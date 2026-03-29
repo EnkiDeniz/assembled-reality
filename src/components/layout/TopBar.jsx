@@ -6,7 +6,7 @@ function formatTimer(seconds) {
   return `${m}m`;
 }
 
-export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, carry, setCarry, receipt, setReceipt, currentSection, sessionDuration }) {
+export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, carry, setCarry, currentSection, sessionDuration }) {
   const [scrollPct, setScrollPct] = useState(0);
 
   const onScroll = useCallback(() => {
@@ -27,14 +27,14 @@ export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, c
         <div className="flex items-center gap-1.5 md:gap-3.5">
           <button
             onClick={() => setNav(!nav)}
-            className={`bg-transparent border-none cursor-pointer text-[0.875rem] p-1.5 min-h-9 min-w-9 flex items-center justify-center ${nav ? "md:text-ink" : ""} text-ink-secondary`}
+            className={`bg-transparent border-none cursor-pointer text-[1rem] p-1.5 min-h-9 min-w-9 flex items-center justify-center ${nav ? "md:text-ink" : ""} text-ink-secondary`}
           >{"\u2630"}</button>
           {currentSection && (
             <span className="md:hidden text-xs text-ink-muted font-medium max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
-              <span className="font-mono">§{currentSection.num}</span> {currentSection.title}
+              <span className="font-mono">&sect;{currentSection.num}</span> {currentSection.title}
             </span>
           )}
-          <span className="hidden md:inline font-semibold tracking-[0.04em] uppercase text-ink-muted text-sm">
+          <span className="hidden md:inline font-semibold tracking-wider uppercase text-ink-muted text-sm">
             Assembled Reality
           </span>
         </div>
@@ -44,11 +44,10 @@ export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, c
           )}
           <button onClick={() => setPulse(!pulse)} className={pillClass(pulse)} title="Team activity">Pulse</button>
           <button onClick={() => setCarry(!carry)} className={pillClass(carry)} title="Your collected passages">Carry</button>
-          <button onClick={() => setReceipt(!receipt)} className={pillClass(receipt)} title="Session receipt">Receipt</button>
+          <span className="text-ink-muted text-sm font-medium max-w-15 md:max-w-none overflow-hidden text-ellipsis whitespace-nowrap">{reader}</span>
           {sessionDuration > 0 && formatTimer(sessionDuration) && (
             <span className="font-mono text-xs text-ink-faint hidden md:inline">{formatTimer(sessionDuration)}</span>
           )}
-          <span className="text-ink-muted text-sm font-medium max-w-15 md:max-w-none overflow-hidden text-ellipsis whitespace-nowrap">{reader}</span>
         </div>
       </div>
       {/* Reading progress bar */}

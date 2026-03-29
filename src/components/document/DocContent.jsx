@@ -23,18 +23,15 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
       {versionPulse && dismissVersionBanner && (
         <VersionPulseBar versionPulse={versionPulse} reader={reader} onDismiss={dismissVersionBanner} />
       )}
-      <header className="mb-10 pb-6 border-b border-border">
+      <header className="mb-12 pb-6 border-b border-border">
         <h1 className="text-3xl font-bold tracking-[-0.01em] leading-[1.15] mb-1">Assembled Reality</h1>
-        <div className="text-body text-ink-tertiary mb-3.5">The process by which Lakin.ai coordinates intelligence.</div>
-        <P style={{ fontSize: "0.8125rem", color: "#888" }}>Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.</P>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-base text-ink-tertiary">
-          {[["Company", "Lakin.ai"], ["Products", "GetReceipts · Box7 · PromiseMe · The Signet"], ["Version", "v1.0"], ["Status", "Founding document"]].map(([k, v]) => (
-            <React.Fragment key={k}>
-              <dt className="font-semibold text-ink-muted uppercase tracking-[0.04em] text-xs">{k}</dt>
-              <dd className="m-0">{v}</dd>
-            </React.Fragment>
-          ))}
+        <div className="text-body text-ink-tertiary leading-relaxed mb-3.5">The process by which Lakin.ai coordinates intelligence.</div>
+        <div className="text-[0.8rem] text-ink-muted mb-3">
+          Lakin.ai &middot; v1.0 &middot; Founding document &middot; GetReceipts &middot; Box7 &middot; PromiseMe &middot; The Signet
+          {" "}&middot;{" "}
+          <button onClick={resetWelcome} className="bg-transparent border-none cursor-pointer text-ink-muted underline underline-offset-2 text-[0.8rem] p-0 hover:text-ink-secondary">How to use this document</button>
         </div>
+        <P style={{ fontSize: "0.8125rem", color: "#888", marginBottom: 0 }}>Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.</P>
       </header>
 
       <Sec id="reader-note" num="0" title="Reader Note" {...sp}>

@@ -3,7 +3,7 @@ import useMediaQuery from "../../hooks/useMediaQuery";
 
 const READER_COLORS = ["#DC2626", "#0369A1", "#B45309", "#7C3AED", "#059669", "#BE185D", "#1D4ED8"];
 
-export default function NavSidebar({ anns, sigs, highlights = [], readingPositions = {}, onClose }) {
+export default function NavSidebar({ anns, sigs, highlights = [], readingPositions = {}, onClose, currentSectionId }) {
   const isDesktop = useMediaQuery("(min-width: 769px)");
 
   const readersAtSection = {};
@@ -32,24 +32,23 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
 
         {/* Reading positions */}
         <div className="mb-2.5 pb-2 border-b border-border">
-          <div className="text-xs font-semibold tracking-[0.06em] uppercase text-ink-muted mb-1">Last seen</div>
-          <div className="flex flex-wrap gap-1">
+          <div className="text-xs font-semibold tracking-[0.06em] uppercase text-ink-muted mb-2">Last seen</div>
+          <div className="flex flex-wrap gap-1.5">
             {READERS.map((r, i) => {
               const pos = readingPositions[r];
               const sec = pos ? SECTIONS.find(s => s.id === pos.sectionId) : null;
               return (
                 <span
                   key={r}
-                  className="py-0.5 px-1.5 md:py-0.5 md:px-1.5 text-sm font-medium rounded-[3px]"
+                  className="py-1 px-2 md:py-0.5 md:px-2 text-sm font-medium rounded-[3px]"
                   style={{
-                    padding: !isDesktop ? "3px 8px" : "2px 6px",
                     background: pos ? READER_COLORS[i] + "10" : "transparent",
                     color: pos ? READER_COLORS[i] : "#D4D4D4",
                     border: `1px solid ${pos ? READER_COLORS[i] + "30" : "#E5E5E5"}`,
                   }}
-                  title={sec ? `${r}: §${sec.num}` : `${r}: Not started`}
+                  title={sec ? `${r}: \u00A7${sec.num}` : `${r}: Not started`}
                 >
-                  {r}{sec ? ` ·${sec.num}` : ""}
+                  {r}{sec ? ` \u00B7${sec.num}` : ""}
                 </span>
               );
             })}
@@ -58,22 +57,25 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
 
         {[1, 2, 3].map(p => (
           <div key={p}>
-            <div className={`text-xs font-semibold tracking-[0.06em] uppercase text-ink-muted mb-[3px] ${p > 1 ? "mt-2.5 pt-2 border-t border-border" : ""}`}>
+            <div className={`text-xs font-semibold tracking-[0.06em] uppercase text-ink-muted mb-[3px] ${p > 1 ? "mt-4 pt-2.5 border-t border-border" : ""}`}>
               {PART_NAMES[p]}
             </div>
             {SECTIONS.filter(s => s.part === p || (p === 1 && s.part === 0)).map(s => {
               const ac = (anns[s.id] || []).length;
               const sc = SHAPES.reduce((sum, { key }) => sum + ((sigs[s.id] || {})[key]?.length || 0), 0);
               const readersHere = readersAtSection[s.id] || [];
+              const isActive = currentSectionId === s.id;
 
               return (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
                   onClick={onClose}
-                  className="flex justify-between items-center text-md md:text-base text-ink-secondary no-underline py-2 px-1 md:py-[3px] md:px-0.5 leading-[1.3] rounded-sm min-h-10 md:min-h-auto"
+                  className={`flex justify-between items-center text-md md:text-base text-ink-secondary no-underline py-2 pl-1 pr-1 md:py-[5px] md:pl-1 md:pr-1 leading-[1.3] rounded min-h-10 md:min-h-auto transition-colors duration-100
+                    hover:bg-surface-raised
+                    ${isActive ? "bg-surface-raised font-medium" : ""}`}
                 >
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     {readersHere.length > 0 && (
                       <span className="flex gap-0.5">
                         {readersHere.map(r => {
@@ -82,7 +84,7 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
                         })}
                       </span>
                     )}
-                    <span className="font-mono text-xs text-ink-faint">{s.num}</span>
+                    <span className="font-mono text-base text-ink-muted font-medium">{s.num}</span>
                     {s.title}
                   </span>
                   {(sc > 0 || ac > 0) && (

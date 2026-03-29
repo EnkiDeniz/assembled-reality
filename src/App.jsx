@@ -102,13 +102,11 @@ export default function App() {
           setPulse={(v) => setRightPanel(v ? "pulse" : null)}
           carry={rightPanel === "carry"}
           setCarry={(v) => setRightPanel(v ? "carry" : null)}
-          receipt={rightPanel === "receipt"}
-          setReceipt={(v) => setRightPanel(v ? "receipt" : null)}
           currentSection={currentSection}
           sessionDuration={tracker.duration}
         />
 
-        {nav && <NavSidebar anns={store.anns} sigs={store.sigs} highlights={store.highlights} readingPositions={store.readingPositions} onClose={() => setNav(false)} />}
+        {nav && <NavSidebar anns={store.anns} sigs={store.sigs} highlights={store.highlights} readingPositions={store.readingPositions} onClose={() => setNav(false)} currentSectionId={currentSectionId} />}
         {rightPanel === "pulse" && <PulseSidebar anns={store.anns} sigs={store.sigs} onClose={() => setRightPanel(null)} />}
         {rightPanel === "carry" && (
           <CarryListPanel

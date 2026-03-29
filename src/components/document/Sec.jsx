@@ -16,22 +16,22 @@ export default function Sec({ id, num, title, children, sigs, anns, reader, onSi
   return (
     <>
       {ph}
-      <section id={id} className={`mb-12 pb-6 ${isSealed ? "bg-surface-guide py-3.5 px-4 rounded-sm border border-border" : "border-b border-divider"}`}>
-        <h2 className="text-lg font-bold mb-2.5 leading-[1.3] flex items-baseline gap-1.5">
-          <span className="font-mono text-sm text-ink-muted font-normal">{num}</span>
+      <section id={id} className={`mb-12 pb-6 ${isSealed ? "bg-surface-guide py-3.5 px-4 rounded-sm border border-border" : "border-b border-border"}`}>
+        <h2 className="text-[1.2rem] font-bold mb-2.5 mt-1 leading-[1.3] flex items-baseline gap-1.5">
+          <span className="font-mono text-base text-ink-muted font-normal">{num}</span>
           {title}
           {isSealed && <span className="text-xs font-semibold tracking-[0.06em] uppercase text-seal">Sealed</span>}
         </h2>
         {children}
 
         {/* Interaction footer -- collapsed by default */}
-        <div className="mt-2.5 border-t border-divider pt-1.5">
+        <div className="mt-2.5 border-t border-border pt-1.5">
           {!showTools && !hasActivity ? (
             <button
               onClick={() => setShowTools(true)}
-              className="bg-transparent border-none cursor-pointer text-sm text-ink-muted py-1 min-h-8 tracking-[0.02em]"
+              className="bg-transparent border-none cursor-pointer text-sm text-ink-muted py-1 min-h-8 tracking-[0.02em] hover:underline hover:decoration-dotted hover:underline-offset-4"
             >
-              Signal · Tag · Discuss
+              Signal &middot; Tag &middot; Discuss
             </button>
           ) : (
             <>
