@@ -1,16 +1,63 @@
-# React + Vite
+# Assembled Reality
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**The founding document of Lakin.ai** — an interactive, collaborative reader for the text that defines how Lakin coordinates intelligence.
 
-Currently, two official plugins are available:
+## What is this?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Assembled Reality is Lakin.ai's core philosophy and protocol specification, presented as a web-based document with built-in collaboration tools. It articulates the company's founding claim:
 
-## React Compiler
+> *The universal failure mode of coordinating intelligences is coherence without contact.*
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The document spans 20 sections across three parts:
 
-## Expanding the ESLint configuration
+1. **The Claim** — The friction, foundational statement, first principles, and the problem of accumulation without contact.
+2. **The Protocol** — The membrane, the seven-move space, the ledger, the alignment game, geometry of the seal, and the pre-seal audit.
+3. **Instruments & Open Edges** — The four instruments (GetReceipts, Box7, PromiseMe, The Signet), builder implications, and open questions.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Features
+
+- **Passphrase gate** — Access requires knowing the passphrase, keeping the document within the intended audience.
+- **Reader identity** — Each reader selects their name on arrival, tying all interactions to a person.
+- **Shape signals** — Every section can be marked with three shapes:
+  - **Triangle** (strengthens aim)
+  - **Square** (needs evidence)
+  - **Circle** (needs context)
+- **Annotations** — Threaded comments per section for thoughts, questions, and pushback.
+- **Pulse panel** — A live sidebar showing who's reading and recent annotation activity.
+- **Navigation sidebar** — Section index with signal and annotation counts at a glance.
+
+## Tech stack
+
+- **React** + **Vite**
+- Inline styles (no CSS framework)
+- Google Fonts: Cormorant Garamond, DM Sans, JetBrains Mono
+- **localStorage** for persistence (signals, annotations, reader identity)
+- Deployed on **Vercel**
+
+## Getting started
+
+```bash
+npm install
+npm run dev
+```
+
+## Build & deploy
+
+```bash
+npm run build     # outputs to dist/
+vercel --prod     # deploy to Vercel
+```
+
+## Note on persistence
+
+All data (annotations, shape signals, reader selection) is stored in the browser's localStorage. This means:
+
+- Data persists across sessions on the same browser.
+- Data does **not** sync between different browsers or devices.
+- For shared real-time collaboration, a backend (e.g. Vercel KV, Supabase, Firebase) would need to be added.
+
+## Company
+
+**Lakin.ai** — Products: GetReceipts, Box7, PromiseMe, The Signet
+
+*Reality doesn't appear. It's assembled.*
