@@ -1,15 +1,6 @@
-import { useState, useEffect } from "react";
 import { READERS, SECTIONS, SHAPES } from "../../constants";
 
 export default function PulseSidebar({ anns, sigs, onClose }) {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
   const items = [];
   Object.entries(anns).forEach(([sid, a]) => a.forEach(x => {
     const s = SECTIONS.find(z => z.id === sid);
@@ -23,60 +14,42 @@ export default function PulseSidebar({ anns, sigs, onClose }) {
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 85, background: "rgba(0,0,0,0.12)" }} />
-      <div
-        className={isMobile ? "sidebar-right" : undefined}
-        style={{
-          position: "fixed", top: 38, right: 0,
-          width: isMobile ? "100%" : 280,
-          bottom: 0, zIndex: 90,
-          background: "#EDE9E1", borderLeft: isMobile ? "none" : "1px solid #D6D1C8",
-          overflowY: "auto", WebkitOverflowScrolling: "touch",
-        }}
-      >
-        <div style={{
-          padding: "8px 14px", borderBottom: "1px solid #D6D1C8",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
-          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.54rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A877F" }}>Pulse</span>
-          {isMobile && (
-            <button onClick={onClose} style={{
-              background: "none", border: "1px solid #D6D1C8", borderRadius: 4,
-              padding: "6px 14px", fontSize: "0.62rem", fontFamily: "'DM Sans',sans-serif",
-              fontWeight: 600, color: "#5C5A55", cursor: "pointer",
-            }}>Close</button>
-          )}
+      <div onClick={onClose} className="fixed inset-0 z-85 bg-black/8" />
+      <div className="sidebar-right md:sidebar-right-none fixed top-10 right-0 bottom-0 z-90 bg-surface overflow-y-auto overscroll-contain w-full md:w-[280px] border-l-0 md:border-l md:border-border">
+        <div className="px-3.5 py-2 border-b border-border flex justify-between items-center">
+          <span className="text-sm font-semibold tracking-[0.04em] uppercase text-ink-muted">Pulse</span>
+          <button onClick={onClose} className="md:hidden bg-transparent border border-border rounded-[3px] px-3.5 py-1.5 text-base font-medium text-ink-tertiary cursor-pointer">Close</button>
         </div>
-        <div style={{ padding: "10px 14px" }}>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.54rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A877F", marginBottom: 6 }}>Who's reading</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+        <div className="p-2.5 px-3.5">
+          <div className="mb-3.5">
+            <div className="text-sm font-semibold tracking-[0.04em] uppercase text-ink-muted mb-1.5">Readers</div>
+            <div className="flex flex-wrap gap-1">
               {READERS.map(r => {
                 const a = sigMap[r] > 0 || items.some(i => i.author === r);
                 return (
-                  <span key={r} style={{
-                    padding: isMobile ? "4px 12px" : "2px 9px",
-                    fontSize: isMobile ? "0.72rem" : "0.66rem",
-                    fontFamily: "'DM Sans',sans-serif", fontWeight: a ? 600 : 400,
-                    background: a ? "#1A1917" : "transparent",
-                    color: a ? "#F7F4EF" : "#8A877F",
-                    border: `1px solid ${a ? "#1A1917" : "#D6D1C8"}`, borderRadius: 12,
-                  }}>{r}</span>
+                  <span
+                    key={r}
+                    className={`py-1 px-2.5 md:py-[3px] md:px-2 text-base rounded-[3px] ${
+                      a ? "font-semibold bg-ink text-white border border-ink" : "font-normal bg-transparent text-ink-faint border border-border"
+                    }`}
+                  >
+                    {r}
+                  </span>
                 );
               })}
             </div>
           </div>
-          <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.54rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A877F", marginBottom: 6 }}>Recent</div>
-          {items.length === 0 ? <div style={{ color: "#8A877F", fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem" }}>No annotations yet.</div> :
+          <div className="text-sm font-semibold tracking-[0.04em] uppercase text-ink-muted mb-1.5">Recent</div>
+          {items.length === 0 ? <div className="text-ink-faint text-md">No annotations yet.</div> :
             items.slice(0, 20).map((x, i) => (
-              <div key={i} style={{
-                padding: isMobile ? "10px 0" : "6px 0",
-                borderBottom: i < Math.min(items.length, 20) - 1 ? "1px solid #E8E4DC" : "none",
-                fontSize: "0.7rem", fontFamily: "'DM Sans',sans-serif", lineHeight: 1.4,
-              }}>
-                <span style={{ fontWeight: 600 }}>{x.author}</span><span style={{ color: "#5C5A55" }}> on <em>{x.section}</em></span>
-                <p style={{ margin: "2px 0 0", color: "#5C5A55", fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: "0.82rem" }}>"{x.text.length > 85 ? x.text.slice(0, 85) + "\u2026" : x.text}"</p>
-                <div style={{ fontSize: "0.56rem", color: "#8A877F", marginTop: 1 }}>{x.time}</div>
+              <div
+                key={i}
+                className={`py-2.5 md:py-1.5 text-md leading-[1.4] ${i < Math.min(items.length, 20) - 1 ? "border-b border-divider" : ""}`}
+              >
+                <span className="font-semibold text-ink-secondary">{x.author}</span>
+                <span className="text-ink-muted"> on {x.section}</span>
+                <p className="m-0 mt-0.5 text-ink-tertiary text-md">"{x.text.length > 85 ? x.text.slice(0, 85) + "\u2026" : x.text}"</p>
+                <div className="text-sm text-ink-faint mt-px">{x.time}</div>
               </div>
             ))}
         </div>

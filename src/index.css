@@ -1,3 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand / Shape colors */
+  --color-triangle: #B84C2A;
+  --color-square: #2A5A6B;
+  --color-circle: #6B5A2A;
+
+  /* Reader colors */
+  --color-reader-1: #DC2626;
+  --color-reader-2: #0369A1;
+  --color-reader-3: #B45309;
+  --color-reader-4: #7C3AED;
+  --color-reader-5: #059669;
+  --color-reader-6: #BE185D;
+  --color-reader-7: #1D4ED8;
+
+  /* Grayscale */
+  --color-ink: #111;
+  --color-ink-secondary: #333;
+  --color-ink-tertiary: #666;
+  --color-ink-muted: #999;
+  --color-ink-faint: #BBB;
+  --color-border: #E5E5E5;
+  --color-border-dark: #D4D4D4;
+  --color-border-warm: #E8E4DC;
+  --color-divider: #EBEBEB;
+
+  /* Surfaces */
+  --color-surface: #FAFAF9;
+  --color-surface-raised: #F5F5F4;
+  --color-surface-warm: #F8F7F5;
+  --color-surface-beige: #EDE9E1;
+  --color-surface-warm-border: #D6D1C8;
+  --color-surface-guide: #EEEBE6;
+
+  /* Semantic */
+  --color-error: #DC2626;
+  --color-seal: #0369A1;
+
+  /* Font families */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Font sizes */
+  --text-2xs: 0.5625rem;
+  --text-xs: 0.625rem;
+  --text-sm: 0.6875rem;
+  --text-base: 0.75rem;
+  --text-md: 0.8125rem;
+  --text-body: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.4rem;
+  --text-3xl: 1.75rem;
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.12s ease;
+  --animate-slide-left: slide-in-left 0.25s ease-out;
+  --animate-slide-right: slide-in-right 0.25s ease-out;
+  --animate-slide-up: slide-up-sheet 0.3s ease-out;
+
+  /* Breakpoint */
+  --breakpoint-md: 769px;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Base resets */
 * {
   margin: 0;
   padding: 0;
@@ -11,27 +98,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes slideUpSheet {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
 /* Touch-friendly interactive elements */
 button, [role="button"] {
   -webkit-tap-highlight-color: transparent;
@@ -39,7 +105,7 @@ button, [role="button"] {
 
 /* Focus visible for keyboard navigation */
 button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visible {
-  outline: 2px solid #2A5A6B;
+  outline: 2px solid var(--color-square);
   outline-offset: 2px;
 }
 
@@ -54,27 +120,12 @@ textarea {
 
 /* Mobile breakpoint utilities */
 @media (max-width: 768px) {
-  /* Prevent horizontal overflow */
   html, body {
     overflow-x: hidden;
   }
 
-  /* Larger touch targets for all buttons */
   button {
     min-height: 36px;
     min-width: 36px;
-  }
-
-  /* Sidebar overlay animations */
-  .sidebar-left {
-    animation: slideInLeft 0.25s ease-out;
-  }
-
-  .sidebar-right {
-    animation: slideInRight 0.25s ease-out;
-  }
-
-  .bottom-sheet {
-    animation: slideUpSheet 0.3s ease-out;
   }
 }

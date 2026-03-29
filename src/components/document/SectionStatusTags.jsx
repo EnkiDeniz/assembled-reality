@@ -6,8 +6,8 @@ export default function SectionStatusTags({ sectionId, statusTags, toggleStatusT
   const isSealed = sealVoters.length >= 4;
 
   return (
-    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-      {STATUS_TAGS.map(({ key, label, color }) => {
+    <div className="flex gap-1 flex-wrap my-1.5">
+      {STATUS_TAGS.map(({ key, label }) => {
         const voters = tags[key] || [];
         const voted = voters.includes(reader);
         const count = voters.length;
@@ -18,26 +18,19 @@ export default function SectionStatusTags({ sectionId, statusTags, toggleStatusT
             key={key}
             onClick={() => toggleStatusTag(sectionId, key)}
             title={voters.length > 0 ? voters.join(", ") : "No votes yet"}
+            className="flex items-center gap-0.5 px-2 py-0.5 text-sm font-medium rounded-sm cursor-pointer transition-all duration-100 min-h-7"
             style={{
-              display: "flex", alignItems: "center", gap: 3,
-              padding: "4px 10px", fontSize: "0.54rem",
-              fontFamily: "'DM Sans',sans-serif", fontWeight: 600,
-              letterSpacing: "0.06em", textTransform: "uppercase",
-              background: isSeal ? "#2A5A6B" : voted ? color + "14" : "transparent",
-              color: isSeal ? "#F7F4EF" : voted ? color : "#8A877F",
-              border: `1px solid ${isSeal ? "#2A5A6B" : voted ? color : "#D6D1C8"}`,
-              borderRadius: 12, cursor: "pointer",
-              transition: "all 0.15s",
-              minHeight: 36,
+              background: isSeal ? "#111" : voted ? "#F5F5F4" : "transparent",
+              color: isSeal ? "#fff" : voted ? "#333" : "#BBB",
+              border: `1px solid ${isSeal ? "#111" : voted ? "var(--color-border)" : "#E5E5E5"}`,
             }}
           >
             {label}
             {count > 0 && (
-              <span style={{
-                fontSize: "0.5rem", fontWeight: 700,
-                background: isSeal ? "rgba(255,255,255,0.2)" : "transparent",
-                padding: "0 3px", borderRadius: 4,
-              }}>
+              <span
+                className="text-xs font-semibold"
+                style={{ color: isSeal ? "rgba(255,255,255,0.7)" : "#999" }}
+              >
                 {count}/{READERS.length}
               </span>
             )}

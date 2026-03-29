@@ -1,16 +1,8 @@
 import { useState, useEffect } from "react";
 
 export default function WelcomeGuide({ reader, dismissed, onDismiss, onReopen }) {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [expanded, setExpanded] = useState(!dismissed);
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // When dismissed changes externally (e.g. resetWelcome), sync
   useEffect(() => {
     if (!dismissed) setExpanded(true);
   }, [dismissed]);
@@ -19,11 +11,7 @@ export default function WelcomeGuide({ reader, dismissed, onDismiss, onReopen })
     return (
       <button
         onClick={() => { onReopen(); setExpanded(true); }}
-        style={{
-          background: "none", border: "none", cursor: "pointer",
-          fontSize: "0.6875rem", color: "#999", padding: "0 0 8px",
-          textDecoration: "underline", textUnderlineOffset: 2,
-        }}
+        className="bg-transparent border-none cursor-pointer text-sm text-ink-muted p-0 pb-2 underline underline-offset-2"
       >
         How to use this document
       </button>
@@ -33,44 +21,76 @@ export default function WelcomeGuide({ reader, dismissed, onDismiss, onReopen })
   if (!expanded) return null;
 
   return (
-    <div style={{
-      marginBottom: "1.5rem",
-      padding: isMobile ? "16px 14px" : "18px 20px",
-      background: "#F8F7F5",
-      border: "1px solid #E5E2DC",
-      borderRadius: 4,
-      animation: "fadeIn 0.2s ease",
-    }}>
-      <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-        marginBottom: 12,
-      }}>
+    <div className="mb-6 animate-fade-in">
+      {/* Mobile: compact single-line with expand */}
+      <div className="md:hidden">
+        <MobileGuide reader={reader} onDismiss={() => { onDismiss(); setExpanded(false); }} />
+      </div>
+      {/* Desktop: full card */}
+      <div className="hidden md:block">
+        <DesktopGuide reader={reader} onDismiss={() => { onDismiss(); setExpanded(false); }} />
+      </div>
+    </div>
+  );
+}
+
+function MobileGuide({ reader, onDismiss }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="p-3 bg-surface-warm border border-surface-warm-border rounded-[4px]">
+      <div className="flex justify-between items-center">
+        <div className="text-md font-medium text-ink">
+          Welcome, {reader}. <span className="text-ink-tertiary font-normal">This is a living document you shape together.</span>
+        </div>
+        <div className="flex items-center gap-1.5 ml-2 shrink-0">
+          <button
+            onClick={() => setOpen(!open)}
+            className="bg-transparent border-none cursor-pointer text-sm text-ink-muted underline underline-offset-2 p-0"
+          >
+            {open ? "Less" : "How?"}
+          </button>
+          <button
+            onClick={onDismiss}
+            className="bg-transparent border-none cursor-pointer text-ink-faint text-base p-1"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+      {open && (
+        <div className="mt-2.5 pt-2.5 border-t border-surface-warm-border grid grid-cols-1 gap-1.5 animate-fade-in">
+          <HintLine icon="✦" text="Select text to highlight, carry, or comment" />
+          <HintLine icon="△□○" text="Three shapes: aim · evidence · context" />
+          <HintLine icon="§" text="Each section has Signal · Tag · Discuss at the bottom" />
+          <HintLine icon="◉" text="Pulse = team activity · Carry = your selections" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DesktopGuide({ reader, onDismiss }) {
+  return (
+    <div className="py-[18px] px-5 bg-surface-warm border border-surface-warm-border rounded-[4px]">
+      <div className="flex justify-between items-start mb-3">
         <div>
-          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#111", marginBottom: 2 }}>
+          <div className="text-body font-semibold text-ink mb-0.5">
             Welcome, {reader}.
           </div>
-          <div style={{ fontSize: "0.8125rem", color: "#666", lineHeight: 1.5 }}>
+          <div className="text-md text-ink-tertiary leading-[1.5]">
             This is a living document. You don't just read it — you shape it.
           </div>
         </div>
         <button
-          onClick={() => { onDismiss(); setExpanded(false); }}
-          style={{
-            background: "none", border: "1px solid #D4D4D4", borderRadius: 3,
-            padding: "4px 10px", fontSize: "0.6875rem", fontWeight: 500,
-            color: "#666", cursor: "pointer", whiteSpace: "nowrap",
-            marginLeft: 12, minHeight: 28,
-          }}
+          onClick={onDismiss}
+          className="bg-transparent border border-border rounded-[3px] px-2.5 py-1 text-sm font-medium text-ink-tertiary cursor-pointer whitespace-nowrap ml-3 min-h-7"
         >
           Got it
         </button>
       </div>
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap: isMobile ? 8 : 10,
-      }}>
+      <div className="grid grid-cols-2 gap-2.5">
         <GuideItem
           icon="✦"
           title="Select any text"
@@ -93,10 +113,7 @@ export default function WelcomeGuide({ reader, dismissed, onDismiss, onReopen })
         />
       </div>
 
-      <div style={{
-        marginTop: 10, paddingTop: 8, borderTop: "1px solid #E5E2DC",
-        fontSize: "0.6875rem", color: "#999", lineHeight: 1.5,
-      }}>
+      <div className="mt-2.5 pt-2 border-t border-surface-warm-border text-sm text-ink-muted leading-[1.5]">
         When 4+ readers vote "Ready to seal" on a section, it locks. The document evolves through your signals.
       </div>
     </div>
@@ -105,25 +122,25 @@ export default function WelcomeGuide({ reader, dismissed, onDismiss, onReopen })
 
 function GuideItem({ icon, title, desc }) {
   return (
-    <div style={{
-      display: "flex", gap: 8, alignItems: "flex-start",
-      padding: "6px 8px", background: "#FAFAF9", borderRadius: 3,
-      border: "1px solid #EEEBE6",
-    }}>
-      <span style={{
-        fontSize: "0.75rem", fontWeight: 600, color: "#888",
-        minWidth: 28, textAlign: "center", flexShrink: 0,
-        fontFamily: "'JetBrains Mono',monospace",
-        lineHeight: "18px", paddingTop: 1,
-      }}>{icon}</span>
+    <div className="flex gap-2 items-start p-1.5 px-2 bg-surface rounded-[3px] border border-divider">
+      <span className="text-base font-semibold text-ink-muted min-w-7 text-center shrink-0 font-mono leading-[18px] pt-px">{icon}</span>
       <div>
-        <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#333", marginBottom: 1 }}>{title}</div>
-        <div style={{ fontSize: "0.6875rem", color: "#777", lineHeight: 1.45 }}>{desc}</div>
+        <div className="text-base font-semibold text-ink-secondary mb-px">{title}</div>
+        <div className="text-sm text-ink-tertiary leading-[1.45]">{desc}</div>
       </div>
     </div>
   );
 }
 
+function HintLine({ icon, text }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-ink-tertiary">
+      <span className="font-mono text-xs text-ink-muted w-6 text-center shrink-0">{icon}</span>
+      <span>{text}</span>
+    </div>
+  );
+}
+
 function Sh({ c, children }) {
-  return <span style={{ color: c, fontWeight: 600 }}>{children}</span>;
+  return <span style={{ color: c }} className="font-semibold">{children}</span>;
 }

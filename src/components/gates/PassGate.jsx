@@ -11,19 +11,31 @@ export default function PassGate({ onPass }) {
     else { setWrong(true); setTimeout(() => setWrong(false), 1200); }
   };
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F4EF", opacity: vis ? 1 : 0, transition: "opacity 0.8s" }}>
-      <div style={{ width: "100%", maxWidth: 480, padding: "2rem 1.2rem", textAlign: "center" }}>
-        <input autoFocus value={inp} onChange={e => { setInp(e.target.value); setWrong(false); }} onKeyDown={e => e.key === "Enter" && check()} spellCheck={false}
+    <div
+      className="min-h-screen flex items-center justify-center bg-surface transition-opacity duration-600"
+      style={{ opacity: vis ? 1 : 0 }}
+    >
+      <div className="w-full max-w-[400px] px-5 py-8 text-center">
+        <input
+          autoFocus
+          value={inp}
+          onChange={e => { setInp(e.target.value); setWrong(false); }}
+          onKeyDown={e => e.key === "Enter" && check()}
+          spellCheck={false}
+          className="w-full py-3.5 text-lg font-sans bg-transparent border-none border-b outline-none text-center transition-all duration-200"
           style={{
-            width: "100%", padding: "16px 0", fontSize: "1.3rem",
-            fontFamily: "'Cormorant Garamond',Georgia,serif",
-            background: "transparent", border: "none",
-            borderBottom: `1px solid ${wrong ? "#B84C2A" : "#D6D1C8"}`,
-            outline: "none", textAlign: "center",
-            color: wrong ? "#B84C2A" : "#1A1917",
-            transition: "all 0.3s",
-          }} />
-        <div style={{ marginTop: 16, fontSize: "0.7rem", fontFamily: "'DM Sans',sans-serif", color: "#B84C2A", opacity: wrong ? 1 : 0, transition: "opacity 0.3s", height: 20 }}>{wrong ? "Not yet." : ""}</div>
+            borderBottomWidth: "1px",
+            borderBottomStyle: "solid",
+            borderBottomColor: wrong ? "#DC2626" : "var(--color-border)",
+            color: wrong ? "#DC2626" : "var(--color-ink)",
+          }}
+        />
+        <div
+          className="mt-3 text-base text-error h-[18px] transition-opacity duration-200"
+          style={{ opacity: wrong ? 1 : 0 }}
+        >
+          {wrong ? "Not yet." : ""}
+        </div>
       </div>
     </div>
   );

@@ -13,14 +13,11 @@ export default function EmojiReactions({ bqId, reactions, toggleReaction, reader
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); if (!showPicker) setShowPicker(false); }}
+      className="flex gap-1 flex-wrap items-center overflow-hidden transition-all duration-150"
       style={{
-        display: "flex", gap: 4, flexWrap: "wrap",
-        marginTop: hasAny ? 6 : 0, paddingTop: hasAny ? 4 : 0,
-        alignItems: "center",
-        minHeight: visible ? 28 : 0,
+        marginTop: hasAny ? 6 : 0,
+        minHeight: visible ? 24 : 0,
         opacity: visible ? 1 : 0,
-        transition: "opacity 0.2s, min-height 0.2s",
-        overflow: "hidden",
       }}
     >
       {EMOJI_REACTIONS.map(({ key, emoji }) => {
@@ -32,58 +29,35 @@ export default function EmojiReactions({ bqId, reactions, toggleReaction, reader
             key={key}
             onClick={() => toggleReaction(bqId, key)}
             title={voters.join(", ")}
+            className="flex items-center gap-0.5 py-0.5 px-2 text-base rounded-sm cursor-pointer transition-all duration-100 min-h-7"
             style={{
-              display: "flex", alignItems: "center", gap: 3,
-              padding: "4px 10px", fontSize: "0.72rem",
-              background: voted ? "#1A191710" : "transparent",
-              border: `1px solid ${voted ? "#D6D1C8" : "#E8E4DC"}`,
-              borderRadius: 12, cursor: "pointer",
-              transition: "all 0.15s",
-              minHeight: 36, minWidth: 36,
+              background: voted ? "#F5F5F4" : "transparent",
+              border: `1px solid ${voted ? "#D4D4D4" : "#E5E5E5"}`,
             }}
           >
-            <span style={{ fontSize: "0.82rem" }}>{emoji}</span>
-            <span style={{ fontSize: "0.58rem", fontFamily: "'DM Sans',sans-serif", fontWeight: 600, color: "#5C5A55" }}>{voters.length}</span>
+            <span>{emoji}</span>
+            <span className="text-sm font-medium text-ink-tertiary">{voters.length}</span>
           </button>
         );
       })}
 
-      {/* Add reaction — visible on hover/tap or when reactions exist */}
       {visible && (
-        <div style={{ position: "relative" }}>
+        <div className="relative">
           <button
             onClick={() => setShowPicker(!showPicker)}
-            style={{
-              padding: "4px 10px", fontSize: "0.72rem",
-              background: "transparent",
-              border: `1px solid ${showPicker ? "#D6D1C8" : "transparent"}`,
-              borderRadius: 12, cursor: "pointer", color: "#8A877F",
-              minHeight: 36, minWidth: 36,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 0.15s",
-            }}
+            className="py-0.5 px-2 text-base bg-transparent rounded-sm cursor-pointer text-ink-faint min-h-7 min-w-7 flex items-center justify-center"
+            style={{ border: `1px solid ${showPicker ? "#D4D4D4" : "transparent"}` }}
           >
             +
           </button>
           {showPicker && (
-            <div style={{
-              position: "absolute", bottom: "100%", left: 0, marginBottom: 4,
-              display: "flex", gap: 2, padding: "4px 6px",
-              background: "#F7F4EF", border: "1px solid #D6D1C8", borderRadius: 8,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)", zIndex: 50,
-            }}>
+            <div className="absolute bottom-full left-0 mb-1 flex gap-0.5 py-1 px-1.5 bg-white border border-border rounded shadow-[0_2px_8px_rgba(0,0,0,0.08)] z-50">
               {EMOJI_REACTIONS.map(({ key, emoji, label }) => (
                 <button
                   key={key}
                   onClick={() => { toggleReaction(bqId, key); setShowPicker(false); }}
                   title={label}
-                  style={{
-                    padding: "6px 8px", fontSize: "1rem",
-                    background: "transparent", border: "none",
-                    cursor: "pointer", borderRadius: 4,
-                    minWidth: 40, minHeight: 40,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
+                  className="py-1.5 px-2 text-[1rem] bg-transparent border-none cursor-pointer rounded-sm min-w-9 min-h-9 flex items-center justify-center"
                 >
                   {emoji}
                 </button>

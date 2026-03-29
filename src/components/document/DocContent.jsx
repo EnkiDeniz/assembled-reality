@@ -10,11 +10,10 @@ import WelcomeGuide from "../onboarding/WelcomeGuide";
 export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag, emojiReactions, toggleReaction, versionPulse, dismissVersionBanner, welcomeDismissed, dismissWelcome, resetWelcome, navOpen }) {
   const sp = { sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag };
   const reactionCtx = useMemo(() => ({ emojiReactions: emojiReactions || {}, toggleReaction: toggleReaction || (() => {}), reader }), [emojiReactions, toggleReaction, reader]);
-  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
 
   return (
     <ReactionContext.Provider value={reactionCtx}>
-    <main style={{ maxWidth: 640, margin: "0 auto", padding: isMobile ? "52px 16px 60px" : "56px 20px 80px", transition: "margin-left 0.25s ease" }}>
+    <main className="max-w-[640px] mx-auto pt-[52px] px-4 pb-15 md:pt-14 md:px-5 md:pb-20 transition-[margin-left] duration-[250ms] ease-in-out">
       <WelcomeGuide
         reader={reader}
         dismissed={!!(welcomeDismissed && welcomeDismissed[reader])}
@@ -24,15 +23,15 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
       {versionPulse && dismissVersionBanner && (
         <VersionPulseBar versionPulse={versionPulse} reader={reader} onDismiss={dismissVersionBanner} />
       )}
-      <header style={{ marginBottom: "2.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid #D4D4D4" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.15, marginBottom: 4 }}>Assembled Reality</h1>
-        <div style={{ fontSize: "0.9375rem", color: "#666", marginBottom: 14 }}>The process by which Lakin.ai coordinates intelligence.</div>
+      <header className="mb-10 pb-6 border-b border-border">
+        <h1 className="text-3xl font-bold tracking-[-0.01em] leading-[1.15] mb-1">Assembled Reality</h1>
+        <div className="text-body text-ink-tertiary mb-3.5">The process by which Lakin.ai coordinates intelligence.</div>
         <P style={{ fontSize: "0.8125rem", color: "#888" }}>Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.</P>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 12px", fontSize: "0.75rem", color: "#666" }}>
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-base text-ink-tertiary">
           {[["Company", "Lakin.ai"], ["Products", "GetReceipts · Box7 · PromiseMe · The Signet"], ["Version", "v1.0"], ["Status", "Founding document"]].map(([k, v]) => (
             <React.Fragment key={k}>
-              <dt style={{ fontWeight: 600, color: "#999", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "0.625rem" }}>{k}</dt>
-              <dd style={{ margin: 0 }}>{v}</dd>
+              <dt className="font-semibold text-ink-muted uppercase tracking-[0.04em] text-xs">{k}</dt>
+              <dd className="m-0">{v}</dd>
             </React.Fragment>
           ))}
         </div>
@@ -135,7 +134,7 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
         <P>A move is not real because it was declared. A move is not real because it was narrated well. A move becomes real when reality answers and that answer can be preserved.</P>
         <P>Declaration comes first. Move comes second. World-return comes third. Witness comes fourth. Seal comes last.</P>
         <P>Reverse the order and three intelligences can agree about nothing.</P>
-        <BQ>The receipt catches the break, not the loop. <span style={{ fontWeight: 400 }}>It matters most when reality returns something the prior story did not predict.</span></BQ>
+        <BQ>The receipt catches the break, not the loop. <span className="font-normal">It matters most when reality returns something the prior story did not predict.</span></BQ>
         <P>Gradient as assembly depth: level 1 is simple closure, low cost — a task done, a message sent, a box checked. Level 7 is multi-domain, multi-agent convergence — difficult to fake, expensive to manufacture, and resistant to narrative override. The gradient is not decoration. It is the honesty metric.</P>
       </Sec>
 
@@ -153,11 +152,11 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
         <P>Both human and AI run the same protocol. The gap between declarations is the conversation.</P>
         <BQ>The protocol asks for proof, not preservation. That is the friction that is also testimony.</BQ>
         <BQ>The seal is a foundation, not a finish line.</BQ>
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "0.74rem", color: "#5C5A55", margin: "1rem 0" }}>align &rarr; seal &rarr; stand on the seal &rarr; declare next {"\u25B3"} &rarr; new gap &rarr; align again</div>
+        <div className="font-mono text-[0.74rem] text-ink-tertiary my-4">align &rarr; seal &rarr; stand on the seal &rarr; declare next {"\u25B3"} &rarr; new gap &rarr; align again</div>
         <P>The 0 you return to is not the same 0 you started from. Same form — presence before declaration — but standing on a sealed platform that didn't exist before.</P>
         <P>Recurrence is how you zoom into convergence.</P>
-        <div style={{ margin: "1.3rem 0", padding: "1rem 1.2rem", background: "#EDE9E1", border: "1px solid #D6D1C8" }}>
-          <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.54rem", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A877F", marginBottom: 6 }}>One cycle, worked</div>
+        <div className="my-5 p-4 px-5 bg-surface-beige border border-surface-warm-border">
+          <div className="font-sans text-2xs font-semibold tracking-[0.12em] uppercase text-ink-muted mb-1.5">One cycle, worked</div>
           <P style={{ fontSize: "0.86rem", marginBottom: 0 }}>A builder declares: "Ship the onboarding flow by Friday" (<S t="t">{"\u25B3"}</S>, step 1). The micro-move is: write the first screen copy and push it to staging (step 2). The test is: show it to one external user and record what they do, not what they say (step 3). The return: user ignored the CTA and tapped the back button (step 4). The gap widened — aim and reality diverged. Reroute, not seal (step 5). New micro-move: rewrite the CTA with the receipt in hand. The loop continues. The seal comes when the return confirms the aim. Not before.</P>
         </div>
         <P>Box7 is the instrument that makes this game playable.</P>
@@ -188,13 +187,13 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
       <Sec id="pre-seal-audit" num="13" title="Pre-Seal Audit" {...sp}>
         <BQ>The audit exists to stop false closure.</BQ>
         <P>Do not seal because the story is elegant. Do not seal because the room agrees.</P>
-        <P style={{ marginTop: "1.3rem" }}><strong>Mirror checks</strong> <span style={{ color: "#8A877F", fontSize: "0.82rem" }}>(same shape, both directions)</span></P>
+        <P style={{ marginTop: "1.3rem" }}><strong>Mirror checks</strong> <span className="text-ink-muted text-[0.82rem]">(same shape, both directions)</span></P>
         <T h={["Relation", "Question"]} r={[
-          [<span style={{ color: "#B84C2A" }}>{"\u25B3\u2194\u25B3"}</span>, "Is this aim actually mine, or am I carrying someone else's?"],
-          [<span style={{ color: "#2A5A6B" }}>{"\u25A2\u2194\u25A2"}</span>, "Does my evidence cohere, or am I holding contradictory receipts?"],
-          [<span style={{ color: "#6B5A2A" }}>{"\u25CB\u2194\u25CB"}</span>, "Am I telling a story about my story instead of living in it?"],
+          [<span className="text-triangle">{"\u25B3\u2194\u25B3"}</span>, "Is this aim actually mine, or am I carrying someone else's?"],
+          [<span className="text-square">{"\u25A2\u2194\u25A2"}</span>, "Does my evidence cohere, or am I holding contradictory receipts?"],
+          [<span className="text-circle">{"\u25CB\u2194\u25CB"}</span>, "Am I telling a story about my story instead of living in it?"],
         ]} />
-        <P style={{ marginTop: "1.3rem" }}><strong>Crossing checks</strong> <span style={{ color: "#8A877F", fontSize: "0.82rem" }}>(shape meets shape)</span></P>
+        <P style={{ marginTop: "1.3rem" }}><strong>Crossing checks</strong> <span className="text-ink-muted text-[0.82rem]">(shape meets shape)</span></P>
         <T h={["Relation", "Question"]} r={[
           [<><S t="t">{"\u25B3"}</S>{"\u2192"}<S t="s">{"\u25A2"}</S></>, "Does my aim survive contact with the evidence?"],
           [<><S t="s">{"\u25A2"}</S>{"\u2192"}<S t="t">{"\u25B3"}</S></>, "Is the evidence asking me to change direction?"],
@@ -212,7 +211,7 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
           [<><S t="c">{"\u25CB"}</S>{"\u2192"}<S t="t">{"\u25B3"}</S>{"\u2192"}<S t="s">{"\u25A2"}</S></>, "Dreamer", "Generative vision. Founders live here.", "Dream hardens into identity before reality arrives."],
           [<><S t="c">{"\u25CB"}</S>{"\u2192"}<S t="s">{"\u25A2"}</S>{"\u2192"}<S t="t">{"\u25B3"}</S></>, "Survivor", "Disillusionment produces leanest aims.", "Narrative collapse without reconstruction."],
         ]} />
-        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.72rem", fontStyle: "italic", color: "#8A877F", marginTop: 12, paddingTop: 8, borderTop: "1px solid #E8E4DC" }}>Builder note: this is the section Box7 should eventually automate. The audit is where the product meets the philosophy.</div>
+        <div className="font-sans text-[0.72rem] italic text-ink-muted mt-3 pt-2 border-t border-surface-warm-border">Builder note: this is the section Box7 should eventually automate. The audit is where the product meets the philosophy.</div>
       </Sec>
 
       <Sec id="body-signet" num="14" title="The Body and the Signet" {...sp} ph={<PH n="III" t="Instruments and Open Edges" />}>
@@ -220,9 +219,9 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
         <P>Inference is weightless. Interpretation has mass. The body carries consequence memory. A machine can compute complexity — it did not bear it.</P>
         <BQ>The body is signal, not oracle.</BQ>
         <P>Three somatic signals the protocol recognizes:</P>
-        <P>The <strong style={{ color: "#B84C2A" }}>shake</strong> — the aim is real and costly to hold.</P>
-        <P>The <strong style={{ color: "#B84C2A" }}>gut drop</strong> — misalignment before the mind names it.</P>
-        <P>The <strong style={{ color: "#B84C2A" }}>flinch</strong> — the story can't survive the evidence.</P>
+        <P>The <strong className="text-triangle">shake</strong> — the aim is real and costly to hold.</P>
+        <P>The <strong className="text-triangle">gut drop</strong> — misalignment before the mind names it.</P>
+        <P>The <strong className="text-triangle">flinch</strong> — the story can't survive the evidence.</P>
         <P>A declaration that doesn't land in the body is rhetoric. A declaration that shakes you is real.</P>
         <P>The fourth channel is downstream of the Circle until the Circle is audited. A nervous system trained by a false story will read truth as threat. Run the <CrossRef to="pre-seal-audit" /> before trusting the somatic read.</P>
         <BQ>The fourth channel votes. It does not decide.</BQ>
@@ -246,7 +245,7 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
         <P>Unpaid invoice — a claim without external answer.</P>
         <P>Counterfeit receipt — a false sign of closure.</P>
         <P>Self-sealing loop — a system that treats internal coherence as settlement.</P>
-        <BQ><strong>The operator sentence test:</strong> <span style={{ fontWeight: 400 }}>a strong operator sentence should help produce a condition that another witness, with no incentive to agree, can observe.</span></BQ>
+        <BQ><strong>The operator sentence test:</strong> <span className="font-normal">a strong operator sentence should help produce a condition that another witness, with no incentive to agree, can observe.</span></BQ>
       </Sec>
 
       <Sec id="four-instruments" num="16" title="The Four Instruments" {...sp}>
@@ -273,13 +272,13 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
       <Sec id="open-questions" num="18" title="Open Questions" {...sp}>
         <P style={{ fontStyle: "italic", color: "#5C5A55", marginBottom: "1.4rem" }}>These are invitations, not admissions of weakness. A founding document that has no open questions has sealed without a receipt.</P>
         {["Where does inference end and interpretation begin in a way that can be formalized?", "Can shape be modeled without collapsing the person into a belief-attribution object?", "What constitutes seal readiness when three shapes, multiple witnesses, and world-return all matter?", "When two tetrahedrons share one cube — two Lakins negotiating shared reality — what does the geometry look like?", "Can the three-shape classification hold across users, domains, and cultures as a universal protocol?", <>What happens to presence-based coordination when the network outgrows mutual witness?<ToggleDepth label="The imece-to-Sumerian transition"><P style={{ marginBottom: "0.6rem" }}>The Anatolian village runs on imece — showing up is the receipt, everyone sees everyone, social memory is the ledger. The Sumerians invented clay tablets at the exact moment that system broke.</P><P style={{ marginBottom: 0 }}>How does the protocol preserve the gift quality of imece at Sumerian scale? How does it keep the body in the field when the field becomes a network?</P></ToggleDepth></>].map((q, i) => (
-          <div key={i} style={{ marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid #D6D1C8" }}>
+          <div key={i} className="mb-2.5 pl-3 border-l-2 border-surface-warm-border">
             <P style={{ marginBottom: 0 }}>{q}</P>
           </div>
         ))}
         {["Cost is embedded in the protocol as a byproduct of use. Whether protocol-embedded proxies are sufficient remains open.", "If the game generates explicit shape data, the AI participates as a protocol vertex without needing to infer shape from language."].map((q, i) => (
-          <div key={`p${i}`} style={{ marginBottom: 10, paddingLeft: 12, borderLeft: "2px solid #2A5A6B" }}>
-            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.56rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#2A5A6B" }}>Partially resolved</div>
+          <div key={`p${i}`} className="mb-2.5 pl-3 border-l-2 border-square">
+            <div className="font-sans text-2xs font-semibold tracking-[0.08em] uppercase text-square">Partially resolved</div>
             <P style={{ fontStyle: "italic", marginBottom: 0 }}>{q}</P>
           </div>
         ))}
@@ -293,7 +292,7 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
         <BQ>Coherence without contact is the universal failure mode of coordinating intelligences. The receipt is the universal defense. The human authors. The AI assists. Reality closes.</BQ>
         <P>Everything else is assembly.</P>
         <BQ style={{ borderLeftColor: "#1A1917", fontSize: "1.06rem" }}>Reality doesn't appear. It's assembled.</BQ>
-        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.64rem", color: "#8A877F", marginTop: "2.2rem" }}>Lakin.ai {"\u00B7"} 2026 {"\u00B7"} v1.0</div>
+        <div className="font-sans text-[0.64rem] text-ink-muted mt-9">Lakin.ai {"\u00B7"} 2026 {"\u00B7"} v1.0</div>
       </Sec>
     </main>
     </ReactionContext.Provider>

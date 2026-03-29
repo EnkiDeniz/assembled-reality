@@ -4,35 +4,24 @@ export default function VersionPulseBar({ versionPulse, reader, onDismiss }) {
   const lastSeen = versionPulse?.lastSeen?.[reader];
   if (lastSeen === DOCUMENT_VERSION) return null;
 
+  // Only show when there's actually a version change to announce (not on first visit)
+  if (!lastSeen) return null;
+
   const latestChange = CHANGELOG[CHANGELOG.length - 1];
   if (!latestChange) return null;
 
   return (
-    <div style={{
-      maxWidth: 660, margin: "0 auto", padding: "0 22px",
-    }}>
-      <div style={{
-        marginTop: 8, padding: "8px 14px",
-        background: "#2A5A6B0E", border: "1px solid #2A5A6B30",
-        borderRadius: 4,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        fontFamily: "'DM Sans',sans-serif", fontSize: "0.62rem",
-        color: "#2A5A6B",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "0.52rem" }}>
+    <div className="max-w-[640px] mx-auto px-5">
+      <div className="mt-1.5 px-3 py-1.5 bg-surface-raised border border-border rounded-[3px] flex items-center justify-between text-base text-ink-tertiary">
+        <div className="flex items-center gap-2">
+          <code className="font-mono text-sm text-ink font-medium">
             v{DOCUMENT_VERSION}
-          </span>
-          <span style={{ color: "#5C5A55" }}>{latestChange.summary}</span>
+          </code>
+          <span>{latestChange.summary}</span>
         </div>
         <button
           onClick={() => onDismiss(DOCUMENT_VERSION)}
-          style={{
-            background: "transparent", border: "none",
-            color: "#8A877F", padding: "4px 8px", borderRadius: 3,
-            cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
-            fontSize: "0.56rem", fontWeight: 500,
-          }}
+          className="bg-transparent border-none text-ink-muted p-1 px-2 rounded-[3px] cursor-pointer text-base min-h-7 min-w-7"
         >
           &times;
         </button>

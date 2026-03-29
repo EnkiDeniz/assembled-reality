@@ -11,22 +11,16 @@ export default function MentionInput({ value, onChange, placeholder, rows = 2, s
   const handleChange = (e) => {
     const val = e.target.value;
     onChange(val);
-
     const cursorPos = e.target.selectionStart;
     const textBefore = val.slice(0, cursorPos);
     const atMatch = textBefore.match(/@(\w*)$/);
-
     if (atMatch) {
       setFilter(atMatch[1].toLowerCase());
       setShowDropdown(true);
-      // Position relative to wrapper for better mobile behavior
       if (wrapperRef.current) {
         const wrapperRect = wrapperRef.current.getBoundingClientRect();
         const taRect = e.target.getBoundingClientRect();
-        setDropdownPos({
-          top: taRect.bottom - wrapperRect.top + 2,
-          left: 0,
-        });
+        setDropdownPos({ top: taRect.bottom - wrapperRect.top + 2, left: 0 });
       }
     } else {
       setShowDropdown(false);
@@ -44,65 +38,34 @@ export default function MentionInput({ value, onChange, placeholder, rows = 2, s
       const newBefore = textBefore.slice(0, atMatch.index) + `@${name} `;
       onChange(newBefore + textAfter);
       setShowDropdown(false);
-      setTimeout(() => {
-        ta.selectionStart = ta.selectionEnd = newBefore.length;
-        ta.focus();
-      }, 0);
+      setTimeout(() => { ta.selectionStart = ta.selectionEnd = newBefore.length; ta.focus(); }, 0);
     }
   };
 
   const filtered = READERS.filter(r => r.toLowerCase().startsWith(filter));
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (showDropdown && e.key === "Escape") {
-        setShowDropdown(false);
-      }
-    };
+    const handleKeyDown = (e) => { if (showDropdown && e.key === "Escape") setShowDropdown(false); };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDropdown]);
 
   return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
+    <div ref={wrapperRef} className="relative">
       <textarea
         ref={textareaRef}
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
         rows={rows}
-        style={{
-          width: "100%", padding: "9px 10px", fontSize: "16px",
-          fontFamily: "'Cormorant Garamond',Georgia,serif",
-          border: "1px solid #D6D1C8", background: "#F7F4EF",
-          borderRadius: 3, outline: "none", resize: "vertical", lineHeight: 1.5,
-          ...style,
-        }}
+        className="w-full py-2 px-2.5 text-[16px] font-[inherit] border border-border bg-white rounded-sm outline-none resize-y leading-normal"
+        style={style}
       />
       {showDropdown && filtered.length > 0 && (
-        <div style={{
-          position: "absolute",
-          top: dropdownPos.top,
-          left: dropdownPos.left,
-          right: 0,
-          zIndex: 300, background: "#F7F4EF", border: "1px solid #D6D1C8",
-          borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          maxHeight: 200, overflowY: "auto",
-        }}>
+        <div className="absolute left-0 right-0 z-[300] bg-white border border-border rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.06)] max-h-[200px] overflow-y-auto" style={{ top: dropdownPos.top }}>
           {filtered.map(name => (
-            <button
-              key={name}
-              onClick={() => insertMention(name)}
-              style={{
-                display: "block", width: "100%",
-                padding: "10px 14px",
-                fontSize: "0.82rem", fontFamily: "'DM Sans',sans-serif",
-                fontWeight: 500, background: "transparent", border: "none",
-                cursor: "pointer", textAlign: "left", color: "#1A1917",
-                minHeight: 40,
-                borderBottom: "1px solid #F0ECE4",
-              }}
-            >
+            <button key={name} onClick={() => insertMention(name)}
+              className="block w-full py-2 px-3 text-md font-medium bg-transparent border-none cursor-pointer text-left text-ink min-h-9 border-b border-surface-raised">
               @{name}
             </button>
           ))}

@@ -4,28 +4,21 @@ export default function ToggleDepth({ label, children }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ margin: "0.8rem 0" }}>
+    <div className="my-2.5">
       <button
         onClick={() => setOpen(!open)}
-        style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "4px 0", fontSize: "0.68rem",
-          fontFamily: "'DM Sans',sans-serif", fontWeight: 500,
-          background: "none", border: "none", cursor: "pointer",
-          color: "#2A5A6B",
-        }}
+        className="flex items-center gap-1 py-1 text-base font-medium bg-transparent border-none cursor-pointer text-ink-tertiary min-h-7"
       >
-        <span style={{ fontSize: "0.6rem", transition: "transform 0.2s", transform: open ? "rotate(90deg)" : "rotate(0)" }}>{"\u25B8"}</span>
-        {label || "Go deeper"}
+        <span
+          className="text-xs transition-transform duration-150"
+          style={{ transform: open ? "rotate(90deg)" : "rotate(0)" }}
+        >
+          {"\u25B8"}
+        </span>
+        {label || "Expand"}
       </button>
       {open && (
-        <div style={{
-          marginTop: 6, padding: "12px 16px",
-          background: "#F0ECE4", borderLeft: "2px solid #2A5A6B",
-          borderRadius: "0 4px 4px 0",
-          animation: "slideDown 0.2s ease",
-          fontSize: "0.88rem", lineHeight: 1.6,
-        }}>
+        <div className="mt-1 px-3.5 py-2.5 bg-[#F5F5F4] border-l-2 border-border rounded-r-sm text-[0.875rem] leading-relaxed">
           {children}
         </div>
       )}

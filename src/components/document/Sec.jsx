@@ -16,50 +16,37 @@ export default function Sec({ id, num, title, children, sigs, anns, reader, onSi
   return (
     <>
       {ph}
-      <section id={id} style={{
-        marginBottom: "3rem",
-        paddingBottom: "1.5rem",
-        borderBottom: isSealed ? "none" : "1px solid #F0EFED",
-        ...(isSealed ? { background: "#F0F0EE", padding: "14px 16px", borderRadius: 3, border: "1px solid #E5E5E5" } : {}),
-      }}>
-        <h2 style={{
-          fontSize: "1.125rem", fontWeight: 700,
-          marginBottom: "0.6rem", lineHeight: 1.3,
-          display: "flex", alignItems: "baseline", gap: 6,
-        }}>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "0.6875rem", color: "#999", fontWeight: 400 }}>{num}</span>
+      <section id={id} className={`mb-12 pb-6 ${isSealed ? "bg-surface-guide py-3.5 px-4 rounded-sm border border-border" : "border-b border-divider"}`}>
+        <h2 className="text-lg font-bold mb-2.5 leading-[1.3] flex items-baseline gap-1.5">
+          <span className="font-mono text-sm text-ink-muted font-normal">{num}</span>
           {title}
-          {isSealed && <span style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#0369A1" }}>Sealed</span>}
+          {isSealed && <span className="text-xs font-semibold tracking-[0.06em] uppercase text-seal">Sealed</span>}
         </h2>
         {children}
 
-        {/* Interaction footer — collapsed by default */}
-        <div style={{ marginTop: 10, borderTop: "1px solid #EBEBEB", paddingTop: 6 }}>
+        {/* Interaction footer -- collapsed by default */}
+        <div className="mt-2.5 border-t border-divider pt-1.5">
           {!showTools && !hasActivity ? (
             <button
               onClick={() => setShowTools(true)}
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                fontSize: "0.6875rem", color: "#999", padding: "4px 0",
-                minHeight: 32, letterSpacing: "0.02em",
-              }}
+              className="bg-transparent border-none cursor-pointer text-sm text-ink-muted py-1 min-h-8 tracking-[0.02em]"
             >
               Signal · Tag · Discuss
             </button>
           ) : (
             <>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#BBB", marginBottom: 4 }}>How does this section land?</div>
+              <div className="mb-2">
+                <div className="text-2xs font-semibold tracking-[0.08em] uppercase text-ink-faint mb-1">How does this section land?</div>
                 <ShapeSig sid={id} sigs={sigs} onSig={onSig} reader={reader} />
               </div>
               {!isReaderNote && statusTags && toggleStatusTag && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#BBB", marginBottom: 4 }}>Section status</div>
+                <div className="mb-2">
+                  <div className="text-2xs font-semibold tracking-[0.08em] uppercase text-ink-faint mb-1">Section status</div>
                   <SectionStatusTags sectionId={id} statusTags={statusTags} toggleStatusTag={toggleStatusTag} reader={reader} />
                 </div>
               )}
               <div>
-                <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#BBB", marginBottom: 4, marginTop: 4 }}>Discussion</div>
+                <div className="text-2xs font-semibold tracking-[0.08em] uppercase text-ink-faint mb-1 mt-1">Discussion</div>
                 <AnnThread sid={id} anns={anns} reader={reader} onAdd={onAnn} />
               </div>
             </>

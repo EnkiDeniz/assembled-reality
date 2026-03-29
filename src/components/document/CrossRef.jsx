@@ -7,25 +7,14 @@ export default function CrossRef({ to }) {
   const handleClick = (e) => {
     e.preventDefault();
     const el = document.getElementById(to);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
     <a
       href={`#${to}`}
       onClick={handleClick}
-      style={{
-        color: "#2A5A6B",
-        textDecoration: "none",
-        borderBottom: "1px dashed #2A5A6B",
-        fontWeight: 500,
-        cursor: "pointer",
-        transition: "color 0.15s",
-      }}
-      onMouseEnter={e => e.target.style.color = "#1A1917"}
-      onMouseLeave={e => e.target.style.color = "#2A5A6B"}
+      className="text-ink no-underline border-b border-border font-medium cursor-pointer"
     >
       {"\u00A7"}{section.num} {section.title}
     </a>
