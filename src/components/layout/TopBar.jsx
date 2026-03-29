@@ -1,6 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 
-export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, carry, setCarry, currentSection }) {
+function formatTimer(seconds) {
+  if (seconds < 60) return null; // don't show under 1 min
+  const m = Math.floor(seconds / 60);
+  return `${m}m`;
+}
+
+export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, carry, setCarry, receipt, setReceipt, currentSection, sessionDuration }) {
   const [scrollPct, setScrollPct] = useState(0);
 
   const onScroll = useCallback(() => {
@@ -38,6 +44,10 @@ export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, c
           )}
           <button onClick={() => setPulse(!pulse)} className={pillClass(pulse)} title="Team activity">Pulse</button>
           <button onClick={() => setCarry(!carry)} className={pillClass(carry)} title="Your collected passages">Carry</button>
+          <button onClick={() => setReceipt(!receipt)} className={pillClass(receipt)} title="Session receipt">Receipt</button>
+          {sessionDuration > 0 && formatTimer(sessionDuration) && (
+            <span className="font-mono text-xs text-ink-faint hidden md:inline">{formatTimer(sessionDuration)}</span>
+          )}
           <span className="text-ink-muted text-sm font-medium max-w-15 md:max-w-none overflow-hidden text-ellipsis whitespace-nowrap">{reader}</span>
         </div>
       </div>

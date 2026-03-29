@@ -15,6 +15,7 @@ export default function useStore() {
   const [emojiReactions, setEmojiReactions] = useState({});
   const [versionPulse, setVersionPulse] = useState({ lastSeen: {} });
   const [welcomeDismissed, setWelcomeDismissed] = useState({});
+  const [sessionReceipts, setSessionReceipts] = useState([]);
 
   // Load all state from localStorage on mount
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function useStore() {
     setEmojiReactions(ld(KEYS.emojiReactions, {}));
     setVersionPulse(ld(KEYS.versionPulse, { lastSeen: {} }));
     setWelcomeDismissed(ld(KEYS.welcome, {}));
+    setSessionReceipts(ld(KEYS.sessionReceipts, []));
 
     if (p && r) { setReader(r); setPhase("doc"); }
     else if (p) { setPhase("name"); }
@@ -195,6 +197,15 @@ export default function useStore() {
     });
   }, [reader]);
 
+  // Session receipts
+  const saveSessionReceipt = useCallback((summary) => {
+    setSessionReceipts(prev => {
+      const n = [...prev, { ...summary, savedAt: Date.now() }];
+      sv(KEYS.sessionReceipts, n);
+      return n;
+    });
+  }, []);
+
   return {
     phase, reader,
     sigs, anns, onPass, onName, onSig, onAnn,
@@ -206,5 +217,6 @@ export default function useStore() {
     emojiReactions, toggleReaction,
     versionPulse, dismissVersionBanner,
     welcomeDismissed, dismissWelcome, resetWelcome,
+    sessionReceipts, saveSessionReceipt,
   };
 }

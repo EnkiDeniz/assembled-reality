@@ -12,6 +12,8 @@ export const KEYS = {
   emojiReactions: "ar:er",
   versionPulse: "ar:vp",
   welcome: "ar:wg2",
+  session: "ar:ss",
+  sessionReceipts: "ar:sr",
 };
 
 export function ld(k, fallback) {
