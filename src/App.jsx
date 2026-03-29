@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { SHAPES } from "./constants";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { SHAPES, SECTIONS } from "./constants";
 import useStore from "./hooks/useStore";
 import useTextSelection from "./hooks/useTextSelection";
 import useReadingPosition from "./hooks/useReadingPosition";
@@ -19,10 +19,23 @@ import { exportCarryList } from "./utils/markdownExport";
 export default function App() {
   const store = useStore();
   const [rightPanel, setRightPanel] = useState(null); // "pulse" | "carry" | null
-  const [nav, setNav] = useState(false);
+  const initDesktop = typeof window !== "undefined" && window.innerWidth > 768;
+  const [nav, setNav] = useState(initDesktop);
+  const [isMobile, setIsMobile] = useState(!initDesktop);
   const [commentAnchor, setCommentAnchor] = useState(null);
   const contentRef = useRef(null);
   const { selection, popoverPos, clearSelection } = useTextSelection(contentRef);
+
+  // Track mobile state and auto-close nav when resizing to mobile
+  useEffect(() => {
+    const onResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) setNav(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Track reading position
   useReadingPosition(store.reader, store.updateReadingPosition);
@@ -45,16 +58,18 @@ export default function App() {
     clearSelection();
   }, [selection, clearSelection]);
 
-  if (store.phase === "loading") return <div style={{ minHeight: "100vh", background: "#F7F4EF" }} />;
+  if (store.phase === "loading") return <div style={{ minHeight: "100vh", background: "#FAFAF9" }} />;
   if (store.phase === "pass") return <PassGate onPass={store.onPass} />;
   if (store.phase === "name") return <NameGate onSelect={store.onName} />;
 
   const tA = Object.values(store.anns).reduce((s, a) => s + a.length, 0);
   const tS = Object.values(store.sigs).reduce((s, x) => s + SHAPES.reduce((s2, { key }) => s2 + ((x[key] || []).length), 0), 0);
+  const currentSectionId = store.readingPositions?.[store.reader]?.sectionId;
+  const currentSection = SECTIONS.find(s => s.id === currentSectionId) || null;
 
   return (
-    <div style={{ background: "#F7F4EF", minHeight: "100vh", fontFamily: "'Cormorant Garamond',Georgia,serif", color: "#1A1917", lineHeight: 1.72 }}>
-      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <div style={{ background: "#FAFAF9", minHeight: "100vh", fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", color: "#111", lineHeight: 1.7, fontSize: "0.9375rem" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
       <TopBar
         reader={store.reader} tS={tS} tA={tA}
@@ -63,6 +78,7 @@ export default function App() {
         setPulse={(v) => setRightPanel(v ? "pulse" : null)}
         carry={rightPanel === "carry"}
         setCarry={(v) => setRightPanel(v ? "carry" : null)}
+        currentSection={currentSection}
       />
 
       {nav && <NavSidebar anns={store.anns} sigs={store.sigs} highlights={store.highlights} readingPositions={store.readingPositions} onClose={() => setNav(false)} />}
@@ -77,7 +93,7 @@ export default function App() {
         />
       )}
 
-      <div ref={contentRef} style={{ position: "relative" }}>
+      <div ref={contentRef} style={{ position: "relative", marginLeft: (nav && !isMobile) ? 260 : 0, transition: "margin-left 0.25s ease" }}>
         <ReadingPresenceDots readingPositions={store.readingPositions} currentReader={store.reader} />
         <TextHighlighter highlights={store.highlights} reader={store.reader} />
         <SelectionPopover
@@ -104,6 +120,10 @@ export default function App() {
           toggleReaction={store.toggleReaction}
           versionPulse={store.versionPulse}
           dismissVersionBanner={store.dismissVersionBanner}
+          welcomeDismissed={store.welcomeDismissed}
+          dismissWelcome={store.dismissWelcome}
+          resetWelcome={store.resetWelcome}
+          navOpen={nav}
         />
       </div>
     </div>

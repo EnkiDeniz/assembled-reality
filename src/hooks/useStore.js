@@ -14,6 +14,7 @@ export default function useStore() {
   const [readingPositions, setReadingPositions] = useState({});
   const [emojiReactions, setEmojiReactions] = useState({});
   const [versionPulse, setVersionPulse] = useState({ lastSeen: {} });
+  const [welcomeDismissed, setWelcomeDismissed] = useState({});
 
   // Load all state from localStorage on mount
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function useStore() {
     setReadingPositions(ld(KEYS.readingPos, {}));
     setEmojiReactions(ld(KEYS.emojiReactions, {}));
     setVersionPulse(ld(KEYS.versionPulse, { lastSeen: {} }));
+    setWelcomeDismissed(ld(KEYS.welcome, {}));
 
     if (p && r) { setReader(r); setPhase("doc"); }
     else if (p) { setPhase("name"); }
@@ -167,6 +169,23 @@ export default function useStore() {
     });
   }, [reader]);
 
+  // Welcome guide
+  const dismissWelcome = useCallback(() => {
+    setWelcomeDismissed(prev => {
+      const n = { ...prev, [reader]: true };
+      sv(KEYS.welcome, n);
+      return n;
+    });
+  }, [reader]);
+
+  const resetWelcome = useCallback(() => {
+    setWelcomeDismissed(prev => {
+      const n = { ...prev, [reader]: false };
+      sv(KEYS.welcome, n);
+      return n;
+    });
+  }, [reader]);
+
   // Version pulse
   const dismissVersionBanner = useCallback((version) => {
     setVersionPulse(prev => {
@@ -186,5 +205,6 @@ export default function useStore() {
     readingPositions, updateReadingPosition,
     emojiReactions, toggleReaction,
     versionPulse, dismissVersionBanner,
+    welcomeDismissed, dismissWelcome, resetWelcome,
   };
 }

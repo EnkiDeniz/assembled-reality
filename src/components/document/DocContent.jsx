@@ -5,26 +5,33 @@ import ToggleDepth from "./ToggleDepth";
 import CrossRef from "./CrossRef";
 import { ReactionContext } from "./ReactionContext";
 import VersionPulseBar from "../panels/VersionPulseBar";
+import WelcomeGuide from "../onboarding/WelcomeGuide";
 
-export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag, emojiReactions, toggleReaction, versionPulse, dismissVersionBanner }) {
+export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag, emojiReactions, toggleReaction, versionPulse, dismissVersionBanner, welcomeDismissed, dismissWelcome, resetWelcome, navOpen }) {
   const sp = { sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag };
   const reactionCtx = useMemo(() => ({ emojiReactions: emojiReactions || {}, toggleReaction: toggleReaction || (() => {}), reader }), [emojiReactions, toggleReaction, reader]);
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
 
   return (
     <ReactionContext.Provider value={reactionCtx}>
-    <main style={{ maxWidth: 660, margin: "0 auto", padding: isMobile ? "56px 14px 80px" : "62px 22px 90px" }}>
+    <main style={{ maxWidth: 640, margin: "0 auto", padding: isMobile ? "52px 16px 60px" : "56px 20px 80px", transition: "margin-left 0.25s ease" }}>
+      <WelcomeGuide
+        reader={reader}
+        dismissed={!!(welcomeDismissed && welcomeDismissed[reader])}
+        onDismiss={dismissWelcome}
+        onReopen={resetWelcome}
+      />
       {versionPulse && dismissVersionBanner && (
         <VersionPulseBar versionPulse={versionPulse} reader={reader} onDismiss={dismissVersionBanner} />
       )}
-      <header style={{ marginBottom: "3.2rem", paddingBottom: "2.2rem", borderBottom: "2px solid #1A1917" }}>
-        <h1 style={{ fontSize: "2.6rem", fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.08, marginBottom: 5 }}>Assembled Reality</h1>
-        <div style={{ fontSize: "1.05rem", fontStyle: "italic", color: "#5C5A55", marginBottom: 18 }}>The process by which Lakin.ai coordinates intelligence.</div>
-        <P style={{ fontSize: "0.84rem", color: "#5C5A55" }}>This document is written in executable text composed of operator sentences and operator chains. For the writing framework behind that method, see the companion document: <em>Operator Sentences</em>.</P>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 16px", fontFamily: "'DM Sans',sans-serif", fontSize: "0.66rem", color: "#5C5A55" }}>
-          {[["Company", "Lakin.ai"], ["Products", "GetReceipts \u00B7 Box7 \u00B7 PromiseMe \u00B7 The Signet"], ["Version", "v1.0"], ["Status", "Founding document. Distributed to the team."]].map(([k, v]) => (
+      <header style={{ marginBottom: "2.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid #D4D4D4" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.15, marginBottom: 4 }}>Assembled Reality</h1>
+        <div style={{ fontSize: "0.9375rem", color: "#666", marginBottom: 14 }}>The process by which Lakin.ai coordinates intelligence.</div>
+        <P style={{ fontSize: "0.8125rem", color: "#888" }}>Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.</P>
+        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 12px", fontSize: "0.75rem", color: "#666" }}>
+          {[["Company", "Lakin.ai"], ["Products", "GetReceipts · Box7 · PromiseMe · The Signet"], ["Version", "v1.0"], ["Status", "Founding document"]].map(([k, v]) => (
             <React.Fragment key={k}>
-              <dt style={{ fontWeight: 600, color: "#8A877F", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.54rem" }}>{k}</dt>
+              <dt style={{ fontWeight: 600, color: "#999", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "0.625rem" }}>{k}</dt>
               <dd style={{ margin: 0 }}>{v}</dd>
             </React.Fragment>
           ))}
