@@ -7,9 +7,6 @@ import "@fontsource/source-serif-4/400.css";
 import "@fontsource/source-serif-4/400-italic.css";
 import "@fontsource/source-serif-4/600.css";
 import "@fontsource/source-serif-4/700.css";
-import "@fontsource/eb-garamond/400.css";
-import "@fontsource/eb-garamond/400-italic.css";
-import "@fontsource/eb-garamond/500.css";
 import "./index.css";
 import App from "./App.jsx";
 

@@ -1,15 +1,14 @@
 export const BYPASS_CODES = ["enki7", "gracearchercloud"];
 
-export const TARGET_GLYPHS = ["𒀭", "𒂗", "𒆠", "𒐛", "𒋾", "𒅎", "𒆳"];
+const TARGET_GLYPHS = ["𒀭", "𒂗", "𒆠", "𒐛", "𒋾", "𒅎", "𒆳"];
 
-export const PASSWORD_A = ["𒀭", "𒂗", "𒆠", "𒐛"];
-export const PASSWORD_B = ["𒀭", "𒋾", "𒅎", "𒆳"];
+const PASSWORD_A = ["𒀭", "𒂗", "𒆠", "𒐛"];
+const PASSWORD_B = ["𒀭", "𒋾", "𒅎", "𒆳"];
 
-export const UNLOCK_PHASES = [
-  ["△", "○", "□", "𒐛"],
-  ["hineni"],
-  ["𒀭𒂗𒆠 𒐛", "𒀭 · 𒋾 · 𒅎 · 𒆳"],
-  ["𒀭 · 𒋾 · 𒅎", "𒆳 𒐛", "𒊕 𒆠 𒃻"],
+export const PUZZLE_SUCCESS_PHASES = [
+  ["Alignment registered"],
+  ["Threshold opening"],
+  ["Entering reader"],
 ];
 
 const RANGE_A_START = 0x12000;

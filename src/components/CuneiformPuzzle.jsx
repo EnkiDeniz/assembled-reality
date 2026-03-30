@@ -3,15 +3,12 @@ import {
   buildNoisePool,
   createSchedule,
   getUnlockPassword,
-  PASSWORD_A,
-  PASSWORD_B,
-  TARGET_GLYPHS,
-  UNLOCK_PHASES,
+  PUZZLE_SUCCESS_PHASES,
 } from "../lib/cuneiform";
 
 const COLUMN_COUNT = 4;
 const ROW_COUNT = 7;
-const TICK_MS = 550;
+const TICK_MS = 760;
 
 function makeNoiseCell(noisePool, serial) {
   return {
@@ -223,11 +220,10 @@ export default function CuneiformPuzzle({ onSolved }) {
     if (!state.solvedPassword) return undefined;
 
     const timers = [
-      window.setTimeout(() => dispatch({ type: "unlock-phase", phase: 0 }), 600),
+      window.setTimeout(() => dispatch({ type: "unlock-phase", phase: 0 }), 700),
       window.setTimeout(() => dispatch({ type: "unlock-phase", phase: 1 }), 1800),
-      window.setTimeout(() => dispatch({ type: "unlock-phase", phase: 2 }), 3000),
-      window.setTimeout(() => dispatch({ type: "unlock-phase", phase: 3 }), 4200),
-      window.setTimeout(() => onSolved("puzzle"), 5700),
+      window.setTimeout(() => dispatch({ type: "unlock-phase", phase: 2 }), 2900),
+      window.setTimeout(() => onSolved("puzzle"), 4100),
     ];
 
     timeoutsRef.current = timers;
@@ -237,14 +233,10 @@ export default function CuneiformPuzzle({ onSolved }) {
     };
   }, [onSolved, state.solvedPassword]);
 
-  const revealedPassword = state.solvedPassword === "password-a" ? PASSWORD_A.join("") : PASSWORD_B.join(" · ");
   const phaseLines = useMemo(() => {
     if (state.unlockPhase < 0) return [];
-    if (state.unlockPhase === 0) return UNLOCK_PHASES[0];
-    if (state.unlockPhase === 1) return UNLOCK_PHASES[1];
-    if (state.unlockPhase === 2) return [revealedPassword];
-    return UNLOCK_PHASES[3];
-  }, [revealedPassword, state.unlockPhase]);
+    return PUZZLE_SUCCESS_PHASES[state.unlockPhase] || PUZZLE_SUCCESS_PHASES[PUZZLE_SUCCESS_PHASES.length - 1];
+  }, [state.unlockPhase]);
 
   if (!fontReady) {
     return (
@@ -264,7 +256,7 @@ export default function CuneiformPuzzle({ onSolved }) {
             </div>
           ))}
         </div>
-        <div className="matrix-counter">{state.foundOrder.length} / 4</div>
+        <div className="matrix-counter">Alternate entry</div>
       </div>
 
       <div className="matrix-grid" role="grid" aria-label="Cuneiform lock">
@@ -278,7 +270,9 @@ export default function CuneiformPuzzle({ onSolved }) {
                   type="button"
                   className={`matrix-cell ${state.flashingCellId === cell.id ? "is-wrong" : ""} ${cell.frozen ? "is-frozen" : ""}`}
                   style={{
-                    color: `rgba(200, 180, 140, ${cell.frozen ? 1 : opacity * 0.5})`,
+                    color: cell.frozen
+                      ? "rgba(160, 106, 63, 0.92)"
+                      : `rgba(79, 71, 63, ${0.2 + opacity * 0.62})`,
                   }}
                   onClick={() => dispatch({ type: "click", columnIndex, cell })}
                   aria-label={`Cuneiform cell ${columnIndex + 1}-${rowIndex + 1}`}
@@ -295,10 +289,7 @@ export default function CuneiformPuzzle({ onSolved }) {
       {state.unlockPhase >= 0 && (
         <div className="matrix-unlock">
           {phaseLines.map((line) => (
-            <div
-              key={line}
-              className={line === "hineni" ? "matrix-phase-latin" : "matrix-phase-line"}
-            >
+            <div key={line} className="matrix-phase-line">
               {line}
             </div>
           ))}
@@ -306,10 +297,8 @@ export default function CuneiformPuzzle({ onSolved }) {
       )}
 
       <button type="button" className="matrix-reset" onClick={() => dispatch({ type: "reset" })}>
-        𒊕 𒆠 𒃻
+        Reset matrix
       </button>
-
-      <div className="sr-only">{TARGET_GLYPHS.join(" ")}</div>
     </div>
   );
 }

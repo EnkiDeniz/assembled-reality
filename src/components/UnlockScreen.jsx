@@ -29,31 +29,39 @@ export default function UnlockScreen({ onUnlock }) {
     <main className="lock-screen">
       <div className="lock-screen__frame">
         <div className="lock-screen__header">
-          <p className="lock-screen__eyebrow">Assembled Reality</p>
-          <h1 className="lock-screen__title">hineni</h1>
+          <p className="lock-screen__eyebrow">Private reading instrument</p>
+          <h1 className="lock-screen__title">Assembled Reality</h1>
+          <p className="lock-screen__lede">Enter an internal access code to continue.</p>
         </div>
 
         <form className="lock-screen__form" onSubmit={handleSubmit}>
           <label className="sr-only" htmlFor="entry-code">
             Internal entry code
           </label>
-          <input
-            id="entry-code"
-            className={`lock-screen__input ${wrong ? "is-wrong" : ""}`}
-            type="password"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value);
-              setWrong(false);
-            }}
-            placeholder=" "
-          />
+          <div className={`lock-screen__field ${wrong ? "is-wrong" : ""}`}>
+            <input
+              id="entry-code"
+              className="lock-screen__input"
+              type="password"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={code}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setWrong(false);
+              }}
+              placeholder="Access code"
+            />
+            <button type="submit" className="lock-screen__submit">
+              Enter
+            </button>
+          </div>
           <div className="lock-screen__status">{wrong ? "Not yet." : "\u00A0"}</div>
         </form>
+
+        <div className="lock-screen__divider" />
 
         <button
           type="button"
@@ -62,7 +70,7 @@ export default function UnlockScreen({ onUnlock }) {
           aria-expanded={showPuzzle}
           aria-controls="cuneiform-matrix"
         >
-          𒀭 𒂗 𒆠 𒐛
+          {showPuzzle ? "Hide alternate entry" : "Open alternate entry"}
         </button>
 
         {showPuzzle && (
