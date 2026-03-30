@@ -161,9 +161,38 @@ a {
   width: min(100%, 40rem);
 }
 
+.auth-screen__provider-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.5rem;
+  border: 1px solid var(--paper-border);
+  border-radius: 999px;
+  background: rgba(29, 22, 18, 0.94);
+  color: #f7f3ea;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.auth-screen__provider-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.auth-screen__magic-link,
 .auth-screen__form {
   display: grid;
   gap: 0.9rem;
+}
+
+.auth-screen__fallback-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper-ink-faint);
 }
 
 .auth-screen__input {
@@ -806,6 +835,43 @@ a {
   background: var(--reader-surface);
 }
 
+.reader-marks__mode-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 0.3rem;
+  border: 1px solid var(--reader-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.44);
+}
+
+.reader-shell[data-theme="dark"] .reader-marks__mode-toggle {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.reader-marks__mode-button {
+  min-height: 2.45rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--reader-ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.reader-marks__mode-button.is-active {
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--reader-ink);
+  box-shadow: 0 10px 25px rgba(18, 16, 14, 0.08);
+}
+
+.reader-shell[data-theme="dark"] .reader-marks__mode-button.is-active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .reader-marks__section + .reader-marks__section {
   margin-top: 1.4rem;
 }
@@ -1273,6 +1339,108 @@ a {
   text-decoration: none;
 }
 
+.account-card__form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.account-card__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper-ink-faint);
+}
+
+.account-card__input {
+  width: 100%;
+  min-height: 3.15rem;
+  border: 1px solid var(--paper-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.56);
+  padding: 0.8rem 0.95rem;
+  color: var(--paper-ink);
+}
+
+.account-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.account-card__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  border: 1px solid var(--paper-border);
+  border-radius: 999px;
+  padding: 0 1rem;
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--paper-ink);
+  text-decoration: none;
+}
+
+.account-card__button.is-primary {
+  background: var(--paper-ink);
+  color: #f7f3ea;
+}
+
+.account-card__status {
+  min-height: 1.2rem;
+  font-size: 0.86rem;
+  color: var(--paper-ink-faint);
+}
+
+.account-card__status .is-error {
+  color: #9f4b4b;
+}
+
+.account-card__drafts {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(68, 46, 26, 0.12);
+}
+
+.account-card__empty {
+  margin: 0;
+  color: var(--paper-ink-faint);
+}
+
+.account-card__draft-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.account-card__draft-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--paper-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.48);
+  padding: 0.9rem 1rem;
+}
+
+.account-card__draft-title {
+  margin: 0;
+  color: var(--paper-ink);
+}
+
+.account-card__draft-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  color: var(--paper-ink-faint);
+}
+
+.account-card__draft-link {
+  color: var(--paper-accent);
+  text-decoration: none;
+}
+
 .selection-menu__textarea {
   width: 100%;
   resize: vertical;
@@ -1329,6 +1497,10 @@ a {
   background: var(--reader-chrome);
   color: var(--reader-ink);
   box-shadow: 0 12px 38px rgba(18, 16, 14, 0.08);
+}
+
+.reader-toast.is-receipt {
+  bottom: calc(10rem + env(safe-area-inset-bottom));
 }
 
 .reader-bottomrail {
@@ -1398,6 +1570,24 @@ a {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--reader-ink-faint);
+}
+
+.reader-bottomrail__receipt {
+  justify-self: center;
+  margin-top: 0.45rem;
+  min-height: 2.35rem;
+  border: 1px solid var(--reader-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0 0.95rem;
+  color: var(--reader-ink);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.reader-bottomrail__receipt:disabled {
+  opacity: 0.55;
 }
 
 @keyframes pulse-dot {

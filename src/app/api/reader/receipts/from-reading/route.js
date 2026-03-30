@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRequiredSession } from "@/lib/server-session";
 import { getParsedDocument } from "@/lib/document";
-import { buildReadingReceiptPayload } from "@/lib/getreceipts";
+import {
+  buildReadingReceiptPayload,
+  createRemoteReadingReceiptDraft,
+  getGetReceiptsConnectionForUser,
+} from "@/lib/getreceipts";
 import {
   createReadingReceiptDraftForUser,
   loadReaderPageData,
@@ -46,12 +50,33 @@ export async function POST(request) {
     marks,
     learned: body?.learned || "",
   });
+  const title = body?.title || `Reading receipt · ${sections[0]?.title || "Beginning"}`;
+  const connection = await getGetReceiptsConnectionForUser(session.user.id);
+
+  let remoteReceipt = null;
+  let draftStatus = "LOCAL_DRAFT";
+  let remoteError = null;
+
+  if (connection?.status === "CONNECTED" && connection?.accessTokenEncrypted) {
+    try {
+      remoteReceipt = await createRemoteReadingReceiptDraft(connection, payload);
+      draftStatus = "REMOTE_DRAFT";
+    } catch (error) {
+      remoteError = error instanceof Error ? error.message : "getreceipts-create-failed";
+    }
+  }
 
   const draft = await createReadingReceiptDraftForUser(session.user.id, {
-    title: body?.title || `Reading receipt · ${sections[0]?.title || "Beginning"}`,
+    title,
+    status: draftStatus,
+    getReceiptsReceiptId: remoteReceipt?.id || null,
     sourceSections,
     sourceMarkIds,
-    payload,
+    payload: {
+      ...payload,
+      remoteReceipt,
+      remoteError,
+    },
   });
 
   return NextResponse.json({
@@ -62,7 +87,9 @@ export async function POST(request) {
       title: draft.title,
       sourceSections: draft.sourceSections,
       sourceMarkIds: draft.sourceMarkIds,
-      payload,
+      payload: draft.payload,
     },
+    remoteReceipt,
+    remoteError,
   });
 }

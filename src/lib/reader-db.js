@@ -272,10 +272,49 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
     data: {
       userId,
       readerProfileId: profile.id,
+      getReceiptsReceiptId: draftInput.getReceiptsReceiptId || null,
+      status: draftInput.status || "LOCAL_DRAFT",
       title: draftInput.title || null,
       sourceSections: Array.isArray(draftInput.sourceSections) ? draftInput.sourceSections : [],
       sourceMarkIds: Array.isArray(draftInput.sourceMarkIds) ? draftInput.sourceMarkIds : [],
       payload: draftInput.payload || null,
     },
   });
+}
+
+export async function listReadingReceiptDraftsForUser(userId) {
+  const resolved = await getReaderProfileByUserId(userId);
+  if (!resolved) return [];
+
+  return prisma.readingReceiptDraft.findMany({
+    where: {
+      userId,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+}
+
+export async function updateReaderProfileForUser(userId, input) {
+  const resolved = await getReaderProfileByUserId(userId);
+  if (!resolved) return null;
+
+  const displayName = String(input?.displayName || "").trim();
+  if (!displayName) {
+    throw new Error("Display name is required.");
+  }
+
+  const updated = await prisma.readerProfile.update({
+    where: { id: resolved.profile.id },
+    data: {
+      displayName,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { name: displayName },
+  });
+
+  return updated;
 }

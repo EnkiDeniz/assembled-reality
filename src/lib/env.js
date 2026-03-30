@@ -5,21 +5,62 @@ function splitCsv(value) {
     .filter(Boolean);
 }
 
+function normalizeSecret(value) {
+  return String(value || "").trim();
+}
+
+function getApplePrivateKey() {
+  const raw = normalizeSecret(process.env.APPLE_PRIVATE_KEY);
+  if (!raw) return "";
+
+  if (raw.includes("BEGIN PRIVATE KEY")) {
+    return raw.replace(/\\n/g, "\n");
+  }
+
+  try {
+    return Buffer.from(raw, "base64").toString("utf8");
+  } catch {
+    return raw;
+  }
+}
+
+function getDefaultSiteUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
 export const appEnv = {
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000",
+  siteUrl: getDefaultSiteUrl(),
   authSecret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "",
   bootstrapCode:
     process.env.READER_BOOTSTRAP_CODE ||
     (process.env.NODE_ENV === "development" ? "hineni" : ""),
   invitedEmails: splitCsv(process.env.READER_INVITED_EMAILS),
-  magicLinksEnabled: Boolean(process.env.RESEND_API_KEY && (process.env.NEXTAUTH_EMAIL_FROM || process.env.EMAIL_FROM)),
+  emailFrom:
+    normalizeSecret(process.env.NEXTAUTH_EMAIL_FROM) ||
+    normalizeSecret(process.env.EMAIL_FROM) ||
+    "Assembled Reality <noreply@updates.getreceipts.com>",
+  magicLinksEnabled: Boolean(
+    process.env.RESEND_API_KEY && (process.env.NEXTAUTH_EMAIL_FROM || process.env.EMAIL_FROM),
+  ),
+  apple: {
+    clientId:
+      normalizeSecret(process.env.APPLE_WEB_CLIENT_ID) ||
+      normalizeSecret(process.env.APPLE_ID) ||
+      normalizeSecret(process.env.APPLE_CLIENT_ID),
+    teamId: normalizeSecret(process.env.APPLE_TEAM_ID),
+    keyId: normalizeSecret(process.env.APPLE_KEY_ID),
+    privateKey: getApplePrivateKey(),
+  },
   getReceipts: {
     appSlug: process.env.GETRECEIPTS_APP_SLUG || "assembled-reality",
     baseUrl: process.env.GETRECEIPTS_BASE_URL || "https://getreceipts.com",
     clientSecret: process.env.GETRECEIPTS_CLIENT_SECRET || "",
     redirectUri:
       process.env.GETRECEIPTS_REDIRECT_URI ||
-      `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/integrations/getreceipts/callback`,
+      `${getDefaultSiteUrl()}/api/integrations/getreceipts/callback`,
   },
   integrationsStateSecret:
     process.env.INTEGRATIONS_STATE_SECRET ||
@@ -32,3 +73,10 @@ export const appEnv = {
     process.env.AUTH_SECRET ||
     "",
 };
+
+appEnv.apple.enabled = Boolean(
+  appEnv.apple.clientId &&
+    appEnv.apple.teamId &&
+    appEnv.apple.keyId &&
+    appEnv.apple.privateKey,
+);

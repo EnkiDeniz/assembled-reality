@@ -14,7 +14,7 @@ function MarkSection({ title, count, children, empty }) {
   );
 }
 
-function BookmarkItem({ bookmark, onJump, onDelete }) {
+function BookmarkItem({ bookmark, onJump, onDelete, allowMutations }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(bookmark)}>
@@ -25,14 +25,16 @@ function BookmarkItem({ bookmark, onJump, onDelete }) {
         <span className="reader-mark-card__title">{bookmark.label}</span>
         {bookmark.excerpt ? <span className="reader-mark-card__excerpt">{bookmark.excerpt}</span> : null}
       </button>
-      <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(bookmark.id)}>
-        Remove
-      </button>
+      {allowMutations ? (
+        <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(bookmark.id)}>
+          Remove
+        </button>
+      ) : null}
     </article>
   );
 }
 
-function HighlightItem({ highlight, onJump, onDelete }) {
+function HighlightItem({ highlight, onJump, onDelete, allowMutations }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(highlight)}>
@@ -42,14 +44,16 @@ function HighlightItem({ highlight, onJump, onDelete }) {
         </span>
         <span className="reader-mark-card__excerpt">“{highlight.excerpt}”</span>
       </button>
-      <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(highlight.id)}>
-        Remove
-      </button>
+      {allowMutations ? (
+        <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(highlight.id)}>
+          Remove
+        </button>
+      ) : null}
     </article>
   );
 }
 
-function NoteItem({ note, onJump, onDelete, onSave }) {
+function NoteItem({ note, onJump, onDelete, onSave, allowMutations }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(note.noteText);
 
@@ -93,14 +97,16 @@ function NoteItem({ note, onJump, onDelete, onSave }) {
       )}
 
       <div className="reader-mark-card__actions">
-        {!isEditing ? (
+        {!isEditing && allowMutations ? (
           <button type="button" className="reader-mark-card__secondary" onClick={() => setIsEditing(true)}>
             Edit
           </button>
         ) : null}
-        <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(note.id)}>
-          Remove
-        </button>
+        {allowMutations ? (
+          <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(note.id)}>
+            Remove
+          </button>
+        ) : null}
       </div>
     </article>
   );
@@ -110,9 +116,12 @@ export default function ReaderMarksPanel({
   open,
   currentLabel,
   progressPercent,
+  mode,
+  canViewSeven,
   bookmarks,
   highlights,
   notes,
+  onChangeMode,
   onClose,
   onJumpToBookmark,
   onJumpToMark,
@@ -121,13 +130,19 @@ export default function ReaderMarksPanel({
   onDeleteNote,
   onUpdateNote,
 }) {
+  const allowMutations = mode !== "seven";
+  const subtitle =
+    mode === "seven"
+      ? "Collected marks from the founding readers."
+      : `${progressPercent}% read`;
+
   return (
     <aside className={`reader-marks ${open ? "is-open" : ""}`}>
       <div className="reader-marks__header">
         <div>
           <p className="reader-marks__eyebrow">Reading marks</p>
           <h2 className="reader-marks__title">{currentLabel}</h2>
-          <p className="reader-marks__meta">{progressPercent}% read</p>
+          <p className="reader-marks__meta">{subtitle}</p>
         </div>
         <button type="button" className="reader-chrome-button reader-chrome-button--icon" onClick={onClose}>
           ×
@@ -135,6 +150,25 @@ export default function ReaderMarksPanel({
       </div>
 
       <div className="reader-marks__body">
+        {canViewSeven ? (
+          <div className="reader-marks__mode-toggle" role="tablist" aria-label="Marks view">
+            <button
+              type="button"
+              className={`reader-marks__mode-button ${mode === "mine" ? "is-active" : ""}`}
+              onClick={() => onChangeMode("mine")}
+            >
+              Mine
+            </button>
+            <button
+              type="button"
+              className={`reader-marks__mode-button ${mode === "seven" ? "is-active" : ""}`}
+              onClick={() => onChangeMode("seven")}
+            >
+              Seven
+            </button>
+          </div>
+        ) : null}
+
         <MarkSection title="Bookmarks" count={bookmarks.length} empty="No bookmarks yet.">
           <div className="reader-marks__list">
             {bookmarks.map((bookmark) => (
@@ -143,6 +177,7 @@ export default function ReaderMarksPanel({
                 bookmark={bookmark}
                 onJump={onJumpToBookmark}
                 onDelete={onDeleteBookmark}
+                allowMutations={allowMutations}
               />
             ))}
           </div>
@@ -156,6 +191,7 @@ export default function ReaderMarksPanel({
                 highlight={highlight}
                 onJump={onJumpToMark}
                 onDelete={onDeleteHighlight}
+                allowMutations={allowMutations}
               />
             ))}
           </div>
@@ -170,6 +206,7 @@ export default function ReaderMarksPanel({
                 onJump={onJumpToMark}
                 onDelete={onDeleteNote}
                 onSave={onUpdateNote}
+                allowMutations={allowMutations}
               />
             ))}
           </div>

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { appEnv } from "@/lib/env";
-import { encryptSecret } from "@/lib/crypto";
+import { decryptSecret, encryptSecret } from "@/lib/crypto";
 
 const DEFAULT_SCOPES = [
   "receipts:read",
@@ -112,6 +112,43 @@ export async function storeGetReceiptsConnection(userId, payload) {
   });
 }
 
+export async function getGetReceiptsConnectionForUser(userId) {
+  return prisma.getReceiptsConnection.findUnique({
+    where: { userId },
+  });
+}
+
+export async function createRemoteReadingReceiptDraft(connection, payload) {
+  const accessToken = decryptSecret(connection?.accessTokenEncrypted || "");
+  if (!accessToken) {
+    throw new Error("Connected GetReceipts access token is unavailable.");
+  }
+
+  const response = await fetch(`${appEnv.getReceipts.baseUrl}/api/v1/receipts`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ...payload,
+      status: "draft",
+    }),
+    cache: "no-store",
+  });
+
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      json?.error?.message ||
+      json?.message ||
+      `GetReceipts receipt creation failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return json;
+}
+
 export function buildReadingReceiptPayload({
   profile,
   sections,
@@ -135,7 +172,7 @@ export function buildReadingReceiptPayload({
     tags: ["assembled-reality", "reader"],
     metadata: {
       source_app: "assembled_reality",
-      source_flow: "assembled_reality_reader_v1",
+      source_flow: "assembled_reality_reader_v3",
       assembled_reality: {
         reader_slug: profile.readerSlug,
         section_slugs: sections.map((section) => section.slug),

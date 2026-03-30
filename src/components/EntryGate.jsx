@@ -9,7 +9,12 @@ import { loadUnlockState, saveUnlockState } from "@/lib/storage";
 
 const DEFAULT_UNLOCK = { unlocked: false, method: null };
 
-export default function EntryGate({ session, documentData, foundingReaders }) {
+export default function EntryGate({
+  session,
+  documentData,
+  foundingReaders,
+  authCapabilities,
+}) {
   const router = useRouter();
   const [unlockState, setUnlockState] = useState(() => loadUnlockState() || DEFAULT_UNLOCK);
 
@@ -31,6 +36,19 @@ export default function EntryGate({ session, documentData, foundingReaders }) {
       <AuthScreen
         documentTitle={documentData.title}
         foundingReaders={foundingReaders}
+        authCapabilities={authCapabilities}
+        onAppleSignIn={() =>
+          signIn("apple", {
+            callbackUrl: "/",
+          })
+        }
+        onMagicLinkSignIn={(email) =>
+          signIn("email", {
+            email,
+            redirect: false,
+            callbackUrl: "/",
+          })
+        }
         onSignIn={(credentials) =>
           signIn("credentials", {
             ...credentials,

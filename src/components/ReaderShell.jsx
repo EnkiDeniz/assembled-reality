@@ -73,9 +73,9 @@ export default function ReaderShell({
   setPreferences,
   initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
   initialReadingProgress = null,
-  aggregateAnnotations: _aggregateAnnotations = null,
-  profile: _profile = null,
-  getReceiptsConnection: _getReceiptsConnection = null,
+  aggregateAnnotations = EMPTY_READER_ANNOTATIONS,
+  profile = null,
+  getReceiptsConnection = null,
 }) {
   const initialHash =
     typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
@@ -93,9 +93,12 @@ export default function ReaderShell({
   const [readerAnnotations, setReaderAnnotations] = useState(
     () => initialReaderAnnotations || EMPTY_READER_ANNOTATIONS,
   );
+  const [marksMode, setMarksMode] = useState("mine");
   const [selectionState, setSelectionState] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [selectionNotice, setSelectionNotice] = useState("");
+  const [receiptNotice, setReceiptNotice] = useState("");
+  const [creatingReceipt, setCreatingReceipt] = useState(false);
   const [activeMarkId, setActiveMarkId] = useState(null);
   const [focusedSectionSlug, setFocusedSectionSlug] = useState(null);
   const scrollIntentRef = useRef(false);
@@ -227,30 +230,34 @@ export default function ReaderShell({
     ? `${currentEntry.number} · ${currentEntry.title}`
     : currentEntry.title;
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
+  const visibleAnnotations =
+    marksMode === "seven" && profile?.canViewSeven
+      ? aggregateAnnotations || EMPTY_READER_ANNOTATIONS
+      : readerAnnotations;
   const sortedBookmarks = useMemo(
     () =>
-      readerAnnotations.bookmarks.toSorted(
+      visibleAnnotations.bookmarks.toSorted(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
       ),
-    [readerAnnotations.bookmarks],
+    [visibleAnnotations.bookmarks],
   );
   const sortedHighlights = useMemo(
     () =>
-      readerAnnotations.highlights.toSorted(
+      visibleAnnotations.highlights.toSorted(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
       ),
-    [readerAnnotations.highlights],
+    [visibleAnnotations.highlights],
   );
   const sortedNotes = useMemo(
     () =>
-      readerAnnotations.notes.toSorted(
+      visibleAnnotations.notes.toSorted(
         (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
       ),
-    [readerAnnotations.notes],
+    [visibleAnnotations.notes],
   );
   const marksByBlock = useMemo(
-    () => getRenderableMarksByBlock(readerAnnotations),
-    [readerAnnotations],
+    () => getRenderableMarksByBlock(visibleAnnotations),
+    [visibleAnnotations],
   );
 
   const clearFocusState = useCallback(() => {
@@ -273,6 +280,13 @@ export default function ReaderShell({
       setSelectionNotice("");
       noticeTimeoutRef.current = null;
     }, 1800);
+  }, []);
+
+  const showReceiptNotice = useCallback((message) => {
+    setReceiptNotice(message);
+    window.setTimeout(() => {
+      setReceiptNotice("");
+    }, 2600);
   }, []);
 
   const jumpTo = useCallback(
@@ -533,6 +547,46 @@ export default function ReaderShell({
     clearBrowserSelection();
   };
 
+  const handleCreateReceipt = async () => {
+    const currentSectionSlug =
+      activeSlug === "beginning" ? documentData.sections[0]?.slug || "beginning" : activeSlug;
+    const sourceMarks = [
+      ...readerAnnotations.highlights.filter((mark) => mark.sectionSlug === currentSectionSlug),
+      ...readerAnnotations.notes.filter((mark) => mark.sectionSlug === currentSectionSlug),
+    ];
+
+    setCreatingReceipt(true);
+    try {
+      const response = await fetch("/api/reader/receipts/from-reading", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sourceSections: currentSectionSlug === "beginning" ? [] : [currentSectionSlug],
+          sourceMarkIds: sourceMarks.map((mark) => mark.id),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Could not create receipt draft.");
+      }
+
+      if (payload?.remoteReceipt?.id) {
+        showReceiptNotice("Receipt draft created in GetReceipts.");
+      } else if (payload?.remoteError) {
+        showReceiptNotice("Saved local draft. GetReceipts handoff needs attention.");
+      } else {
+        showReceiptNotice("Saved local reading draft.");
+      }
+    } catch (error) {
+      showReceiptNotice(error instanceof Error ? error.message : "Could not create receipt draft.");
+    } finally {
+      setCreatingReceipt(false);
+    }
+  };
+
   return (
     <div
       className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth}`}
@@ -658,9 +712,12 @@ export default function ReaderShell({
         open={marksOpen}
         currentLabel={currentLabel}
         progressPercent={progressPercent}
+        mode={marksMode}
+        canViewSeven={Boolean(profile?.canViewSeven)}
         bookmarks={sortedBookmarks}
         highlights={sortedHighlights}
         notes={sortedNotes}
+        onChangeMode={setMarksMode}
         onClose={() => setMarksOpen(false)}
         onJumpToBookmark={jumpToMark}
         onJumpToMark={jumpToMark}
@@ -740,6 +797,7 @@ export default function ReaderShell({
       />
 
       {selectionNotice ? <div className="reader-toast">{selectionNotice}</div> : null}
+      {receiptNotice ? <div className="reader-toast is-receipt">{receiptNotice}</div> : null}
 
       <footer className="reader-bottomrail">
         <div className="reader-bottomrail__progress">
@@ -761,6 +819,18 @@ export default function ReaderShell({
           <div className="reader-bottomrail__current">
             <span className="reader-bottomrail__current-title">{currentLabel}</span>
             <span className="reader-bottomrail__current-progress">{progressPercent}% read</span>
+            <button
+              type="button"
+              className="reader-bottomrail__receipt"
+              onClick={handleCreateReceipt}
+              disabled={creatingReceipt}
+            >
+              {creatingReceipt
+                ? "Creating receipt"
+                : getReceiptsConnection?.status === "CONNECTED"
+                  ? "Create receipt"
+                  : "Save reading draft"}
+            </button>
           </div>
           <button
             type="button"
