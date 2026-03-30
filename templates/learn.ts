@@ -51,7 +51,7 @@ LAKIN doesn't fight AI. LAKIN gives AI something to touch. An AI agent that rout
 
 **Feel the Seal™** — The patented authentication layer. How you know a receipt is real.
 
-**Box7** — AI platform for 1–2 people. Think with AI, grounded by receipts.
+**Lakin** — AI platform for 1–2 people. Think with AI, grounded by receipts.
 
 **Box9** — Coordination platform for teams of 3+. Same engine, team scale.`,
   },
