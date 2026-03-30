@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { saveReaderPreferences } from "../lib/storage";
@@ -130,19 +130,61 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
   const currentEntry = entries[currentIndex] || entries[0];
   const previousEntry = currentIndex > 0 ? entries[currentIndex - 1] : null;
   const nextEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null;
+  const progressPercent = Math.round(progress * 100);
 
-  const jumpTo = (slug) => {
+  const jumpTo = useCallback((slug) => {
     const target = document.getElementById(slug);
     if (!target) return;
 
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     scrollIntentRef.current = true;
     setTocOpen(false);
     setAppearanceOpen(false);
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
     window.setTimeout(() => {
       scrollIntentRef.current = false;
-    }, 300);
-  };
+    }, prefersReducedMotion ? 60 : 320);
+  }, []);
+
+  useEffect(() => {
+    document.title = `${documentData.title} · ${currentEntry.title}`;
+  }, [currentEntry.title, documentData.title]);
+
+  useEffect(() => {
+    const handleReaderKeys = (event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const target = event.target;
+      const isEditable =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName));
+
+      if (isEditable) return;
+
+      if ((event.key === "ArrowRight" || event.key === "j") && nextEntry) {
+        event.preventDefault();
+        jumpTo(nextEntry.slug);
+      }
+
+      if ((event.key === "ArrowLeft" || event.key === "k") && previousEntry) {
+        event.preventDefault();
+        jumpTo(previousEntry.slug);
+      }
+
+      if (event.key.toLowerCase() === "t") {
+        event.preventDefault();
+        setAppearanceOpen(false);
+        setTocOpen((current) => !current);
+      }
+    };
+
+    window.addEventListener("keydown", handleReaderKeys);
+    return () => window.removeEventListener("keydown", handleReaderKeys);
+  }, [jumpTo, nextEntry, previousEntry]);
 
   return (
     <div
@@ -154,8 +196,18 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
           <span className="reader-button-icon">☰</span>
           <span>Contents</span>
         </button>
-        <div className="reader-topbar__title">{documentData.title}</div>
-        <button type="button" className="reader-chrome-button reader-chrome-button--icon" onClick={() => setAppearanceOpen((current) => !current)}>
+        <div className="reader-topbar__center">
+          <div className="reader-topbar__title">{documentData.title}</div>
+          <div className="reader-topbar__section">
+            {currentEntry.number ? `${currentEntry.number} · ${currentEntry.title}` : "Beginning"}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="reader-chrome-button reader-chrome-button--icon"
+          onClick={() => setAppearanceOpen((current) => !current)}
+          aria-label="Reader appearance"
+        >
           Aa
         </button>
       </header>
@@ -190,6 +242,10 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
           <div>
             <p className="reader-toc__eyebrow">Contents</p>
             <h2 className="reader-toc__title">{documentData.title}</h2>
+            <p className="reader-toc__status">
+              {currentEntry.number ? `${currentEntry.number} · ${currentEntry.title}` : "Beginning"}
+              <span>{progressPercent}% read</span>
+            </p>
           </div>
           <button type="button" className="reader-chrome-button reader-chrome-button--icon" onClick={() => setTocOpen(false)}>
             ×
@@ -203,7 +259,8 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
               className={`reader-toc__item ${entry.slug === activeSlug ? "is-active" : ""}`}
               onClick={() => jumpTo(entry.slug)}
             >
-              <span>{entry.label}</span>
+              <span className="reader-toc__item-label">{entry.title}</span>
+              <span className="reader-toc__item-meta">{entry.number ?? "0"}</span>
             </button>
           ))}
         </nav>
@@ -248,17 +305,22 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
             className="reader-bottomrail__button"
             onClick={() => previousEntry && jumpTo(previousEntry.slug)}
             disabled={!previousEntry}
+            aria-label={previousEntry ? `Go to ${previousEntry.title}` : "No previous section"}
           >
             Previous
           </button>
           <div className="reader-bottomrail__current">
-            {currentEntry.number ? `${currentEntry.number} · ${currentEntry.title}` : currentEntry.title}
+            <span className="reader-bottomrail__current-title">
+              {currentEntry.number ? `${currentEntry.number} · ${currentEntry.title}` : currentEntry.title}
+            </span>
+            <span className="reader-bottomrail__current-progress">{progressPercent}% read</span>
           </div>
           <button
             type="button"
             className="reader-bottomrail__button"
             onClick={() => nextEntry && jumpTo(nextEntry.slug)}
             disabled={!nextEntry}
+            aria-label={nextEntry ? `Go to ${nextEntry.title}` : "No next section"}
           >
             Next
           </button>
