@@ -6,7 +6,7 @@ export default function SectionStatusTags({ sectionId, statusTags, toggleStatusT
   const isSealed = sealVoters.length >= 4;
 
   return (
-    <div className="flex gap-1 flex-wrap my-1.5">
+    <div className="my-1.5 flex flex-wrap gap-2">
       {STATUS_TAGS.map(({ key, label }) => {
         const voters = tags[key] || [];
         const voted = voters.includes(reader);
@@ -18,11 +18,11 @@ export default function SectionStatusTags({ sectionId, statusTags, toggleStatusT
             key={key}
             onClick={() => toggleStatusTag(sectionId, key)}
             title={voters.length > 0 ? voters.join(", ") : "No votes yet"}
-            className="flex items-center gap-0.5 px-2 py-0.5 text-sm font-medium rounded-sm cursor-pointer transition-all duration-100 min-h-7"
+            className="flex min-h-9 cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-sm font-medium transition-all duration-150"
             style={{
-              background: isSeal ? "#111" : voted ? "#F5F5F4" : "transparent",
-              color: isSeal ? "#fff" : voted ? "#333" : "#BBB",
-              border: `1px solid ${isSeal ? "#111" : voted ? "var(--color-border)" : "#E5E5E5"}`,
+              background: isSeal ? "var(--color-ink)" : voted ? "var(--color-surface-raised)" : "transparent",
+              color: isSeal ? "var(--color-paper-soft)" : voted ? "var(--color-ink-secondary)" : "var(--color-ink-muted)",
+              border: `1px solid ${isSeal ? "var(--color-ink)" : voted ? "var(--color-border-dark)" : "var(--color-border)"}`,
             }}
           >
             {label}

@@ -29,10 +29,10 @@ export default function EmojiReactions({ bqId, reactions, toggleReaction, reader
             key={key}
             onClick={() => toggleReaction(bqId, key)}
             title={voters.join(", ")}
-            className="flex items-center gap-0.5 py-0.5 px-2 text-base rounded-sm cursor-pointer transition-all duration-100 min-h-7"
+            className="flex min-h-8 cursor-pointer items-center gap-1 rounded-full px-2.5 py-0.5 text-base transition-all duration-100"
             style={{
-              background: voted ? "#F5F5F4" : "transparent",
-              border: `1px solid ${voted ? "#D4D4D4" : "#E5E5E5"}`,
+              background: voted ? "rgba(255,255,255,0.46)" : "transparent",
+              border: `1px solid ${voted ? "var(--color-border-dark)" : "var(--color-border)"}`,
             }}
           >
             <span>{emoji}</span>
@@ -45,19 +45,19 @@ export default function EmojiReactions({ bqId, reactions, toggleReaction, reader
         <div className="relative">
           <button
             onClick={() => setShowPicker(!showPicker)}
-            className="py-0.5 px-2 text-base bg-transparent rounded-sm cursor-pointer text-ink-faint min-h-7 min-w-7 flex items-center justify-center"
-            style={{ border: `1px solid ${showPicker ? "#D4D4D4" : "transparent"}` }}
+            className="flex min-h-8 min-w-8 cursor-pointer items-center justify-center rounded-full bg-transparent px-2 py-0.5 text-base text-ink-faint"
+            style={{ border: `1px solid ${showPicker ? "var(--color-border-dark)" : "transparent"}` }}
           >
             +
           </button>
           {showPicker && (
-            <div className="absolute bottom-full left-0 mb-1 flex gap-0.5 py-1 px-1.5 bg-white border border-border rounded shadow-[0_2px_8px_rgba(0,0,0,0.08)] z-50">
+            <div className="absolute bottom-full left-0 z-50 mb-1 flex gap-0.5 rounded-full border border-border bg-paper-soft px-1.5 py-1 shadow-[0_10px_24px_rgba(27,24,21,0.08)]">
               {EMOJI_REACTIONS.map(({ key, emoji, label }) => (
                 <button
                   key={key}
                   onClick={() => { toggleReaction(bqId, key); setShowPicker(false); }}
                   title={label}
-                  className="py-1.5 px-2 text-[1rem] bg-transparent border-none cursor-pointer rounded-sm min-w-9 min-h-9 flex items-center justify-center"
+                  className="flex min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent px-2 py-1.5 text-[1rem]"
                 >
                   {emoji}
                 </button>

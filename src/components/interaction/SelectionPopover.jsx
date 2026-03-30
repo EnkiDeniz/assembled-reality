@@ -1,50 +1,34 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { SHAPES } from "../../constants";
 
 export default function SelectionPopover({ pos, onHighlight, onUnderline, onComment, onClose }) {
   const [showShapes, setShowShapes] = useState(false);
   const ref = useRef(null);
-  const [adjustedPos, setAdjustedPos] = useState(null);
-
-  useEffect(() => {
-    if (!pos || !ref.current) { setAdjustedPos(null); return; }
-    const el = ref.current;
-    const rect = el.getBoundingClientRect();
-    const vw = window.innerWidth;
-    let left = pos.left;
-    let top = pos.top;
-    const halfWidth = rect.width / 2;
-    if (left - halfWidth < 8) left = halfWidth + 8;
-    if (left + halfWidth > vw - 8) left = vw - halfWidth - 8;
-    if (rect.height > pos.top - 8) top = pos.top + 30;
-    setAdjustedPos({ top, left });
-  }, [pos]);
 
   if (!pos) return null;
-  const finalPos = adjustedPos || pos;
 
   return (
     <div
       ref={ref}
       data-selection-popover
-      className="absolute -translate-x-1/2 -translate-y-full z-[200] flex gap-px py-0.5 px-1 bg-ink rounded shadow-[0_4px_12px_rgba(0,0,0,0.15)] text-base animate-fade-in"
-      style={{ top: finalPos.top, left: finalPos.left }}
+      className="absolute z-[200] flex -translate-x-1/2 -translate-y-full gap-1 rounded-full border border-border-dark/70 bg-paper-soft/96 px-2 py-1 text-base shadow-[0_14px_32px_rgba(27,24,21,0.12)] backdrop-blur-md animate-fade-in"
+      style={{ top: pos.top, left: pos.left }}
     >
       {showShapes ? (
         <>
           {SHAPES.map(({ key, sym }) => (
             <button key={key} onClick={() => { onHighlight(key); setShowShapes(false); onClose(); }} title={key}
-              className="bg-transparent border-none cursor-pointer text-white text-body font-medium py-1.5 px-2.5 rounded-sm flex items-center gap-0.5 whitespace-nowrap min-h-8">{sym}</button>
+              className="flex min-h-8 items-center gap-0.5 rounded-full border-none bg-transparent px-2.5 py-1.5 font-serif text-[1rem] whitespace-nowrap text-ink">{sym}</button>
           ))}
-          <button onClick={() => setShowShapes(false)} className="bg-transparent border-none cursor-pointer text-ink-tertiary text-base font-medium py-1.5 px-2.5 rounded-sm flex items-center gap-0.5 whitespace-nowrap min-h-8">&times;</button>
+          <button onClick={() => setShowShapes(false)} className="flex min-h-8 items-center gap-0.5 whitespace-nowrap rounded-full border-none bg-transparent px-2.5 py-1.5 text-base font-medium text-ink-tertiary">&times;</button>
         </>
       ) : (
         <>
-          <button onClick={() => setShowShapes(true)} className="bg-transparent border-none cursor-pointer text-white text-base font-medium py-1.5 px-2.5 rounded-sm flex items-center gap-0.5 whitespace-nowrap min-h-8" title="Highlight">Highlight</button>
-          <div className="w-px bg-white/12 my-1" />
-          <button onClick={() => { onUnderline(); onClose(); }} className="bg-transparent border-none cursor-pointer text-white text-base font-medium py-1.5 px-2.5 rounded-sm flex items-center gap-0.5 whitespace-nowrap min-h-8" title="Carry">Carry</button>
-          <div className="w-px bg-white/12 my-1" />
-          <button onClick={() => { onComment(); onClose(); }} className="bg-transparent border-none cursor-pointer text-white text-base font-medium py-1.5 px-2.5 rounded-sm flex items-center gap-0.5 whitespace-nowrap min-h-8" title="Comment">Comment</button>
+          <button onClick={() => setShowShapes(true)} className="flex min-h-8 items-center gap-0.5 whitespace-nowrap rounded-full border-none bg-transparent px-2.5 py-1.5 font-sans text-sm font-medium text-ink" title="Highlight">Highlight</button>
+          <div className="my-1 w-px bg-border" />
+          <button onClick={() => { onUnderline(); onClose(); }} className="flex min-h-8 items-center gap-0.5 whitespace-nowrap rounded-full border-none bg-transparent px-2.5 py-1.5 font-sans text-sm font-medium text-ink" title="Carry">Carry</button>
+          <div className="my-1 w-px bg-border" />
+          <button onClick={() => { onComment(); onClose(); }} className="flex min-h-8 items-center gap-0.5 whitespace-nowrap rounded-full border-none bg-transparent px-2.5 py-1.5 font-sans text-sm font-medium text-ink" title="Comment">Comment</button>
         </>
       )}
     </div>

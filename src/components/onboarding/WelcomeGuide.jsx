@@ -1,120 +1,79 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function WelcomeGuide({ reader, dismissed, onDismiss, onReopen }) {
-  const [expanded, setExpanded] = useState(!dismissed);
+  const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    if (!dismissed) setExpanded(true);
-  }, [dismissed]);
-
-  if (dismissed && !expanded) {
+  if (!expanded) {
     return (
-      <button
-        onClick={() => { onReopen(); setExpanded(true); }}
-        className="bg-transparent border-none cursor-pointer text-sm text-ink-muted p-0 pb-2 underline underline-offset-2"
-      >
-        How to use this document
-      </button>
+      <div className="mb-8 flex flex-col gap-3 border-b border-border-warm pb-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">
+            Orientation
+          </div>
+          <p className="mt-1 text-sm leading-[1.7] text-ink-tertiary">
+            Welcome, {reader}. This is a living document shaped by signals, tags, and discussion.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => { onReopen(); setExpanded(true); }}
+            className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink"
+          >
+            How to read this text
+          </button>
+          {!dismissed && (
+            <button
+              onClick={onDismiss}
+              className="rounded-full border border-transparent px-2 py-2 text-sm font-medium text-ink-muted transition-colors duration-150 hover:text-ink"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      </div>
     );
   }
 
-  if (!expanded) return null;
-
   return (
-    <div className="mb-6 animate-fade-in">
-      {/* Mobile: compact single-line with expand */}
-      <div className="md:hidden">
-        <MobileGuide reader={reader} onDismiss={() => { onDismiss(); setExpanded(false); }} />
-      </div>
-      {/* Desktop: full card */}
-      <div className="hidden md:block">
-        <DesktopGuide reader={reader} onDismiss={() => { onDismiss(); setExpanded(false); }} />
-      </div>
-    </div>
-  );
-}
-
-function MobileGuide({ reader, onDismiss }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="p-3 bg-surface-warm border border-surface-warm-border rounded-[4px]">
-      <div className="flex justify-between items-center">
-        <div className="text-md font-medium text-ink">
-          Welcome, {reader}. <span className="text-ink-tertiary font-normal">This is a living document you shape together.</span>
-        </div>
-        <div className="flex items-center gap-1.5 ml-2 shrink-0">
-          <button
-            onClick={() => setOpen(!open)}
-            className="bg-transparent border-none cursor-pointer text-sm text-ink-muted underline underline-offset-2 p-0"
-          >
-            {open ? "Less" : "How?"}
-          </button>
-          <button
-            onClick={onDismiss}
-            className="bg-transparent border-none cursor-pointer text-ink-faint text-base p-1"
-          >
-            &times;
-          </button>
-        </div>
-      </div>
-      {open && (
-        <div className="mt-2.5 pt-2.5 border-t border-surface-warm-border grid grid-cols-1 gap-1.5 animate-fade-in">
-          <HintLine icon="✦" text="Select text to highlight, carry, or comment" />
-          <HintLine icon="△□○" text="Three shapes: aim · evidence · context" />
-          <HintLine icon="§" text="Each section has Signal · Tag · Discuss at the bottom" />
-          <HintLine icon="◉" text="Pulse = team activity · Carry = your selections" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DesktopGuide({ reader, onDismiss }) {
-  return (
-    <div className="py-[18px] px-5 bg-surface-warm border border-surface-warm-border rounded-[4px]">
-      <div className="flex justify-between items-start mb-3">
+    <div className="mb-10 animate-fade-in rounded-[2rem] border border-border-warm bg-surface-warm/90 px-5 py-5 md:px-7">
+      <div className="flex flex-col gap-4 border-b border-border-warm pb-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-body font-semibold text-ink mb-0.5">
-            Welcome, {reader}.
+          <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">
+            Reading guide
           </div>
-          <div className="text-md text-ink-tertiary leading-[1.5]">
-            This is a living document. You don't just read it — you shape it.
+          <div className="mt-2 font-serif text-[2rem] leading-none text-ink">
+            Read it like a threshold, not a brochure.
           </div>
         </div>
         <button
-          onClick={onDismiss}
-          className="bg-transparent border border-border rounded-[3px] px-2.5 py-1 text-sm font-medium text-ink-tertiary cursor-pointer whitespace-nowrap ml-3 min-h-7"
+          onClick={() => { onDismiss(); setExpanded(false); }}
+          className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink"
         >
-          Got it
+          Collapse
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
         <GuideItem
           icon="✦"
-          title="Select any text"
-          desc="Highlight with a shape, carry a passage, or start a comment thread."
+          title="Select any line"
+          desc="Highlight with a shape, carry a passage, or start an inline comment thread."
         />
         <GuideItem
           icon="△ □ ○"
-          title="Three shapes"
-          desc={<><Sh c="#B84C2A">△</Sh> Strengthens aim · <Sh c="#2A5A6B">□</Sh> Needs evidence · <Sh c="#6B5A2A">○</Sh> Needs context</>}
+          title="Read through the shapes"
+          desc={<><Sh c="#B45A38">△</Sh> aim · <Sh c="#546C77">□</Sh> evidence · <Sh c="#8B7442">○</Sh> context</>}
         />
         <GuideItem
           icon="§"
-          title="Section tools"
-          desc={<>Each section has <em>Signal · Tag · Discuss</em> at the bottom. Tag sections as load-bearing, needs work, or ready to seal.</>}
+          title="Use the section footer"
+          desc={<>Every section can be signaled, tagged, and discussed without breaking the reading rhythm.</>}
         />
         <GuideItem
           icon="◉"
-          title="Pulse & Carry"
-          desc={<><strong>Pulse</strong> shows team activity. <strong>Carry</strong> collects your selected passages for export.</>}
+          title="Watch the room"
+          desc={<><strong>Pulse</strong> shows team activity. <strong>Carry</strong> collects the lines worth keeping.</>}
         />
-      </div>
-
-      <div className="mt-2.5 pt-2 border-t border-surface-warm-border text-sm text-ink-muted leading-[1.5]">
-        When 4+ readers vote "Ready to seal" on a section, it locks. The document evolves through your signals.
       </div>
     </div>
   );
@@ -122,21 +81,12 @@ function DesktopGuide({ reader, onDismiss }) {
 
 function GuideItem({ icon, title, desc }) {
   return (
-    <div className="flex gap-2 items-start p-1.5 px-2 bg-surface rounded-[3px] border border-divider">
-      <span className="text-base font-semibold text-ink-muted min-w-7 text-center shrink-0 font-mono leading-[18px] pt-px">{icon}</span>
+    <div className="flex gap-3 border-b border-border-warm pb-4 last:border-b-0">
+      <span className="min-w-8 shrink-0 pt-0.5 text-center font-mono text-sm leading-[18px] text-ink-muted">{icon}</span>
       <div>
-        <div className="text-base font-semibold text-ink-secondary mb-px">{title}</div>
-        <div className="text-sm text-ink-tertiary leading-[1.45]">{desc}</div>
+        <div className="font-serif text-[1.4rem] leading-none text-ink-secondary">{title}</div>
+        <div className="mt-1 text-sm leading-[1.7] text-ink-tertiary">{desc}</div>
       </div>
-    </div>
-  );
-}
-
-function HintLine({ icon, text }) {
-  return (
-    <div className="flex items-center gap-2 text-sm text-ink-tertiary">
-      <span className="font-mono text-xs text-ink-muted w-6 text-center shrink-0">{icon}</span>
-      <span>{text}</span>
     </div>
   );
 }

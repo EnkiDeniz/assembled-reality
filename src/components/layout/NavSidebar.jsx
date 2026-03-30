@@ -3,7 +3,7 @@ import useMediaQuery from "../../hooks/useMediaQuery";
 
 const READER_COLORS = ["#DC2626", "#0369A1", "#B45309", "#7C3AED", "#059669", "#BE185D", "#1D4ED8"];
 
-export default function NavSidebar({ anns, sigs, highlights = [], readingPositions = {}, onClose, currentSectionId }) {
+export default function NavSidebar({ anns, sigs, readingPositions = {}, onClose, currentSectionId }) {
   const isDesktop = useMediaQuery("(min-width: 769px)");
 
   const readersAtSection = {};
@@ -17,34 +17,39 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
     <>
       {!isDesktop && <div onClick={onClose} className="fixed inset-0 z-85 bg-black/8" />}
       <div
-        className={`fixed top-10 left-0 bottom-0 bg-surface overflow-y-auto overscroll-contain
-          w-full md:w-[260px]
+        className={`fixed left-0 bottom-0 overflow-y-auto overscroll-contain bg-paper-soft/95 shadow-[18px_0_50px_rgba(27,24,21,0.08)] backdrop-blur-xl
+          top-0 pt-[88px]
+          w-full md:w-[300px]
           z-90 md:z-50
-          border-r-0 md:border-r md:border-border
-          p-3 px-4 md:p-3 md:px-3.5
+          border-r-0 md:border-r md:border-border-dark/60
+          p-4 px-5 md:px-5
           ${!isDesktop ? "sidebar-left" : ""}`}
       >
         {!isDesktop && (
-          <div className="flex justify-end mb-2">
-            <button onClick={onClose} className="bg-transparent border border-border rounded-[3px] px-3.5 py-1.5 text-base font-medium text-ink-tertiary cursor-pointer">Close</button>
+          <div className="mb-3 flex justify-end">
+            <button onClick={onClose} className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink">Close</button>
           </div>
         )}
 
-        {/* Reading positions */}
-        <div className="mb-2.5 pb-2 border-b border-border">
-          <div className="text-xs font-semibold tracking-[0.06em] uppercase text-ink-muted mb-2">Last seen</div>
-          <div className="flex flex-wrap gap-1.5">
+        <div className="mb-4 border-b border-border-warm pb-4">
+          <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Reading room</div>
+          <div className="mt-1 font-serif text-[1.75rem] leading-none text-ink">Section index</div>
+        </div>
+
+        <div className="mb-5 border-b border-border-warm pb-4">
+          <div className="mb-3 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">Last seen</div>
+          <div className="flex flex-wrap gap-2">
             {READERS.map((r, i) => {
               const pos = readingPositions[r];
               const sec = pos ? SECTIONS.find(s => s.id === pos.sectionId) : null;
               return (
                 <span
                   key={r}
-                  className="py-1 px-2 md:py-0.5 md:px-2 text-sm font-medium rounded-[3px]"
+                  className="rounded-full px-2.5 py-1 text-sm font-medium"
                   style={{
-                    background: pos ? READER_COLORS[i] + "10" : "transparent",
-                    color: pos ? READER_COLORS[i] : "#D4D4D4",
-                    border: `1px solid ${pos ? READER_COLORS[i] + "30" : "#E5E5E5"}`,
+                    background: pos ? READER_COLORS[i] + "14" : "transparent",
+                    color: pos ? READER_COLORS[i] : "#B5AB9F",
+                    border: `1px solid ${pos ? READER_COLORS[i] + "35" : "var(--color-border)"}`,
                   }}
                   title={sec ? `${r}: \u00A7${sec.num}` : `${r}: Not started`}
                 >
@@ -57,7 +62,7 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
 
         {[1, 2, 3].map(p => (
           <div key={p}>
-            <div className={`text-xs font-semibold tracking-[0.06em] uppercase text-ink-muted mb-[3px] ${p > 1 ? "mt-4 pt-2.5 border-t border-border" : ""}`}>
+            <div className={`mb-2 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted ${p > 1 ? "mt-6 border-t border-border-warm pt-4" : ""}`}>
               {PART_NAMES[p]}
             </div>
             {SECTIONS.filter(s => s.part === p || (p === 1 && s.part === 0)).map(s => {
@@ -71,11 +76,10 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
                   key={s.id}
                   href={`#${s.id}`}
                   onClick={onClose}
-                  className={`flex justify-between items-center text-md md:text-base text-ink-secondary no-underline py-2 pl-1 pr-1 md:py-[5px] md:pl-1 md:pr-1 leading-[1.3] rounded min-h-10 md:min-h-auto transition-colors duration-100
-                    hover:bg-surface-raised
-                    ${isActive ? "bg-surface-raised font-medium" : ""}`}
+                  className={`flex min-h-11 items-center justify-between rounded-2xl px-3 py-2 no-underline transition-all duration-150 md:min-h-0
+                    ${isActive ? "bg-surface-raised/80 shadow-[0_8px_24px_rgba(27,24,21,0.06)]" : "hover:bg-white/45"}`}
                 >
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-2">
                     {readersHere.length > 0 && (
                       <span className="flex gap-0.5">
                         {readersHere.map(r => {
@@ -84,11 +88,13 @@ export default function NavSidebar({ anns, sigs, highlights = [], readingPositio
                         })}
                       </span>
                     )}
-                    <span className="font-mono text-base text-ink-muted font-medium">{s.num}</span>
-                    {s.title}
+                    <span className="font-mono text-[0.78rem] uppercase tracking-[0.12em] text-ink-muted">{s.num}</span>
+                    <span className={`text-[0.95rem] leading-[1.3] ${isActive ? "font-semibold text-ink" : "text-ink-secondary"}`}>
+                      {s.title}
+                    </span>
                   </span>
                   {(sc > 0 || ac > 0) && (
-                    <span className="text-xs text-ink-muted font-medium">
+                    <span className="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-muted">
                       {sc > 0 && `${sc}s`}{sc > 0 && ac > 0 && " "}{ac > 0 && `${ac}a`}
                     </span>
                   )}

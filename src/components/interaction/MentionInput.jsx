@@ -58,14 +58,16 @@ export default function MentionInput({ value, onChange, placeholder, rows = 2, s
         onChange={handleChange}
         placeholder={placeholder}
         rows={rows}
-        className="w-full py-2 px-2.5 text-[16px] font-[inherit] border border-border bg-white rounded-sm outline-none resize-y leading-normal"
+        className="w-full resize-y rounded-[1rem] border border-border-dark/70 bg-paper-soft px-3 py-2.5 text-[16px] leading-normal outline-none"
         style={style}
       />
       {showDropdown && filtered.length > 0 && (
-        <div className="absolute left-0 right-0 z-[300] bg-white border border-border rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.06)] max-h-[200px] overflow-y-auto" style={{ top: dropdownPos.top }}>
+        <div className="absolute left-0 right-0 z-[300] max-h-[200px] overflow-y-auto rounded-[1rem] border border-border bg-paper-soft shadow-[0_10px_24px_rgba(27,24,21,0.08)]" style={{ top: dropdownPos.top }}>
           {filtered.map(name => (
             <button key={name} onClick={() => insertMention(name)}
-              className="block w-full py-2 px-3 text-md font-medium bg-transparent border-none cursor-pointer text-left text-ink min-h-9 border-b border-surface-raised">
+              className="block min-h-9 w-full border-b border-surface-raised bg-transparent px-3 py-2 text-left text-md font-medium text-ink"
+              type="button"
+            >
               @{name}
             </button>
           ))}

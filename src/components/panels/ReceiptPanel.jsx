@@ -18,12 +18,13 @@ export default function ReceiptPanel({ session, duration, actionCounts, uniqueSe
   const isDesktop = useMediaQuery("(min-width: 769px)");
   const connected = isConnected();
   const receipt = session ? composeReceipt(session) : null;
+  const sessionEnd = session ? session.startedAt + duration * 1000 : 0;
 
   // Section dwell times
   const sectionDurations = {};
   if (session) {
     for (const s of session.sections) {
-      const end = s.leftAt || Date.now();
+      const end = s.leftAt || sessionEnd;
       const dur = (end - s.enteredAt) / 1000;
       sectionDurations[s.id] = (sectionDurations[s.id] || 0) + dur;
     }

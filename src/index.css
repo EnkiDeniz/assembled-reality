@@ -2,9 +2,9 @@
 
 @theme {
   /* Brand / Shape colors */
-  --color-triangle: #B84C2A;
-  --color-square: #2A5A6B;
-  --color-circle: #6B5A2A;
+  --color-triangle: #b45a38;
+  --color-square: #546c77;
+  --color-circle: #8b7442;
 
   /* Reader colors */
   --color-reader-1: #DC2626;
@@ -16,30 +16,34 @@
   --color-reader-7: #1D4ED8;
 
   /* Grayscale */
-  --color-ink: #111;
-  --color-ink-secondary: #333;
-  --color-ink-tertiary: #666;
-  --color-ink-muted: #999;
-  --color-ink-faint: #BBB;
-  --color-border: #E5E5E5;
-  --color-border-dark: #D4D4D4;
-  --color-border-warm: #E8E4DC;
-  --color-divider: #EBEBEB;
+  --color-ink: #1b1815;
+  --color-ink-secondary: #382f29;
+  --color-ink-tertiary: #5d5349;
+  --color-ink-muted: #8b7f72;
+  --color-ink-faint: #b5ab9f;
+  --color-border: #d8ccbf;
+  --color-border-dark: #b8aa98;
+  --color-border-warm: #e7dacb;
+  --color-divider: #e9dfd5;
 
   /* Surfaces */
-  --color-surface: #FAFAF9;
-  --color-surface-raised: #F5F5F4;
-  --color-surface-warm: #F8F7F5;
-  --color-surface-beige: #EDE9E1;
-  --color-surface-warm-border: #D6D1C8;
-  --color-surface-guide: #EEEBE6;
+  --color-paper: #f3ebdf;
+  --color-paper-soft: #fbf7f0;
+  --color-paper-deep: #e8dccb;
+  --color-surface: #f7f1e8;
+  --color-surface-raised: #f1e7da;
+  --color-surface-warm: #efe5d8;
+  --color-surface-beige: #e8dbc9;
+  --color-surface-warm-border: #cabaa7;
+  --color-surface-guide: #f0e5d5;
 
   /* Semantic */
   --color-error: #DC2626;
-  --color-seal: #0369A1;
+  --color-seal: #305f70;
 
   /* Font families */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Font sizes */
@@ -59,6 +63,9 @@
   --animate-slide-left: slide-in-left 0.25s ease-out;
   --animate-slide-right: slide-in-right 0.25s ease-out;
   --animate-slide-up: slide-up-sheet 0.3s ease-out;
+  --animate-float-slow: float-slow 12s ease-in-out infinite;
+  --animate-rise: rise-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-drift: drift 15s ease-in-out infinite;
 
   /* Breakpoint */
   --breakpoint-md: 769px;
@@ -84,6 +91,21 @@
   to { transform: translateY(0); }
 }
 
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(14deg); }
+  50% { transform: translate3d(12px, -10px, 0) rotate(8deg); }
+}
+
 /* Base resets */
 * {
   margin: 0;
@@ -91,11 +113,32 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--color-paper);
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  background:
+    radial-gradient(circle at top left, rgba(180, 90, 56, 0.07), transparent 28%),
+    radial-gradient(circle at 85% 12%, rgba(84, 108, 119, 0.05), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)),
+    var(--color-paper);
+  color: var(--color-ink-secondary);
+  font-family: var(--font-sans);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(180, 90, 56, 0.18);
+  color: var(--color-ink);
 }
 
 /* Touch-friendly interactive elements */

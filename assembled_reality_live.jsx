@@ -97,7 +97,7 @@ function ShapeSig({ sid, sigs, onSig, reader }) {
   );
 }
 
-function AnnThread({ sid, anns, reader, onAdd }) {
+function AnnThread({ sid, anns, onAdd }) {
   const [open, setOpen] = useState(false);
   const [txt, setTxt] = useState("");
   const items = anns[sid]||[];

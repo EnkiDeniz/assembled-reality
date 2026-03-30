@@ -28,7 +28,7 @@ export default function useReadingPosition(reader, updateReadingPosition) {
           updateReadingPosition(mostVisible.id);
         }
       },
-      { threshold: [0.1, 0.3, 0.5, 0.7], rootMargin: "-38px 0px 0px 0px" }
+      { threshold: [0.1, 0.3, 0.5, 0.7], rootMargin: "-88px 0px 0px 0px" }
     );
 
     sectionElements.forEach(el => observerRef.current.observe(el));

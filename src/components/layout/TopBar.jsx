@@ -22,48 +22,54 @@ export default function TopBar({ reader, tS, tA, nav, setNav, pulse, setPulse, c
   const hasActivity = tS > 0 || tA > 0;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-100">
-      <div className="bg-surface/92 backdrop-blur-[8px] border-b border-border px-2.5 md:px-[18px] h-10 flex items-center justify-between text-base">
-        <div className="flex items-center gap-1.5 md:gap-3.5">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-100 px-3 pt-3 md:px-4 md:pt-4">
+      <div className="pointer-events-auto relative mx-auto flex h-14 max-w-[1440px] items-center justify-between rounded-full border border-border-dark/70 bg-paper-soft/78 px-3 shadow-[0_18px_45px_rgba(27,24,21,0.08)] backdrop-blur-xl md:px-5">
+        <div className="flex items-center gap-1.5 md:gap-4">
           <button
             onClick={() => setNav(!nav)}
-            className={`bg-transparent border-none cursor-pointer text-[1rem] p-1.5 min-h-9 min-w-9 flex items-center justify-center ${nav ? "md:text-ink" : ""} text-ink-secondary`}
+            className={`flex min-h-10 min-w-10 items-center justify-center rounded-full border border-transparent bg-transparent p-1.5 text-[1rem] text-ink-secondary transition-all duration-150 hover:border-border hover:bg-white/55 ${nav ? "md:text-ink" : ""}`}
           >{"\u2630"}</button>
           {currentSection && (
-            <span className="md:hidden text-xs text-ink-muted font-medium max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap font-sans text-xs font-medium text-ink-muted md:hidden">
               <span className="font-mono">&sect;{currentSection.num}</span> {currentSection.title}
             </span>
           )}
-          <span className="hidden md:inline font-semibold tracking-wider uppercase text-ink-muted text-sm">
-            Assembled Reality
-          </span>
+          <div className="hidden md:block">
+            <div className="font-sans text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-ink-muted">
+              Assembled Reality
+            </div>
+            <div className="mt-0.5 font-mono text-[0.66rem] uppercase tracking-[0.16em] text-ink-faint">
+              Reading instrument
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-1.5 md:gap-2.5">
           {hasActivity && (
-            <span className="hidden md:inline text-ink-muted text-sm">{tS}s &middot; {tA}a</span>
+            <span className="hidden font-sans text-xs uppercase tracking-[0.16em] text-ink-muted md:inline">
+              {tS}s &middot; {tA}a
+            </span>
           )}
           <button onClick={() => setPulse(!pulse)} className={pillClass(pulse)} title="Team activity">Pulse</button>
           <button onClick={() => setCarry(!carry)} className={pillClass(carry)} title="Your collected passages">Carry</button>
-          <span className="text-ink-muted text-sm font-medium max-w-15 md:max-w-none overflow-hidden text-ellipsis whitespace-nowrap">{reader}</span>
+          <span className="max-w-15 overflow-hidden text-ellipsis whitespace-nowrap font-sans text-sm font-medium text-ink-muted md:max-w-none">{reader}</span>
           {sessionDuration > 0 && formatTimer(sessionDuration) && (
-            <span className="font-mono text-xs text-ink-faint hidden md:inline">{formatTimer(sessionDuration)}</span>
+            <span className="hidden font-mono text-xs uppercase tracking-[0.14em] text-ink-faint md:inline">{formatTimer(sessionDuration)}</span>
           )}
         </div>
-      </div>
-      {/* Reading progress bar */}
-      <div className="h-0.5 bg-transparent w-full relative -mt-px">
-        <div
-          className="h-full bg-ink opacity-15 transition-[width] duration-100 ease-linear"
-          style={{ width: `${scrollPct * 100}%` }}
-        />
+        <div className="absolute inset-x-5 bottom-0 h-px overflow-hidden rounded-full bg-border/50">
+          <div
+            className="h-full bg-gradient-to-r from-triangle/50 via-square/45 to-circle/45 transition-[width] duration-100 ease-linear"
+            style={{ width: `${scrollPct * 100}%` }}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 const pillClass = (active) =>
-  `px-2.5 py-1 text-sm font-medium border rounded-[3px] cursor-pointer min-h-7 min-w-auto transition-all duration-100 ${
+  `min-h-9 min-w-auto rounded-full border px-3 py-1 text-sm font-medium transition-all duration-150 ${
     active
-      ? "bg-ink text-white border-ink"
-      : "bg-transparent text-ink-tertiary border-border"
+      ? "border-ink bg-ink text-paper-soft"
+      : "border-border-dark/70 bg-transparent text-ink-tertiary hover:border-ink hover:bg-white/55"
   }`;

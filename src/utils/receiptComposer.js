@@ -51,8 +51,6 @@ export function composeReceipt(session) {
     else if (a.type === "status_tag") counts.statusTags++;
   }
 
-  const totalActions = Object.values(counts).reduce((s, n) => s + n, 0);
-
   // Build tried string
   const tried = uniqueSections.length > 0
     ? `Read ${rangeStr} (${uniqueSections.length} of ${SECTIONS.length} sections).`

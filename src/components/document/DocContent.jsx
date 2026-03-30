@@ -7,13 +7,13 @@ import { ReactionContext } from "./ReactionContext";
 import VersionPulseBar from "../panels/VersionPulseBar";
 import WelcomeGuide from "../onboarding/WelcomeGuide";
 
-export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag, emojiReactions, toggleReaction, versionPulse, dismissVersionBanner, welcomeDismissed, dismissWelcome, resetWelcome, navOpen }) {
+export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag, emojiReactions, toggleReaction, versionPulse, dismissVersionBanner, welcomeDismissed, dismissWelcome, resetWelcome }) {
   const sp = { sigs, anns, reader, onSig, onAnn, statusTags, toggleStatusTag };
   const reactionCtx = useMemo(() => ({ emojiReactions: emojiReactions || {}, toggleReaction: toggleReaction || (() => {}), reader }), [emojiReactions, toggleReaction, reader]);
 
   return (
     <ReactionContext.Provider value={reactionCtx}>
-    <main className="max-w-[640px] mx-auto pt-[52px] px-4 pb-15 md:pt-14 md:px-5 md:pb-20 transition-[margin-left] duration-[250ms] ease-in-out">
+    <main className="mx-auto max-w-[760px] px-5 pb-18 pt-[96px] transition-[margin-left] duration-[250ms] ease-in-out md:px-8 md:pb-24 md:pt-[110px]">
       <WelcomeGuide
         reader={reader}
         dismissed={!!(welcomeDismissed && welcomeDismissed[reader])}
@@ -23,15 +23,18 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
       {versionPulse && dismissVersionBanner && (
         <VersionPulseBar versionPulse={versionPulse} reader={reader} onDismiss={dismissVersionBanner} />
       )}
-      <header className="mb-12 pb-6 border-b border-border">
-        <h1 className="text-3xl font-bold tracking-[-0.01em] leading-[1.15] mb-1">Assembled Reality</h1>
-        <div className="text-body text-ink-tertiary leading-relaxed mb-3.5">The process by which Lakin.ai coordinates intelligence.</div>
-        <div className="text-[0.8rem] text-ink-muted mb-3">
+      <header className="mb-14 border-b border-border-warm pb-8">
+        <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Reading room</div>
+        <h1 className="mt-4 font-serif text-[clamp(3.4rem,6vw,5.4rem)] leading-[0.94] tracking-[-0.04em] text-ink">Assembled Reality</h1>
+        <div className="mt-3 max-w-[32rem] font-serif text-[1.35rem] leading-[1.25] text-ink-tertiary md:text-[1.55rem]">The process by which Lakin.ai coordinates intelligence.</div>
+        <div className="mt-5 font-sans text-[0.78rem] uppercase tracking-[0.18em] text-ink-muted">
           Lakin.ai &middot; v1.0 &middot; Founding document &middot; GetReceipts &middot; Box7 &middot; PromiseMe &middot; The Signet
           {" "}&middot;{" "}
-          <button onClick={resetWelcome} className="bg-transparent border-none cursor-pointer text-ink-muted underline underline-offset-2 text-[0.8rem] p-0 hover:text-ink-secondary">How to use this document</button>
+          <button onClick={resetWelcome} className="cursor-pointer border-none bg-transparent p-0 text-[0.78rem] uppercase tracking-[0.18em] text-ink-muted underline decoration-border-dark underline-offset-4 transition-colors duration-150 hover:text-ink-secondary">How to use this document</button>
         </div>
-        <P style={{ fontSize: "0.8125rem", color: "#888", marginBottom: 0 }}>Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.</P>
+        <P style={{ fontSize: "0.92rem", color: "var(--color-ink-tertiary)", marginBottom: 0, marginTop: "1.2rem", maxWidth: "38rem" }}>
+          Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.
+        </P>
       </header>
 
       <Sec id="reader-note" num="0" title="Reader Note" {...sp}>

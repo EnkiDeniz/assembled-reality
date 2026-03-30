@@ -15,22 +15,25 @@ export default function PulseSidebar({ anns, sigs, onClose }) {
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 z-85 bg-black/8" />
-      <div className="sidebar-right md:sidebar-right-none fixed top-10 right-0 bottom-0 z-90 bg-surface overflow-y-auto overscroll-contain w-full md:w-[280px] border-l-0 md:border-l md:border-border">
-        <div className="px-3.5 py-2 border-b border-border flex justify-between items-center">
-          <span className="text-sm font-semibold tracking-[0.04em] uppercase text-ink-muted">Pulse</span>
-          <button onClick={onClose} className="md:hidden bg-transparent border border-border rounded-[3px] px-3.5 py-1.5 text-base font-medium text-ink-tertiary cursor-pointer">Close</button>
+      <div className="sidebar-right md:sidebar-right-none fixed right-0 top-0 bottom-0 z-90 w-full overflow-y-auto overscroll-contain border-l-0 bg-paper-soft/95 pt-[88px] shadow-[-18px_0_50px_rgba(27,24,21,0.08)] backdrop-blur-xl md:w-[340px] md:border-l md:border-border-dark/60">
+        <div className="flex items-center justify-between border-b border-border-warm px-5 py-4">
+          <div>
+            <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Side annotation</div>
+            <span className="mt-1 block font-serif text-[1.6rem] leading-none text-ink">Pulse</span>
+          </div>
+          <button onClick={onClose} className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink md:hidden">Close</button>
         </div>
-        <div className="p-2.5 px-3.5">
-          <div className="mb-3.5">
-            <div className="text-sm font-semibold tracking-[0.04em] uppercase text-ink-muted mb-1.5">Readers</div>
-            <div className="flex flex-wrap gap-1">
+        <div className="px-5 py-5">
+          <div className="mb-5">
+            <div className="mb-3 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">Readers in the room</div>
+            <div className="flex flex-wrap gap-2">
               {READERS.map(r => {
                 const a = sigMap[r] > 0 || items.some(i => i.author === r);
                 return (
                   <span
                     key={r}
-                    className={`py-1 px-2.5 md:py-[3px] md:px-2 text-base rounded-[3px] ${
-                      a ? "font-semibold bg-ink text-white border border-ink" : "font-normal bg-transparent text-ink-faint border border-border"
+                    className={`rounded-full px-3 py-1.5 text-sm ${
+                      a ? "border border-ink bg-ink text-paper-soft" : "border border-border text-ink-faint"
                     }`}
                   >
                     {r}
@@ -39,17 +42,19 @@ export default function PulseSidebar({ anns, sigs, onClose }) {
               })}
             </div>
           </div>
-          <div className="text-sm font-semibold tracking-[0.04em] uppercase text-ink-muted mb-1.5">Recent</div>
-          {items.length === 0 ? <div className="text-ink-faint text-md">No annotations yet.</div> :
+          <div className="mb-3 border-t border-border-warm pt-5 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">Recent annotations</div>
+          {items.length === 0 ? <div className="text-md text-ink-faint">No annotations yet.</div> :
             items.slice(0, 20).map((x, i) => (
               <div
                 key={i}
-                className={`py-2.5 md:py-1.5 text-md leading-[1.4] ${i < Math.min(items.length, 20) - 1 ? "border-b border-divider" : ""}`}
+                className={`py-3 text-md leading-[1.4] ${i < Math.min(items.length, 20) - 1 ? "border-b border-divider" : ""}`}
               >
-                <span className="font-semibold text-ink-secondary">{x.author}</span>
-                <span className="text-ink-muted"> on {x.section}</span>
-                <p className="m-0 mt-0.5 text-ink-tertiary text-md">"{x.text.length > 85 ? x.text.slice(0, 85) + "\u2026" : x.text}"</p>
-                <div className="text-sm text-ink-faint mt-px">{x.time}</div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-sans text-sm font-semibold uppercase tracking-[0.12em] text-ink-secondary">{x.author}</span>
+                  <span className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-ink-faint">{x.time}</span>
+                </div>
+                <div className="mt-1 text-sm text-ink-muted">on {x.section}</div>
+                <p className="m-0 mt-2 font-serif text-[1.18rem] leading-[1.42] text-ink-tertiary">"{x.text.length > 85 ? x.text.slice(0, 85) + "\u2026" : x.text}"</p>
               </div>
             ))}
         </div>

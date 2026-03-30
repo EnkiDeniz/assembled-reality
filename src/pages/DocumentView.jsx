@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import useTextSelection from "../hooks/useTextSelection";
 import useReadingPosition from "../hooks/useReadingPosition";
 import DocContent from "../components/document/DocContent";
@@ -13,6 +13,17 @@ export default function DocumentView({ store, nav, isDesktop }) {
   const { selection, popoverPos, clearSelection } = useTextSelection(contentRef);
 
   useReadingPosition(store.reader, store.updateReadingPosition);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return;
+
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ block: "start" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [store.reader]);
 
   const handleHighlight = useCallback((shape) => {
     if (!selection) return;
@@ -33,7 +44,7 @@ export default function DocumentView({ store, nav, isDesktop }) {
   }, [selection, clearSelection]);
 
   return (
-    <div ref={contentRef} className="relative transition-[margin-left] duration-[250ms] ease-in-out" style={{ marginLeft: (nav && isDesktop) ? 260 : 0 }}>
+    <div ref={contentRef} className="relative transition-[margin-left] duration-[250ms] ease-in-out" style={{ marginLeft: (nav && isDesktop) ? 300 : 0 }}>
       <ReadingPresenceDots readingPositions={store.readingPositions} currentReader={store.reader} />
       <TextHighlighter highlights={store.highlights} reader={store.reader} />
       <SelectionPopover

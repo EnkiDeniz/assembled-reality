@@ -16,38 +16,37 @@ export default function Sec({ id, num, title, children, sigs, anns, reader, onSi
   return (
     <>
       {ph}
-      <section id={id} className={`mb-12 pb-6 ${isSealed ? "bg-surface-guide py-3.5 px-4 rounded-sm border border-border" : "border-b border-border"}`}>
-        <h2 className="text-[1.2rem] font-bold mb-2.5 mt-1 leading-[1.3] flex items-baseline gap-1.5">
-          <span className="font-mono text-base text-ink-muted font-normal">{num}</span>
-          {title}
-          {isSealed && <span className="text-xs font-semibold tracking-[0.06em] uppercase text-seal">Sealed</span>}
+      <section id={id} className={`scroll-mt-28 mb-14 pb-8 ${isSealed ? "rounded-[1.75rem] border border-border-dark/70 bg-surface-guide px-5 py-6 md:px-6" : "border-b border-border-warm"}`}>
+        <h2 className="mt-1 mb-4 flex flex-wrap items-baseline gap-2 leading-[1.1]">
+          <span className="font-mono text-[0.76rem] uppercase tracking-[0.16em] text-ink-muted">{num}</span>
+          <span className="font-serif text-[2rem] text-ink md:text-[2.35rem]">{title}</span>
+          {isSealed && <span className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-seal">Sealed</span>}
         </h2>
         {children}
 
-        {/* Interaction footer -- collapsed by default */}
-        <div className="mt-2.5 border-t border-border pt-1.5">
+        <div className="mt-5 border-t border-border-warm pt-3">
           {!showTools && !hasActivity ? (
             <button
               onClick={() => setShowTools(true)}
-              className="bg-transparent border-none cursor-pointer text-sm text-ink-muted py-1 min-h-8 tracking-[0.02em] hover:underline hover:decoration-dotted hover:underline-offset-4"
+              className="min-h-8 cursor-pointer border-none bg-transparent py-1 font-sans text-[0.72rem] font-medium uppercase tracking-[0.18em] text-ink-muted underline decoration-border underline-offset-4 transition-colors duration-150 hover:text-ink"
             >
               Signal &middot; Tag &middot; Discuss
             </button>
           ) : (
             <>
-              <div className="mb-2">
-                <div className="text-2xs font-semibold tracking-[0.08em] uppercase text-ink-faint mb-1">How does this section land?</div>
+              <div className="mb-4">
+                <div className="mb-2 font-sans text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-ink-faint">How does this section land?</div>
                 <ShapeSig sid={id} sigs={sigs} onSig={onSig} reader={reader} />
               </div>
               {!isReaderNote && statusTags && toggleStatusTag && (
-                <div className="mb-2">
-                  <div className="text-2xs font-semibold tracking-[0.08em] uppercase text-ink-faint mb-1">Section status</div>
+                <div className="mb-4">
+                  <div className="mb-2 font-sans text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-ink-faint">Section status</div>
                   <SectionStatusTags sectionId={id} statusTags={statusTags} toggleStatusTag={toggleStatusTag} reader={reader} />
                 </div>
               )}
               <div>
-                <div className="text-2xs font-semibold tracking-[0.08em] uppercase text-ink-faint mb-1 mt-1">Discussion</div>
-                <AnnThread sid={id} anns={anns} reader={reader} onAdd={onAnn} />
+                <div className="mt-1 mb-2 font-sans text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-ink-faint">Discussion</div>
+                <AnnThread sid={id} anns={anns} onAdd={onAnn} />
               </div>
             </>
           )}

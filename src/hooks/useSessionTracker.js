@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ld, sv, KEYS } from "../storage";
 
 const INACTIVITY_THRESHOLD = 30 * 60 * 1000; // 30 minutes
@@ -18,65 +18,77 @@ function isSessionExpired(session) {
   return Date.now() - session.lastActivityAt > INACTIVITY_THRESHOLD;
 }
 
+function restoreSession(reader) {
+  if (!reader) return null;
+  const saved = ld(KEYS.session, null);
+  if (saved && saved.reader === reader && !isSessionExpired(saved)) {
+    return saved;
+  }
+  return createSession(reader);
+}
+
 export default function useSessionTracker(reader) {
-  const [session, setSession] = useState(() => {
-    if (!reader) return null;
-    const saved = ld(KEYS.session, null);
-    if (saved && saved.reader === reader && !isSessionExpired(saved)) {
-      return saved;
-    }
-    return createSession(reader);
-  });
+  const [session, setSession] = useState(() => restoreSession(reader));
+  const fallbackSession = useMemo(() => restoreSession(reader), [reader]);
+  const activeSession = reader
+    ? (session && session.reader === reader && !isSessionExpired(session) ? session : fallbackSession)
+    : null;
 
   const [duration, setDuration] = useState(0);
   const timerRef = useRef(null);
 
   // Persist session to localStorage on every change
   useEffect(() => {
-    if (session) sv(KEYS.session, session);
-  }, [session]);
+    if (activeSession) sv(KEYS.session, activeSession);
+  }, [activeSession]);
 
   // Live duration ticker
   useEffect(() => {
-    if (!session) return;
+    if (!activeSession) return;
     const tick = () => {
-      setDuration(Math.floor((Date.now() - session.startedAt) / 1000));
+      setDuration(Math.floor((Date.now() - activeSession.startedAt) / 1000));
     };
     tick();
     timerRef.current = setInterval(tick, 1000);
     return () => clearInterval(timerRef.current);
-  }, [session?.startedAt]);
+  }, [activeSession]);
 
   // Touch lastActivityAt
   const touch = useCallback(() => {
     setSession(prev => {
-      if (!prev) return prev;
-      if (isSessionExpired(prev)) {
-        const fresh = createSession(prev.reader);
+      if (!reader) return prev;
+      const current = prev && prev.reader === reader && !isSessionExpired(prev) ? prev : restoreSession(reader);
+      if (!current) return current;
+      if (isSessionExpired(current)) {
+        const fresh = createSession(current.reader);
         return fresh;
       }
-      return { ...prev, lastActivityAt: Date.now() };
+      return { ...current, lastActivityAt: Date.now() };
     });
-  }, []);
+  }, [reader]);
 
   const recordAction = useCallback((type, details = {}) => {
     setSession(prev => {
-      if (!prev) return prev;
-      if (isSessionExpired(prev)) return createSession(prev.reader);
+      if (!reader) return prev;
+      const current = prev && prev.reader === reader && !isSessionExpired(prev) ? prev : restoreSession(reader);
+      if (!current) return current;
+      if (isSessionExpired(current)) return createSession(current.reader);
       return {
-        ...prev,
+        ...current,
         lastActivityAt: Date.now(),
-        actions: [...prev.actions, { type, ...details, at: Date.now() }],
+        actions: [...current.actions, { type, ...details, at: Date.now() }],
       };
     });
-  }, []);
+  }, [reader]);
 
   const recordSectionVisit = useCallback((sectionId) => {
     setSession(prev => {
-      if (!prev) return prev;
-      if (isSessionExpired(prev)) return createSession(prev.reader);
+      if (!reader) return prev;
+      const current = prev && prev.reader === reader && !isSessionExpired(prev) ? prev : restoreSession(reader);
+      if (!current) return current;
+      if (isSessionExpired(current)) return createSession(current.reader);
 
-      const sections = [...prev.sections];
+      const sections = [...current.sections];
       const last = sections[sections.length - 1];
 
       // If already on this section, just touch
@@ -92,11 +104,11 @@ export default function useSessionTracker(reader) {
       // Don't re-add if it's the same section we just left
       sections.push({ id: sectionId, enteredAt: Date.now(), leftAt: null });
 
-      return { ...prev, lastActivityAt: Date.now(), sections };
+      return { ...current, lastActivityAt: Date.now(), sections };
     });
-  }, []);
+  }, [reader]);
 
-  const getSessionData = useCallback(() => session, [session]);
+  const getSessionData = useCallback(() => activeSession, [activeSession]);
 
   const resetSession = useCallback(() => {
     if (!reader) return;
@@ -106,9 +118,9 @@ export default function useSessionTracker(reader) {
   }, [reader]);
 
   const getActionCounts = useCallback(() => {
-    if (!session) return { signals: 0, highlights: 0, annotations: 0, carries: 0, comments: 0, statusTags: 0, reactions: 0 };
+    if (!activeSession) return { signals: 0, highlights: 0, annotations: 0, carries: 0, comments: 0, statusTags: 0, reactions: 0 };
     const counts = { signals: 0, highlights: 0, annotations: 0, carries: 0, comments: 0, statusTags: 0, reactions: 0 };
-    for (const a of session.actions) {
+    for (const a of activeSession.actions) {
       if (a.type === "signal") counts.signals++;
       else if (a.type === "highlight") counts.highlights++;
       else if (a.type === "annotation") counts.annotations++;
@@ -118,20 +130,20 @@ export default function useSessionTracker(reader) {
       else if (a.type === "reaction") counts.reactions++;
     }
     return counts;
-  }, [session]);
+  }, [activeSession]);
 
   const getUniqueSectionsVisited = useCallback(() => {
-    if (!session) return [];
+    if (!activeSession) return [];
     const seen = new Set();
-    return session.sections.filter(s => {
+    return activeSession.sections.filter(s => {
       if (seen.has(s.id)) return false;
       seen.add(s.id);
       return true;
     });
-  }, [session]);
+  }, [activeSession]);
 
   return {
-    session,
+    session: activeSession,
     duration,
     recordAction,
     recordSectionVisit,

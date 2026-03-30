@@ -1,42 +1,42 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ld, sv, KEYS } from "../storage";
-import { SHAPES } from "../constants";
+
+function getInitialStoreState() {
+  const pass = ld(KEYS.pass, false);
+  const reader = ld(KEYS.reader, null);
+
+  return {
+    phase: pass && reader ? "doc" : pass ? "name" : "pass",
+    reader,
+    sigs: ld(KEYS.sigs, {}),
+    anns: ld(KEYS.anns, {}),
+    highlights: ld(KEYS.highlights, []),
+    carryList: ld(KEYS.carryList, {}),
+    inlineComments: ld(KEYS.inlineComments, []),
+    statusTags: ld(KEYS.statusTags, {}),
+    readingPositions: ld(KEYS.readingPos, {}),
+    emojiReactions: ld(KEYS.emojiReactions, {}),
+    versionPulse: ld(KEYS.versionPulse, { lastSeen: {} }),
+    welcomeDismissed: ld(KEYS.welcome, {}),
+    sessionReceipts: ld(KEYS.sessionReceipts, []),
+  };
+}
 
 export default function useStore() {
-  const [phase, setPhase] = useState("loading");
-  const [reader, setReader] = useState(null);
-  const [sigs, setSigs] = useState({});
-  const [anns, setAnns] = useState({});
-  const [highlights, setHighlights] = useState([]);
-  const [carryList, setCarryList] = useState({});
-  const [inlineComments, setInlineComments] = useState([]);
-  const [statusTags, setStatusTags] = useState({});
-  const [readingPositions, setReadingPositions] = useState({});
-  const [emojiReactions, setEmojiReactions] = useState({});
-  const [versionPulse, setVersionPulse] = useState({ lastSeen: {} });
-  const [welcomeDismissed, setWelcomeDismissed] = useState({});
-  const [sessionReceipts, setSessionReceipts] = useState([]);
-
-  // Load all state from localStorage on mount
-  useEffect(() => {
-    const p = ld(KEYS.pass, false);
-    const r = ld(KEYS.reader, null);
-    setSigs(ld(KEYS.sigs, {}));
-    setAnns(ld(KEYS.anns, {}));
-    setHighlights(ld(KEYS.highlights, []));
-    setCarryList(ld(KEYS.carryList, {}));
-    setInlineComments(ld(KEYS.inlineComments, []));
-    setStatusTags(ld(KEYS.statusTags, {}));
-    setReadingPositions(ld(KEYS.readingPos, {}));
-    setEmojiReactions(ld(KEYS.emojiReactions, {}));
-    setVersionPulse(ld(KEYS.versionPulse, { lastSeen: {} }));
-    setWelcomeDismissed(ld(KEYS.welcome, {}));
-    setSessionReceipts(ld(KEYS.sessionReceipts, []));
-
-    if (p && r) { setReader(r); setPhase("doc"); }
-    else if (p) { setPhase("name"); }
-    else { setPhase("pass"); }
-  }, []);
+  const [initialState] = useState(() => getInitialStoreState());
+  const [phase, setPhase] = useState(initialState.phase);
+  const [reader, setReader] = useState(initialState.reader);
+  const [sigs, setSigs] = useState(initialState.sigs);
+  const [anns, setAnns] = useState(initialState.anns);
+  const [highlights, setHighlights] = useState(initialState.highlights);
+  const [carryList, setCarryList] = useState(initialState.carryList);
+  const [inlineComments, setInlineComments] = useState(initialState.inlineComments);
+  const [statusTags, setStatusTags] = useState(initialState.statusTags);
+  const [readingPositions, setReadingPositions] = useState(initialState.readingPositions);
+  const [emojiReactions, setEmojiReactions] = useState(initialState.emojiReactions);
+  const [versionPulse, setVersionPulse] = useState(initialState.versionPulse);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(initialState.welcomeDismissed);
+  const [sessionReceipts, setSessionReceipts] = useState(initialState.sessionReceipts);
 
   const onPass = useCallback(() => {
     sv(KEYS.pass, true);

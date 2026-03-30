@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { SHAPES, SECTIONS } from "./constants";
 import useStore from "./hooks/useStore";
 import useMediaQuery from "./hooks/useMediaQuery";
@@ -12,132 +12,182 @@ import PulseSidebar from "./components/layout/PulseSidebar";
 import CarryListPanel from "./components/panels/CarryListPanel";
 import ReceiptPanel from "./components/panels/ReceiptPanel";
 import DocumentView from "./pages/DocumentView";
-import PlaceholderPage from "./pages/PlaceholderPage";
+import LandingPage from "./pages/LandingPage";
 import { exportCarryList } from "./utils/markdownExport";
 
 export default function App() {
   const store = useStore();
   const [rightPanel, setRightPanel] = useState(null);
   const isDesktop = useMediaQuery("(min-width: 769px)");
-  const [nav, setNav] = useState(isDesktop);
+  const [navOpen, setNavOpen] = useState(false);
+  const nav = navOpen;
 
   // Session tracking
   const tracker = useSessionTracker(store.reader);
 
-  useEffect(() => {
-    if (!isDesktop) setNav(false);
-  }, [isDesktop]);
-
   // Track reading position changes into session
   const currentSectionId = store.readingPositions?.[store.reader]?.sectionId;
+  const { recordSectionVisit, recordAction, duration, session, getActionCounts, getUniqueSectionsVisited, resetSession } = tracker;
   useEffect(() => {
-    if (currentSectionId) tracker.recordSectionVisit(currentSectionId);
-  }, [currentSectionId]);
+    if (currentSectionId) recordSectionVisit(currentSectionId);
+  }, [currentSectionId, recordSectionVisit]);
 
-  // Wrapped store callbacks that also record into session tracker
-  const wrappedOnSig = useCallback((sid, key) => {
-    store.onSig(sid, key);
-    tracker.recordAction("signal", { sectionId: sid, shape: key });
-  }, [store.onSig, tracker.recordAction]);
-
-  const wrappedOnAnn = useCallback((sid, txt) => {
-    store.onAnn(sid, txt);
-    tracker.recordAction("annotation", { sectionId: sid });
-  }, [store.onAnn, tracker.recordAction]);
-
-  const wrappedAddHighlight = useCallback((hl) => {
-    store.addHighlight(hl);
-    tracker.recordAction("highlight", { sectionId: hl.anchor?.sectionId, text: hl.anchor?.textContent?.slice(0, 80) });
-  }, [store.addHighlight, tracker.recordAction]);
-
-  const wrappedAddCarryItem = useCallback((item) => {
-    store.addCarryItem(item);
-    tracker.recordAction("carry", { sectionId: item.anchor?.sectionId, text: item.text?.slice(0, 80) });
-  }, [store.addCarryItem, tracker.recordAction]);
-
-  const wrappedAddInlineComment = useCallback((comment) => {
-    store.addInlineComment(comment);
-    tracker.recordAction("comment", {});
-  }, [store.addInlineComment, tracker.recordAction]);
-
-  const wrappedToggleStatusTag = useCallback((sectionId, tagKey) => {
-    store.toggleStatusTag(sectionId, tagKey);
-    tracker.recordAction("status_tag", { sectionId, tag: tagKey });
-  }, [store.toggleStatusTag, tracker.recordAction]);
-
-  const wrappedToggleReaction = useCallback((bqId, emojiKey) => {
-    store.toggleReaction(bqId, emojiKey);
-    tracker.recordAction("reaction", { emoji: emojiKey });
-  }, [store.toggleReaction, tracker.recordAction]);
-
-  // Build a wrapped store object for DocumentView
   const wrappedStore = useMemo(() => ({
     ...store,
-    onSig: wrappedOnSig,
-    onAnn: wrappedOnAnn,
-    addHighlight: wrappedAddHighlight,
-    addCarryItem: wrappedAddCarryItem,
-    addInlineComment: wrappedAddInlineComment,
-    toggleStatusTag: wrappedToggleStatusTag,
-    toggleReaction: wrappedToggleReaction,
-  }), [store, wrappedOnSig, wrappedOnAnn, wrappedAddHighlight, wrappedAddCarryItem, wrappedAddInlineComment, wrappedToggleStatusTag, wrappedToggleReaction]);
-
-  if (store.phase === "loading") return <div className="min-h-screen bg-surface" />;
-  if (store.phase === "pass") return <PassGate onPass={store.onPass} />;
-  if (store.phase === "name") return <NameGate onSelect={store.onName} />;
+    onSig: (sid, key) => {
+      store.onSig(sid, key);
+      recordAction("signal", { sectionId: sid, shape: key });
+    },
+    onAnn: (sid, txt) => {
+      store.onAnn(sid, txt);
+      recordAction("annotation", { sectionId: sid });
+    },
+    addHighlight: (hl) => {
+      store.addHighlight(hl);
+      recordAction("highlight", { sectionId: hl.anchor?.sectionId, text: hl.anchor?.textContent?.slice(0, 80) });
+    },
+    addCarryItem: (item) => {
+      store.addCarryItem(item);
+      recordAction("carry", { sectionId: item.anchor?.sectionId, text: item.text?.slice(0, 80) });
+    },
+    addInlineComment: (comment) => {
+      store.addInlineComment(comment);
+      recordAction("comment", {});
+    },
+    toggleStatusTag: (sectionId, tagKey) => {
+      store.toggleStatusTag(sectionId, tagKey);
+      recordAction("status_tag", { sectionId, tag: tagKey });
+    },
+    toggleReaction: (bqId, emojiKey) => {
+      store.toggleReaction(bqId, emojiKey);
+      recordAction("reaction", { emoji: emojiKey });
+    },
+  }), [store, recordAction]);
 
   const tA = Object.values(store.anns).reduce((s, a) => s + a.length, 0);
   const tS = Object.values(store.sigs).reduce((s, x) => s + SHAPES.reduce((s2, { key }) => s2 + ((x[key] || []).length), 0), 0);
   const currentSection = SECTIONS.find(s => s.id === currentSectionId) || null;
 
   return (
-    <BrowserRouter>
-      <div className="bg-surface min-h-screen font-sans text-ink leading-[1.7] text-body">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-        <TopBar
-          reader={store.reader} tS={tS} tA={tA}
-          nav={nav} setNav={setNav}
-          pulse={rightPanel === "pulse"}
-          setPulse={(v) => setRightPanel(v ? "pulse" : null)}
-          carry={rightPanel === "carry"}
-          setCarry={(v) => setRightPanel(v ? "carry" : null)}
-          currentSection={currentSection}
-          sessionDuration={tracker.duration}
-        />
-
-        {nav && <NavSidebar anns={store.anns} sigs={store.sigs} highlights={store.highlights} readingPositions={store.readingPositions} onClose={() => setNav(false)} currentSectionId={currentSectionId} />}
-        {rightPanel === "pulse" && <PulseSidebar anns={store.anns} sigs={store.sigs} onClose={() => setRightPanel(null)} />}
-        {rightPanel === "carry" && (
-          <CarryListPanel
-            carryList={store.carryList}
-            reader={store.reader}
-            onRemove={store.removeCarryItem}
-            onClose={() => setRightPanel(null)}
-            onExport={() => exportCarryList(store.reader, store.carryList, store.highlights)}
-          />
-        )}
-        {rightPanel === "receipt" && (
-          <ReceiptPanel
-            session={tracker.session}
-            duration={tracker.duration}
-            actionCounts={tracker.getActionCounts()}
-            uniqueSections={tracker.getUniqueSectionsVisited()}
-            onClose={() => setRightPanel(null)}
-            onSave={(receipt) => {
-              store.saveSessionReceipt({ ...receipt, sessionId: tracker.session?.id });
-              tracker.resetSession();
-              setRightPanel(null);
-            }}
-          />
-        )}
-
+      <BrowserRouter>
         <Routes>
-          <Route path="/" element={<DocumentView store={wrappedStore} nav={nav} isDesktop={isDesktop} />} />
-          <Route path="/files" element={<PlaceholderPage title="Files" description="Share and collaborate on files with your team." />} />
-          <Route path="/notifications" element={<PlaceholderPage title="Notifications" description="Stay updated on team activity and mentions." />} />
+          <Route path="/" element={<LandingPage phase={store.phase} reader={store.reader} />} />
+          <Route
+            path="/document"
+            element={
+              <DocumentRoute
+                store={store}
+                wrappedStore={wrappedStore}
+                nav={nav}
+                setNav={setNavOpen}
+                isDesktop={isDesktop}
+                rightPanel={rightPanel}
+                setRightPanel={setRightPanel}
+                currentSection={currentSection}
+                currentSectionId={currentSectionId}
+                tA={tA}
+                tS={tS}
+                duration={duration}
+                session={session}
+                getActionCounts={getActionCounts}
+                getUniqueSectionsVisited={getUniqueSectionsVisited}
+                resetSession={resetSession}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </>
+  );
+}
+
+function DocumentRoute({
+  store,
+  wrappedStore,
+  nav,
+  setNav,
+  isDesktop,
+  rightPanel,
+  setRightPanel,
+  currentSection,
+  currentSectionId,
+  tA,
+  tS,
+  duration,
+  session,
+  getActionCounts,
+  getUniqueSectionsVisited,
+  resetSession,
+}) {
+  if (store.phase === "loading") {
+    return <div className="min-h-screen bg-paper" />;
+  }
+
+  if (store.phase === "pass") {
+    return <PassGate onPass={store.onPass} />;
+  }
+
+  if (store.phase === "name") {
+    return <NameGate onSelect={store.onName} />;
+  }
+
+  return (
+    <div className="bg-paper min-h-screen font-sans text-ink leading-[1.75] text-body">
+      <TopBar
+        reader={store.reader}
+        tS={tS}
+        tA={tA}
+        nav={nav}
+        setNav={setNav}
+        pulse={rightPanel === "pulse"}
+        setPulse={(v) => setRightPanel(v ? "pulse" : null)}
+        carry={rightPanel === "carry"}
+        setCarry={(v) => setRightPanel(v ? "carry" : null)}
+        currentSection={currentSection}
+        sessionDuration={duration}
+      />
+
+      {nav && (
+        <NavSidebar
+          anns={store.anns}
+          sigs={store.sigs}
+          readingPositions={store.readingPositions}
+          onClose={() => setNav(false)}
+          currentSectionId={currentSectionId}
+        />
+      )}
+      {rightPanel === "pulse" && <PulseSidebar anns={store.anns} sigs={store.sigs} onClose={() => setRightPanel(null)} />}
+      {rightPanel === "carry" && (
+        <CarryListPanel
+          carryList={store.carryList}
+          reader={store.reader}
+          onRemove={store.removeCarryItem}
+          onClose={() => setRightPanel(null)}
+          onExport={() => exportCarryList(store.reader, store.carryList, store.highlights)}
+        />
+      )}
+      {rightPanel === "receipt" && (
+        <ReceiptPanel
+          session={session}
+          duration={duration}
+          actionCounts={getActionCounts()}
+          uniqueSections={getUniqueSectionsVisited()}
+          onClose={() => setRightPanel(null)}
+          onSave={(receipt) => {
+            store.saveSessionReceipt({ ...receipt, sessionId: session?.id });
+            resetSession();
+            setRightPanel(null);
+          }}
+        />
+      )}
+
+      <DocumentView store={wrappedStore} nav={nav} isDesktop={isDesktop} />
+    </div>
   );
 }

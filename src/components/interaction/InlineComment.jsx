@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { deserializeRange } from "../../utils/rangeSerializer";
 import { parseMentions } from "../../utils/mentionParser";
 import MentionInput from "./MentionInput";
@@ -19,7 +19,7 @@ function MentionText({ text }) {
   );
 }
 
-function CommentCard({ comment, reader, onReply, onClose, isMobile }) {
+function CommentCard({ comment, onReply, onClose, isMobile }) {
   const [txt, setTxt] = useState("");
 
   if (isMobile) {
@@ -95,9 +95,10 @@ function CommentCard({ comment, reader, onReply, onClose, isMobile }) {
   );
 }
 
-export default function InlineCommentLayer({ comments, reader, addReply, newAnchor, onAddNew, onCancelNew }) {
+export default function InlineCommentLayer({ comments, addReply, newAnchor, onAddNew, onCancelNew }) {
   const [openId, setOpenId] = useState(null);
   const [newTxt, setNewTxt] = useState("");
+  const [commentPositions, setCommentPositions] = useState([]);
   const isDesktop = useMediaQuery("(min-width: 769px)");
   const isMobile = !isDesktop;
   const marksRef = useRef([]);
@@ -128,24 +129,37 @@ export default function InlineCommentLayer({ comments, reader, addReply, newAnch
         if (parent) { parent.replaceChild(document.createTextNode(mark.textContent), mark); parent.normalize(); }
       });
       marksRef.current = [];
+      setCommentPositions([]);
     };
   }, [comments]);
 
-  const commentPositions = useMemo(() => {
-    return marksRef.current.map(({ mark, comment }) => {
-      const rect = mark.getBoundingClientRect();
-      return { comment, top: rect.top + window.scrollY, mark };
-    });
+  useEffect(() => {
+    const updatePositions = () => {
+      setCommentPositions(
+        marksRef.current.map(({ mark, comment }) => {
+          const rect = mark.getBoundingClientRect();
+          return { comment, top: rect.top + window.scrollY, mark };
+        })
+      );
+    };
+
+    updatePositions();
+    window.addEventListener("scroll", updatePositions, { passive: true });
+    window.addEventListener("resize", updatePositions);
+    return () => {
+      window.removeEventListener("scroll", updatePositions);
+      window.removeEventListener("resize", updatePositions);
+    };
   }, [comments, openId]);
 
   return (
     <>
       {commentPositions.map(({ comment, top }) => {
         if (openId !== comment.id) return null;
-        if (isMobile) return <CommentCard key={comment.id} comment={comment} reader={reader} onReply={addReply} onClose={() => setOpenId(null)} isMobile />;
+        if (isMobile) return <CommentCard key={comment.id} comment={comment} onReply={addReply} onClose={() => setOpenId(null)} isMobile />;
         return (
           <div key={comment.id} className="absolute ml-2" style={{ top, left: "100%" }}>
-            <CommentCard comment={comment} reader={reader} onReply={addReply} onClose={() => setOpenId(null)} isMobile={false} />
+            <CommentCard comment={comment} onReply={addReply} onClose={() => setOpenId(null)} isMobile={false} />
           </div>
         );
       })}
