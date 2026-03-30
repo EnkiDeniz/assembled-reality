@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   buildNoisePool,

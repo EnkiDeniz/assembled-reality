@@ -21,7 +21,7 @@
   --reader-text-size: 1.16rem;
   --reader-leading: 1.9;
   --reader-column-padding: clamp(1.4rem, 3vw, 2.6rem);
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: var(--font-ui), system-ui, sans-serif;
   background: var(--paper-bg);
   color: var(--paper-ink);
 }
@@ -38,8 +38,7 @@ html {
   background: var(--paper-bg);
 }
 
-body,
-#root {
+body {
   min-height: 100vh;
 }
 
@@ -120,7 +119,7 @@ a {
 
 .lock-screen__title {
   margin: 0;
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: clamp(3rem, 9vw, 5.6rem);
   line-height: 0.92;
   font-weight: 700;
@@ -131,7 +130,7 @@ a {
 .lock-screen__lede {
   margin: 0;
   max-width: 30rem;
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: clamp(1.15rem, 2.6vw, 1.45rem);
   line-height: 1.5;
   color: var(--paper-ink-soft);
@@ -139,6 +138,70 @@ a {
 
 .lock-screen__form {
   width: 100%;
+}
+
+.lock-screen__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--paper-ink-faint);
+  font-size: 0.84rem;
+}
+
+.lock-screen__identity-action {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--paper-accent);
+  cursor: pointer;
+}
+
+.auth-screen__frame {
+  width: min(100%, 40rem);
+}
+
+.auth-screen__form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.auth-screen__input {
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid var(--paper-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0.9rem 1rem;
+  color: var(--paper-ink);
+}
+
+.auth-screen__directory {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-screen__directory-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--paper-ink-faint);
+}
+
+.auth-screen__directory-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.auth-screen__directory-chip {
+  border: 1px solid var(--paper-border);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.85rem;
+  color: var(--paper-ink-soft);
+  background: rgba(255, 255, 255, 0.48);
 }
 
 .lock-screen__field {
@@ -361,7 +424,7 @@ a {
 }
 
 .matrix-phase-line {
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-style: italic;
   font-size: 1.2rem;
   line-height: 1.5;
@@ -627,6 +690,7 @@ a {
 
 .reader-toc__title {
   margin: 0.4rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 1.35rem;
   line-height: 1.05;
 }
@@ -722,6 +786,7 @@ a {
 
 .reader-marks__title {
   margin: 0.4rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 1.35rem;
   line-height: 1.05;
 }
@@ -813,7 +878,7 @@ a {
 }
 
 .reader-mark-card__excerpt {
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 1rem;
   line-height: 1.55;
   color: var(--reader-ink-soft);
@@ -821,6 +886,7 @@ a {
 
 .reader-mark-card__note {
   margin: 0;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 0.94rem;
   line-height: 1.6;
   color: var(--reader-ink);
@@ -916,7 +982,7 @@ a {
 
 .reader-beginning__title {
   margin: 1rem 0 0;
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: clamp(3.2rem, 8vw, 5.7rem);
   line-height: 0.92;
   letter-spacing: -0.05em;
@@ -925,7 +991,7 @@ a {
 
 .reader-beginning__subtitle {
   margin: 1rem 0 0;
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: clamp(1.3rem, 3vw, 1.95rem);
   line-height: 1.28;
   color: var(--reader-ink-soft);
@@ -972,7 +1038,7 @@ a {
 
 .reader-section__title {
   margin: 0.85rem 0 1.5rem;
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 600;
   line-height: 1.02;
@@ -991,9 +1057,31 @@ a {
   margin-bottom: 0;
 }
 
+.markdown-flow h1,
+.markdown-flow h2,
+.markdown-flow h3 {
+  margin: 2rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--reader-ink);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.markdown-flow h1 {
+  font-size: clamp(1.8rem, 3vw, 2.3rem);
+}
+
+.markdown-flow h2 {
+  font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+}
+
+.markdown-flow h3 {
+  font-size: clamp(1.15rem, 1.9vw, 1.4rem);
+}
+
 .markdown-flow p,
 .markdown-flow li {
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: var(--reader-text-size);
   line-height: var(--reader-leading);
 }
@@ -1002,7 +1090,8 @@ a {
   margin: 1.15rem 0 0;
 }
 
-.markdown-flow ul {
+.markdown-flow ul,
+.markdown-flow ol {
   margin: 1.15rem 0 0;
   padding-left: 1.35rem;
 }
@@ -1123,10 +1212,65 @@ a {
 }
 
 .selection-menu__quote {
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 0.98rem;
   line-height: 1.5;
   color: var(--reader-ink-soft);
+}
+
+.account-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.5rem;
+}
+
+.account-card {
+  width: min(100%, 34rem);
+  border: 1px solid var(--paper-border);
+  border-radius: 1.75rem;
+  background: var(--paper-surface);
+  box-shadow: 0 24px 80px rgba(18, 16, 14, 0.08);
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+.account-card__title {
+  margin: 0.35rem 0 1.25rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.account-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.account-card__meta dt {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper-ink-faint);
+  margin-bottom: 0.25rem;
+}
+
+.account-card__meta dd {
+  margin: 0;
+  color: var(--paper-ink);
+}
+
+.account-card__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  border-radius: 999px;
+  border: 1px solid var(--paper-border);
+  padding: 0 1rem;
+  background: rgba(255, 255, 255, 0.52);
+  text-decoration: none;
 }
 
 .selection-menu__textarea {

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 
 function MarkSection({ title, count, children, empty }) {
@@ -16,7 +18,10 @@ function BookmarkItem({ bookmark, onJump, onDelete }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(bookmark)}>
-        <span className="reader-mark-card__eyebrow">Bookmark</span>
+        <span className="reader-mark-card__eyebrow">
+          {bookmark.ownerName ? `${bookmark.ownerName} · ` : ""}
+          Bookmark
+        </span>
         <span className="reader-mark-card__title">{bookmark.label}</span>
         {bookmark.excerpt ? <span className="reader-mark-card__excerpt">{bookmark.excerpt}</span> : null}
       </button>
@@ -31,7 +36,10 @@ function HighlightItem({ highlight, onJump, onDelete }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(highlight)}>
-        <span className="reader-mark-card__eyebrow">{highlight.sectionTitle}</span>
+        <span className="reader-mark-card__eyebrow">
+          {highlight.ownerName ? `${highlight.ownerName} · ` : ""}
+          {highlight.sectionTitle}
+        </span>
         <span className="reader-mark-card__excerpt">“{highlight.excerpt}”</span>
       </button>
       <button type="button" className="reader-mark-card__delete" onClick={() => onDelete(highlight.id)}>
@@ -48,7 +56,10 @@ function NoteItem({ note, onJump, onDelete, onSave }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(note)}>
-        <span className="reader-mark-card__eyebrow">{note.sectionTitle}</span>
+        <span className="reader-mark-card__eyebrow">
+          {note.ownerName ? `${note.ownerName} · ` : ""}
+          {note.sectionTitle}
+        </span>
         <span className="reader-mark-card__excerpt">“{note.excerpt}”</span>
       </button>
 

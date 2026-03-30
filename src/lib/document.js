@@ -1,17 +1,48 @@
-import rawDocument from "../../content/assembled_reality_v07_final.md?raw";
+import fs from "node:fs";
+import path from "node:path";
+import { cache } from "react";
+import { slugify } from "@/lib/text";
 
 const SECTION_HEADER_RE = /^##\s+(\d+)\s+·\s+(.+)$/gm;
+const APPENDIX_DOCUMENTS = [
+  {
+    number: "21",
+    title: "Appendix · Operator Sentences",
+    segments: ["docs", "operator-sentences.md"],
+  },
+];
 
-export function slugify(value) {
-  return value
-    .toLowerCase()
-    .replace(/['".,]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function normalizeMarkdown(markdown) {
+  return markdown.replace(/\r\n/g, "\n").trim();
+}
+
+function readMarkdownFile(...segments) {
+  const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), ...segments);
+  return fs.readFileSync(filePath, "utf8");
+}
+
+function stripLeadingTitle(markdown) {
+  return normalizeMarkdown(markdown).replace(/^#\s+.+\n+/, "").trim();
+}
+
+function buildAppendixMarkdown() {
+  return APPENDIX_DOCUMENTS.flatMap((appendix) => {
+    const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), ...appendix.segments);
+    if (!fs.existsSync(filePath)) {
+      return [];
+    }
+
+    const body = stripLeadingTitle(readMarkdownFile(...appendix.segments));
+    if (!body) {
+      return [];
+    }
+
+    return [`## ${appendix.number} · ${appendix.title}\n\n${body}`];
+  }).join("\n\n---\n\n");
 }
 
 export function parseDocument(markdown) {
-  const normalized = markdown.replace(/\r\n/g, "\n").trim();
+  const normalized = normalizeMarkdown(markdown);
   const titleMatch = normalized.match(/^#\s+(.+)$/m);
   const subtitleMatch = normalized.match(/^###\s+(.+)$/m);
   const title = titleMatch?.[1]?.trim() || "ASSEMBLED REALITY";
@@ -59,4 +90,9 @@ export function parseDocument(markdown) {
   };
 }
 
-export const parsedDocument = parseDocument(rawDocument);
+export const getParsedDocument = cache(() => {
+  const baseDocument = normalizeMarkdown(readMarkdownFile("content", "assembled_reality_v07_final.md"));
+  const appendixDocument = buildAppendixMarkdown();
+  const raw = [baseDocument, appendixDocument].filter(Boolean).join("\n\n---\n\n");
+  return parseDocument(raw);
+});

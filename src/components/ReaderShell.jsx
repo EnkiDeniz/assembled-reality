@@ -1,5 +1,6 @@
+"use client";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderMarksPanel from "./ReaderMarksPanel";
 import SelectionMenu from "./SelectionMenu";
@@ -11,11 +12,10 @@ import {
   deleteNote,
   getRenderableMarksByBlock,
   hasSectionBookmark,
-  loadReaderAnnotations,
-  saveReaderAnnotations,
   toggleSectionBookmark,
   updateNote,
 } from "../lib/annotations";
+import { EMPTY_READER_ANNOTATIONS } from "../lib/reader-store";
 import { clearBrowserSelection, getSelectionAnchor } from "../lib/selection";
 import { saveReaderPreferences } from "../lib/storage";
 
@@ -67,14 +67,32 @@ function MarksIcon() {
   );
 }
 
-export default function ReaderShell({ documentData, preferences, setPreferences }) {
-  const location = useLocation();
+export default function ReaderShell({
+  documentData,
+  preferences,
+  setPreferences,
+  initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
+  initialReadingProgress = null,
+  aggregateAnnotations: _aggregateAnnotations = null,
+  profile: _profile = null,
+  getReceiptsConnection: _getReceiptsConnection = null,
+}) {
+  const initialHash =
+    typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
   const [tocOpen, setTocOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [marksOpen, setMarksOpen] = useState(false);
-  const [activeSlug, setActiveSlug] = useState(location.hash.replace("#", "") || "beginning");
-  const [progress, setProgress] = useState(0);
-  const [readerAnnotations, setReaderAnnotations] = useState(() => loadReaderAnnotations());
+  const [activeSlug, setActiveSlug] = useState(
+    initialHash || initialReadingProgress?.sectionSlug || "beginning",
+  );
+  const [progress, setProgress] = useState(
+    typeof initialReadingProgress?.progressPercent === "number"
+      ? initialReadingProgress.progressPercent / 100
+      : 0,
+  );
+  const [readerAnnotations, setReaderAnnotations] = useState(
+    () => initialReaderAnnotations || EMPTY_READER_ANNOTATIONS,
+  );
   const [selectionState, setSelectionState] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [selectionNotice, setSelectionNotice] = useState("");
@@ -83,6 +101,8 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
   const scrollIntentRef = useRef(false);
   const noticeTimeoutRef = useRef(null);
   const focusTimeoutRef = useRef(null);
+  const hasHydratedMarksRef = useRef(false);
+  const hasHydratedProgressRef = useRef(false);
 
   const entries = useMemo(
     () => [
@@ -107,27 +127,29 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
   }, [preferences]);
 
   useEffect(() => {
-    saveReaderAnnotations(readerAnnotations);
-  }, [readerAnnotations]);
+    if (typeof window === "undefined") return undefined;
 
-  const marksByBlock = useMemo(
-    () => getRenderableMarksByBlock(readerAnnotations),
-    [readerAnnotations],
-  );
+    const scrollToHash = () => {
+      const targetSlug =
+        window.location.hash.replace("#", "") ||
+        initialReadingProgress?.sectionSlug ||
+        "beginning";
+      const target = document.getElementById(targetSlug);
+      if (!target) return;
 
-  useEffect(() => {
-    const targetSlug = location.hash.replace("#", "") || "beginning";
-    const target = document.getElementById(targetSlug);
-    if (!target) return;
+      scrollIntentRef.current = true;
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "start", behavior: "auto" });
+        window.setTimeout(() => {
+          scrollIntentRef.current = false;
+        }, 120);
+      });
+    };
 
-    scrollIntentRef.current = true;
-    window.requestAnimationFrame(() => {
-      target.scrollIntoView({ block: "start", behavior: "auto" });
-      window.setTimeout(() => {
-        scrollIntentRef.current = false;
-      }, 120);
-    });
-  }, [location.hash]);
+    scrollToHash();
+    window.addEventListener("hashchange", scrollToHash);
+    return () => window.removeEventListener("hashchange", scrollToHash);
+  }, [initialReadingProgress?.sectionSlug]);
 
   useEffect(() => {
     const handleProgress = () => {
@@ -174,9 +196,9 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
   useEffect(() => {
     if (scrollIntentRef.current) return;
     const nextHash = activeSlug === "beginning" ? "" : `#${activeSlug}`;
-    const nextUrl = `${location.pathname}${nextHash}`;
+    const nextUrl = nextHash ? `/read${nextHash}` : "/read";
     window.history.replaceState(window.history.state, "", nextUrl);
-  }, [activeSlug, location.pathname]);
+  }, [activeSlug]);
 
   useEffect(() => {
     const handleEscape = (event) => {
@@ -226,6 +248,10 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
       ),
     [readerAnnotations.notes],
   );
+  const marksByBlock = useMemo(
+    () => getRenderableMarksByBlock(readerAnnotations),
+    [readerAnnotations],
+  );
 
   const clearFocusState = useCallback(() => {
     if (focusTimeoutRef.current) {
@@ -249,27 +275,30 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
     }, 1800);
   }, []);
 
-  const jumpTo = useCallback((slug) => {
-    const target = document.getElementById(slug);
-    if (!target) return;
+  const jumpTo = useCallback(
+    (slug) => {
+      const target = document.getElementById(slug);
+      if (!target) return;
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scrollIntentRef.current = true;
-    setTocOpen(false);
-    setAppearanceOpen(false);
-    setMarksOpen(false);
-    setSelectionState(null);
-    setNoteDraft("");
-    clearBrowserSelection();
-    clearFocusState();
-    target.scrollIntoView({
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-      block: "start",
-    });
-    window.setTimeout(() => {
-      scrollIntentRef.current = false;
-    }, prefersReducedMotion ? 60 : 320);
-  }, [clearFocusState]);
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      scrollIntentRef.current = true;
+      setTocOpen(false);
+      setAppearanceOpen(false);
+      setMarksOpen(false);
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      clearFocusState();
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, prefersReducedMotion ? 60 : 320);
+    },
+    [clearFocusState],
+  );
 
   const jumpToMark = useCallback(
     (mark) => {
@@ -404,6 +433,65 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
     };
   }, []);
 
+  useEffect(() => {
+    if (!hasHydratedMarksRef.current) {
+      hasHydratedMarksRef.current = true;
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        await fetch("/api/reader/marks", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(readerAnnotations),
+          signal: controller.signal,
+        });
+      } catch {
+        // Keep local state responsive; retry on the next mutation.
+      }
+    }, 260);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [readerAnnotations]);
+
+  useEffect(() => {
+    if (!hasHydratedProgressRef.current) {
+      hasHydratedProgressRef.current = true;
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        await fetch("/api/reader/progress", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sectionSlug: activeSlug,
+            progressPercent,
+          }),
+          signal: controller.signal,
+        });
+      } catch {
+        // Progress saves are best effort.
+      }
+    }, 320);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [activeSlug, progressPercent]);
+
   const handleToggleBookmark = () => {
     setReaderAnnotations((current) =>
       toggleSectionBookmark(current, {
@@ -457,9 +545,7 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
         </button>
         <div className="reader-topbar__center">
           <div className="reader-topbar__title">{documentData.title}</div>
-          <div className="reader-topbar__section">
-            {currentLabel}
-          </div>
+          <div className="reader-topbar__section">{currentLabel}</div>
         </div>
         <div className="reader-topbar__actions">
           <button
@@ -545,7 +631,11 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
               <span>{progressPercent}% read</span>
             </p>
           </div>
-          <button type="button" className="reader-chrome-button reader-chrome-button--icon" onClick={() => setTocOpen(false)}>
+          <button
+            type="button"
+            className="reader-chrome-button reader-chrome-button--icon"
+            onClick={() => setTocOpen(false)}
+          >
             ×
           </button>
         </div>
@@ -653,7 +743,10 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
 
       <footer className="reader-bottomrail">
         <div className="reader-bottomrail__progress">
-          <div className="reader-bottomrail__progress-fill" style={{ width: `${progress * 100}%` }} />
+          <div
+            className="reader-bottomrail__progress-fill"
+            style={{ width: `${progress * 100}%` }}
+          />
         </div>
         <div className="reader-bottomrail__nav">
           <button
@@ -666,9 +759,7 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
             Previous
           </button>
           <div className="reader-bottomrail__current">
-            <span className="reader-bottomrail__current-title">
-              {currentLabel}
-            </span>
+            <span className="reader-bottomrail__current-title">{currentLabel}</span>
             <span className="reader-bottomrail__current-progress">{progressPercent}% read</span>
           </div>
           <button
