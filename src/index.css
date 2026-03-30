@@ -536,6 +536,12 @@ a {
   font-size: 1rem;
 }
 
+.reader-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}
+
 .reader-appearance-menu {
   position: fixed;
   top: calc(max(1rem, env(safe-area-inset-top)) + 4.6rem);

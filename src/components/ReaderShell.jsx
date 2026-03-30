@@ -35,6 +35,38 @@ const THEME_LABELS = {
   dark: "Dark",
 };
 
+function BookmarkIcon({ filled }) {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M6 3.75h8a1.25 1.25 0 0 1 1.25 1.25v11.4l-5.25-3.2-5.25 3.2V5A1.25 1.25 0 0 1 6 3.75Z"
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MarksIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M4.5 5.75h11M4.5 10h7.5M4.5 14.25h9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14.5 8.2 15 9.65l1.45.5-1.45.5-.5 1.45-.5-1.45-1.45-.5 1.45-.5.5-1.45Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export default function ReaderShell({ documentData, preferences, setPreferences }) {
   const location = useLocation();
   const [tocOpen, setTocOpen] = useState(false);
@@ -432,23 +464,29 @@ export default function ReaderShell({ documentData, preferences, setPreferences 
         <div className="reader-topbar__actions">
           <button
             type="button"
-            className={`reader-chrome-button ${currentBookmarked ? "is-active" : ""}`}
+            className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
             onClick={handleToggleBookmark}
+            aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
+            title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
           >
-            <span className="reader-button-icon">{currentBookmarked ? "◆" : "◇"}</span>
-            <span>{currentBookmarked ? "Saved" : "Bookmark"}</span>
+            <span className="reader-button-icon">
+              <BookmarkIcon filled={currentBookmarked} />
+            </span>
           </button>
           <button
             type="button"
-            className={`reader-chrome-button ${marksOpen ? "is-active" : ""}`}
+            className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
             onClick={() => {
               setTocOpen(false);
               setAppearanceOpen(false);
               setMarksOpen((current) => !current);
             }}
+            aria-label={marksOpen ? "Close marks" : "Open marks"}
+            title={marksOpen ? "Close marks" : "Open marks"}
           >
-            <span className="reader-button-icon">✦</span>
-            <span>Marks</span>
+            <span className="reader-button-icon">
+              <MarksIcon />
+            </span>
           </button>
           <button
             type="button"
