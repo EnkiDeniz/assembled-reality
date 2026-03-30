@@ -1,17 +1,57 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import UnlockScreen from "./components/UnlockScreen";
+import ReaderShell from "./components/ReaderShell";
+import { parsedDocument } from "./lib/document";
+import { loadReaderPreferences, loadUnlockState, saveUnlockState } from "./lib/storage";
+
+const DEFAULT_UNLOCK = { unlocked: false, method: null };
+
 export default function App() {
+  const [unlockState, setUnlockState] = useState(() => loadUnlockState() || DEFAULT_UNLOCK);
+  const [preferences, setPreferences] = useState(() => loadReaderPreferences());
+
+  useEffect(() => {
+    document.title = unlockState.unlocked
+      ? `${parsedDocument.title} · Reader`
+      : `${parsedDocument.title} · Unlock`;
+  }, [unlockState.unlocked]);
+
+  const handleUnlock = useCallback((method) => {
+    const nextState = { unlocked: true, method };
+    setUnlockState(nextState);
+    saveUnlockState(nextState);
+  }, []);
+
   return (
-    <main className="app-shell">
-      <section className="reset-panel" aria-labelledby="reset-title">
-        <p className="reset-eyebrow">Assembled Reality</p>
-        <h1 id="reset-title" className="reset-title">
-          Rebuild in progress.
-        </h1>
-        <p className="reset-copy">
-          This site has been reset to a clean deployable scaffold. The Vite build,
-          Vercel routing, and project wiring are still in place so the next version
-          can be rebuilt and shipped without redoing setup.
-        </p>
-      </section>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            unlockState.unlocked ? (
+              <Navigate to="/read" replace />
+            ) : (
+              <UnlockScreen onUnlock={handleUnlock} />
+            )
+          }
+        />
+        <Route
+          path="/read"
+          element={
+            unlockState.unlocked ? (
+              <ReaderShell
+                documentData={parsedDocument}
+                preferences={preferences}
+                setPreferences={setPreferences}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to={unlockState.unlocked ? "/read" : "/"} replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
