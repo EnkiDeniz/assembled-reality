@@ -44,7 +44,11 @@ export default function DocumentView({ store, nav, isDesktop }) {
   }, [selection, clearSelection]);
 
   return (
-    <div ref={contentRef} className="relative transition-[margin-left] duration-[250ms] ease-in-out" style={{ marginLeft: (nav && isDesktop) ? 300 : 0 }}>
+    <div
+      ref={contentRef}
+      className="relative min-h-screen transition-[margin-left] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+      style={{ marginLeft: (nav && isDesktop) ? 320 : 0 }}
+    >
       <ReadingPresenceDots readingPositions={store.readingPositions} currentReader={store.reader} />
       <TextHighlighter highlights={store.highlights} reader={store.reader} />
       <SelectionPopover

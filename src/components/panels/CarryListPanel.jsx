@@ -4,30 +4,30 @@ export default function CarryListPanel({ carryList, reader, onRemove, onClose, o
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 z-85 bg-black/8" />
-      <div className="sidebar-right md:sidebar-right-none fixed right-0 top-0 bottom-0 z-90 flex w-full flex-col overflow-y-auto overscroll-contain border-l-0 bg-paper-soft/95 pt-[88px] shadow-[-18px_0_50px_rgba(27,24,21,0.08)] backdrop-blur-xl md:w-[360px] md:border-l md:border-border-dark/60">
-        <div className="flex items-center justify-between border-b border-border-warm px-5 py-4">
+      <div className="sidebar-right md:sidebar-right-none fixed right-0 top-0 bottom-0 z-90 flex w-full flex-col overflow-y-auto overscroll-contain border-l-0 bg-surface/96 pt-[104px] shadow-[-24px_0_80px_rgba(20,17,15,0.1)] backdrop-blur-2xl md:w-[380px] md:border-l md:border-border-dark/65">
+        <div className="flex items-center justify-between border-b border-border-warm px-5 py-4 md:px-6">
           <div>
             <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Side annotation</div>
-            <span className="mt-1 block font-serif text-[1.6rem] leading-none text-ink">Carry</span>
+            <span className="mt-2 block font-serif text-[1.75rem] leading-none text-ink">Carry</span>
           </div>
           <div className="flex gap-1.5 items-center">
             {onExport && (
-              <button onClick={onExport} className="min-h-9 rounded-full bg-ink px-4 text-sm font-medium text-paper-soft transition-all duration-150 hover:-translate-y-0.5">
+              <button onClick={onExport} className="min-h-10 rounded-full bg-ink px-4 text-sm font-medium text-paper-soft transition-all duration-150 hover:-translate-y-0.5">
                 Export
               </button>
             )}
-            <button onClick={onClose} className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink md:hidden">Close</button>
+            <button onClick={onClose} className="rounded-full border border-border-dark/70 bg-paper-soft px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink md:hidden">Close</button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-6">
           {READERS.map(r => {
             const items = carryList[r] || [];
             if (items.length === 0 && r !== reader) return null;
             const isMe = r === reader;
             return (
-              <div key={r} className="mb-6">
-                <div className={`mb-2 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] ${isMe ? "text-ink" : "text-ink-muted"}`}>
+              <div key={r} className="mb-6 rounded-[1.55rem] border border-border-warm bg-paper-soft/78 px-4 py-4 shadow-[0_12px_30px_rgba(20,17,15,0.04)]">
+                <div className={`mb-3 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] ${isMe ? "text-ink" : "text-ink-muted"}`}>
                   {r}{isMe ? " (you)" : ""}
                 </div>
                 {items.length === 0 ? (
@@ -41,7 +41,7 @@ export default function CarryListPanel({ carryList, reader, onRemove, onClose, o
                         className={`flex items-start justify-between gap-3 py-3 ${i < items.length - 1 ? "border-b border-divider" : ""}`}
                       >
                         <div className="flex-1">
-                          <p className="m-0 inline border-b border-border-dark/60 pb-px font-serif text-[1.22rem] leading-[1.45] text-ink-secondary">
+                          <p className="m-0 inline border-b border-border-dark/50 pb-px font-serif text-[1.22rem] leading-[1.45] text-ink-secondary">
                             {item.text.length > 120 ? item.text.slice(0, 120) + "\u2026" : item.text}
                           </p>
                           {section && <div className="mt-2 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-muted">§{section.num} {section.title}</div>}

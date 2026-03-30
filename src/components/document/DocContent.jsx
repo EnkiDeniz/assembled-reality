@@ -13,30 +13,66 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
 
   return (
     <ReactionContext.Provider value={reactionCtx}>
-    <main className="mx-auto max-w-[760px] px-5 pb-18 pt-[96px] transition-[margin-left] duration-[250ms] ease-in-out md:px-8 md:pb-24 md:pt-[110px]">
+    <main className="mx-auto max-w-[980px] px-4 pb-18 pt-[106px] md:px-8 md:pb-24 md:pt-[132px]">
       <WelcomeGuide
         reader={reader}
         dismissed={!!(welcomeDismissed && welcomeDismissed[reader])}
         onDismiss={dismissWelcome}
         onReopen={resetWelcome}
       />
-      {versionPulse && dismissVersionBanner && (
-        <VersionPulseBar versionPulse={versionPulse} reader={reader} onDismiss={dismissVersionBanner} />
-      )}
-      <header className="mb-14 border-b border-border-warm pb-8">
-        <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Reading room</div>
-        <h1 className="mt-4 font-serif text-[clamp(3.4rem,6vw,5.4rem)] leading-[0.94] tracking-[-0.04em] text-ink">Assembled Reality</h1>
-        <div className="mt-3 max-w-[32rem] font-serif text-[1.35rem] leading-[1.25] text-ink-tertiary md:text-[1.55rem]">The process by which Lakin.ai coordinates intelligence.</div>
-        <div className="mt-5 font-sans text-[0.78rem] uppercase tracking-[0.18em] text-ink-muted">
-          Lakin.ai &middot; v1.0 &middot; Founding document &middot; GetReceipts &middot; Box7 &middot; PromiseMe &middot; The Signet
-          {" "}&middot;{" "}
-          <button onClick={resetWelcome} className="cursor-pointer border-none bg-transparent p-0 text-[0.78rem] uppercase tracking-[0.18em] text-ink-muted underline decoration-border-dark underline-offset-4 transition-colors duration-150 hover:text-ink-secondary">How to use this document</button>
-        </div>
-        <P style={{ fontSize: "0.92rem", color: "var(--color-ink-tertiary)", marginBottom: 0, marginTop: "1.2rem", maxWidth: "38rem" }}>
-          Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.
-        </P>
-      </header>
+      <article className="overflow-hidden rounded-[2.2rem] border border-border-dark/70 bg-paper-soft/96 shadow-[0_38px_120px_rgba(20,17,15,0.11)]">
+        {versionPulse && dismissVersionBanner && (
+          <VersionPulseBar versionPulse={versionPulse} reader={reader} onDismiss={dismissVersionBanner} />
+        )}
 
+        <header className="border-b border-border-warm px-6 py-8 md:px-10 md:py-10">
+          <div className="flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-[38rem]">
+              <div className="font-sans text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Reading room</div>
+              <h1 className="mt-4 font-serif text-[clamp(3rem,5vw,5rem)] leading-[0.92] tracking-[-0.045em] text-ink">Assembled Reality</h1>
+              <div className="mt-3 max-w-[32rem] font-serif text-[1.3rem] leading-[1.18] text-ink-tertiary md:text-[1.45rem]">
+                The process by which Lakin.ai coordinates intelligence.
+              </div>
+            </div>
+
+            <div className="rounded-[1.6rem] border border-border-dark/60 bg-surface/78 px-5 py-5 xl:max-w-[18rem]">
+              <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">
+                Reader stance
+              </div>
+              <p className="mt-3 font-serif text-[1.45rem] leading-[1.2] text-ink">
+                Read it like a living doctrine, not a brochure.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-7 grid gap-0 overflow-hidden rounded-[1.6rem] border border-border-warm bg-surface/55 lg:grid-cols-[minmax(0,1.25fr)_0.75fr]">
+            <div className="px-5 py-5 md:px-6">
+              <div className="font-sans text-[0.74rem] uppercase tracking-[0.18em] text-ink-muted">
+                Lakin.ai &middot; v1.0 &middot; Founding document &middot; GetReceipts &middot; Box7 &middot; PromiseMe &middot; The Signet
+              </div>
+              <P style={{ fontSize: "0.94rem", color: "var(--color-ink-tertiary)", marginBottom: 0, marginTop: "0.95rem", maxWidth: "38rem" }}>
+                Written in executable text composed of operator sentences and operator chains. See companion: <em>Operator Sentences</em>.
+              </P>
+            </div>
+
+            <div className="border-t border-border-warm px-5 py-5 lg:border-l lg:border-t-0 md:px-6">
+              <div className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-ink-muted">
+                Reader
+              </div>
+              <div className="mt-2 font-serif text-[1.45rem] leading-none text-ink">
+                {reader}
+              </div>
+              <button
+                onClick={resetWelcome}
+                className="mt-4 cursor-pointer border-none bg-transparent p-0 font-sans text-[0.76rem] uppercase tracking-[0.18em] text-ink-muted underline decoration-border-dark underline-offset-4 transition-colors duration-150 hover:text-ink-secondary"
+              >
+                Reopen reading guide
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="px-6 py-8 md:px-10 md:py-10">
       <Sec id="reader-note" num="0" title="Reader Note" {...sp}>
         <P>This document does not try to explain every idea before using it.</P>
         <P>It tries to state the operators cleanly enough that the architecture can be carried, tested, and argued about.</P>
@@ -294,6 +330,8 @@ export default function DocContent({ sigs, anns, reader, onSig, onAnn, statusTag
         <BQ style={{ borderLeftColor: "#1A1917", fontSize: "1.06rem" }}>Reality doesn't appear. It's assembled.</BQ>
         <div className="font-sans text-[0.64rem] text-ink-muted mt-9">Lakin.ai {"\u00B7"} 2026 {"\u00B7"} v1.0</div>
       </Sec>
+        </div>
+      </article>
     </main>
     </ReactionContext.Provider>
   );

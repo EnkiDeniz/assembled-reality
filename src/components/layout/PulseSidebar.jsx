@@ -15,16 +15,16 @@ export default function PulseSidebar({ anns, sigs, onClose }) {
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 z-85 bg-black/8" />
-      <div className="sidebar-right md:sidebar-right-none fixed right-0 top-0 bottom-0 z-90 w-full overflow-y-auto overscroll-contain border-l-0 bg-paper-soft/95 pt-[88px] shadow-[-18px_0_50px_rgba(27,24,21,0.08)] backdrop-blur-xl md:w-[340px] md:border-l md:border-border-dark/60">
-        <div className="flex items-center justify-between border-b border-border-warm px-5 py-4">
+      <div className="sidebar-right md:sidebar-right-none fixed right-0 top-0 bottom-0 z-90 w-full overflow-y-auto overscroll-contain border-l-0 bg-surface/96 pt-[104px] shadow-[-24px_0_80px_rgba(20,17,15,0.1)] backdrop-blur-2xl md:w-[360px] md:border-l md:border-border-dark/65">
+        <div className="flex items-center justify-between border-b border-border-warm px-5 py-4 md:px-6">
           <div>
             <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Side annotation</div>
-            <span className="mt-1 block font-serif text-[1.6rem] leading-none text-ink">Pulse</span>
+            <span className="mt-2 block font-serif text-[1.75rem] leading-none text-ink">Pulse</span>
           </div>
-          <button onClick={onClose} className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink md:hidden">Close</button>
+          <button onClick={onClose} className="rounded-full border border-border-dark/70 bg-paper-soft px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink md:hidden">Close</button>
         </div>
-        <div className="px-5 py-5">
-          <div className="mb-5">
+        <div className="px-5 py-5 md:px-6">
+          <div className="mb-6 rounded-[1.5rem] border border-border-warm bg-paper-soft/80 px-4 py-4">
             <div className="mb-3 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">Readers in the room</div>
             <div className="flex flex-wrap gap-2">
               {READERS.map(r => {
@@ -33,7 +33,7 @@ export default function PulseSidebar({ anns, sigs, onClose }) {
                   <span
                     key={r}
                     className={`rounded-full px-3 py-1.5 text-sm ${
-                      a ? "border border-ink bg-ink text-paper-soft" : "border border-border text-ink-faint"
+                      a ? "border border-ink bg-ink text-paper-soft" : "border border-border bg-white/25 text-ink-faint"
                     }`}
                   >
                     {r}
@@ -47,7 +47,7 @@ export default function PulseSidebar({ anns, sigs, onClose }) {
             items.slice(0, 20).map((x, i) => (
               <div
                 key={i}
-                className={`py-3 text-md leading-[1.4] ${i < Math.min(items.length, 20) - 1 ? "border-b border-divider" : ""}`}
+                className={`rounded-[1.35rem] px-4 py-4 text-md leading-[1.4] ${i < Math.min(items.length, 20) - 1 ? "mb-3" : ""} border border-border-warm bg-paper-soft/75 shadow-[0_10px_24px_rgba(20,17,15,0.04)]`}
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-sans text-sm font-semibold uppercase tracking-[0.12em] text-ink-secondary">{x.author}</span>

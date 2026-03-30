@@ -18,9 +18,9 @@ export default function SectionStatusTags({ sectionId, statusTags, toggleStatusT
             key={key}
             onClick={() => toggleStatusTag(sectionId, key)}
             title={voters.length > 0 ? voters.join(", ") : "No votes yet"}
-            className="flex min-h-9 cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-sm font-medium transition-all duration-150"
+            className="flex min-h-10 cursor-pointer items-center gap-1 rounded-full px-3.5 py-1 text-sm font-medium transition-all duration-150"
             style={{
-              background: isSeal ? "var(--color-ink)" : voted ? "var(--color-surface-raised)" : "transparent",
+              background: isSeal ? "var(--color-ink)" : voted ? "var(--color-surface-raised)" : "rgba(255,255,255,0.4)",
               color: isSeal ? "var(--color-paper-soft)" : voted ? "var(--color-ink-secondary)" : "var(--color-ink-muted)",
               border: `1px solid ${isSeal ? "var(--color-ink)" : voted ? "var(--color-border-dark)" : "var(--color-border)"}`,
             }}

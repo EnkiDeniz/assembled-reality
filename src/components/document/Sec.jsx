@@ -16,21 +16,21 @@ export default function Sec({ id, num, title, children, sigs, anns, reader, onSi
   return (
     <>
       {ph}
-      <section id={id} className={`scroll-mt-28 mb-14 pb-8 ${isSealed ? "rounded-[1.75rem] border border-border-dark/70 bg-surface-guide px-5 py-6 md:px-6" : "border-b border-border-warm"}`}>
-        <h2 className="mt-1 mb-4 flex flex-wrap items-baseline gap-2 leading-[1.1]">
-          <span className="font-mono text-[0.76rem] uppercase tracking-[0.16em] text-ink-muted">{num}</span>
-          <span className="font-serif text-[2rem] text-ink md:text-[2.35rem]">{title}</span>
+      <section id={id} className={`scroll-mt-32 mb-16 pb-8 ${isSealed ? "rounded-[1.9rem] border border-border-dark/70 bg-surface-guide px-5 py-6 shadow-[0_18px_40px_rgba(20,17,15,0.05)] md:px-6" : "border-b border-border-warm"}`}>
+        <h2 className="mb-4 mt-1 flex flex-wrap items-baseline gap-3 leading-[1.05]">
+          <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[0.72rem] uppercase tracking-[0.16em] text-ink-muted">{num}</span>
+          <span className="font-serif text-[2.05rem] text-ink md:text-[2.45rem]">{title}</span>
           {isSealed && <span className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-seal">Sealed</span>}
         </h2>
         {children}
 
-        <div className="mt-5 border-t border-border-warm pt-3">
+        <div className="mt-6 rounded-[1.5rem] border border-border-warm bg-surface/42 px-4 py-4">
           {!showTools && !hasActivity ? (
             <button
               onClick={() => setShowTools(true)}
-              className="min-h-8 cursor-pointer border-none bg-transparent py-1 font-sans text-[0.72rem] font-medium uppercase tracking-[0.18em] text-ink-muted underline decoration-border underline-offset-4 transition-colors duration-150 hover:text-ink"
+              className="min-h-8 w-full cursor-pointer border-none bg-transparent py-1 text-left font-sans text-[0.72rem] font-medium uppercase tracking-[0.18em] text-ink-muted transition-colors duration-150 hover:text-ink"
             >
-              Signal &middot; Tag &middot; Discuss
+              Open section tools: signal, tag, discuss
             </button>
           ) : (
             <>

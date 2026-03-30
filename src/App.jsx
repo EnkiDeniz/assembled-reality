@@ -76,7 +76,14 @@ export default function App() {
 
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LandingPage phase={store.phase} reader={store.reader} />} />
+          <Route
+            path="/"
+            element={
+              store.phase === "pass"
+                ? <PassGate onPass={store.onPass} />
+                : <LandingPage phase={store.phase} reader={store.reader} />
+            }
+          />
           <Route
             path="/document"
             element={
@@ -138,7 +145,7 @@ function DocumentRoute({
   }
 
   return (
-    <div className="bg-paper min-h-screen font-sans text-ink leading-[1.75] text-body">
+    <div className="min-h-screen bg-[linear-gradient(180deg,_rgba(255,255,255,0.62),_rgba(255,255,255,0.1)),radial-gradient(circle_at_top_left,_rgba(180,90,56,0.05),_transparent_22%),var(--color-paper)] font-sans text-ink leading-[1.75] text-body">
       <TopBar
         reader={store.reader}
         tS={tS}

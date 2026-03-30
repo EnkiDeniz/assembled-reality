@@ -17,26 +17,29 @@ export default function NavSidebar({ anns, sigs, readingPositions = {}, onClose,
     <>
       {!isDesktop && <div onClick={onClose} className="fixed inset-0 z-85 bg-black/8" />}
       <div
-        className={`fixed left-0 bottom-0 overflow-y-auto overscroll-contain bg-paper-soft/95 shadow-[18px_0_50px_rgba(27,24,21,0.08)] backdrop-blur-xl
-          top-0 pt-[88px]
-          w-full md:w-[300px]
+        className={`fixed left-0 bottom-0 overflow-y-auto overscroll-contain bg-surface/96 shadow-[24px_0_80px_rgba(20,17,15,0.1)] backdrop-blur-2xl
+          top-0 pt-[104px]
+          w-full md:w-[320px]
           z-90 md:z-50
-          border-r-0 md:border-r md:border-border-dark/60
-          p-4 px-5 md:px-5
+          border-r-0 md:border-r md:border-border-dark/65
+          p-4 px-5 md:px-6
           ${!isDesktop ? "sidebar-left" : ""}`}
       >
         {!isDesktop && (
-          <div className="mb-3 flex justify-end">
-            <button onClick={onClose} className="rounded-full border border-border-dark/70 px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink">Close</button>
+          <div className="mb-4 flex justify-end">
+            <button onClick={onClose} className="rounded-full border border-border-dark/70 bg-paper-soft px-4 py-2 text-sm font-medium text-ink-tertiary transition-colors duration-150 hover:border-ink hover:text-ink">Close</button>
           </div>
         )}
 
-        <div className="mb-4 border-b border-border-warm pb-4">
+        <div className="mb-5 rounded-[1.6rem] border border-border-dark/60 bg-paper-soft/85 px-4 py-4 shadow-[0_16px_40px_rgba(20,17,15,0.05)]">
           <div className="font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted">Reading room</div>
-          <div className="mt-1 font-serif text-[1.75rem] leading-none text-ink">Section index</div>
+          <div className="mt-2 font-serif text-[1.85rem] leading-[0.98] text-ink">Section index</div>
+          <p className="mt-3 text-[0.92rem] leading-[1.7] text-ink-tertiary">
+            The rail keeps the architecture visible while you read: section order, reader presence, and where the room is active.
+          </p>
         </div>
 
-        <div className="mb-5 border-b border-border-warm pb-4">
+        <div className="mb-6 rounded-[1.4rem] border border-border-warm bg-white/36 px-4 py-4">
           <div className="mb-3 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted">Last seen</div>
           <div className="flex flex-wrap gap-2">
             {READERS.map((r, i) => {
@@ -45,7 +48,7 @@ export default function NavSidebar({ anns, sigs, readingPositions = {}, onClose,
               return (
                 <span
                   key={r}
-                  className="rounded-full px-2.5 py-1 text-sm font-medium"
+                  className="rounded-full px-2.5 py-1 text-sm font-medium shadow-[0_4px_14px_rgba(20,17,15,0.03)]"
                   style={{
                     background: pos ? READER_COLORS[i] + "14" : "transparent",
                     color: pos ? READER_COLORS[i] : "#B5AB9F",
@@ -62,7 +65,7 @@ export default function NavSidebar({ anns, sigs, readingPositions = {}, onClose,
 
         {[1, 2, 3].map(p => (
           <div key={p}>
-            <div className={`mb-2 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-ink-muted ${p > 1 ? "mt-6 border-t border-border-warm pt-4" : ""}`}>
+            <div className={`mb-3 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-ink-muted ${p > 1 ? "mt-7 border-t border-border-warm pt-5" : ""}`}>
               {PART_NAMES[p]}
             </div>
             {SECTIONS.filter(s => s.part === p || (p === 1 && s.part === 0)).map(s => {
@@ -76,20 +79,20 @@ export default function NavSidebar({ anns, sigs, readingPositions = {}, onClose,
                   key={s.id}
                   href={`#${s.id}`}
                   onClick={onClose}
-                  className={`flex min-h-11 items-center justify-between rounded-2xl px-3 py-2 no-underline transition-all duration-150 md:min-h-0
-                    ${isActive ? "bg-surface-raised/80 shadow-[0_8px_24px_rgba(27,24,21,0.06)]" : "hover:bg-white/45"}`}
+                  className={`mb-1.5 flex min-h-12 items-center justify-between rounded-[1.2rem] px-3 py-2.5 no-underline transition-all duration-150 md:min-h-0
+                    ${isActive ? "border border-border-dark/65 bg-paper-soft shadow-[0_10px_28px_rgba(20,17,15,0.06)]" : "border border-transparent hover:border-border hover:bg-white/48"}`}
                 >
                   <span className="flex items-center gap-2">
                     {readersHere.length > 0 && (
                       <span className="flex gap-0.5">
                         {readersHere.map(r => {
                           const idx = READERS.indexOf(r);
-                          return <span key={r} className="w-1.5 h-1.5 rounded-full" style={{ background: READER_COLORS[idx] || "#999" }} title={r} />;
+                          return <span key={r} className="h-1.5 w-1.5 rounded-full" style={{ background: READER_COLORS[idx] || "#999" }} title={r} />;
                         })}
                       </span>
                     )}
-                    <span className="font-mono text-[0.78rem] uppercase tracking-[0.12em] text-ink-muted">{s.num}</span>
-                    <span className={`text-[0.95rem] leading-[1.3] ${isActive ? "font-semibold text-ink" : "text-ink-secondary"}`}>
+                    <span className="font-mono text-[0.76rem] uppercase tracking-[0.16em] text-ink-muted">{s.num}</span>
+                    <span className={`text-[0.98rem] leading-[1.3] ${isActive ? "font-semibold text-ink" : "text-ink-secondary"}`}>
                       {s.title}
                     </span>
                   </span>

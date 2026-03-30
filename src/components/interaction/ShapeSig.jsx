@@ -10,9 +10,9 @@ export default function ShapeSig({ sid, sigs, onSig, reader }) {
         const me = v.includes(reader);
         return (
           <button key={key} onClick={() => onSig(sid, key)} title={v.join(", ") || "No signals yet"}
-            className="flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-150"
+            className="flex min-h-10 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all duration-150"
             style={{
-              background: me ? `${color}18` : "transparent",
+              background: me ? `${color}18` : "rgba(255,255,255,0.42)",
               border: `1px solid ${me ? color : "var(--color-border-dark)"}`,
               color: me ? "var(--color-ink)" : "var(--color-ink-tertiary)",
             }}>
