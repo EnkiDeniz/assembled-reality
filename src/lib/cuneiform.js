@@ -1,9 +1,9 @@
-export const BYPASS_CODES = ["enki7", "gracearchercloud"];
+export const BYPASS_CODES = ["hineni"];
 
 const TARGET_GLYPHS = ["𒀭", "𒂗", "𒆠", "𒐛", "𒋾", "𒅎", "𒆳"];
 
-const PASSWORD_A = ["𒀭", "𒂗", "𒆠", "𒐛"];
-const PASSWORD_B = ["𒀭", "𒋾", "𒅎", "𒆳"];
+const PUZZLE_PASSWORD_A = ["𒀭", "𒂗", "𒆠", "𒐛"];
+const PUZZLE_PASSWORD_B = ["𒀭", "𒋾", "𒅎", "𒆳"];
 
 export const PUZZLE_SUCCESS_PHASES = [
   ["Alignment registered"],
@@ -67,8 +67,8 @@ export function createSchedule(foundGlyphs, frozenColumns) {
 
 export function getUnlockPassword(foundGlyphs) {
   const found = new Set(foundGlyphs);
-  const hasPasswordA = PASSWORD_A.every((glyph) => found.has(glyph));
-  const hasPasswordB = PASSWORD_B.every((glyph) => found.has(glyph));
+  const hasPasswordA = PUZZLE_PASSWORD_A.every((glyph) => found.has(glyph));
+  const hasPasswordB = PUZZLE_PASSWORD_B.every((glyph) => found.has(glyph));
 
   if (hasPasswordA) return "password-a";
   if (hasPasswordB) return "password-b";
