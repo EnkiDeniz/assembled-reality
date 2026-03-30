@@ -71,7 +71,7 @@ export const siteConfig = {
     'touched vs untouched',
     'LAKIN',
     'GetReceipts',
-    'Box7',
+    'Lakin',
     'Box9',
   ],
   navLinks: [
@@ -189,7 +189,7 @@ export const siteConfig = {
             'Create, collect, and share receipts that show what happened, what reality said back, and who was there when it did.',
         },
         {
-          name: 'Box7',
+          name: 'Lakin',
           href: 'https://box7.ai',
           label: 'Reasoning Layer',
           description:
@@ -344,7 +344,7 @@ export const siteConfig = {
       'Expanded context for AI agents. This file inlines the core canon and recent essays so an agent can understand LAKIN without fetching each page individually.',
     coreProducts: [
       'GetReceipts (getreceipts.com) — the refinery where receipts are created, collected, and shared',
-      'Box7 (box7.ai) — AI thinking grounded by receipts, for individuals',
+      'Lakin (box7.ai) — AI thinking grounded by receipts, for individuals',
       'Box9 (box9.ai) — receipt-grounded coordination for teams',
     ],
   },

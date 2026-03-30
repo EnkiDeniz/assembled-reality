@@ -1164,7 +1164,7 @@ The distinction matters: a competitive skydiver landing on a 2cm target and a fi
 
 ## We see this everywhere
 
-We built [Box7](https://box7.ai) because we kept seeing this pattern — not at 3,000 feet, but in kitchens, inboxes, and quarterly reviews.
+We built [Lakin](https://box7.ai) because we kept seeing this pattern — not at 3,000 feet, but in kitchens, inboxes, and quarterly reviews.
 
 A founder fixates on a competitor and stops seeing their own customers. A person in a difficult relationship replays the same argument on loop, unable to see the thirty other things in their life that are working. Someone stares at a number on a scale or a bank balance until it becomes the only signal that matters, and every decision routes through it.
 
@@ -1230,11 +1230,11 @@ One new signal. That's all it takes to restore the geometry of choice.
 
 ---
 
-## What Box7 actually does
+## What Lakin actually does
 
-Box7 doesn't mirror. It reads.
+Lakin doesn't mirror. It reads.
 
-When someone brings a situation into Box7, the system doesn't validate or argue. It reads the shape — or the absence of one. It detects when awareness has collapsed to a line: when all the energy, all the language, all the attention is routing through a single signal. And then it does what the instructor does: it directs attention toward clear space. Not away from the problem. Toward something real that the fixation made invisible.
+When someone brings a situation into Lakin, the system doesn't validate or argue. It reads the shape — or the absence of one. It detects when awareness has collapsed to a line: when all the energy, all the language, all the attention is routing through a single signal. And then it does what the instructor does: it directs attention toward clear space. Not away from the problem. Toward something real that the fixation made invisible.
 
 A receipt you forgot you had. A pattern you stopped noticing. A commitment that's still alive underneath the noise.
 
@@ -1264,7 +1264,7 @@ That's what we're building.
 
 ---
 
-**Box7** — *Shape-reading AI for the moments when you can't see the field.*
+**Lakin** — *Shape-reading AI for the moments when you can't see the field.*
 
 [lakin.ai](https://lakin.ai)
 

@@ -1,8 +1,10 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import CuneiformPuzzle from "./CuneiformPuzzle";
 import { BYPASS_CODES } from "../lib/cuneiform";
 
-export default function UnlockScreen({ onUnlock }) {
+export default function UnlockScreen({ onUnlock, onSignOut = null, userName = "" }) {
   const [code, setCode] = useState("");
   const [wrong, setWrong] = useState(false);
   const [showPuzzle, setShowPuzzle] = useState(false);
@@ -32,6 +34,16 @@ export default function UnlockScreen({ onUnlock }) {
           <p className="lock-screen__eyebrow">Private reading instrument</p>
           <h1 className="lock-screen__title">Assembled Reality</h1>
           <p className="lock-screen__lede">Enter an internal access code to continue.</p>
+          {userName ? (
+            <div className="lock-screen__identity">
+              <span>Signed in as {userName}</span>
+              {onSignOut ? (
+                <button type="button" className="lock-screen__identity-action" onClick={onSignOut}>
+                  Switch reader
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <form className="lock-screen__form" onSubmit={handleSubmit}>
