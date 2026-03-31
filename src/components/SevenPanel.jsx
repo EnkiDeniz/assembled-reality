@@ -175,6 +175,8 @@ export default function SevenPanel({
     index: 0,
     total: 0,
     mode: preferredVoiceProvider ? "provider" : "device",
+    sourceType: null,
+    sourceId: null,
   });
   const [chatStatus, setChatStatus] = useState(() =>
     initialChatStatus({ textEnabled, textProvider }),
@@ -229,6 +231,7 @@ export default function SevenPanel({
   const canListen = effectiveVoiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
   const hasConversation = messages.length > 0;
+  const sectionAudioActive = audioActive && audioState.sourceType === "section";
 
   useEffect(() => {
     if (!messageListRef.current) return;
@@ -297,17 +300,20 @@ export default function SevenPanel({
     effectiveVoiceEnabled
       ? {
           id: "listen",
-          label: audioActive ? "Stop" : "Listen",
+          label: sectionAudioActive ? "Stop" : "Read section",
           className: "reader-seven__action is-primary",
           icon: <SpeakerIcon />,
           disabled: !canListen && !audioActive,
           onClick: () => {
-            if (audioActive) {
+            if (sectionAudioActive) {
               stopAudio();
               return;
             }
 
-            playText(narrationText, `Reading ${currentLabel}`);
+            playText(narrationText, `Reading ${currentLabel}`, {
+              type: "section",
+              id: activeSlug,
+            });
           },
         }
       : null,
@@ -396,6 +402,8 @@ export default function SevenPanel({
       index: 0,
       total: 0,
       mode: preferredVoiceProvider ? "provider" : "device",
+      sourceType: null,
+      sourceId: null,
     });
   }, [clearAudioUrl, preferredVoiceProvider]);
 
@@ -485,7 +493,7 @@ export default function SevenPanel({
     await speakChunk(0);
   }
 
-  async function playText(text, label) {
+  async function playText(text, label, source = null) {
     if (!effectiveVoiceEnabled) {
       setAudioError("Seven's voice is unavailable right now.");
       return;
@@ -505,6 +513,8 @@ export default function SevenPanel({
       index: 0,
       total: chunks.length,
       mode: voiceEnabled ? "provider" : "device",
+      sourceType: source?.type || null,
+      sourceId: source?.id || null,
     });
 
     if (!voiceEnabled && browserSpeechEnabled) {
@@ -532,6 +542,8 @@ export default function SevenPanel({
           index: 0,
           total: 0,
           mode: "device",
+          sourceType: null,
+          sourceId: null,
         });
       }
       return;
@@ -546,6 +558,8 @@ export default function SevenPanel({
         index: chunkIndex + 1,
         total: chunks.length,
         mode: "provider",
+        sourceType: source?.type || null,
+        sourceId: source?.id || null,
       });
 
       const { blob, meta } = await fetchAudioChunk(chunks[chunkIndex]);
@@ -585,6 +599,8 @@ export default function SevenPanel({
             index: 0,
             total: 0,
             mode: "provider",
+            sourceType: null,
+            sourceId: null,
           });
           return;
         }
@@ -601,6 +617,8 @@ export default function SevenPanel({
             index: 0,
             total: 0,
             mode: "provider",
+            sourceType: null,
+            sourceId: null,
           });
         }
       });
@@ -615,6 +633,8 @@ export default function SevenPanel({
           index: 0,
           total: 0,
           mode: "provider",
+          sourceType: null,
+          sourceId: null,
         });
       });
 
@@ -627,6 +647,8 @@ export default function SevenPanel({
         index: chunkIndex + 1,
         total: chunks.length,
         mode: "provider",
+        sourceType: source?.type || null,
+        sourceId: source?.id || null,
       });
     };
 
@@ -686,6 +708,8 @@ export default function SevenPanel({
         index: 0,
         total: 0,
         mode: browserSpeechEnabled ? "device" : "provider",
+        sourceType: null,
+        sourceId: null,
       });
     }
   }
@@ -804,21 +828,24 @@ export default function SevenPanel({
           ) : null}
 
           {actionButtons.length ? (
-            <div className="reader-seven__actions">
-              {actionButtons.map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  className={action.className}
-                  disabled={action.disabled}
-                  onClick={action.onClick}
-                >
-                  <span className="reader-seven__action-inner">
-                    <span className="reader-seven__action-icon">{action.icon}</span>
-                    <span>{action.label}</span>
-                  </span>
-                </button>
-              ))}
+            <div className="reader-seven__section-tools">
+              <p className="reader-seven__section-tools-label">Section tools</p>
+              <div className="reader-seven__actions">
+                {actionButtons.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    className={action.className}
+                    disabled={action.disabled}
+                    onClick={action.onClick}
+                  >
+                    <span className="reader-seven__action-inner">
+                      <span className="reader-seven__action-icon">{action.icon}</span>
+                      <span>{action.label}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -831,6 +858,9 @@ export default function SevenPanel({
                 <p className="reader-seven__empty-title">Ask about this section.</p>
                 <p className="reader-seven__empty-copy">
                   Start with a direct question or tap one of these.
+                </p>
+                <p className="reader-seven__empty-note">
+                  The top row works on the section. Reply audio appears under each Seven answer.
                 </p>
               </div>
               <div className="reader-seven__starter-list" aria-label="Starter prompts">
@@ -859,19 +889,56 @@ export default function SevenPanel({
             <article key={message.id} className={`reader-seven__message is-${message.role}`}>
               <div className="reader-seven__message-meta">
                 <span>{message.role === "assistant" ? "Seven" : "You"}</span>
-                {message.role === "assistant" ? (
-                  <button
-                    type="button"
-                    className="reader-seven__speak"
-                    disabled={!effectiveVoiceEnabled}
-                    onClick={() => playText(message.content, "Speaking Seven")}
-                  >
-                    <SpeakerIcon />
-                    <span>Listen</span>
-                  </button>
-                ) : null}
               </div>
               <p className="reader-seven__message-text">{message.content}</p>
+              {message.role === "assistant" ? (
+                <div className="reader-seven__message-actions">
+                  <p className="reader-seven__message-audio-label">Reply audio</p>
+                  <button
+                    type="button"
+                    className={`reader-seven__reply-listen ${
+                      audioActive &&
+                      audioState.sourceType === "message" &&
+                      audioState.sourceId === message.id
+                        ? "is-active"
+                        : ""
+                    }`}
+                    disabled={!effectiveVoiceEnabled}
+                    aria-label={
+                      audioActive &&
+                      audioState.sourceType === "message" &&
+                      audioState.sourceId === message.id
+                        ? "Stop this reply"
+                        : "Play this reply"
+                    }
+                    onClick={() => {
+                      const playingThisReply =
+                        audioActive &&
+                        audioState.sourceType === "message" &&
+                        audioState.sourceId === message.id;
+
+                      if (playingThisReply) {
+                        stopAudio();
+                        return;
+                      }
+
+                      playText(message.content, "Playing Seven's reply", {
+                        type: "message",
+                        id: message.id,
+                      });
+                    }}
+                  >
+                    <SpeakerIcon />
+                    <span>
+                      {audioActive &&
+                      audioState.sourceType === "message" &&
+                      audioState.sourceId === message.id
+                        ? "Stop reply"
+                        : "Play reply"}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
             </article>
           ))}
         </div>

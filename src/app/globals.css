@@ -1092,6 +1092,19 @@ a {
   gap: 0.55rem;
 }
 
+.reader-seven__section-tools {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reader-seven__section-tools-label {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--reader-ink-faint);
+}
+
 .reader-seven__actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1207,6 +1220,13 @@ a {
   color: var(--reader-ink-faint);
 }
 
+.reader-seven__empty-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--reader-ink-faint);
+}
+
 .reader-seven__message {
   display: grid;
   gap: 0.45rem;
@@ -1249,17 +1269,45 @@ a {
   color: var(--reader-ink);
 }
 
-.reader-seven__speak {
-  border: 0;
-  background: transparent;
-  padding: 0;
+.reader-seven__message-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.15rem;
+}
+
+.reader-seven__message-audio-label {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--reader-ink-faint);
+}
+
+.reader-seven__reply-listen {
+  border: 1px solid var(--reader-border);
+  border-radius: 999px;
+  background: rgba(160, 106, 63, 0.12);
+  border-color: rgba(160, 106, 63, 0.22);
+  padding: 0.52rem 0.85rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  color: var(--reader-ink-faint);
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
+  gap: 0.4rem;
+  color: var(--reader-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.reader-seven__reply-listen.is-active {
+  background: rgba(160, 106, 63, 0.18);
+  border-color: rgba(160, 106, 63, 0.28);
+}
+
+.reader-seven__reply-listen:disabled {
+  opacity: 0.45;
 }
 
 .reader-seven__composer {
@@ -2796,6 +2844,11 @@ a {
 
   .reader-seven__starter-list {
     grid-template-columns: 1fr;
+  }
+
+  .reader-seven__message-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .reader-seven__messages {
