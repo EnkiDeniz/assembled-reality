@@ -108,7 +108,7 @@ export default function UnlockScreen({
                 setCode(event.target.value);
                 setWrong(false);
               }}
-              placeholder={isLandingVariant ? "hineni" : "Access code"}
+              placeholder={isLandingVariant ? "" : "Access code"}
             />
             {!isLandingVariant ? (
               <button
