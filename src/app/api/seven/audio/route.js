@@ -73,8 +73,7 @@ export async function POST(request) {
     return Response.json(
       {
         ok: false,
-        error:
-          "Seven's voice is not configured. Add `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`.",
+        error: "Seven's voice is unavailable right now.",
       },
       { status: 503 },
     );

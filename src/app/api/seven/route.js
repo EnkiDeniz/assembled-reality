@@ -52,7 +52,7 @@ export async function POST(request) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Seven needs `OPENAI_API_KEY` before it can answer.",
+        error: "Seven's chat is unavailable right now.",
       },
       { status: 503 },
     );

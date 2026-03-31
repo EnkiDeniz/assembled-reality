@@ -32,7 +32,23 @@ function SpeakerIcon() {
 }
 
 const INITIAL_MESSAGE =
-  "I’m Seven. I can read the current section aloud, explain it in plainer language, or answer a question about what you’re reading.";
+  "I’m Seven.";
+
+function buildWelcomeMessage({ textEnabled, voiceEnabled }) {
+  if (voiceEnabled && textEnabled) {
+    return `${INITIAL_MESSAGE} I can read the current section aloud, explain it in plainer language, or answer a question about what you’re reading.`;
+  }
+
+  if (voiceEnabled) {
+    return `${INITIAL_MESSAGE} I can read the current section aloud right now, but chat is unavailable.`;
+  }
+
+  if (textEnabled) {
+    return `${INITIAL_MESSAGE} I can explain this section and answer questions right now, but voice is unavailable.`;
+  }
+
+  return `${INITIAL_MESSAGE} Voice and chat are unavailable right now.`;
+}
 
 export default function SevenPanel({
   open,
@@ -57,11 +73,15 @@ export default function SevenPanel({
     () => stripMarkdownForSpeech(currentSection.markdown),
     [currentSection.markdown],
   );
+  const welcomeMessage = useMemo(
+    () => buildWelcomeMessage({ textEnabled, voiceEnabled }),
+    [textEnabled, voiceEnabled],
+  );
 
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState(() => [
-    { id: "seven-welcome", role: "assistant", content: INITIAL_MESSAGE },
+    { id: "seven-welcome", role: "assistant", content: welcomeMessage },
   ]);
   const [audioState, setAudioState] = useState({
     status: "idle",
@@ -75,18 +95,33 @@ export default function SevenPanel({
   const audioUrlRef = useRef(null);
   const audioSessionRef = useRef(0);
   const messageListRef = useRef(null);
+  const composerRef = useRef(null);
+  const composerInputRef = useRef(null);
 
   const textDisabledReason = textEnabled
     ? ""
-    : "Seven's explanations need `OPENAI_API_KEY`.";
+    : "Seven’s chat is unavailable right now.";
   const voiceDisabledReason = voiceEnabled
     ? ""
-    : "Seven's narration needs `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`.";
+    : "Seven’s voice is unavailable right now.";
+
+  const canListen = voiceEnabled && speechChunks.length > 0;
+  const audioActive = audioState.status !== "idle";
 
   useEffect(() => {
     if (!messageListRef.current) return;
     messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    setMessages((current) => {
+      if (current.length !== 1 || current[0]?.id !== "seven-welcome") {
+        return current;
+      }
+
+      return [{ id: "seven-welcome", role: "assistant", content: welcomeMessage }];
+    });
+  }, [welcomeMessage]);
 
   const clearAudioUrl = useCallback(() => {
     if (audioUrlRef.current) {
@@ -113,6 +148,11 @@ export default function SevenPanel({
       total: 0,
     });
   }, [clearAudioUrl]);
+
+  const focusComposer = useCallback(() => {
+    composerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    composerInputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (open) return undefined;
@@ -345,73 +385,82 @@ export default function SevenPanel({
       </div>
 
       <div className="reader-seven__body">
-        <div className="reader-seven__context">
-          <p className="reader-seven__context-label">Current focus</p>
-          <p className="reader-seven__context-text">{sectionPreview || "No section text yet."}</p>
-        </div>
+        <div className="reader-seven__intro">
+          <div className="reader-seven__context">
+            <p className="reader-seven__context-label">Current focus</p>
+            <p className="reader-seven__context-text">{sectionPreview || "No section text yet."}</p>
+          </div>
 
-        <div className="reader-seven__actions">
-          <button
-            type="button"
-            className="reader-seven__action is-primary"
-            disabled={!voiceEnabled || speechChunks.length === 0}
-            onClick={() => playText(narrationText, `Reading ${currentLabel}`)}
-          >
-            Read section
-          </button>
-          <button
-            type="button"
-            className="reader-seven__action"
-            disabled={!textEnabled || pending}
-            onClick={() =>
-              requestSeven({
-                mode: "explain",
-                question: "",
-                userLine: `Explain ${currentLabel} in plainer language.`,
-              })
-            }
-          >
-            Explain
-          </button>
-          <button
-            type="button"
-            className="reader-seven__action"
-            disabled={!textEnabled || pending}
-            onClick={() =>
-              requestSeven({
-                mode: "summary",
-                question: "",
-                userLine: `Summarize ${currentLabel}.`,
-              })
-            }
-          >
-            Summarize
-          </button>
-          <button
-            type="button"
-            className="reader-seven__action"
-            disabled={audioState.status === "idle"}
-            onClick={stopAudio}
-          >
-            Stop audio
-          </button>
-        </div>
+          <div className="reader-seven__actions">
+            <button
+              type="button"
+              className="reader-seven__action is-primary"
+              disabled={!canListen && !audioActive}
+              onClick={() => {
+                if (audioActive) {
+                  stopAudio();
+                  return;
+                }
 
-        <div className="reader-seven__status" aria-live="polite">
-          {audioState.status === "loading"
-            ? `${audioState.label}… preparing part ${audioState.index} of ${audioState.total}.`
-            : null}
-          {audioState.status === "playing"
-            ? `${audioState.label}… playing part ${audioState.index} of ${audioState.total}.`
-            : null}
-          {audioState.status === "idle" && audioError ? audioError : null}
-          {audioState.status === "idle" && !audioError && voiceEnabled
-            ? "Seven’s voice is AI-generated."
-            : null}
-        </div>
+                playText(narrationText, `Reading ${currentLabel}`);
+              }}
+            >
+              {audioActive ? "Stop listening" : "Listen to section"}
+            </button>
+            <button
+              type="button"
+              className="reader-seven__action"
+              disabled={!textEnabled || pending}
+              onClick={() =>
+                requestSeven({
+                  mode: "explain",
+                  question: "",
+                  userLine: `Explain ${currentLabel} in plainer language.`,
+                })
+              }
+            >
+              Explain
+            </button>
+            <button
+              type="button"
+              className="reader-seven__action"
+              disabled={!textEnabled || pending}
+              onClick={() =>
+                requestSeven({
+                  mode: "summary",
+                  question: "",
+                  userLine: `Summarize ${currentLabel}.`,
+                })
+              }
+            >
+              Summarize
+            </button>
+            <button
+              type="button"
+              className="reader-seven__action"
+              disabled={!textEnabled}
+              onClick={focusComposer}
+            >
+              Ask a question
+            </button>
+          </div>
 
-        {!textEnabled ? <p className="reader-seven__disabled">{textDisabledReason}</p> : null}
-        {!voiceEnabled ? <p className="reader-seven__disabled">{voiceDisabledReason}</p> : null}
+          <div className="reader-seven__status" aria-live="polite">
+            {audioState.status === "loading"
+              ? `${audioState.label}… preparing part ${audioState.index} of ${audioState.total}.`
+              : null}
+            {audioState.status === "playing"
+              ? `${audioState.label}… playing part ${audioState.index} of ${audioState.total}.`
+              : null}
+            {audioState.status === "idle" && audioError ? audioError : null}
+            {audioState.status === "idle" && !audioError && voiceEnabled
+              ? "Seven is ready to read this section aloud."
+              : null}
+          </div>
+
+          {!textEnabled ? <p className="reader-seven__disabled">{textDisabledReason}</p> : null}
+          {!voiceEnabled ? <p className="reader-seven__disabled">{voiceDisabledReason}</p> : null}
+        </div>
 
         <div ref={messageListRef} className="reader-seven__messages">
           {messages.map((message) => (
@@ -429,7 +478,7 @@ export default function SevenPanel({
                     onClick={() => playText(message.content, "Speaking Seven")}
                   >
                     <SpeakerIcon />
-                    <span>Speak</span>
+                    <span>Listen</span>
                   </button>
                 ) : null}
               </div>
@@ -439,6 +488,7 @@ export default function SevenPanel({
         </div>
 
         <form
+          ref={composerRef}
           className="reader-seven__composer"
           onSubmit={(event) => {
             event.preventDefault();
@@ -458,15 +508,21 @@ export default function SevenPanel({
           </label>
           <textarea
             id="seven-question"
+            ref={composerInputRef}
             className="reader-seven__composer-input"
             rows={3}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="What does this mean in practice?"
+            placeholder={
+              textEnabled
+                ? "What does this mean in practice?"
+                : "Seven’s chat is unavailable right now."
+            }
+            disabled={!textEnabled}
           />
           <div className="reader-seven__composer-actions">
             <p className="reader-seven__composer-note">
-              Seven stays close to the document and explains in spoken language.
+              Seven stays close to the section in view and explains in spoken language.
             </p>
             <button
               type="submit"
