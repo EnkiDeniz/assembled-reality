@@ -868,11 +868,11 @@ export default function ReaderShell({
             onClick={(event) => toggleSurface("contents", event)}
             aria-label={contentsOpen ? "Close contents" : "Open contents"}
             aria-expanded={contentsOpen}
+            title={contentsOpen ? "Close contents" : "Open contents"}
           >
             <span className="reader-button-icon" aria-hidden="true">
               ☰
             </span>
-            <span className="reader-chrome-button__label">Contents</span>
           </button>
 
           <div className="reader-topbar__center">
@@ -901,11 +901,11 @@ export default function ReaderShell({
               onClick={(event) => toggleSurface("notebook", event)}
               aria-label={notebookOpen ? "Close notebook" : "Open notebook"}
               aria-expanded={notebookOpen}
+              title={notebookOpen ? "Close notebook" : "Open notebook"}
             >
               <span className="reader-button-icon">
                 <NotebookIcon />
               </span>
-              <span className="reader-chrome-button__label">Notebook</span>
             </button>
 
             <button
@@ -916,11 +916,11 @@ export default function ReaderShell({
               onClick={(event) => toggleSurface("seven", event)}
               aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
               aria-expanded={sevenOpen}
+              title={sevenOpen ? "Close Seven" : "Open Seven"}
             >
               <span className="reader-button-icon">
                 <SevenIcon />
               </span>
-              <span className="reader-chrome-button__label">Ask Seven</span>
             </button>
 
             <button
@@ -935,17 +935,17 @@ export default function ReaderShell({
               <span className="reader-button-icon" aria-hidden="true">
                 Aa
               </span>
-              <span className="reader-chrome-button__label">Appearance</span>
             </button>
 
             <Link
               href="/account"
               className="reader-chrome-button reader-chrome-button--desktop-only reader-account-link"
+              aria-label="Account"
+              title="Account"
             >
               <span className="reader-member-chip" aria-hidden="true">
                 {memberInitial}
               </span>
-              <span className="reader-chrome-button__label">Account</span>
             </Link>
           </div>
         </div>

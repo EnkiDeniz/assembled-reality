@@ -253,37 +253,6 @@ export default function SevenPanel({
     }, 60);
   }, [open, textEnabled]);
 
-  const starterPrompts = useMemo(() => {
-    if (!textEnabled) return [];
-
-    return [
-      {
-        id: "plain-language",
-        label: "Plain language",
-        helper: "What is this section saying in plain language?",
-        mode: "explain",
-        question: "",
-        userLine: `Explain ${currentLabel} in plain language.`,
-      },
-      {
-        id: "practice",
-        label: "In practice",
-        helper: "What matters here in practice?",
-        mode: "question",
-        question: "What matters here in practice?",
-        userLine: "What matters here in practice?",
-      },
-      {
-        id: "attention",
-        label: "Pay attention",
-        helper: "What should I pay attention to here?",
-        mode: "question",
-        question: "What should I pay attention to here?",
-        userLine: "What should I pay attention to here?",
-      },
-    ];
-  }, [currentLabel, textEnabled]);
-
   const actionButtons = [
     effectiveVoiceEnabled
       ? {
@@ -811,42 +780,16 @@ export default function SevenPanel({
       <div className="reader-seven__body">
         <div className="reader-seven__overview">
           <div className="reader-seven__identity">
-            <p className="reader-seven__identity-eyebrow">Current Section</p>
-            <h3 className="reader-seven__identity-title">{currentLabel}</h3>
-            {sectionPreview ? (
-              <p className="reader-seven__identity-preview">{sectionPreview}</p>
-            ) : null}
+            <p className="reader-seven__identity-eyebrow">Section Snapshot</p>
+            <p className="reader-seven__identity-preview">
+              {sectionPreview || currentLabel}
+            </p>
           </div>
 
           {showStatus ? (
             <p className="reader-seven__status" aria-live="polite">
               {liveStatus}
             </p>
-          ) : null}
-
-          {!hasConversation && starterPrompts.length ? (
-            <div className="reader-seven__starter-block">
-              <p className="reader-seven__section-tools-label">Try Asking</p>
-              <div className="reader-seven__starter-list" aria-label="Starter prompts">
-                {starterPrompts.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    type="button"
-                    className="reader-seven__starter"
-                    disabled={pending}
-                    onClick={() =>
-                      requestSeven({
-                        mode: prompt.mode,
-                        question: prompt.question,
-                        userLine: prompt.helper,
-                      })
-                    }
-                  >
-                    <span className="reader-seven__starter-helper">{prompt.helper}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           ) : null}
 
           {actionButtons.length ? (
@@ -878,7 +821,7 @@ export default function SevenPanel({
               <div>
                 <p className="reader-seven__empty-title">Read with Seven.</p>
                 <p className="reader-seven__empty-copy">
-                  Ask what this section means, what matters in practice, or what deserves more attention before you move on.
+                  Ask directly about this section or use the quick actions above.
                 </p>
                 <p className="reader-seven__empty-note">
                   Reply audio appears under each Seven answer when voice is available.
@@ -985,7 +928,7 @@ export default function SevenPanel({
                 });
                 setDraft("");
               }}
-              placeholder="Ask what this section means, what matters, or what to pay attention to..."
+              placeholder="Ask Seven about this section..."
               disabled={!textEnabled}
             />
             <div className="reader-seven__composer-actions">
