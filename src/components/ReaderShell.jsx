@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderMarksPanel from "./ReaderMarksPanel";
@@ -18,7 +20,7 @@ import {
 } from "../lib/annotations";
 import { EMPTY_READER_ANNOTATIONS } from "../lib/reader-store";
 import { clearBrowserSelection, getSelectionAnchor } from "../lib/selection";
-import { saveReaderPreferences } from "../lib/storage";
+import { clearUnlockState, saveReaderPreferences } from "../lib/storage";
 
 const TEXT_SIZE_LABELS = {
   small: "Small",
@@ -93,6 +95,7 @@ export default function ReaderShell({
   initialReadingProgress = null,
   aggregateAnnotations: initialAggregateAnnotations = EMPTY_READER_ANNOTATIONS,
   profile = null,
+  sessionUser = null,
   getReceiptsConnection = null,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
@@ -103,6 +106,7 @@ export default function ReaderShell({
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [marksOpen, setMarksOpen] = useState(false);
   const [sevenOpen, setSevenOpen] = useState(false);
+  const [memberMenuOpen, setMemberMenuOpen] = useState(false);
   const [activeSlug, setActiveSlug] = useState(
     initialHash || initialReadingProgress?.sectionSlug || "beginning",
   );
@@ -246,6 +250,7 @@ export default function ReaderShell({
       setAppearanceOpen(false);
       setMarksOpen(false);
       setSevenOpen(false);
+      setMemberMenuOpen(false);
       setSelectionState(null);
       setNoteDraft("");
       clearBrowserSelection();
@@ -266,6 +271,20 @@ export default function ReaderShell({
   const currentLabel = currentEntry.number
     ? `${currentEntry.number} · ${currentEntry.title}`
     : currentEntry.title;
+  const memberName =
+    profile?.displayName ||
+    sessionUser?.readerName ||
+    sessionUser?.name ||
+    sessionUser?.email ||
+    "Reader";
+  const memberEmail = sessionUser?.email || "";
+  const membershipLabel =
+    profile?.cohort === "FOUNDING" ? "Founding reader" : "Private beta member";
+  const receiptsStatusLabel =
+    getReceiptsConnection?.status === "CONNECTED"
+      ? "GetReceipts connected"
+      : "GetReceipts not connected";
+  const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
   const visibleAnnotations =
     marksMode === "seven" && profile?.canViewSeven
@@ -313,6 +332,35 @@ export default function ReaderShell({
     setFocusedSectionSlug(null);
   }, []);
 
+  const closeReaderPanels = useCallback(() => {
+    setTocOpen(false);
+    setAppearanceOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+  }, []);
+
+  const openMemberMenu = useCallback(() => {
+    setTocOpen(false);
+    setAppearanceOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen((current) => !current);
+  }, []);
+
+  const openSettingsPanel = useCallback(() => {
+    setTocOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setAppearanceOpen(true);
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    clearUnlockState();
+    signOut({ callbackUrl: "/" });
+  }, []);
+
   const showSelectionNotice = useCallback((message) => {
     if (noticeTimeoutRef.current) {
       window.clearTimeout(noticeTimeoutRef.current);
@@ -339,9 +387,7 @@ export default function ReaderShell({
 
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       scrollIntentRef.current = true;
-      setTocOpen(false);
-      setAppearanceOpen(false);
-      setMarksOpen(false);
+      closeReaderPanels();
       setSelectionState(null);
       setNoteDraft("");
       clearBrowserSelection();
@@ -354,7 +400,7 @@ export default function ReaderShell({
         scrollIntentRef.current = false;
       }, prefersReducedMotion ? 60 : 320);
     },
-    [clearFocusState],
+    [clearFocusState, closeReaderPanels],
   );
 
   const jumpToMark = useCallback(
@@ -371,9 +417,7 @@ export default function ReaderShell({
 
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       scrollIntentRef.current = true;
-      setTocOpen(false);
-      setAppearanceOpen(false);
-      setMarksOpen(false);
+      closeReaderPanels();
       setSelectionState(null);
       setNoteDraft("");
       clearBrowserSelection();
@@ -394,7 +438,7 @@ export default function ReaderShell({
         scrollIntentRef.current = false;
       }, prefersReducedMotion ? 60 : 320);
     },
-    [clearFocusState],
+    [clearFocusState, closeReaderPanels],
   );
 
   useEffect(() => {
@@ -427,6 +471,8 @@ export default function ReaderShell({
         event.preventDefault();
         setMarksOpen(false);
         setAppearanceOpen(false);
+        setSevenOpen(false);
+        setMemberMenuOpen(false);
         setTocOpen((current) => !current);
       }
 
@@ -434,6 +480,7 @@ export default function ReaderShell({
         event.preventDefault();
         setTocOpen(false);
         setAppearanceOpen(false);
+        setMemberMenuOpen(false);
         setMarksOpen((current) => !current);
         setSevenOpen(false);
       }
@@ -443,6 +490,7 @@ export default function ReaderShell({
         setTocOpen(false);
         setAppearanceOpen(false);
         setMarksOpen(false);
+        setMemberMenuOpen(false);
         setSevenOpen((current) => !current);
       }
     };
@@ -514,9 +562,7 @@ export default function ReaderShell({
         return;
       }
 
-      setTocOpen(false);
-      setAppearanceOpen(false);
-      setMarksOpen(false);
+      closeReaderPanels();
       setSelectionState({
         mode: "actions",
         anchor,
@@ -538,7 +584,7 @@ export default function ReaderShell({
       document.removeEventListener("selectionchange", handleSelectionChange);
       window.removeEventListener("scroll", dismissSelectionUi);
     };
-  }, [showSelectionNotice]);
+  }, [closeReaderPanels, showSelectionNotice]);
 
   useEffect(() => {
     return () => {
@@ -693,7 +739,17 @@ export default function ReaderShell({
       data-theme={preferences.theme}
     >
       <header className="reader-topbar">
-        <button type="button" className="reader-chrome-button" onClick={() => setTocOpen(true)}>
+        <button
+          type="button"
+          className="reader-chrome-button"
+          onClick={() => {
+            setAppearanceOpen(false);
+            setMarksOpen(false);
+            setSevenOpen(false);
+            setMemberMenuOpen(false);
+            setTocOpen(true);
+          }}
+        >
           <span className="reader-button-icon">☰</span>
           <span>Contents</span>
         </button>
@@ -719,6 +775,8 @@ export default function ReaderShell({
             onClick={() => {
               setTocOpen(false);
               setAppearanceOpen(false);
+              setSevenOpen(false);
+              setMemberMenuOpen(false);
               setMarksOpen((current) => !current);
             }}
             aria-label={marksOpen ? "Close marks" : "Open marks"}
@@ -735,6 +793,7 @@ export default function ReaderShell({
               setTocOpen(false);
               setAppearanceOpen(false);
               setMarksOpen(false);
+              setMemberMenuOpen(false);
               setSevenOpen((current) => !current);
             }}
             aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
@@ -751,14 +810,57 @@ export default function ReaderShell({
             onClick={() => {
               setTocOpen(false);
               setMarksOpen(false);
+              setSevenOpen(false);
+              setMemberMenuOpen(false);
               setAppearanceOpen((current) => !current);
             }}
             aria-label="Reader appearance"
           >
             Aa
           </button>
+          <button
+            type="button"
+            className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
+            onClick={openMemberMenu}
+            aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
+            aria-expanded={memberMenuOpen}
+          >
+            <span className="reader-member-chip" aria-hidden="true">
+              {memberInitial}
+            </span>
+            <span>{memberName}</span>
+          </button>
         </div>
       </header>
+
+      {memberMenuOpen ? (
+        <div className="reader-member-menu" role="dialog" aria-label="Account menu">
+          <div className="reader-member-menu__header">
+            <p className="reader-member-menu__eyebrow">Signed in</p>
+            <h2 className="reader-member-menu__name">{memberName}</h2>
+            {memberEmail ? <p className="reader-member-menu__email">{memberEmail}</p> : null}
+            <div className="reader-member-menu__meta">
+              <span>{membershipLabel}</span>
+              <span>{receiptsStatusLabel}</span>
+            </div>
+          </div>
+          <div className="reader-member-menu__actions">
+            <Link
+              href="/account"
+              className="reader-member-menu__action"
+              onClick={() => setMemberMenuOpen(false)}
+            >
+              Account
+            </Link>
+            <button type="button" className="reader-member-menu__action" onClick={openSettingsPanel}>
+              Settings
+            </button>
+            <button type="button" className="reader-member-menu__action" onClick={handleSignOut}>
+              Log out
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {appearanceOpen && (
         <div className="reader-appearance-menu">
@@ -784,13 +886,8 @@ export default function ReaderShell({
       )}
 
       <div
-        className={`reader-overlay ${tocOpen || appearanceOpen || marksOpen || sevenOpen ? "is-visible" : ""}`}
-        onClick={() => {
-          setTocOpen(false);
-          setAppearanceOpen(false);
-          setMarksOpen(false);
-          setSevenOpen(false);
-        }}
+        className={`reader-overlay ${tocOpen || appearanceOpen || marksOpen || sevenOpen || memberMenuOpen ? "is-visible" : ""}`}
+        onClick={closeReaderPanels}
       />
 
       <aside className={`reader-toc ${tocOpen ? "is-open" : ""}`}>

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
+import { clearUnlockState } from "@/lib/storage";
 
 function draftLink(draft) {
   const remote = draft?.payload?.remoteReceipt;
@@ -13,6 +15,9 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const accountName = displayName || initialProfile?.displayName || "Reader";
+  const membershipLabel =
+    initialProfile?.cohort === "FOUNDING" ? "Founding reader" : "Private beta member";
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -35,7 +40,7 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
       }
 
       setDisplayName(payload.profile?.displayName || displayName);
-      setMessage("Reader name updated.");
+      setMessage("Display name updated.");
     } catch (thrownError) {
       setError(thrownError instanceof Error ? thrownError.message : "Could not update profile.");
     } finally {
@@ -46,20 +51,16 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
   return (
     <main className="account-shell">
       <section className="account-card">
-        <p className="lock-screen__eyebrow">Reader account</p>
-        <h1 className="account-card__title">{displayName || "Reader"}</h1>
+        <p className="lock-screen__eyebrow">Account</p>
+        <h1 className="account-card__title">{accountName}</h1>
         <dl className="account-card__meta">
           <div>
             <dt>Email</dt>
             <dd>{email}</dd>
           </div>
           <div>
-            <dt>Cohort</dt>
-            <dd>{initialProfile?.cohort?.toLowerCase() || "member"}</dd>
-          </div>
-          <div>
-            <dt>Reader slug</dt>
-            <dd>{initialProfile?.readerSlug || "pending"}</dd>
+            <dt>Access</dt>
+            <dd>{membershipLabel}</dd>
           </div>
           <div>
             <dt>GetReceipts</dt>
@@ -69,7 +70,7 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
 
         <form className="account-card__form" onSubmit={handleSave}>
           <label className="account-card__label" htmlFor="reader-display-name">
-            Reader name
+            Display name
           </label>
           <input
             id="reader-display-name"
@@ -80,6 +81,9 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
             required
           />
           <div className="account-card__actions">
+            <Link className="account-card__button" href="/read">
+              Back to reading
+            </Link>
             <button type="submit" className="account-card__button is-primary" disabled={saving}>
               {saving ? "Saving" : "Save"}
             </button>
@@ -89,7 +93,10 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
             <button
               type="button"
               className="account-card__button"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => {
+                clearUnlockState();
+                signOut({ callbackUrl: "/" });
+              }}
             >
               Sign out
             </button>

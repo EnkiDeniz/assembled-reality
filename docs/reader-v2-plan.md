@@ -1,5 +1,7 @@
 # Assembled Reality Reader v2
 
+This document captures an older local-first marks plan. The current product is a multi-user, server-backed reader with a private beta gate on `/`, an authenticated reader app on `/read`, and a member account surface on `/account`.
+
 ## Goal
 
 Extend the locked reader with personal reading tools:

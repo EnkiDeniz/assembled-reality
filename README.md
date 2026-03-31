@@ -13,18 +13,19 @@ Assembled Reality is now a Next.js App Router application for a private multi-us
 
 ## Reader capabilities in this version
 
-- authenticated entry flow
-- ceremonial unlock screen after sign-in
+- private beta gate on `/` before sign-in
+- authenticated member sign-in flow
 - continuous long-form reader powered by the markdown document in [content/assembled_reality_v07_final.md](/Users/denizsengun/Projects/AR/content/assembled_reality_v07_final.md)
 - per-user bookmarks, highlights, notes, and progress via database APIs
-- account surface for reader identity and GetReceipts connection status
+- in-reader account menu with account, settings, and logout affordances
+- account surface for member identity and GetReceipts connection status
 - receipt-draft payload generation from reading context
 
 ## Important routes
 
-- `/` entry and sign-in
-- `/read` authenticated reader
-- `/account` reader account and GetReceipts connection state
+- `/` private beta gate and sign-in
+- `/read` authenticated reader app
+- `/account` member account and GetReceipts connection state
 - `/api/reader/marks`
 - `/api/reader/progress`
 - `/api/reader/aggregate`
