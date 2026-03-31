@@ -21,6 +21,8 @@ export default function ReadGate({
   aggregateAnnotations,
   profile,
   getReceiptsConnection,
+  sevenTextEnabled = false,
+  sevenVoiceEnabled = false,
 }) {
   const [unlockState, setUnlockState] = useState(() => loadUnlockState() || DEFAULT_UNLOCK);
   const [preferences, setPreferences] = useState(() => {
@@ -41,6 +43,8 @@ export default function ReadGate({
       aggregateAnnotations,
       profile,
       getReceiptsConnection,
+      sevenTextEnabled,
+      sevenVoiceEnabled,
     }),
     [
       aggregateAnnotations,
@@ -50,6 +54,8 @@ export default function ReadGate({
       initialProgress,
       preferences,
       profile,
+      sevenTextEnabled,
+      sevenVoiceEnabled,
     ],
   );
 

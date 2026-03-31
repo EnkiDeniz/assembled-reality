@@ -31,6 +31,22 @@ function getDefaultSiteUrl() {
   return "http://localhost:3000";
 }
 
+function getOpenAiApiKey() {
+  const env = normalizeSecret(process.env.VERCEL_ENV || "development");
+
+  if (env === "production") {
+    return normalizeSecret(process.env.OPENAI_API_KEY_PROD || process.env.OPENAI_API_KEY);
+  }
+
+  if (env === "preview") {
+    return normalizeSecret(
+      process.env.OPENAI_API_KEY_PREVIEW || process.env.OPENAI_API_KEY,
+    );
+  }
+
+  return normalizeSecret(process.env.OPENAI_API_KEY);
+}
+
 export const appEnv = {
   siteUrl: getDefaultSiteUrl(),
   authSecret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "",
@@ -72,6 +88,20 @@ export const appEnv = {
     process.env.NEXTAUTH_SECRET ||
     process.env.AUTH_SECRET ||
     "",
+  openai: {
+    apiKey: getOpenAiApiKey(),
+    textModel: normalizeSecret(process.env.OPENAI_SEVEN_MODEL) || "gpt-4o-mini",
+    speechModel:
+      normalizeSecret(process.env.OPENAI_SEVEN_SPEECH_MODEL) || "gpt-4o-mini-tts",
+    voice: normalizeSecret(process.env.OPENAI_SEVEN_VOICE) || "sage",
+  },
+  elevenlabs: {
+    apiKey: normalizeSecret(process.env.ELEVENLABS_API_KEY),
+    voiceId: normalizeSecret(process.env.ELEVENLABS_VOICE_ID),
+    modelId: normalizeSecret(process.env.ELEVENLABS_MODEL_ID) || "eleven_flash_v2_5",
+    outputFormat:
+      normalizeSecret(process.env.ELEVENLABS_OUTPUT_FORMAT) || "mp3_44100_64",
+  },
 };
 
 appEnv.apple.enabled = Boolean(
@@ -79,4 +109,9 @@ appEnv.apple.enabled = Boolean(
     appEnv.apple.teamId &&
     appEnv.apple.keyId &&
     appEnv.apple.privateKey,
+);
+
+appEnv.openai.enabled = Boolean(appEnv.openai.apiKey);
+appEnv.elevenlabs.enabled = Boolean(
+  appEnv.elevenlabs.apiKey && appEnv.elevenlabs.voiceId,
 );

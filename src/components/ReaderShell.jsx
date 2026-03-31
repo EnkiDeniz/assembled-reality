@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderMarksPanel from "./ReaderMarksPanel";
 import SelectionMenu from "./SelectionMenu";
+import SevenPanel from "./SevenPanel";
 import {
   addHighlight,
   addNote,
@@ -67,6 +68,23 @@ function MarksIcon() {
   );
 }
 
+function SevenIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M8.1 6.35h4.8v1.35l-2.35 2.1c-.72.64-1.08 1.14-1.08 1.92v.26"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="9.45" cy="14.55" r="0.7" fill="currentColor" />
+    </svg>
+  );
+}
+
 export default function ReaderShell({
   documentData,
   preferences,
@@ -76,12 +94,15 @@ export default function ReaderShell({
   aggregateAnnotations = EMPTY_READER_ANNOTATIONS,
   profile = null,
   getReceiptsConnection = null,
+  sevenTextEnabled = false,
+  sevenVoiceEnabled = false,
 }) {
   const initialHash =
     typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
   const [tocOpen, setTocOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [marksOpen, setMarksOpen] = useState(false);
+  const [sevenOpen, setSevenOpen] = useState(false);
   const [activeSlug, setActiveSlug] = useState(
     initialHash || initialReadingProgress?.sectionSlug || "beginning",
   );
@@ -209,6 +230,7 @@ export default function ReaderShell({
       setTocOpen(false);
       setAppearanceOpen(false);
       setMarksOpen(false);
+      setSevenOpen(false);
       setSelectionState(null);
       setNoteDraft("");
       clearBrowserSelection();
@@ -392,6 +414,15 @@ export default function ReaderShell({
         setTocOpen(false);
         setAppearanceOpen(false);
         setMarksOpen((current) => !current);
+        setSevenOpen(false);
+      }
+
+      if (event.key.toLowerCase() === "7") {
+        event.preventDefault();
+        setTocOpen(false);
+        setAppearanceOpen(false);
+        setMarksOpen(false);
+        setSevenOpen((current) => !current);
       }
     };
 
@@ -630,6 +661,23 @@ export default function ReaderShell({
           </button>
           <button
             type="button"
+            className={`reader-chrome-button ${sevenOpen ? "is-active" : ""}`}
+            onClick={() => {
+              setTocOpen(false);
+              setAppearanceOpen(false);
+              setMarksOpen(false);
+              setSevenOpen((current) => !current);
+            }}
+            aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
+            title={sevenOpen ? "Close Seven" : "Open Seven"}
+          >
+            <span className="reader-button-icon">
+              <SevenIcon />
+            </span>
+            <span>Seven</span>
+          </button>
+          <button
+            type="button"
             className="reader-chrome-button reader-chrome-button--icon"
             onClick={() => {
               setTocOpen(false);
@@ -667,11 +715,12 @@ export default function ReaderShell({
       )}
 
       <div
-        className={`reader-overlay ${tocOpen || appearanceOpen || marksOpen ? "is-visible" : ""}`}
+        className={`reader-overlay ${tocOpen || appearanceOpen || marksOpen || sevenOpen ? "is-visible" : ""}`}
         onClick={() => {
           setTocOpen(false);
           setAppearanceOpen(false);
           setMarksOpen(false);
+          setSevenOpen(false);
         }}
       />
 
@@ -733,6 +782,16 @@ export default function ReaderShell({
         onUpdateNote={(noteId, nextText) =>
           setReaderAnnotations((current) => updateNote(current, noteId, nextText))
         }
+      />
+
+      <SevenPanel
+        open={sevenOpen}
+        textEnabled={sevenTextEnabled}
+        voiceEnabled={sevenVoiceEnabled}
+        documentData={documentData}
+        activeSlug={activeSlug}
+        currentLabel={currentLabel}
+        onClose={() => setSevenOpen(false)}
       />
 
       <main className="reader-main">

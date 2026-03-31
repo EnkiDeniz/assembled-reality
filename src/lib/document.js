@@ -25,8 +25,13 @@ function stripLeadingTitle(markdown) {
   return normalizeMarkdown(markdown).replace(/^#\s+.+\n+/, "").trim();
 }
 
-function buildAppendixMarkdown() {
+function buildAppendixMarkdown(baseDocument = "") {
   return APPENDIX_DOCUMENTS.flatMap((appendix) => {
+    const heading = `## ${appendix.number} · ${appendix.title}`;
+    if (baseDocument.includes(heading)) {
+      return [];
+    }
+
     const filePath = path.join(/* turbopackIgnore: true */ process.cwd(), ...appendix.segments);
     if (!fs.existsSync(filePath)) {
       return [];
@@ -37,7 +42,7 @@ function buildAppendixMarkdown() {
       return [];
     }
 
-    return [`## ${appendix.number} · ${appendix.title}\n\n${body}`];
+    return [`${heading}\n\n${body}`];
   }).join("\n\n---\n\n");
 }
 
@@ -92,7 +97,7 @@ export function parseDocument(markdown) {
 
 export const getParsedDocument = cache(() => {
   const baseDocument = normalizeMarkdown(readMarkdownFile("content", "assembled_reality_v07_final.md"));
-  const appendixDocument = buildAppendixMarkdown();
+  const appendixDocument = buildAppendixMarkdown(baseDocument);
   const raw = [baseDocument, appendixDocument].filter(Boolean).join("\n\n---\n\n");
   return parseDocument(raw);
 });
