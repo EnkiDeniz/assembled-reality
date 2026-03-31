@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import CuneiformPuzzle from "./CuneiformPuzzle";
-import { BYPASS_CODES } from "../lib/cuneiform";
 
 export default function UnlockScreen({
   onUnlock,
@@ -13,6 +12,7 @@ export default function UnlockScreen({
   const [code, setCode] = useState("");
   const [wrong, setWrong] = useState(false);
   const [showPuzzle, setShowPuzzle] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const isLandingVariant = variant === "landing";
 
   useEffect(() => {
@@ -29,15 +29,35 @@ export default function UnlockScreen({
 
   const normalizedCode = useMemo(() => code.trim().toLowerCase(), [code]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (BYPASS_CODES.includes(normalizedCode)) {
-      onUnlock("bypass");
+    if (!normalizedCode || submitting) {
       return;
     }
 
-    setWrong(true);
-    window.setTimeout(() => setWrong(false), 900);
+    setSubmitting(true);
+
+    try {
+      const response = await fetch("/api/unlock", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ code: normalizedCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid code");
+      }
+
+      onUnlock("bypass");
+      return;
+    } catch {
+      setWrong(true);
+      window.setTimeout(() => setWrong(false), 900);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -84,13 +104,14 @@ export default function UnlockScreen({
                 setCode(event.target.value);
                 setWrong(false);
               }}
-              placeholder={isLandingVariant ? "hineni" : "Access code"}
+              placeholder={isLandingVariant ? "" : "Access code"}
             />
             <button
               type="submit"
               className={`lock-screen__submit ${isLandingVariant ? "lock-screen__submit--minimal" : ""}`}
+              disabled={submitting}
             >
-              Enter
+              {submitting ? "..." : "Enter"}
             </button>
           </div>
           <div className={`lock-screen__status ${isLandingVariant ? "lock-screen__status--minimal" : ""}`}>

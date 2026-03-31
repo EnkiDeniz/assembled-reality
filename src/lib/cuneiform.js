@@ -1,5 +1,3 @@
-export const BYPASS_CODES = ["hineni"];
-
 const TARGET_GLYPHS = ["𒀭", "𒂗", "𒆠", "𒐛", "𒋾", "𒅎", "𒆳"];
 
 const PUZZLE_PASSWORD_A = ["𒀭", "𒂗", "𒆠", "𒐛"];
