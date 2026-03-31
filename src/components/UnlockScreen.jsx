@@ -4,15 +4,28 @@ import { useEffect, useMemo, useState } from "react";
 import CuneiformPuzzle from "./CuneiformPuzzle";
 import { BYPASS_CODES } from "../lib/cuneiform";
 
-export default function UnlockScreen({ onUnlock, onSignOut = null, userName = "" }) {
+export default function UnlockScreen({
+  onUnlock,
+  onSignOut = null,
+  userName = "",
+  variant = "default",
+}) {
   const [code, setCode] = useState("");
   const [wrong, setWrong] = useState(false);
   const [showPuzzle, setShowPuzzle] = useState(false);
+  const isLandingVariant = variant === "landing";
 
   useEffect(() => {
     document.body.classList.add("is-lock-screen");
-    return () => document.body.classList.remove("is-lock-screen");
-  }, []);
+    if (isLandingVariant) {
+      document.body.classList.add("is-lock-screen-minimal");
+    }
+
+    return () => {
+      document.body.classList.remove("is-lock-screen");
+      document.body.classList.remove("is-lock-screen-minimal");
+    };
+  }, [isLandingVariant]);
 
   const normalizedCode = useMemo(() => code.trim().toLowerCase(), [code]);
 
@@ -28,32 +41,39 @@ export default function UnlockScreen({ onUnlock, onSignOut = null, userName = ""
   };
 
   return (
-    <main className="lock-screen">
-      <div className="lock-screen__frame">
-        <div className="lock-screen__header">
-          <p className="lock-screen__eyebrow">Private reading instrument</p>
-          <h1 className="lock-screen__title">Assembled Reality</h1>
-          <p className="lock-screen__lede">Enter an internal access code to continue.</p>
-          {userName ? (
-            <div className="lock-screen__identity">
-              <span>Signed in as {userName}</span>
-              {onSignOut ? (
-                <button type="button" className="lock-screen__identity-action" onClick={onSignOut}>
-                  Switch reader
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+    <main className={`lock-screen ${isLandingVariant ? "lock-screen--minimal" : ""}`}>
+      <div className={`lock-screen__frame ${isLandingVariant ? "lock-screen__frame--minimal" : ""}`}>
+        {!isLandingVariant ? (
+          <div className="lock-screen__header">
+            <p className="lock-screen__eyebrow">Private reading instrument</p>
+            <h1 className="lock-screen__title">Assembled Reality</h1>
+            <p className="lock-screen__lede">Enter an internal access code to continue.</p>
+            {userName ? (
+              <div className="lock-screen__identity">
+                <span>Signed in as {userName}</span>
+                {onSignOut ? (
+                  <button type="button" className="lock-screen__identity-action" onClick={onSignOut}>
+                    Switch reader
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-        <form className="lock-screen__form" onSubmit={handleSubmit}>
+        <form
+          className={`lock-screen__form ${isLandingVariant ? "lock-screen__form--minimal" : ""}`}
+          onSubmit={handleSubmit}
+        >
           <label className="sr-only" htmlFor="entry-code">
             Internal entry code
           </label>
-          <div className={`lock-screen__field ${wrong ? "is-wrong" : ""}`}>
+          <div
+            className={`lock-screen__field ${wrong ? "is-wrong" : ""} ${isLandingVariant ? "lock-screen__field--minimal" : ""}`}
+          >
             <input
               id="entry-code"
-              className="lock-screen__input"
+              className={`lock-screen__input ${isLandingVariant ? "lock-screen__input--minimal" : ""}`}
               type="password"
               autoComplete="off"
               autoCorrect="off"
@@ -64,29 +84,43 @@ export default function UnlockScreen({ onUnlock, onSignOut = null, userName = ""
                 setCode(event.target.value);
                 setWrong(false);
               }}
-              placeholder="Access code"
+              placeholder={isLandingVariant ? "hineni" : "Access code"}
             />
-            <button type="submit" className="lock-screen__submit">
+            <button
+              type="submit"
+              className={`lock-screen__submit ${isLandingVariant ? "lock-screen__submit--minimal" : ""}`}
+            >
               Enter
             </button>
           </div>
-          <div className="lock-screen__status">{wrong ? "Not yet." : "\u00A0"}</div>
+          <div className={`lock-screen__status ${isLandingVariant ? "lock-screen__status--minimal" : ""}`}>
+            {wrong ? "Not yet." : "\u00A0"}
+          </div>
         </form>
 
-        <div className="lock-screen__divider" />
+        {!isLandingVariant ? <div className="lock-screen__divider" /> : null}
 
         <button
           type="button"
-          className="lock-screen__puzzle-toggle"
+          className={`lock-screen__puzzle-toggle ${isLandingVariant ? "lock-screen__puzzle-toggle--minimal" : ""}`}
           onClick={() => setShowPuzzle((current) => !current)}
           aria-expanded={showPuzzle}
           aria-controls="cuneiform-matrix"
         >
-          {showPuzzle ? "Hide alternate entry" : "Open alternate entry"}
+          {showPuzzle
+            ? isLandingVariant
+              ? "hide puzzle"
+              : "Hide alternate entry"
+            : isLandingVariant
+              ? "solve the puzzle"
+              : "Open alternate entry"}
         </button>
 
         {showPuzzle && (
-          <div id="cuneiform-matrix" className="lock-screen__puzzle">
+          <div
+            id="cuneiform-matrix"
+            className={`lock-screen__puzzle ${isLandingVariant ? "lock-screen__puzzle--minimal" : ""}`}
+          >
             <CuneiformPuzzle onSolved={onUnlock} />
           </div>
         )}

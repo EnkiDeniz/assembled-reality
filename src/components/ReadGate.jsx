@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import ReaderShell from "@/components/ReaderShell";
 import UnlockScreen from "@/components/UnlockScreen";
 import {
+  clearUnlockState,
   DEFAULT_READER_PREFERENCES,
   loadReaderPreferences,
   loadUnlockState,
@@ -68,7 +69,10 @@ export default function ReadGate({
           setUnlockState(nextState);
         }}
         userName={session?.user?.readerName || session?.user?.name || session?.user?.email}
-        onSignOut={() => signOut({ callbackUrl: "/" })}
+        onSignOut={() => {
+          clearUnlockState();
+          signOut({ callbackUrl: "/" });
+        }}
       />
     );
   }

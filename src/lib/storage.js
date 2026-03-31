@@ -23,6 +23,11 @@ export function saveUnlockState(value) {
   window.sessionStorage.setItem(UNLOCK_KEY, JSON.stringify(value));
 }
 
+export function clearUnlockState() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(UNLOCK_KEY);
+}
+
 export function loadReaderPreferences() {
   if (typeof window === "undefined") return DEFAULT_READER_PREFERENCES;
 
