@@ -12,7 +12,6 @@ const DEFAULT_UNLOCK = { unlocked: false, method: null };
 export default function EntryGate({
   session,
   documentTitle,
-  foundingReaders,
   authCapabilities,
 }) {
   const router = useRouter();
@@ -47,7 +46,6 @@ export default function EntryGate({
     return (
       <AuthScreen
         documentTitle={documentTitle}
-        foundingReaders={foundingReaders}
         authCapabilities={authCapabilities}
         onAppleSignIn={() =>
           signIn("apple", {
@@ -59,12 +57,6 @@ export default function EntryGate({
             email,
             redirect: false,
             callbackUrl: "/",
-          })
-        }
-        onSignIn={(credentials) =>
-          signIn("credentials", {
-            ...credentials,
-            redirect: false,
           })
         }
       />

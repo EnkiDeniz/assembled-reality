@@ -15,38 +15,14 @@ function AppleIcon() {
 
 export default function AuthScreen({
   documentTitle,
-  foundingReaders,
-  onSignIn,
   onAppleSignIn,
   onMagicLinkSignIn,
   authCapabilities,
 }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    accessCode: "",
-  });
   const [emailOnly, setEmailOnly] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-
-    const result = await onSignIn(form);
-
-    if (!result?.ok) {
-      setError("We could not place you yet.");
-      setSubmitting(false);
-      return;
-    }
-
-    window.location.reload();
-  };
 
   const handleMagicLink = async (event) => {
     event.preventDefault();
@@ -75,7 +51,7 @@ export default function AuthScreen({
           <p className="lock-screen__eyebrow">Private reading instrument</p>
           <h1 className="lock-screen__title">{documentTitle}</h1>
           <p className="lock-screen__lede">
-            Sign in with your reader identity to enter the document.
+            Sign in to continue.
           </p>
         </div>
 
@@ -117,70 +93,11 @@ export default function AuthScreen({
           <div className="lock-screen__divider" />
         ) : null}
 
-        <form className="auth-screen__form" onSubmit={handleSubmit}>
-          <p className="auth-screen__fallback-label">Internal reader access</p>
-          <label className="sr-only" htmlFor="reader-name">
-            Reader name
-          </label>
-          <input
-            id="reader-name"
-            className="auth-screen__input"
-            type="text"
-            placeholder="Name"
-            value={form.name}
-            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-            required
-          />
+        {!authCapabilities?.appleEnabled && !authCapabilities?.magicLinksEnabled ? (
+          <div className="lock-screen__status">Sign-in is not available right now.</div>
+        ) : null}
 
-          <label className="sr-only" htmlFor="reader-email">
-            Reader email
-          </label>
-          <input
-            id="reader-email"
-            className="auth-screen__input"
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-            required
-          />
-
-          <label className="sr-only" htmlFor="reader-code">
-            Access code
-          </label>
-          <div className={`lock-screen__field ${error ? "is-wrong" : ""}`}>
-            <input
-              id="reader-code"
-              className="lock-screen__input"
-              type="password"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              placeholder="Access code"
-              value={form.accessCode}
-              onChange={(event) => setForm((current) => ({ ...current, accessCode: event.target.value }))}
-              required
-            />
-            <button type="submit" className="lock-screen__submit" disabled={submitting}>
-              {submitting ? "Entering" : "Enter"}
-            </button>
-          </div>
-          <div className="lock-screen__status">{error ? error : "\u00A0"}</div>
-        </form>
-
-        <div className="lock-screen__divider" />
-
-        <div className="auth-screen__directory">
-          <p className="auth-screen__directory-label">Founding readers</p>
-          <div className="auth-screen__directory-list">
-            {foundingReaders.map((reader) => (
-              <span key={reader} className="auth-screen__directory-chip">
-                {reader}
-              </span>
-            ))}
-          </div>
-        </div>
+        {error ? <div className="lock-screen__status">{error}</div> : null}
       </div>
     </main>
   );
