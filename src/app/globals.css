@@ -649,6 +649,7 @@ a {
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--reader-ink);
+  text-wrap: balance;
 }
 
 .reader-topbar__center {
@@ -935,6 +936,20 @@ a {
   background: var(--reader-surface);
 }
 
+.reader-toc__utility {
+  display: none;
+}
+
+.reader-toc__utility-action {
+  width: 100%;
+  min-height: 2.7rem;
+  border: 1px solid var(--reader-border);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.44);
+  color: var(--reader-ink);
+  font: inherit;
+}
+
 .reader-toc__item {
   width: 100%;
   border: 1px solid transparent;
@@ -1076,6 +1091,10 @@ a {
   font-size: 0.98rem;
   line-height: 1.55;
   color: var(--reader-ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .reader-seven__actions {
@@ -1091,6 +1110,21 @@ a {
   background: transparent;
   color: var(--reader-ink);
   font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0 0.95rem;
+}
+
+.reader-seven__action-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.reader-seven__action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .reader-seven__action.is-primary {
@@ -1116,6 +1150,17 @@ a {
   border: 1px solid var(--reader-border);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.44);
+}
+
+.reader-seven__notice {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--reader-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.44);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--reader-ink-soft);
 }
 
 .reader-seven__messages {
@@ -1190,7 +1235,8 @@ a {
 }
 
 .reader-shell[data-theme="dark"] .reader-seven__composer,
-.reader-shell[data-theme="dark"] .reader-seven__disabled {
+.reader-shell[data-theme="dark"] .reader-seven__disabled,
+.reader-shell[data-theme="dark"] .reader-seven__notice {
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -2282,6 +2328,7 @@ a {
   backdrop-filter: blur(16px);
   box-shadow: 0 18px 50px rgba(18, 16, 14, 0.07);
   z-index: 25;
+  transition: transform 200ms ease, opacity 200ms ease;
 }
 
 .reader-bottomrail__progress {
@@ -2476,10 +2523,16 @@ a {
 
   .reader-topbar__title {
     font-size: 0.85rem;
+    max-width: 11ch;
+    line-height: 1.05;
   }
 
   .reader-topbar__section {
     display: none;
+  }
+
+  .reader-topbar__center {
+    justify-items: start;
   }
 
   .reader-topbar__actions {
@@ -2489,6 +2542,10 @@ a {
   .reader-chrome-button {
     padding: 0.5rem 0.75rem;
     font-size: 0.82rem;
+  }
+
+  .reader-chrome-button[data-mobile-hidden="true"] {
+    display: none;
   }
 
   .reader-chrome-button:not(.reader-chrome-button--icon) > span:last-child {
@@ -2530,9 +2587,38 @@ a {
     border-radius: 1.25rem 1.25rem 0 0;
   }
 
+  .reader-toc__header::before,
+  .reader-marks__header::before,
+  .reader-seven__header::before {
+    content: "";
+    width: 2.8rem;
+    height: 0.24rem;
+    border-radius: 999px;
+    background: rgba(68, 46, 26, 0.14);
+    position: absolute;
+    left: 50%;
+    top: 0.7rem;
+    transform: translateX(-50%);
+  }
+
+  .reader-toc__header,
+  .reader-marks__header,
+  .reader-seven__header {
+    position: relative;
+    padding-top: 1.7rem;
+  }
+
   .reader-toc__nav {
     height: auto;
     max-height: calc(70vh - 5rem);
+  }
+
+  .reader-toc__utility {
+    display: grid;
+    gap: 0.55rem;
+    padding-top: 0.6rem;
+    margin-top: 0.35rem;
+    border-top: 1px solid var(--reader-border);
   }
 
   .reader-marks {
@@ -2584,11 +2670,11 @@ a {
   }
 
   .reader-seven__actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .reader-seven__messages {
-    min-height: 12rem;
+    min-height: 8rem;
   }
 
   .reader-seven__composer-actions {
@@ -2599,6 +2685,12 @@ a {
   .reader-main {
     padding-inline: 0.85rem;
     padding-top: calc(max(5rem, env(safe-area-inset-top) + 3.3rem));
+  }
+
+  .reader-shell.has-floating-panel .reader-bottomrail {
+    transform: translate(-50%, 120%);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .reader-book {

@@ -286,6 +286,7 @@ export default function ReaderShell({
       : "GetReceipts not connected";
   const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
+  const hasFloatingPanel = tocOpen || appearanceOpen || marksOpen || sevenOpen || memberMenuOpen;
   const visibleAnnotations =
     marksMode === "seven" && profile?.canViewSeven
       ? aggregateAnnotations || EMPTY_READER_ANNOTATIONS
@@ -735,7 +736,7 @@ export default function ReaderShell({
 
   return (
     <div
-      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth}`}
+      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${hasFloatingPanel ? "has-floating-panel" : ""}`}
       data-theme={preferences.theme}
     >
       <header className="reader-topbar">
@@ -761,6 +762,7 @@ export default function ReaderShell({
           <button
             type="button"
             className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
+            data-mobile-hidden="true"
             onClick={handleToggleBookmark}
             aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
             title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
@@ -772,6 +774,7 @@ export default function ReaderShell({
           <button
             type="button"
             className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
+            data-mobile-hidden="true"
             onClick={() => {
               setTocOpen(false);
               setAppearanceOpen(false);
@@ -807,6 +810,7 @@ export default function ReaderShell({
           <button
             type="button"
             className="reader-chrome-button reader-chrome-button--icon"
+            data-mobile-hidden="true"
             onClick={() => {
               setTocOpen(false);
               setMarksOpen(false);
@@ -821,6 +825,7 @@ export default function ReaderShell({
           <button
             type="button"
             className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
+            data-mobile-hidden="true"
             onClick={openMemberMenu}
             aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
             aria-expanded={memberMenuOpen}
@@ -904,6 +909,7 @@ export default function ReaderShell({
             type="button"
             className="reader-chrome-button reader-chrome-button--icon"
             onClick={() => setTocOpen(false)}
+            aria-label="Close contents"
           >
             ×
           </button>
@@ -920,6 +926,48 @@ export default function ReaderShell({
               <span className="reader-toc__item-meta">{entry.number ?? "0"}</span>
             </button>
           ))}
+          <div className="reader-toc__utility">
+            <button
+              type="button"
+              className="reader-toc__utility-action"
+              onClick={() => {
+                setTocOpen(false);
+                setAppearanceOpen(false);
+                setSevenOpen(false);
+                setMemberMenuOpen(false);
+                setMarksOpen(true);
+              }}
+            >
+              Reading Marks
+            </button>
+            <button
+              type="button"
+              className="reader-toc__utility-action"
+              onClick={() => {
+                handleToggleBookmark();
+                setTocOpen(false);
+              }}
+            >
+              {currentBookmarked ? "Remove Bookmark" : "Save Bookmark"}
+            </button>
+            <button
+              type="button"
+              className="reader-toc__utility-action"
+              onClick={openSettingsPanel}
+            >
+              Reading Settings
+            </button>
+            <button
+              type="button"
+              className="reader-toc__utility-action"
+              onClick={openMemberMenu}
+            >
+              Account
+            </button>
+            <button type="button" className="reader-toc__utility-action" onClick={handleSignOut}>
+              Log Out
+            </button>
+          </div>
         </nav>
       </aside>
 

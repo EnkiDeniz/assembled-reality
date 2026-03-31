@@ -146,6 +146,24 @@ export function getNarrationText(documentData, activeSlug) {
   return [heading, subtitle.trim(), body].filter(Boolean).join("\n\n").trim();
 }
 
+export function getSectionPreview(documentData, activeSlug) {
+  const section = getReaderSection(documentData, activeSlug);
+  const paragraphs = String(section.markdown || "")
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) =>
+      stripMarkdownForSpeech(paragraph)
+        .replace(/\s+/g, " ")
+        .replace(/[-]{3,}/g, " ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .filter((paragraph) => paragraph.length > 36)
+    .filter((paragraph) => !/[|]/.test(paragraph));
+
+  return paragraphs[0] || stripMarkdownForSpeech(section.markdown).replace(/\s+/g, " ").trim();
+}
+
 export function getSectionOutline(documentData) {
   return (documentData?.sections || [])
     .map((section) => `${section.number}. ${section.title}`)

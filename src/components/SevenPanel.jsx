@@ -5,9 +5,9 @@ import { buildExcerpt } from "../lib/text";
 import {
   getNarrationText,
   getReaderSection,
+  getSectionPreview,
   getSectionOutline,
   splitTextForSpeech,
-  stripMarkdownForSpeech,
 } from "../lib/seven";
 
 function SpeakerIcon() {
@@ -25,6 +25,27 @@ function SpeakerIcon() {
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ExplainIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M5.35 4.75h9.3A1.35 1.35 0 0 1 16 6.1v5.4a1.35 1.35 0 0 1-1.35 1.35H10.6l-2.5 2v-2H5.35A1.35 1.35 0 0 1 4 11.5V6.1a1.35 1.35 0 0 1 1.35-1.35Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.45"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.1 8h5.8M7.1 10.2h4.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.45"
         strokeLinecap="round"
       />
     </svg>
@@ -69,9 +90,9 @@ export default function SevenPanel({
     [activeSlug, documentData],
   );
   const speechChunks = useMemo(() => splitTextForSpeech(narrationText), [narrationText]);
-  const currentSectionPlainText = useMemo(
-    () => stripMarkdownForSpeech(currentSection.markdown),
-    [currentSection.markdown],
+  const sectionPreview = useMemo(
+    () => buildExcerpt(getSectionPreview(documentData, activeSlug), 180),
+    [activeSlug, documentData],
   );
   const welcomeMessage = useMemo(
     () => buildWelcomeMessage({ textEnabled, voiceEnabled }),
@@ -95,7 +116,6 @@ export default function SevenPanel({
   const audioUrlRef = useRef(null);
   const audioSessionRef = useRef(0);
   const messageListRef = useRef(null);
-  const composerRef = useRef(null);
   const composerInputRef = useRef(null);
 
   const textDisabledReason = textEnabled
@@ -107,6 +127,55 @@ export default function SevenPanel({
 
   const canListen = voiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
+  const hasCapabilities = voiceEnabled || textEnabled;
+  const capabilityNotice = !hasCapabilities
+    ? "Seven is offline right now."
+    : !voiceEnabled
+      ? "Voice is offline right now. Text guidance is still available."
+      : !textEnabled
+        ? "Text guidance is offline right now. Voice is still available."
+        : "";
+  const panelMeta = !hasCapabilities
+    ? "Seven is temporarily offline for this section."
+    : voiceEnabled && textEnabled
+      ? "Listen now or ask about the section in view."
+      : voiceEnabled
+        ? "Read the section aloud."
+        : "Ask about the section in view.";
+  const actions = [
+    voiceEnabled
+      ? {
+          id: "listen",
+          className: "reader-seven__action is-primary",
+          disabled: !canListen && !audioActive,
+          label: audioActive ? "Stop" : "Listen",
+          icon: <SpeakerIcon />,
+          onClick: () => {
+            if (audioActive) {
+              stopAudio();
+              return;
+            }
+
+            playText(narrationText, `Reading ${currentLabel}`);
+          },
+        }
+      : null,
+    textEnabled
+      ? {
+          id: "explain",
+          className: "reader-seven__action",
+          disabled: pending,
+          label: "Explain",
+          icon: <ExplainIcon />,
+          onClick: () =>
+            requestSeven({
+              mode: "explain",
+              question: "",
+              userLine: `Explain ${currentLabel} in plainer language.`,
+            }),
+        }
+      : null,
+  ].filter(Boolean);
 
   useEffect(() => {
     if (!messageListRef.current) return;
@@ -148,11 +217,6 @@ export default function SevenPanel({
       total: 0,
     });
   }, [clearAudioUrl]);
-
-  const focusComposer = useCallback(() => {
-    composerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    composerInputRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     if (open) return undefined;
@@ -363,22 +427,19 @@ export default function SevenPanel({
     }
   }
 
-  const sectionPreview = buildExcerpt(currentSectionPlainText, 180);
-
   return (
     <aside className={`reader-seven ${open ? "is-open" : ""}`}>
       <div className="reader-seven__header">
         <div>
           <p className="reader-seven__eyebrow">Seven</p>
           <h2 className="reader-seven__title">{currentLabel}</h2>
-          <p className="reader-seven__meta">
-            Interactive audio guide for the section in view.
-          </p>
+          <p className="reader-seven__meta">{panelMeta}</p>
         </div>
         <button
           type="button"
           className="reader-chrome-button reader-chrome-button--icon"
           onClick={onClose}
+          aria-label="Close Seven"
         >
           ×
         </button>
@@ -387,63 +448,28 @@ export default function SevenPanel({
       <div className="reader-seven__body">
         <div className="reader-seven__intro">
           <div className="reader-seven__context">
-            <p className="reader-seven__context-label">Current focus</p>
+            <p className="reader-seven__context-label">In This Section</p>
             <p className="reader-seven__context-text">{sectionPreview || "No section text yet."}</p>
           </div>
 
-          <div className="reader-seven__actions">
-            <button
-              type="button"
-              className="reader-seven__action is-primary"
-              disabled={!canListen && !audioActive}
-              onClick={() => {
-                if (audioActive) {
-                  stopAudio();
-                  return;
-                }
-
-                playText(narrationText, `Reading ${currentLabel}`);
-              }}
-            >
-              {audioActive ? "Stop listening" : "Listen to section"}
-            </button>
-            <button
-              type="button"
-              className="reader-seven__action"
-              disabled={!textEnabled || pending}
-              onClick={() =>
-                requestSeven({
-                  mode: "explain",
-                  question: "",
-                  userLine: `Explain ${currentLabel} in plainer language.`,
-                })
-              }
-            >
-              Explain
-            </button>
-            <button
-              type="button"
-              className="reader-seven__action"
-              disabled={!textEnabled || pending}
-              onClick={() =>
-                requestSeven({
-                  mode: "summary",
-                  question: "",
-                  userLine: `Summarize ${currentLabel}.`,
-                })
-              }
-            >
-              Summarize
-            </button>
-            <button
-              type="button"
-              className="reader-seven__action"
-              disabled={!textEnabled}
-              onClick={focusComposer}
-            >
-              Ask a question
-            </button>
-          </div>
+          {actions.length ? (
+            <div className="reader-seven__actions">
+              {actions.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className={action.className}
+                  disabled={action.disabled}
+                  onClick={action.onClick}
+                >
+                  <span className="reader-seven__action-inner">
+                    <span className="reader-seven__action-icon">{action.icon}</span>
+                    <span>{action.label}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="reader-seven__status" aria-live="polite">
             {audioState.status === "loading"
@@ -458,8 +484,9 @@ export default function SevenPanel({
               : null}
           </div>
 
-          {!textEnabled ? <p className="reader-seven__disabled">{textDisabledReason}</p> : null}
-          {!voiceEnabled ? <p className="reader-seven__disabled">{voiceDisabledReason}</p> : null}
+          {capabilityNotice ? (
+            <p className="reader-seven__notice">{capabilityNotice}</p>
+          ) : null}
         </div>
 
         <div ref={messageListRef} className="reader-seven__messages">
@@ -487,52 +514,49 @@ export default function SevenPanel({
           ))}
         </div>
 
-        <form
-          ref={composerRef}
-          className="reader-seven__composer"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const question = draft.trim();
-            if (!question || pending) return;
+        {textEnabled ? (
+          <form
+            className="reader-seven__composer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const question = draft.trim();
+              if (!question || pending) return;
 
-            requestSeven({
-              mode: "question",
-              question,
-              userLine: question,
-            });
-            setDraft("");
-          }}
-        >
-          <label className="reader-seven__composer-label" htmlFor="seven-question">
-            Ask Seven about this section
-          </label>
-          <textarea
-            id="seven-question"
-            ref={composerInputRef}
-            className="reader-seven__composer-input"
-            rows={3}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={
-              textEnabled
-                ? "What does this mean in practice?"
-                : "Seven’s chat is unavailable right now."
-            }
-            disabled={!textEnabled}
-          />
-          <div className="reader-seven__composer-actions">
+              requestSeven({
+                mode: "question",
+                question,
+                userLine: question,
+              });
+              setDraft("");
+            }}
+          >
+            <label className="reader-seven__composer-label" htmlFor="seven-question">
+              Ask Seven About This Section
+            </label>
+            <textarea
+              id="seven-question"
+              ref={composerInputRef}
+              className="reader-seven__composer-input"
+              rows={3}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="What does this mean in practice…"
+              disabled={!textEnabled}
+            />
+            <div className="reader-seven__composer-actions">
             <p className="reader-seven__composer-note">
-              Seven stays close to the section in view and explains in spoken language.
+                Ask a specific question when you want more than the quick explanation.
             </p>
-            <button
-              type="submit"
-              className="reader-seven__send"
-              disabled={!draft.trim() || pending || !textEnabled}
-            >
-              {pending ? "Thinking" : "Ask Seven"}
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                className="reader-seven__send"
+                disabled={!draft.trim() || pending || !textEnabled}
+              >
+                {pending ? "Thinking…" : "Ask Seven"}
+              </button>
+            </div>
+          </form>
+        ) : null}
       </div>
     </aside>
   );

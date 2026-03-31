@@ -160,7 +160,12 @@ export default function ReaderMarksPanel({
           <h2 className="reader-marks__title">{currentLabel}</h2>
           <p className="reader-marks__meta">{subtitle}</p>
         </div>
-        <button type="button" className="reader-chrome-button reader-chrome-button--icon" onClick={onClose}>
+        <button
+          type="button"
+          className="reader-chrome-button reader-chrome-button--icon"
+          onClick={onClose}
+          aria-label="Close reading marks"
+        >
           ×
         </button>
       </div>
