@@ -1,83 +1,101 @@
+import { NextResponse } from "next/server";
 import { appEnv } from "@/lib/env";
+import {
+  buildSevenIssueMessage,
+  getSevenReasonCode,
+  getSevenRetryAfterSeconds,
+} from "@/lib/seven";
+import { getRequiredSession } from "@/lib/server-session";
 
 export const runtime = "nodejs";
 
 const VOICE_UNAVAILABLE_MESSAGE = "Seven's voice is unavailable right now.";
 
-export async function POST(request) {
-  const body = await request.json();
-  const text = String(body?.text || "").trim();
+function createAudioSuccessResponse(providerResponse, metadata = {}) {
+  const headers = new Headers();
+  headers.set("Content-Type", "audio/mpeg");
+  headers.set("Cache-Control", "no-store");
+  headers.set("X-Seven-Provider", metadata.provider || "");
 
-  if (!text) {
-    return Response.json(
-      {
-        ok: false,
-        error: "Seven needs text before it can speak.",
-      },
-      { status: 400 },
-    );
+  if (metadata.fallbackFrom) {
+    headers.set("X-Seven-Fallback-From", metadata.fallbackFrom);
   }
 
-  if (text.length > 4096) {
-    return Response.json(
-      {
-        ok: false,
-        error: "This audio chunk is too long for a single speech request.",
-      },
-      { status: 400 },
-    );
+  if (metadata.fallbackReasonCode) {
+    headers.set("X-Seven-Fallback-Reason-Code", metadata.fallbackReasonCode);
   }
 
-  if (appEnv.elevenlabs.enabled) {
-    const url = new URL(
-      `https://api.elevenlabs.io/v1/text-to-speech/${appEnv.elevenlabs.voiceId}`,
-    );
-    url.searchParams.set("output_format", appEnv.elevenlabs.outputFormat);
+  return new Response(providerResponse.body, {
+    status: 200,
+    headers,
+  });
+}
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": appEnv.elevenlabs.apiKey,
-        Accept: "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: appEnv.elevenlabs.modelId,
+function buildVoiceErrorResponse({
+  provider,
+  status = 503,
+  reasonCode = "provider_unavailable",
+  retryAfterSeconds = null,
+  fallbackFrom = null,
+  fallbackReasonCode = "",
+}) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: buildSevenIssueMessage({
+        feature: "voice",
+        provider,
+        reasonCode,
+        retryAfterSeconds,
       }),
-    });
+      provider,
+      reasonCode,
+      retryable: reasonCode === "rate_limited" || reasonCode === "provider_unavailable",
+      retryAfterSeconds,
+      fallbackFrom,
+      fallbackReasonCode,
+    },
+    { status },
+  );
+}
 
-    if (!response.ok) {
-      console.error("Seven voice request failed.", {
-        provider: "elevenlabs",
-        status: response.status,
-      });
-      return Response.json(
-        {
-          ok: false,
-          error: VOICE_UNAVAILABLE_MESSAGE,
-        },
-        { status: response.status },
-      );
-    }
+async function parseProviderFailure(response) {
+  const payload = await response.json().catch(() => null);
+  const detail =
+    payload?.detail?.status ||
+    payload?.detail?.message ||
+    payload?.error?.message ||
+    payload?.error?.code ||
+    payload?.error?.type ||
+    payload?.message ||
+    "";
+  const reasonCode = getSevenReasonCode({
+    status: response.status,
+    detail,
+    code: payload?.error?.code,
+    type: payload?.error?.type,
+  });
 
-    return new Response(response.body, {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "no-store",
-      },
-    });
-  }
+  return {
+    status: response.status,
+    detail,
+    reasonCode,
+    retryAfterSeconds: getSevenRetryAfterSeconds(response.headers),
+  };
+}
 
+async function requestOpenAiSpeech(text) {
   if (!appEnv.openai.enabled) {
-    return Response.json(
-      {
-        ok: false,
-        error: VOICE_UNAVAILABLE_MESSAGE,
+    return {
+      ok: false,
+      provider: "openai",
+      error: {
+        status: 503,
+        detail: VOICE_UNAVAILABLE_MESSAGE,
+        reasonCode: "provider_unavailable",
+        retryAfterSeconds: null,
       },
-      { status: 503 },
-    );
+    };
   }
 
   const response = await fetch("https://api.openai.com/v1/audio/speech", {
@@ -95,24 +113,167 @@ export async function POST(request) {
   });
 
   if (!response.ok) {
-    console.error("Seven voice request failed.", {
+    return {
+      ok: false,
       provider: "openai",
-      status: response.status,
-    });
-    return Response.json(
+      error: await parseProviderFailure(response),
+    };
+  }
+
+  return {
+    ok: true,
+    provider: "openai",
+    response,
+  };
+}
+
+async function requestElevenLabsSpeech(text) {
+  if (!appEnv.elevenlabs.enabled) {
+    return {
+      ok: false,
+      provider: "elevenlabs",
+      error: {
+        status: 503,
+        detail: VOICE_UNAVAILABLE_MESSAGE,
+        reasonCode: "provider_unavailable",
+        retryAfterSeconds: null,
+      },
+    };
+  }
+
+  const url = new URL(
+    `https://api.elevenlabs.io/v1/text-to-speech/${appEnv.elevenlabs.voiceId}`,
+  );
+  url.searchParams.set("output_format", appEnv.elevenlabs.outputFormat);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "xi-api-key": appEnv.elevenlabs.apiKey,
+      Accept: "audio/mpeg",
+    },
+    body: JSON.stringify({
+      text,
+      model_id: appEnv.elevenlabs.modelId,
+    }),
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      provider: "elevenlabs",
+      error: await parseProviderFailure(response),
+    };
+  }
+
+  return {
+    ok: true,
+    provider: "elevenlabs",
+    response,
+  };
+}
+
+export async function POST(request) {
+  const session = await getRequiredSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const text = String(body?.text || "").trim();
+
+  if (!text) {
+    return NextResponse.json(
       {
         ok: false,
-        error: VOICE_UNAVAILABLE_MESSAGE,
+        error: "Seven needs text before it can speak.",
       },
-      { status: response.status },
+      { status: 400 },
     );
   }
 
-  return new Response(response.body, {
-    status: 200,
-    headers: {
-      "Content-Type": "audio/mpeg",
-      "Cache-Control": "no-store",
-    },
-  });
+  if (text.length > 4096) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "This audio chunk is too long for a single speech request.",
+      },
+      { status: 400 },
+    );
+  }
+
+  let initialFailure = null;
+
+  if (appEnv.elevenlabs.enabled) {
+    try {
+      const elevenlabs = await requestElevenLabsSpeech(text);
+      if (elevenlabs.ok) {
+        return createAudioSuccessResponse(elevenlabs.response, {
+          provider: "elevenlabs",
+        });
+      }
+
+      initialFailure = elevenlabs.error;
+      console.error("Seven voice request failed.", {
+        provider: "elevenlabs",
+        status: elevenlabs.error.status,
+        reasonCode: elevenlabs.error.reasonCode,
+        detail: elevenlabs.error.detail || undefined,
+      });
+    } catch (error) {
+      initialFailure = {
+        status: 503,
+        detail: error instanceof Error ? error.message : String(error),
+        reasonCode: "provider_unavailable",
+        retryAfterSeconds: null,
+      };
+      console.error("Seven voice request crashed.", {
+        provider: "elevenlabs",
+        detail: initialFailure.detail,
+      });
+    }
+  }
+
+  try {
+    const openai = await requestOpenAiSpeech(text);
+    if (openai.ok) {
+      return createAudioSuccessResponse(openai.response, {
+        provider: "openai",
+        fallbackFrom: initialFailure ? "elevenlabs" : null,
+        fallbackReasonCode: initialFailure?.reasonCode || "",
+      });
+    }
+
+    console.error("Seven voice request failed.", {
+      provider: "openai",
+      status: openai.error.status,
+      reasonCode: openai.error.reasonCode,
+      detail: openai.error.detail || undefined,
+      fallbackFrom: initialFailure ? "elevenlabs" : undefined,
+    });
+
+    return buildVoiceErrorResponse({
+      provider: "openai",
+      status: openai.error.status,
+      reasonCode: openai.error.reasonCode,
+      retryAfterSeconds: openai.error.retryAfterSeconds,
+      fallbackFrom: initialFailure ? "elevenlabs" : null,
+      fallbackReasonCode: initialFailure?.reasonCode || "",
+    });
+  } catch (error) {
+    console.error("Seven voice request crashed.", {
+      provider: "openai",
+      detail: error instanceof Error ? error.message : String(error),
+      fallbackFrom: initialFailure ? "elevenlabs" : undefined,
+    });
+
+    return buildVoiceErrorResponse({
+      provider: "openai",
+      status: 503,
+      reasonCode: "provider_unavailable",
+      fallbackFrom: initialFailure ? "elevenlabs" : null,
+      fallbackReasonCode: initialFailure?.reasonCode || "",
+    });
+  }
 }

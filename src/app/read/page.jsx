@@ -27,6 +27,10 @@ export default async function ReadPage() {
       getReceiptsConnection={readerData?.getReceiptsConnection}
       sevenTextEnabled={appEnv.openai.enabled}
       sevenVoiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
+      sevenTextProvider={appEnv.openai.enabled ? "openai" : null}
+      sevenVoiceProvider={
+        appEnv.elevenlabs.enabled ? "elevenlabs" : appEnv.openai.enabled ? "openai" : null
+      }
     />
   );
 }

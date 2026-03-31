@@ -20,7 +20,7 @@ import {
 } from "../lib/annotations";
 import { EMPTY_READER_ANNOTATIONS } from "../lib/reader-store";
 import { clearBrowserSelection, getSelectionAnchor } from "../lib/selection";
-import { clearUnlockState, saveReaderPreferences } from "../lib/storage";
+import { saveReaderPreferences } from "../lib/storage";
 
 const TEXT_SIZE_LABELS = {
   small: "Small",
@@ -71,20 +71,7 @@ function MarksIcon() {
 }
 
 function SevenIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M8.1 6.35h4.8v1.35l-2.35 2.1c-.72.64-1.08 1.14-1.08 1.92v.26"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="9.45" cy="14.55" r="0.7" fill="currentColor" />
-    </svg>
-  );
+  return <span className="reader-seven-icon" aria-hidden="true">7</span>;
 }
 
 export default function ReaderShell({
@@ -93,12 +80,13 @@ export default function ReaderShell({
   setPreferences,
   initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
   initialReadingProgress = null,
-  aggregateAnnotations: initialAggregateAnnotations = EMPTY_READER_ANNOTATIONS,
   profile = null,
   sessionUser = null,
   getReceiptsConnection = null,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
+  sevenTextProvider = null,
+  sevenVoiceProvider = null,
 }) {
   const initialHash =
     typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
@@ -115,25 +103,9 @@ export default function ReaderShell({
       ? initialReadingProgress.progressPercent / 100
       : 0,
   );
-  const [aggregateAnnotations, setAggregateAnnotations] = useState(
-    () => initialAggregateAnnotations || EMPTY_READER_ANNOTATIONS,
-  );
-  const [aggregateAnnotationsStatus, setAggregateAnnotationsStatus] = useState(() => ({
-    state:
-      initialAggregateAnnotations &&
-      [
-        initialAggregateAnnotations.bookmarks?.length,
-        initialAggregateAnnotations.highlights?.length,
-        initialAggregateAnnotations.notes?.length,
-      ].some(Boolean)
-        ? "ready"
-        : "idle",
-    error: "",
-  }));
   const [readerAnnotations, setReaderAnnotations] = useState(
     () => initialReaderAnnotations || EMPTY_READER_ANNOTATIONS,
   );
-  const [marksMode, setMarksMode] = useState("mine");
   const [selectionState, setSelectionState] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [selectionNotice, setSelectionNotice] = useState("");
@@ -278,8 +250,7 @@ export default function ReaderShell({
     sessionUser?.email ||
     "Reader";
   const memberEmail = sessionUser?.email || "";
-  const membershipLabel =
-    profile?.cohort === "FOUNDING" ? "Founding reader" : "Private beta member";
+  const membershipLabel = "Reader";
   const receiptsStatusLabel =
     getReceiptsConnection?.status === "CONNECTED"
       ? "GetReceipts connected"
@@ -287,40 +258,30 @@ export default function ReaderShell({
   const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
   const hasFloatingPanel = tocOpen || appearanceOpen || marksOpen || sevenOpen || memberMenuOpen;
-  const visibleAnnotations =
-    marksMode === "seven" && profile?.canViewSeven
-      ? aggregateAnnotations || EMPTY_READER_ANNOTATIONS
-      : readerAnnotations;
-  const sharedMarksLoading =
-    marksMode === "seven" && aggregateAnnotationsStatus.state === "loading";
-  const sharedMarksError =
-    marksMode === "seven" && aggregateAnnotationsStatus.state === "error"
-      ? aggregateAnnotationsStatus.error
-      : "";
   const sortedBookmarks = useMemo(
     () =>
-      visibleAnnotations.bookmarks.toSorted(
+      readerAnnotations.bookmarks.toSorted(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
       ),
-    [visibleAnnotations.bookmarks],
+    [readerAnnotations.bookmarks],
   );
   const sortedHighlights = useMemo(
     () =>
-      visibleAnnotations.highlights.toSorted(
+      readerAnnotations.highlights.toSorted(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
       ),
-    [visibleAnnotations.highlights],
+    [readerAnnotations.highlights],
   );
   const sortedNotes = useMemo(
     () =>
-      visibleAnnotations.notes.toSorted(
+      readerAnnotations.notes.toSorted(
         (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
       ),
-    [visibleAnnotations.notes],
+    [readerAnnotations.notes],
   );
   const marksByBlock = useMemo(
-    () => getRenderableMarksByBlock(visibleAnnotations),
-    [visibleAnnotations],
+    () => getRenderableMarksByBlock(readerAnnotations),
+    [readerAnnotations],
   );
 
   const clearFocusState = useCallback(() => {
@@ -357,8 +318,39 @@ export default function ReaderShell({
     setAppearanceOpen(true);
   }, []);
 
+  const openContentsPanel = useCallback(() => {
+    setAppearanceOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setTocOpen(true);
+  }, []);
+
+  const toggleMarksPanel = useCallback(() => {
+    setTocOpen(false);
+    setAppearanceOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setMarksOpen((current) => !current);
+  }, []);
+
+  const toggleSevenPanel = useCallback(() => {
+    setTocOpen(false);
+    setAppearanceOpen(false);
+    setMarksOpen(false);
+    setMemberMenuOpen(false);
+    setSevenOpen((current) => !current);
+  }, []);
+
+  const toggleAppearancePanel = useCallback(() => {
+    setTocOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setAppearanceOpen((current) => !current);
+  }, []);
+
   const handleSignOut = useCallback(() => {
-    clearUnlockState();
     signOut({ callbackUrl: "/" });
   }, []);
 
@@ -499,54 +491,6 @@ export default function ReaderShell({
     window.addEventListener("keydown", handleReaderKeys);
     return () => window.removeEventListener("keydown", handleReaderKeys);
   }, [jumpTo, nextEntry, previousEntry]);
-
-  useEffect(() => {
-    if (marksMode !== "seven" || !profile?.canViewSeven) {
-      return undefined;
-    }
-
-    if (aggregateAnnotationsStatus.state === "loading" || aggregateAnnotationsStatus.state === "ready") {
-      return undefined;
-    }
-
-    const controller = new AbortController();
-    let active = true;
-
-    setAggregateAnnotationsStatus({
-      state: "loading",
-      error: "",
-    });
-
-    fetch("/api/reader/aggregate", { signal: controller.signal })
-      .then(async (response) => {
-        const payload = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(payload?.error || "Could not load collected marks.");
-        }
-
-        if (!active) return;
-
-        setAggregateAnnotations(payload?.annotations || EMPTY_READER_ANNOTATIONS);
-        setAggregateAnnotationsStatus({
-          state: "ready",
-          error: "",
-        });
-      })
-      .catch((error) => {
-        if (!active || controller.signal.aborted) return;
-
-        setAggregateAnnotationsStatus({
-          state: "error",
-          error: error instanceof Error ? error.message : "Could not load collected marks.",
-        });
-      });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [aggregateAnnotationsStatus.state, marksMode, profile?.canViewSeven]);
 
   useEffect(() => {
     const syncSelection = () => {
@@ -736,105 +680,76 @@ export default function ReaderShell({
 
   return (
     <div
-      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${hasFloatingPanel ? "has-floating-panel" : ""}`}
+      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${hasFloatingPanel ? "has-floating-panel" : ""} ${sevenOpen ? "has-seven-open" : ""}`}
       data-theme={preferences.theme}
     >
       <header className="reader-topbar">
-        <button
-          type="button"
-          className="reader-chrome-button"
-          onClick={() => {
-            setAppearanceOpen(false);
-            setMarksOpen(false);
-            setSevenOpen(false);
-            setMemberMenuOpen(false);
-            setTocOpen(true);
-          }}
-        >
-          <span className="reader-button-icon">☰</span>
-          <span>Contents</span>
-        </button>
-        <div className="reader-topbar__center">
-          <div className="reader-topbar__title">{documentData.title}</div>
-          <div className="reader-topbar__section">{currentLabel}</div>
-        </div>
-        <div className="reader-topbar__actions">
-          <button
-            type="button"
-            className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
-            data-mobile-hidden="true"
-            onClick={handleToggleBookmark}
-            aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
-            title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
-          >
-            <span className="reader-button-icon">
-              <BookmarkIcon filled={currentBookmarked} />
-            </span>
+        <div className="reader-topbar__primary">
+          <button type="button" className="reader-chrome-button" onClick={openContentsPanel}>
+            <span className="reader-button-icon">☰</span>
+            <span>Contents</span>
           </button>
-          <button
-            type="button"
-            className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
-            data-mobile-hidden="true"
-            onClick={() => {
-              setTocOpen(false);
-              setAppearanceOpen(false);
-              setSevenOpen(false);
-              setMemberMenuOpen(false);
-              setMarksOpen((current) => !current);
-            }}
-            aria-label={marksOpen ? "Close marks" : "Open marks"}
-            title={marksOpen ? "Close marks" : "Open marks"}
-          >
-            <span className="reader-button-icon">
-              <MarksIcon />
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`reader-chrome-button ${sevenOpen ? "is-active" : ""}`}
-            onClick={() => {
-              setTocOpen(false);
-              setAppearanceOpen(false);
-              setMarksOpen(false);
-              setMemberMenuOpen(false);
-              setSevenOpen((current) => !current);
-            }}
-            aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
-            title={sevenOpen ? "Close Seven" : "Open Seven"}
-          >
-            <span className="reader-button-icon">
-              <SevenIcon />
-            </span>
-            <span>Seven</span>
-          </button>
-          <button
-            type="button"
-            className="reader-chrome-button reader-chrome-button--icon"
-            data-mobile-hidden="true"
-            onClick={() => {
-              setTocOpen(false);
-              setMarksOpen(false);
-              setSevenOpen(false);
-              setMemberMenuOpen(false);
-              setAppearanceOpen((current) => !current);
-            }}
-            aria-label="Reader appearance"
-          >
-            Aa
-          </button>
-          <button
-            type="button"
-            className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
-            data-mobile-hidden="true"
-            onClick={openMemberMenu}
-            aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
-            aria-expanded={memberMenuOpen}
-          >
-            <span className="reader-member-chip" aria-hidden="true">
-              {memberInitial}
-            </span>
-            <span>{memberName}</span>
-          </button>
+          <div className="reader-topbar__center">
+            <div className="reader-topbar__title">{documentData.title}</div>
+            <div className="reader-topbar__section">{currentLabel}</div>
+          </div>
+          <div className="reader-topbar__actions">
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
+              onClick={handleToggleBookmark}
+              aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
+              title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
+            >
+              <span className="reader-button-icon">
+                <BookmarkIcon filled={currentBookmarked} />
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
+              onClick={toggleMarksPanel}
+              aria-label={marksOpen ? "Close marks" : "Open marks"}
+              title={marksOpen ? "Close marks" : "Open marks"}
+            >
+              <span className="reader-button-icon">
+                <MarksIcon />
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon reader-chrome-button--seven ${sevenOpen ? "is-active" : ""}`}
+              onClick={toggleSevenPanel}
+              aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
+              title={sevenOpen ? "Close Seven" : "Open Seven"}
+            >
+              <span className="reader-button-icon">
+                <SevenIcon />
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon ${appearanceOpen ? "is-active" : ""}`}
+              onClick={toggleAppearancePanel}
+              aria-label="Reader appearance"
+              title="Reader appearance"
+            >
+              Aa
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
+              data-mobile-hidden="true"
+              onClick={openMemberMenu}
+              aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
+              aria-expanded={memberMenuOpen}
+            >
+              <span className="reader-member-chip" aria-hidden="true">
+                {memberInitial}
+              </span>
+              <span>{memberName}</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -960,6 +875,18 @@ export default function ReaderShell({
             <button
               type="button"
               className="reader-toc__utility-action"
+              onClick={handleCreateReceipt}
+              disabled={creatingReceipt}
+            >
+              {creatingReceipt
+                ? "Creating Receipt"
+                : getReceiptsConnection?.status === "CONNECTED"
+                  ? "Create Receipt"
+                  : "Save Reading Draft"}
+            </button>
+            <button
+              type="button"
+              className="reader-toc__utility-action"
               onClick={openMemberMenu}
             >
               Account
@@ -975,14 +902,9 @@ export default function ReaderShell({
         open={marksOpen}
         currentLabel={currentLabel}
         progressPercent={progressPercent}
-        mode={marksMode}
-        canViewSeven={Boolean(profile?.canViewSeven)}
-        isLoadingSharedMarks={sharedMarksLoading}
-        sharedMarksError={sharedMarksError}
         bookmarks={sortedBookmarks}
         highlights={sortedHighlights}
         notes={sortedNotes}
-        onChangeMode={setMarksMode}
         onClose={() => setMarksOpen(false)}
         onJumpToBookmark={jumpToMark}
         onJumpToMark={jumpToMark}
@@ -1004,6 +926,8 @@ export default function ReaderShell({
         open={sevenOpen}
         textEnabled={sevenTextEnabled}
         voiceEnabled={sevenVoiceEnabled}
+        textProvider={sevenTextProvider}
+        preferredVoiceProvider={sevenVoiceProvider}
         documentData={documentData}
         activeSlug={activeSlug}
         currentLabel={currentLabel}
@@ -1019,7 +943,7 @@ export default function ReaderShell({
               data-section-title="Beginning"
               className={`reader-beginning ${focusedSectionSlug === "beginning" ? "is-focused-source" : ""}`}
             >
-              <p className="reader-beginning__eyebrow">Private reading instrument</p>
+              <p className="reader-beginning__eyebrow">Reading instrument</p>
               <h1 className="reader-beginning__title">{documentData.title}</h1>
               <p className="reader-beginning__subtitle">{documentData.subtitle}</p>
               <MarkdownRenderer
@@ -1089,9 +1013,15 @@ export default function ReaderShell({
             disabled={!previousEntry}
             aria-label={previousEntry ? `Go to ${previousEntry.title}` : "No previous section"}
           >
-            Previous
+            <span className="reader-bottomrail__button-icon" aria-hidden="true">
+              ‹
+            </span>
+            <span className="reader-bottomrail__button-label">Previous</span>
           </button>
           <div className="reader-bottomrail__current">
+            <span className="reader-bottomrail__current-compact">
+              {currentEntry.number ? `${currentEntry.number} · ${progressPercent}% read` : `${progressPercent}% read`}
+            </span>
             <span className="reader-bottomrail__current-title">{currentLabel}</span>
             <span className="reader-bottomrail__current-progress">{progressPercent}% read</span>
             <button
@@ -1114,7 +1044,10 @@ export default function ReaderShell({
             disabled={!nextEntry}
             aria-label={nextEntry ? `Go to ${nextEntry.title}` : "No next section"}
           >
-            Next
+            <span className="reader-bottomrail__button-label">Next</span>
+            <span className="reader-bottomrail__button-icon" aria-hidden="true">
+              ›
+            </span>
           </button>
         </div>
       </footer>

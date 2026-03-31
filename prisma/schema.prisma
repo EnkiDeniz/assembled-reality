@@ -13,11 +13,6 @@ enum ReaderRole {
   ADMIN
 }
 
-enum ReaderCohort {
-  FOUNDING
-  MEMBER
-}
-
 enum ConnectionStatus {
   DISCONNECTED
   CONNECTED
@@ -53,8 +48,6 @@ model ReaderProfile {
   displayName         String
   readerSlug          String                @unique
   role                ReaderRole            @default(READER)
-  cohort              ReaderCohort          @default(MEMBER)
-  canViewSeven        Boolean               @default(false)
   lastReadSlug        String?
   lastReadAt          DateTime?
   createdAt           DateTime              @default(now())
@@ -65,8 +58,6 @@ model ReaderProfile {
   notes               Note[]
   readingProgress     ReadingProgress[]
   readingReceiptDrafts ReadingReceiptDraft[]
-
-  @@index([cohort])
 }
 
 model Bookmark {

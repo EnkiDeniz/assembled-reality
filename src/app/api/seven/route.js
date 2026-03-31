@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { appEnv } from "@/lib/env";
+import {
+  buildSevenIssueMessage,
+  getSevenReasonCode,
+  getSevenRetryAfterSeconds,
+} from "@/lib/seven";
+import { getRequiredSession } from "@/lib/server-session";
 
 export const runtime = "nodejs";
 
@@ -50,11 +56,19 @@ function extractMessageText(payload) {
 }
 
 export async function POST(request) {
+  const session = await getRequiredSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!appEnv.openai.enabled) {
     return NextResponse.json(
       {
         ok: false,
         error: CHAT_UNAVAILABLE_MESSAGE,
+        provider: "openai",
+        reasonCode: "provider_unavailable",
+        retryable: false,
       },
       { status: 503 },
     );
@@ -96,54 +110,106 @@ export async function POST(request) {
     .filter(Boolean)
     .join("\n\n");
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${appEnv.openai.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: appEnv.openai.textModel,
-      input: [
-        {
-          role: "system",
-          content: [{ type: "input_text", text: systemPrompt }],
-        },
-        {
-          role: "user",
-          content: [{ type: "input_text", text: userPrompt }],
-        },
-      ],
-    }),
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    console.error("Seven chat request failed.", {
-      status: response.status,
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${appEnv.openai.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: appEnv.openai.textModel,
+        input: [
+          {
+            role: "system",
+            content: [{ type: "input_text", text: systemPrompt }],
+          },
+          {
+            role: "user",
+            content: [{ type: "input_text", text: userPrompt }],
+          },
+        ],
+      }),
     });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const providerDetail =
+        payload?.error?.message || payload?.error?.code || payload?.error?.type || "";
+      const reasonCode = getSevenReasonCode({
+        status: response.status,
+        detail: providerDetail,
+        code: payload?.error?.code,
+        type: payload?.error?.type,
+      });
+      const retryAfterSeconds = getSevenRetryAfterSeconds(response.headers);
+      const retryable =
+        reasonCode === "rate_limited" || reasonCode === "provider_unavailable";
+
+      console.error("Seven chat request failed.", {
+        provider: "openai",
+        status: response.status,
+        reasonCode,
+        retryAfterSeconds: retryAfterSeconds || undefined,
+        detail: providerDetail || undefined,
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: buildSevenIssueMessage({
+            feature: "chat",
+            provider: "openai",
+            reasonCode,
+            retryAfterSeconds,
+          }),
+          provider: "openai",
+          reasonCode,
+          retryable,
+          retryAfterSeconds,
+        },
+        { status: response.status },
+      );
+    }
+
+    const answer = extractMessageText(payload);
+    if (!answer) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Seven returned an empty answer.",
+          provider: "openai",
+          reasonCode: "empty_response",
+          retryable: false,
+        },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      answer,
+      provider: "openai",
+    });
+  } catch (error) {
+    console.error("Seven chat request crashed.", {
+      provider: "openai",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json(
       {
         ok: false,
-        error: CHAT_UNAVAILABLE_MESSAGE,
+        error: buildSevenIssueMessage({
+          feature: "chat",
+          provider: "openai",
+          reasonCode: "provider_unavailable",
+        }),
+        provider: "openai",
+        reasonCode: "provider_unavailable",
+        retryable: true,
       },
-      { status: response.status },
+      { status: 503 },
     );
   }
-
-  const answer = extractMessageText(payload);
-  if (!answer) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Seven returned an empty answer.",
-      },
-      { status: 502 },
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    answer,
-  });
 }

@@ -1,6 +1,6 @@
 # Assembled Reality Reader v2
 
-This document captures an older local-first marks plan. The current product is a multi-user, server-backed reader with a private beta gate on `/`, an authenticated reader app on `/read`, and a member account surface on `/account`.
+This document captures an older local-first marks plan. The current product is a multi-user, server-backed reader with open sign-in on `/`, an authenticated reader app on `/read`, and an account surface on `/account`.
 
 ## Goal
 
@@ -103,4 +103,4 @@ Each item should:
 - refresh and verify persistence
 - jump from saved marks back into the document
 - confirm highlights render correctly after reload
-- confirm existing unlock and reader behavior still works
+- confirm existing sign-in and reader behavior still works

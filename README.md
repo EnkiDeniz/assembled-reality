@@ -1,11 +1,11 @@
 # Assembled Reality
 
-Assembled Reality is now a Next.js App Router application for a private multi-user reading instrument.
+Assembled Reality is a Next.js App Router application for a multi-user reading instrument.
 
 ## Current stack
 
 - Next.js App Router
-- NextAuth with a bootstrap credentials flow
+- NextAuth with Apple sign-in and Resend-powered email magic links
 - Prisma
 - Supabase-hosted Postgres target via `DATABASE_URL`
 - server-backed reader state for bookmarks, highlights, notes, and progress
@@ -13,22 +13,20 @@ Assembled Reality is now a Next.js App Router application for a private multi-us
 
 ## Reader capabilities in this version
 
-- private beta gate on `/` before sign-in
-- authenticated member sign-in flow
+- open sign-in flow on `/` with Apple and email magic links
 - continuous long-form reader powered by the markdown document in [content/assembled_reality_v07_final.md](/Users/denizsengun/Projects/AR/content/assembled_reality_v07_final.md)
 - per-user bookmarks, highlights, notes, and progress via database APIs
 - in-reader account menu with account, settings, and logout affordances
-- account surface for member identity and GetReceipts connection status
+- account surface for reader identity and GetReceipts connection status
 - receipt-draft payload generation from reading context
 
 ## Important routes
 
-- `/` private beta gate and sign-in
+- `/` sign-in
 - `/read` authenticated reader app
-- `/account` member account and GetReceipts connection state
+- `/account` reader account and GetReceipts connection state
 - `/api/reader/marks`
 - `/api/reader/progress`
-- `/api/reader/aggregate`
 - `/api/reader/receipts/from-reading`
 
 ## Environment
@@ -39,12 +37,16 @@ Minimum local env for meaningful development:
 - `DATABASE_URL`
 - `DIRECT_DATABASE_URL`
 
-Recommended auth/invite env:
+Recommended auth env:
 
-- `READER_BOOTSTRAP_CODE`
-- `READER_INVITED_EMAILS`
 - `NEXTAUTH_URL`
 - `NEXT_PUBLIC_SITE_URL`
+- `NEXTAUTH_EMAIL_FROM`
+- `RESEND_API_KEY`
+- `APPLE_WEB_CLIENT_ID`
+- `APPLE_KEY_ID`
+- `APPLE_TEAM_ID`
+- `APPLE_PRIVATE_KEY`
 
 Optional GetReceipts integration env:
 
@@ -90,4 +92,4 @@ Generate the Prisma client:
 npx prisma generate
 ```
 
-When the database credentials are configured, the next setup step is to run a Prisma migration or schema push for the new reader tables.
+When the database credentials are configured, the next setup step is to apply the Prisma migration for the reader tables or run a schema push in local development.

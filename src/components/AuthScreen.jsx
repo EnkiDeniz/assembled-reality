@@ -48,7 +48,7 @@ export default function AuthScreen({
     <main className="lock-screen auth-screen">
       <div className="lock-screen__frame auth-screen__frame">
         <div className="lock-screen__header">
-          <p className="lock-screen__eyebrow">Private reading instrument</p>
+          <p className="lock-screen__eyebrow">Reading instrument</p>
           <h1 className="lock-screen__title">{documentTitle}</h1>
           <p className="lock-screen__lede">
             Sign in to continue.
@@ -69,14 +69,14 @@ export default function AuthScreen({
         {authCapabilities?.magicLinksEnabled ? (
           <form className="auth-screen__magic-link" onSubmit={handleMagicLink}>
             <label className="sr-only" htmlFor="reader-email-link">
-              Email for magic link
+              Email for sign-in link
             </label>
             <div className="lock-screen__field">
               <input
                 id="reader-email-link"
                 className="lock-screen__input"
                 type="email"
-                placeholder="Email for magic link"
+                placeholder="Email for sign-in link"
                 value={emailOnly}
                 onChange={(event) => setEmailOnly(event.target.value)}
                 required

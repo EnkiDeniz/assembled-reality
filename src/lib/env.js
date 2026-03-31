@@ -1,10 +1,3 @@
-function splitCsv(value) {
-  return (value || "")
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 function normalizeSecret(value) {
   return String(value || "").trim();
 }
@@ -50,10 +43,6 @@ function getOpenAiApiKey() {
 export const appEnv = {
   siteUrl: getDefaultSiteUrl(),
   authSecret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "",
-  bootstrapCode:
-    process.env.READER_BOOTSTRAP_CODE ||
-    (process.env.NODE_ENV === "development" ? "hineni" : ""),
-  invitedEmails: splitCsv(process.env.READER_INVITED_EMAILS),
   emailFrom:
     normalizeSecret(process.env.NEXTAUTH_EMAIL_FROM) ||
     normalizeSecret(process.env.EMAIL_FROM) ||

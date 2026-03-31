@@ -1,44 +1,11 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import AppleProvider from "next-auth/providers/apple";
-import CredentialsProvider from "next-auth/providers/credentials";
 import EmailProvider from "next-auth/providers/email";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { appEnv } from "@/lib/env";
 import { ensureReaderProfileForUser } from "@/lib/reader-db";
 import { sendVerificationRequest } from "@/lib/email";
-
-function isInvitedEmail(email) {
-  if (!appEnv.invitedEmails.length) return true;
-  return appEnv.invitedEmails.includes((email || "").trim().toLowerCase());
-}
-
-async function findOrCreateUser({ email, name }) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedName = name.trim();
-
-  let user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        name: normalizedName,
-        emailVerified: new Date(),
-      },
-    });
-  } else if (!user.name && normalizedName) {
-    user = await prisma.user.update({
-      where: { id: user.id },
-      data: { name: normalizedName },
-    });
-  }
-
-  await ensureReaderProfileForUser(user, normalizedName);
-  return user;
-}
 
 function getProfileSeedName(user) {
   if (user?.name?.trim()) return user.name.trim();
@@ -114,50 +81,9 @@ export const authOptions = {
           }),
         ]
       : []),
-    CredentialsProvider({
-      name: "Reader Access",
-      credentials: {
-        name: { label: "Name", type: "text" },
-        email: { label: "Email", type: "email" },
-        accessCode: { label: "Access code", type: "password" },
-      },
-      async authorize(credentials) {
-        const name = credentials?.name?.trim() || "";
-        const email = credentials?.email?.trim() || "";
-        const accessCode = credentials?.accessCode?.trim().toLowerCase() || "";
-
-        if (!name || !email || !accessCode) {
-          return null;
-        }
-
-        if (!appEnv.bootstrapCode || accessCode !== appEnv.bootstrapCode.toLowerCase()) {
-          return null;
-        }
-
-        if (!isInvitedEmail(email)) {
-          return null;
-        }
-
-        const user = await findOrCreateUser({ email, name });
-        const profile = await ensureReaderProfileForUser(user, name);
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: profile.displayName,
-          image: user.image,
-          readerSlug: profile.readerSlug,
-          readerRole: profile.role,
-        };
-      },
-    }),
   ],
   callbacks: {
     async signIn({ user }) {
-      if (user?.email && !isInvitedEmail(user.email)) {
-        return false;
-      }
-
       const profile = await ensureReaderProfile(user);
       if (profile) {
         user.name = profile.displayName;

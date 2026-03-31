@@ -18,10 +18,7 @@ function BookmarkItem({ bookmark, onJump, onDelete, allowMutations }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(bookmark)}>
-        <span className="reader-mark-card__eyebrow">
-          {bookmark.ownerName ? `${bookmark.ownerName} · ` : ""}
-          Bookmark
-        </span>
+        <span className="reader-mark-card__eyebrow">Bookmark</span>
         <span className="reader-mark-card__title">{bookmark.label}</span>
         {bookmark.excerpt ? <span className="reader-mark-card__excerpt">{bookmark.excerpt}</span> : null}
       </button>
@@ -38,10 +35,7 @@ function HighlightItem({ highlight, onJump, onDelete, allowMutations }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(highlight)}>
-        <span className="reader-mark-card__eyebrow">
-          {highlight.ownerName ? `${highlight.ownerName} · ` : ""}
-          {highlight.sectionTitle}
-        </span>
+        <span className="reader-mark-card__eyebrow">{highlight.sectionTitle}</span>
         <span className="reader-mark-card__excerpt">“{highlight.excerpt}”</span>
       </button>
       {allowMutations ? (
@@ -60,10 +54,7 @@ function NoteItem({ note, onJump, onDelete, onSave, allowMutations }) {
   return (
     <article className="reader-mark-card">
       <button type="button" className="reader-mark-card__jump" onClick={() => onJump(note)}>
-        <span className="reader-mark-card__eyebrow">
-          {note.ownerName ? `${note.ownerName} · ` : ""}
-          {note.sectionTitle}
-        </span>
+        <span className="reader-mark-card__eyebrow">{note.sectionTitle}</span>
         <span className="reader-mark-card__excerpt">“{note.excerpt}”</span>
       </button>
 
@@ -116,14 +107,9 @@ export default function ReaderMarksPanel({
   open,
   currentLabel,
   progressPercent,
-  mode,
-  canViewSeven,
-  isLoadingSharedMarks = false,
-  sharedMarksError = "",
   bookmarks,
   highlights,
   notes,
-  onChangeMode,
   onClose,
   onJumpToBookmark,
   onJumpToMark,
@@ -132,25 +118,8 @@ export default function ReaderMarksPanel({
   onDeleteNote,
   onUpdateNote,
 }) {
-  const allowMutations = mode !== "seven";
-  const subtitle =
-    mode === "seven"
-      ? isLoadingSharedMarks
-        ? "Loading collected marks from the founding readers."
-        : sharedMarksError || "Collected marks from the founding readers."
-      : `${progressPercent}% read`;
-  const bookmarkEmpty =
-    mode === "seven" && (isLoadingSharedMarks || sharedMarksError)
-      ? subtitle
-      : "No bookmarks yet.";
-  const highlightEmpty =
-    mode === "seven" && (isLoadingSharedMarks || sharedMarksError)
-      ? subtitle
-      : "No highlights yet.";
-  const noteEmpty =
-    mode === "seven" && (isLoadingSharedMarks || sharedMarksError)
-      ? subtitle
-      : "No notes yet.";
+  const allowMutations = true;
+  const subtitle = `${progressPercent}% read`;
 
   return (
     <aside className={`reader-marks ${open ? "is-open" : ""}`}>
@@ -171,26 +140,7 @@ export default function ReaderMarksPanel({
       </div>
 
       <div className="reader-marks__body">
-        {canViewSeven ? (
-          <div className="reader-marks__mode-toggle" role="tablist" aria-label="Marks view">
-            <button
-              type="button"
-              className={`reader-marks__mode-button ${mode === "mine" ? "is-active" : ""}`}
-              onClick={() => onChangeMode("mine")}
-            >
-              Mine
-            </button>
-            <button
-              type="button"
-              className={`reader-marks__mode-button ${mode === "seven" ? "is-active" : ""}`}
-              onClick={() => onChangeMode("seven")}
-            >
-              Seven
-            </button>
-          </div>
-        ) : null}
-
-        <MarkSection title="Bookmarks" count={bookmarks.length} empty={bookmarkEmpty}>
+        <MarkSection title="Bookmarks" count={bookmarks.length} empty="No bookmarks yet.">
           <div className="reader-marks__list">
             {bookmarks.map((bookmark) => (
               <BookmarkItem
@@ -204,7 +154,7 @@ export default function ReaderMarksPanel({
           </div>
         </MarkSection>
 
-        <MarkSection title="Highlights" count={highlights.length} empty={highlightEmpty}>
+        <MarkSection title="Highlights" count={highlights.length} empty="No highlights yet.">
           <div className="reader-marks__list">
             {highlights.map((highlight) => (
               <HighlightItem
@@ -218,7 +168,7 @@ export default function ReaderMarksPanel({
           </div>
         </MarkSection>
 
-        <MarkSection title="Notes" count={notes.length} empty={noteEmpty}>
+        <MarkSection title="Notes" count={notes.length} empty="No notes yet.">
           <div className="reader-marks__list">
             {notes.map((note) => (
               <NoteItem
