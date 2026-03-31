@@ -105,12 +105,6 @@ export const authOptions = {
             clientId: appEnv.apple.clientId,
             clientSecret: generateAppleClientSecret(),
             allowDangerousEmailAccountLinking: true,
-            authorization: {
-              params: {
-                scope: "openid",
-                response_mode: "query",
-              },
-            },
           }),
         ]
       : []),

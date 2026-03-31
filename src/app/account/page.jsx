@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { redirectToCanonicalHost } from "@/lib/canonical-host";
 import { getParsedDocument } from "@/lib/document";
 import { listReadingReceiptDraftsForUser, loadReaderPageData } from "@/lib/reader-db";
 import AccountScreen from "@/components/AccountScreen";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }) {
+  await redirectToCanonicalHost("/account", await searchParams);
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     redirect("/");
