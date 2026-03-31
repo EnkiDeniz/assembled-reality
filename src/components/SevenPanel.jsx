@@ -33,35 +33,58 @@ function SpeakerIcon() {
   );
 }
 
-function ExplainIcon() {
+function SkipPreviousIcon() {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
       <path
-        d="M5.35 4.75h9.3A1.35 1.35 0 0 1 16 6.1v5.4a1.35 1.35 0 0 1-1.35 1.35H10.6l-2.5 2v-2H5.35A1.35 1.35 0 0 1 4 11.5V6.1a1.35 1.35 0 0 1 1.35-1.35Z"
+        d="M6.35 5.25v9.5M14.6 5.95 8.55 10l6.05 4.05V5.95Z"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.45"
         strokeLinejoin="round"
-      />
-      <path
-        d="M7.1 8h5.8M7.1 10.2h4.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.45"
         strokeLinecap="round"
       />
     </svg>
   );
 }
 
-function SummaryIcon() {
+function PlayIcon() {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
       <path
-        d="M5 5.5h10M5 9.25h10M5 13h6.25"
+        d="M7.1 5.6 14.6 10l-7.5 4.4V5.6Z"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M7.15 5.4v9.2M12.85 5.4v9.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.65"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SkipNextIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M13.65 5.25v9.5M5.4 5.95 11.45 10 5.4 14.05V5.95Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.45"
+        strokeLinejoin="round"
         strokeLinecap="round"
       />
     </svg>
@@ -118,6 +141,18 @@ function initialVoiceStatus({ voiceEnabled, browserSpeechEnabled, preferredVoice
   };
 }
 
+function createIdleAudioState(preferredVoiceProvider) {
+  return {
+    status: "idle",
+    label: "",
+    index: 0,
+    total: 0,
+    mode: preferredVoiceProvider ? "provider" : "device",
+    sourceType: null,
+    sourceId: null,
+  };
+}
+
 function buildAudioProgressText(audioState) {
   if (audioState.status === "loading") {
     return audioState.mode === "device"
@@ -129,6 +164,10 @@ function buildAudioProgressText(audioState) {
     return audioState.mode === "device"
       ? `${audioState.label}... speaking through your device voice, part ${audioState.index} of ${audioState.total}.`
       : `${audioState.label}... playing part ${audioState.index} of ${audioState.total}.`;
+  }
+
+  if (audioState.status === "paused") {
+    return `${audioState.label} paused.`;
   }
 
   return "";
@@ -153,6 +192,7 @@ export default function SevenPanel({
   documentData,
   activeSlug,
   currentLabel,
+  onNavigateSection,
   onClose,
 }) {
   const currentSection = useMemo(
@@ -164,25 +204,29 @@ export default function SevenPanel({
     () => getSectionPreview(documentData, activeSlug),
     [activeSlug, documentData],
   );
-  const narrationText = useMemo(
-    () => getNarrationText(documentData, activeSlug),
-    [activeSlug, documentData],
+  const sectionEntries = useMemo(
+    () => [
+      {
+        slug: "beginning",
+        title: "Beginning",
+        label: "Beginning",
+        narrationText: getNarrationText(documentData, "beginning"),
+      },
+      ...((documentData?.sections || []).map((section) => ({
+        slug: section.slug,
+        title: section.title,
+        label: `${section.number} · ${section.title}`,
+        narrationText: getNarrationText(documentData, section.slug),
+      })) || []),
+    ],
+    [documentData],
   );
-  const speechChunks = useMemo(() => splitTextForSpeech(narrationText), [narrationText]);
 
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [browserSpeechEnabled, setBrowserSpeechEnabled] = useState(false);
   const [audioError, setAudioError] = useState("");
-  const [audioState, setAudioState] = useState({
-    status: "idle",
-    label: "",
-    index: 0,
-    total: 0,
-    mode: preferredVoiceProvider ? "provider" : "device",
-    sourceType: null,
-    sourceId: null,
-  });
+  const [audioState, setAudioState] = useState(() => createIdleAudioState(preferredVoiceProvider));
   const [chatStatus, setChatStatus] = useState(() =>
     initialChatStatus({ textEnabled, textProvider }),
   );
@@ -234,85 +278,44 @@ export default function SevenPanel({
   }, [browserSpeechEnabled, preferredVoiceProvider, voiceEnabled]);
 
   const effectiveVoiceEnabled = voiceEnabled || browserSpeechEnabled;
-  const canListen = effectiveVoiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
+  const playerSectionSlug =
+    audioState.sourceType === "section" && audioState.sourceId ? audioState.sourceId : activeSlug;
+  const playerSectionIndex = Math.max(
+    0,
+    sectionEntries.findIndex((entry) => entry.slug === playerSectionSlug),
+  );
+  const playerSection = sectionEntries[playerSectionIndex] || sectionEntries[0];
+  const previousSection = playerSectionIndex > 0 ? sectionEntries[playerSectionIndex - 1] : null;
+  const nextSection =
+    playerSectionIndex < sectionEntries.length - 1 ? sectionEntries[playerSectionIndex + 1] : null;
   const sectionAudioActive = audioActive && audioState.sourceType === "section";
+  const sectionAudioPlaying = sectionAudioActive && audioState.status === "playing";
+  const sectionAudioPaused = sectionAudioActive && audioState.status === "paused";
   const hasMessages = messages.length > 0;
   const composerExpanded = composerActive || draft.trim().length > 0;
+  const canPlaySection = effectiveVoiceEnabled && Boolean(playerSection?.narrationText);
 
   useEffect(() => {
     if (!messageListRef.current) return;
     messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
   }, [messages]);
 
-  const actionButtons = [
-    effectiveVoiceEnabled
-      ? {
-          id: "listen",
-          label: sectionAudioActive ? "Stop" : "Read section",
-          className: "reader-seven__action is-primary",
-          icon: <SpeakerIcon />,
-          disabled: !canListen && !audioActive,
-          onClick: () => {
-            if (sectionAudioActive) {
-              stopAudio();
-              return;
-            }
-
-            playText(narrationText, `Reading ${currentLabel}`, {
-              type: "section",
-              id: activeSlug,
-            });
-          },
-        }
-      : null,
-    textEnabled
-      ? {
-          id: "explain",
-          label: "Explain",
-          className: "reader-seven__action",
-          icon: <ExplainIcon />,
-          disabled: pending,
-          onClick: () =>
-            requestSeven({
-              mode: "explain",
-              question: "",
-              userLine: `Explain ${currentLabel} in plain language.`,
-            }),
-        }
-      : null,
-    textEnabled
-      ? {
-          id: "summary",
-          label: "Summarize",
-          className: "reader-seven__action",
-          icon: <SummaryIcon />,
-          disabled: pending,
-          onClick: () =>
-            requestSeven({
-              mode: "summary",
-              question: "",
-              userLine: `Summarize ${currentLabel}.`,
-            }),
-        }
-      : null,
-  ].filter(Boolean);
-
   const liveStatus =
     buildAudioProgressText(audioState) ||
     audioError ||
     (voiceStatus.state === "device_fallback" || voiceStatus.fallbackFrom
-      ? voiceStatus.message
-      : chatStatus.state === "error"
-        ? chatStatus.message
-        : voiceStatus.state === "device"
-          ? voiceStatus.message
-          : textEnabled && effectiveVoiceEnabled
-            ? "Ask, summarize, or listen from here."
-            : textEnabled
-              ? "Ask about the section from here."
-              : effectiveVoiceEnabled
-                ? "Read the section aloud."
+        ? voiceStatus.message
+        : chatStatus.state === "error"
+          ? chatStatus.message
+          : voiceStatus.state === "device"
+            ? voiceStatus.message
+            : textEnabled && effectiveVoiceEnabled
+              ? "Ask or listen from here."
+              : textEnabled
+                ? "Ask about the section from here."
+                : effectiveVoiceEnabled
+                  ? "Read the section aloud."
                 : "Seven is offline right now.");
   const showStatus =
     audioState.status !== "idle" ||
@@ -345,16 +348,54 @@ export default function SevenPanel({
     }
 
     clearAudioUrl();
-    setAudioState({
-      status: "idle",
-      label: "",
-      index: 0,
-      total: 0,
-      mode: preferredVoiceProvider ? "provider" : "device",
-      sourceType: null,
-      sourceId: null,
-    });
+    setAudioState(createIdleAudioState(preferredVoiceProvider));
   }, [clearAudioUrl, preferredVoiceProvider]);
+
+  const pauseAudio = useCallback(() => {
+    setAudioError("");
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    } else if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.pause();
+    }
+
+    setAudioState((current) =>
+      current.status === "playing" ? { ...current, status: "paused" } : current,
+    );
+  }, []);
+
+  const resumeAudio = useCallback(async () => {
+    if (audioState.status !== "paused") return;
+
+    try {
+      if (audioRef.current) {
+        await audioRef.current.play();
+      } else if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.resume();
+      }
+
+      setAudioError("");
+      setAudioState((current) =>
+        current.status === "paused" ? { ...current, status: "playing" } : current,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Seven could not resume speaking.";
+      setAudioError(message);
+      audioSessionRef.current += 1;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      clearAudioUrl();
+      setAudioState(createIdleAudioState(preferredVoiceProvider));
+    }
+  }, [audioState.status, clearAudioUrl, preferredVoiceProvider]);
 
   useEffect(() => {
     if (open) return undefined;
@@ -390,7 +431,7 @@ export default function SevenPanel({
     };
   }
 
-  async function playWithDeviceVoice(chunks, label, sessionId) {
+  async function playWithDeviceVoice(chunks, label, sessionId, source = null) {
     if (
       typeof window === "undefined" ||
       typeof window.speechSynthesis === "undefined" ||
@@ -411,6 +452,8 @@ export default function SevenPanel({
         index: chunkIndex + 1,
         total: chunks.length,
         mode: "device",
+        sourceType: source?.type || null,
+        sourceId: source?.id || null,
       });
 
       await new Promise((resolve, reject) => {
@@ -426,13 +469,7 @@ export default function SevenPanel({
       if (audioSessionRef.current !== sessionId) return;
 
       if (chunkIndex + 1 >= chunks.length) {
-        setAudioState({
-          status: "idle",
-          label: "",
-          index: 0,
-          total: 0,
-          mode: "device",
-        });
+        setAudioState(createIdleAudioState(preferredVoiceProvider));
         return;
       }
 
@@ -468,7 +505,7 @@ export default function SevenPanel({
 
     if (!voiceEnabled && browserSpeechEnabled) {
       try {
-        await playWithDeviceVoice(chunks, label, sessionId);
+        await playWithDeviceVoice(chunks, label, sessionId, source);
         setVoiceStatus({
           state: "device",
           provider: "device",
@@ -477,6 +514,7 @@ export default function SevenPanel({
           message: "Listening is available through your device voice.",
         });
       } catch (error) {
+        if (audioSessionRef.current !== sessionId) return;
         setAudioError(error instanceof Error ? error.message : "Seven could not start speaking.");
         setVoiceStatus({
           state: "error",
@@ -485,15 +523,7 @@ export default function SevenPanel({
           reasonCode: "unknown_error",
           message: error instanceof Error ? error.message : "Seven could not start speaking.",
         });
-        setAudioState({
-          status: "idle",
-          label: "",
-          index: 0,
-          total: 0,
-          mode: "device",
-          sourceType: null,
-          sourceId: null,
-        });
+        setAudioState(createIdleAudioState(preferredVoiceProvider));
       }
       return;
     }
@@ -542,15 +572,7 @@ export default function SevenPanel({
         if (audioSessionRef.current !== sessionId) return;
 
         if (chunkIndex + 1 >= chunks.length) {
-          setAudioState({
-            status: "idle",
-            label: "",
-            index: 0,
-            total: 0,
-            mode: "provider",
-            sourceType: null,
-            sourceId: null,
-          });
+          setAudioState(createIdleAudioState(preferredVoiceProvider));
           return;
         }
 
@@ -560,31 +582,16 @@ export default function SevenPanel({
           setAudioError(
             error instanceof Error ? error.message : "Seven stopped speaking unexpectedly.",
           );
-          setAudioState({
-            status: "idle",
-            label: "",
-            index: 0,
-            total: 0,
-            mode: "provider",
-            sourceType: null,
-            sourceId: null,
-          });
+          setAudioState(createIdleAudioState(preferredVoiceProvider));
         }
       });
 
       audio.addEventListener("error", () => {
         clearAudioUrl();
         audioRef.current = null;
+        if (audioSessionRef.current !== sessionId) return;
         setAudioError("Seven could not play this audio chunk.");
-        setAudioState({
-          status: "idle",
-          label: "",
-          index: 0,
-          total: 0,
-          mode: "provider",
-          sourceType: null,
-          sourceId: null,
-        });
+        setAudioState(createIdleAudioState(preferredVoiceProvider));
       });
 
       await audio.play();
@@ -604,6 +611,7 @@ export default function SevenPanel({
     try {
       await playChunk(0);
     } catch (error) {
+      if (audioSessionRef.current !== sessionId) return;
       const sourceProvider =
         error?.fallbackFrom || error?.provider || preferredVoiceProvider || "openai";
       const sourceReason = error?.reasonCode || error?.fallbackReasonCode || "unknown_error";
@@ -622,7 +630,7 @@ export default function SevenPanel({
               reasonCode: sourceReason,
             }),
           });
-          await playWithDeviceVoice(chunks, label, sessionId);
+          await playWithDeviceVoice(chunks, label, sessionId, source);
           return;
         } catch (fallbackError) {
           const message =
@@ -651,15 +659,43 @@ export default function SevenPanel({
         });
       }
 
-      setAudioState({
-        status: "idle",
-        label: "",
-        index: 0,
-        total: 0,
-        mode: browserSpeechEnabled ? "device" : "provider",
-        sourceType: null,
-        sourceId: null,
-      });
+      setAudioState(createIdleAudioState(browserSpeechEnabled ? null : preferredVoiceProvider));
+    }
+  }
+
+  function playSectionBySlug(slug) {
+    const targetSection = sectionEntries.find((entry) => entry.slug === slug);
+    if (!targetSection) return;
+
+    playText(targetSection.narrationText, `Reading ${targetSection.title}`, {
+      type: "section",
+      id: targetSection.slug,
+    });
+  }
+
+  function handleToggleSectionPlayback() {
+    if (sectionAudioPlaying) {
+      pauseAudio();
+      return;
+    }
+
+    if (sectionAudioPaused) {
+      resumeAudio();
+      return;
+    }
+
+    playSectionBySlug(playerSection.slug);
+  }
+
+  function handleMoveSection(offset) {
+    const targetSection = sectionEntries[playerSectionIndex + offset];
+    if (!targetSection) return;
+
+    const continuePlayback = sectionAudioActive;
+    onNavigateSection?.(targetSection.slug);
+
+    if (continuePlayback) {
+      playSectionBySlug(targetSection.slug);
     }
   }
 
@@ -783,26 +819,63 @@ export default function SevenPanel({
             </p>
           ) : null}
 
-          {actionButtons.length ? (
-            <div className="reader-seven__section-tools">
-              <div className="reader-seven__actions">
-                {actionButtons.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className={action.className}
-                    disabled={action.disabled}
-                    onClick={action.onClick}
-                  >
-                    <span className="reader-seven__action-inner">
-                      <span className="reader-seven__action-icon">{action.icon}</span>
-                      <span>{action.label}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
+          <div className="reader-seven__player">
+            <div className="reader-seven__player-track">
+              <p className="reader-seven__player-kicker">
+                Section {playerSectionIndex + 1} of {sectionEntries.length}
+              </p>
+              <p className="reader-seven__player-title">{playerSection.title}</p>
             </div>
-          ) : null}
+
+            <div className="reader-seven__player-controls">
+              <button
+                type="button"
+                className="reader-seven__transport"
+                onClick={() => handleMoveSection(-1)}
+                disabled={!previousSection}
+                aria-label={
+                  previousSection
+                    ? `Go to previous section, ${previousSection.title}`
+                    : "No previous section"
+                }
+                title={previousSection ? previousSection.title : "No previous section"}
+              >
+                <SkipPreviousIcon />
+                <span className="sr-only">Previous section</span>
+              </button>
+
+              <button
+                type="button"
+                className="reader-seven__transport reader-seven__transport--primary"
+                onClick={handleToggleSectionPlayback}
+                disabled={!canPlaySection}
+                aria-label={
+                  sectionAudioPlaying
+                    ? `Pause ${playerSection.title}`
+                    : sectionAudioPaused
+                      ? `Resume ${playerSection.title}`
+                      : `Play ${playerSection.title}`
+                }
+              >
+                {sectionAudioPlaying ? <PauseIcon /> : <PlayIcon />}
+                <span>{sectionAudioPlaying ? "Pause" : sectionAudioPaused ? "Resume" : "Play"}</span>
+              </button>
+
+              <button
+                type="button"
+                className="reader-seven__transport"
+                onClick={() => handleMoveSection(1)}
+                disabled={!nextSection}
+                aria-label={
+                  nextSection ? `Go to next section, ${nextSection.title}` : "No next section"
+                }
+                title={nextSection ? nextSection.title : "No next section"}
+              >
+                <SkipNextIcon />
+                <span className="sr-only">Next section</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div ref={messageListRef} className="reader-seven__messages">

@@ -1082,6 +1082,7 @@ export default function ReaderShell({
         documentData={documentData}
         activeSlug={activeSlug}
         currentLabel={currentLabel}
+        onNavigateSection={jumpTo}
         onClose={() => closeSurface()}
       />
 
