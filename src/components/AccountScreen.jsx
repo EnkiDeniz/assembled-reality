@@ -360,241 +360,225 @@ export default function AccountScreen({
         </section>
 
         <div className="account-grid">
-          <div className="account-main">
-            <section id="profile" className="account-panel">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Profile</p>
-                  <h2 className="account-panel__title">Identity</h2>
-                  <p className="account-panel__lede">
-                    Keep your reader name current so your notes and highlights feel personal.
-                  </p>
-                </div>
+          <section id="snapshot" className="account-panel account-panel--rail account-panel--snapshot">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Reading</p>
+                <h2 className="account-panel__title">Snapshot</h2>
               </div>
+            </div>
 
-              <form className="account-form" onSubmit={handleSave}>
-                <div className="account-form__grid">
-                  <label className="account-field" htmlFor="reader-display-name">
-                    <span className="account-field__label">Display name</span>
-                    <input
-                      id="reader-display-name"
-                      className="account-input"
-                      type="text"
-                      value={displayName}
-                      onChange={(event) => setDisplayName(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <div className="account-field account-field--static">
-                    <span className="account-field__label">Email</span>
-                    <span className="account-field__value">{email}</span>
-                  </div>
-                </div>
+            <div className="account-stats">
+              <StatTile
+                label="Progress"
+                value={`${readingProgress}%`}
+                detail={readingSnapshot?.resumeLabel || "Beginning"}
+              />
+              <StatTile label="Bookmarks" value={readingSnapshot?.bookmarkCount ?? 0} />
+              <StatTile label="Highlights" value={readingSnapshot?.highlightCount ?? 0} />
+              <StatTile label="Notes" value={readingSnapshot?.noteCount ?? 0} />
+              <StatTile label="Receipts" value={receiptsCount} />
+            </div>
 
-                <div className="account-form__actions">
-                  <button type="submit" className="account-button is-primary" disabled={saving}>
-                    {saving ? "Saving" : "Save profile"}
-                  </button>
-                  <span className="account-form__status">
-                    {error ? <span className="is-error">{error}</span> : message || " "}
-                  </span>
-                </div>
-              </form>
-            </section>
+            <Link className="account-button is-primary" href={resumeHref}>
+              Continue Reading
+            </Link>
+          </section>
 
-            <section id="settings" className="account-panel">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Settings</p>
-                  <h2 className="account-panel__title">Reading preferences</h2>
-                  <p className="account-panel__lede">
-                    These controls match the reader itself and save on this browser immediately.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="account-button"
-                  onClick={() => setPreferences(DEFAULT_READER_PREFERENCES)}
-                >
-                  Reset
-                </button>
-              </div>
-
-              <div className="account-preferences">
-                <PreferenceGroup
-                  title="Text size"
-                  description="Tune the density of the reading surface."
-                  value={preferences.textSize}
-                  options={TEXT_SIZE_OPTIONS}
-                  onChange={(value) => setPreferences((current) => ({ ...current, textSize: value }))}
-                />
-                <PreferenceGroup
-                  title="Reading width"
-                  description="Choose whether the text sits in a tighter or looser column."
-                  value={preferences.pageWidth}
-                  options={PAGE_WIDTH_OPTIONS}
-                  onChange={(value) => setPreferences((current) => ({ ...current, pageWidth: value }))}
-                />
-                <PreferenceGroup
-                  title="Theme"
-                  description="Switch between the paper surface and the dark reading mode."
-                  value={preferences.theme}
-                  options={THEME_OPTIONS}
-                  onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
-                />
-              </div>
-            </section>
-
-            <section id="connections" className="account-panel">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Connections</p>
-                  <h2 className="account-panel__title">GetReceipts</h2>
-                  <p className="account-panel__lede">{connectionCopy}</p>
-                </div>
-                <div className="account-connection-status">{connectionLabel}</div>
-              </div>
-
-              <div className="account-connection">
-                <div className="account-connection__copy">
-                  <p className="account-connection__title">
-                    {connectionStatus === "connected"
-                      ? "Your account is ready to create receipt drafts from reading context."
-                      : "Connect when you want to turn reading marks into structured output."}
-                  </p>
-                  <p className="account-connection__detail">
-                    The manuscript stays the center of the experience. This is only for exporting the thinking that comes out of it.
-                  </p>
-                </div>
-                <a className="account-button is-primary" href="/connect/getreceipts">
-                  {connectionStatus === "connected" ? "Manage connection" : "Connect GetReceipts"}
-                </a>
-              </div>
-            </section>
-
-            <section id="receipts" className="account-panel">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Activity</p>
-                  <h2 className="account-panel__title">Reading receipts</h2>
-                  <p className="account-panel__lede">
-                    Drafts created from your current reading context appear here.
-                  </p>
-                </div>
-              </div>
-
-              {drafts.length === 0 ? (
-                <p className="account-empty">
-                  No reading receipts yet. When you create one from the reader, it will appear here.
+          <section id="profile" className="account-panel">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Profile</p>
+                <h2 className="account-panel__title">Identity</h2>
+                <p className="account-panel__lede">
+                  Keep your reader name current so your notebook and receipts stay legible.
                 </p>
-              ) : (
-                <div className="account-receipts">
-                  {drafts.map((draft) => {
-                    const href = draftLink(draft);
+              </div>
+            </div>
 
-                    return (
-                      <article key={draft.id} className="account-receipt">
-                        <div className="account-receipt__body">
-                          <p className="account-receipt__title">{draft.title || "Untitled receipt"}</p>
-                          <p className="account-receipt__meta">
-                            {draft.status.toLowerCase().replaceAll("_", " ")}
-                          </p>
-                        </div>
-                        {href ? (
-                          <a className="account-receipt__link" href={href} target="_blank" rel="noreferrer">
-                            Open
-                          </a>
-                        ) : null}
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-
-          <aside className="account-side">
-            <section id="seven-diagnostics" className="account-panel account-panel--side">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Reading</p>
-                  <h2 className="account-panel__title">Snapshot</h2>
+            <form className="account-form" onSubmit={handleSave}>
+              <div className="account-form__grid">
+                <label className="account-field" htmlFor="reader-display-name">
+                  <span className="account-field__label">Display name</span>
+                  <input
+                    id="reader-display-name"
+                    className="account-input"
+                    type="text"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    required
+                  />
+                </label>
+                <div className="account-field account-field--static">
+                  <span className="account-field__label">Email</span>
+                  <span className="account-field__value">{email}</span>
                 </div>
               </div>
 
-              <div className="account-stats">
-                <StatTile label="Progress" value={`${readingProgress}%`} detail={readingSnapshot?.resumeLabel || "Beginning"} />
-                <StatTile label="Bookmarks" value={readingSnapshot?.bookmarkCount ?? 0} />
-                <StatTile label="Highlights" value={readingSnapshot?.highlightCount ?? 0} />
-                <StatTile label="Notes" value={readingSnapshot?.noteCount ?? 0} />
-                <StatTile label="Receipts" value={receiptsCount} />
+              <div className="account-form__actions">
+                <button type="submit" className="account-button is-primary" disabled={saving}>
+                  {saving ? "Saving…" : "Save Profile"}
+                </button>
+                <span className="account-form__status">
+                  {error ? <span className="is-error">{error}</span> : message || " "}
+                </span>
               </div>
+            </form>
+          </section>
 
-              <Link className="account-button is-primary" href={resumeHref}>
-                Continue reading
-              </Link>
-            </section>
-
-            <section className="account-panel account-panel--side">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Seven</p>
-                  <h2 className="account-panel__title">Diagnostics</h2>
-                  <p className="account-panel__lede">
-                    Verify chat and voice directly before you head back into the reader.
-                  </p>
-                </div>
+          <section id="settings" className="account-panel">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Settings</p>
+                <h2 className="account-panel__title">Reading Preferences</h2>
+                <p className="account-panel__lede">
+                  These controls shape the manuscript surface and save in this browser immediately.
+                </p>
               </div>
-
-              <div className="account-diagnostics">
-                <DiagnosticCard
-                  title="Chat"
-                  description="Checks whether Seven can answer a simple diagnostic prompt right now."
-                  buttonLabel="Test chat"
-                  result={sevenDiagnostics.chat}
-                  onRun={runChatDiagnostic}
-                />
-                <DiagnosticCard
-                  title="Voice"
-                  description="Checks whether Seven can generate voice audio and shows the active provider."
-                  buttonLabel="Test voice"
-                  result={sevenDiagnostics.voice}
-                  onRun={runVoiceDiagnostic}
-                />
-              </div>
-            </section>
-
-            <section className="account-panel account-panel--side">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Navigation</p>
-                  <h2 className="account-panel__title">Quick links</h2>
-                </div>
-              </div>
-              <nav className="account-nav" aria-label="Account sections">
-                <a href="#profile">Profile</a>
-                <a href="#settings">Reading settings</a>
-                <a href="#connections">Connections</a>
-                <a href="#receipts">Receipts</a>
-                <a href="#seven-diagnostics">Seven diagnostics</a>
-              </nav>
-            </section>
-
-            <section className="account-panel account-panel--side">
-              <div className="account-panel__header">
-                <div>
-                  <p className="account-panel__eyebrow">Session</p>
-                  <h2 className="account-panel__title">Access</h2>
-                  <p className="account-panel__lede">
-                    Sign out when you’re done, especially on a shared device.
-                  </p>
-                </div>
-              </div>
-              <button type="button" className="account-button" onClick={handleSignOut}>
-                Log out
+              <button
+                type="button"
+                className="account-button"
+                onClick={() => setPreferences(DEFAULT_READER_PREFERENCES)}
+              >
+                Reset
               </button>
-            </section>
-          </aside>
+            </div>
+
+            <div className="account-preferences">
+              <PreferenceGroup
+                title="Text size"
+                description="Tune the density of the reading surface."
+                value={preferences.textSize}
+                options={TEXT_SIZE_OPTIONS}
+                onChange={(value) => setPreferences((current) => ({ ...current, textSize: value }))}
+              />
+              <PreferenceGroup
+                title="Reading width"
+                description="Choose whether the text sits in a tighter or looser column."
+                value={preferences.pageWidth}
+                options={PAGE_WIDTH_OPTIONS}
+                onChange={(value) => setPreferences((current) => ({ ...current, pageWidth: value }))}
+              />
+              <PreferenceGroup
+                title="Theme"
+                description="Switch between the paper surface and the dark reading mode."
+                value={preferences.theme}
+                options={THEME_OPTIONS}
+                onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
+              />
+            </div>
+          </section>
+
+          <section id="receipts" className="account-panel">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Activity</p>
+                <h2 className="account-panel__title">Reading Receipts</h2>
+                <p className="account-panel__lede">
+                  Drafts created from your notebook selections appear here.
+                </p>
+              </div>
+            </div>
+
+            {drafts.length === 0 ? (
+              <p className="account-empty">
+                No reading receipts yet. Create one from the notebook when a set of notes or highlights is ready to carry forward.
+              </p>
+            ) : (
+              <div className="account-receipts">
+                {drafts.map((draft) => {
+                  const href = draftLink(draft);
+
+                  return (
+                    <article key={draft.id} className="account-receipt">
+                      <div className="account-receipt__body">
+                        <p className="account-receipt__title">{draft.title || "Untitled receipt"}</p>
+                        <p className="account-receipt__meta">
+                          {draft.status.toLowerCase().replaceAll("_", " ")}
+                        </p>
+                      </div>
+                      {href ? (
+                        <a className="account-receipt__link" href={href} target="_blank" rel="noreferrer">
+                          Open
+                        </a>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section id="connections" className="account-panel">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Connections</p>
+                <h2 className="account-panel__title">GetReceipts</h2>
+                <p className="account-panel__lede">{connectionCopy}</p>
+              </div>
+              <div className="account-connection-status">{connectionLabel}</div>
+            </div>
+
+            <div className="account-connection">
+              <div className="account-connection__copy">
+                <p className="account-connection__title">
+                  {connectionStatus === "connected"
+                    ? "Your account is ready to create receipt drafts from reading context."
+                    : "Connect when you want to turn notebook material into structured output."}
+                </p>
+                <p className="account-connection__detail">
+                  The manuscript stays the center of the experience. This handoff is only for the thinking that comes out of it.
+                </p>
+              </div>
+              <a className="account-button is-primary" href="/connect/getreceipts">
+                {connectionStatus === "connected" ? "Manage Connection" : "Connect GetReceipts"}
+              </a>
+            </div>
+          </section>
+
+          <section id="seven-diagnostics" className="account-panel account-panel--rail">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Seven</p>
+                <h2 className="account-panel__title">Diagnostics</h2>
+                <p className="account-panel__lede">
+                  Verify chat and voice before you head back into the reader.
+                </p>
+              </div>
+            </div>
+
+            <div className="account-diagnostics">
+              <DiagnosticCard
+                title="Chat"
+                description="Checks whether Seven can answer a simple diagnostic prompt right now."
+                buttonLabel="Test Chat"
+                result={sevenDiagnostics.chat}
+                onRun={runChatDiagnostic}
+              />
+              <DiagnosticCard
+                title="Voice"
+                description="Checks whether Seven can generate voice audio and shows the active provider."
+                buttonLabel="Test Voice"
+                result={sevenDiagnostics.voice}
+                onRun={runVoiceDiagnostic}
+              />
+            </div>
+          </section>
+
+          <section className="account-panel account-panel--rail">
+            <div className="account-panel__header">
+              <div>
+                <p className="account-panel__eyebrow">Session</p>
+                <h2 className="account-panel__title">Access</h2>
+                <p className="account-panel__lede">
+                  Sign out when you are done, especially on a shared device.
+                </p>
+              </div>
+            </div>
+            <button type="button" className="account-button" onClick={handleSignOut}>
+              Log Out
+            </button>
+          </section>
         </div>
       </div>
     </main>

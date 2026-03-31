@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderMarksPanel from "./ReaderMarksPanel";
@@ -38,6 +37,46 @@ const THEME_LABELS = {
   dark: "Dark",
 };
 
+const URL_SYNC_SURFACES = new Set(["contents", "notebook", "seven"]);
+
+function getSyncedSurfaceFromUrl() {
+  if (typeof window === "undefined") return null;
+
+  const panel = new URLSearchParams(window.location.search).get("panel");
+  return URL_SYNC_SURFACES.has(panel) ? panel : null;
+}
+
+function syncReaderUrl({ panel = null, hash = undefined, historyMode = "replace" } = {}) {
+  if (typeof window === "undefined") return;
+
+  const url = new URL(window.location.href);
+  if (panel && URL_SYNC_SURFACES.has(panel)) {
+    url.searchParams.set("panel", panel);
+  } else {
+    url.searchParams.delete("panel");
+  }
+
+  if (typeof hash === "string") {
+    url.hash = hash ? `#${hash}` : "";
+  }
+
+  const method = historyMode === "push" ? "pushState" : "replaceState";
+  window.history[method](window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function buildReceiptTitle(selectedMarks, currentLabel) {
+  const titles = [...new Set(selectedMarks.map((mark) => mark.sectionTitle).filter(Boolean))];
+  if (titles.length === 1) {
+    return `Reading receipt · ${titles[0]}`;
+  }
+
+  if (titles.length > 1) {
+    return `Reading receipt · ${titles[0]} + ${titles.length - 1}`;
+  }
+
+  return `Reading receipt · ${currentLabel}`;
+}
+
 function BookmarkIcon({ filled }) {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
@@ -52,26 +91,44 @@ function BookmarkIcon({ filled }) {
   );
 }
 
-function MarksIcon() {
+function NotebookIcon() {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
       <path
-        d="M4.5 5.75h11M4.5 10h7.5M4.5 14.25h9"
+        d="M4.75 4.25h9.5A1.75 1.75 0 0 1 16 6v8a1.75 1.75 0 0 1-1.75 1.75h-9.5A1.75 1.75 0 0 1 3 14V6a1.75 1.75 0 0 1 1.75-1.75Z"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
+        strokeWidth="1.4"
       />
       <path
-        d="M14.5 8.2 15 9.65l1.45.5-1.45.5-.5 1.45-.5-1.45-1.45-.5 1.45-.5.5-1.45Z"
-        fill="currentColor"
+        d="M6.8 7.25h5.9M6.8 10h5.9M6.8 12.75h3.7"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.4"
       />
     </svg>
   );
 }
 
 function SevenIcon() {
-  return <span className="reader-seven-icon" aria-hidden="true">7</span>;
+  return (
+    <span className="reader-seven-icon" aria-hidden="true">
+      7
+    </span>
+  );
+}
+
+function ContinueCard({ title, onContinue }) {
+  return (
+    <div className="reader-continue-card">
+      <p className="reader-continue-card__eyebrow">Keep Reading</p>
+      <h3 className="reader-continue-card__title">{title}</h3>
+      <button type="button" className="reader-continue-card__action" onClick={onContinue}>
+        Continue to This Section
+      </button>
+    </div>
+  );
 }
 
 export default function ReaderShell({
@@ -82,7 +139,7 @@ export default function ReaderShell({
   initialReadingProgress = null,
   profile = null,
   sessionUser = null,
-  getReceiptsConnection = null,
+  getReceiptsConnection: _getReceiptsConnection = null,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
   sevenTextProvider = null,
@@ -90,11 +147,7 @@ export default function ReaderShell({
 }) {
   const initialHash =
     typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
-  const [tocOpen, setTocOpen] = useState(false);
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
-  const [marksOpen, setMarksOpen] = useState(false);
-  const [sevenOpen, setSevenOpen] = useState(false);
-  const [memberMenuOpen, setMemberMenuOpen] = useState(false);
+  const [activeSurface, setActiveSurface] = useState(() => getSyncedSurfaceFromUrl());
   const [activeSlug, setActiveSlug] = useState(
     initialHash || initialReadingProgress?.sectionSlug || "beginning",
   );
@@ -113,11 +166,21 @@ export default function ReaderShell({
   const [creatingReceipt, setCreatingReceipt] = useState(false);
   const [activeMarkId, setActiveMarkId] = useState(null);
   const [focusedSectionSlug, setFocusedSectionSlug] = useState(null);
+  const [notebookScope, setNotebookScope] = useState("section");
+  const [selectedMarkIds, setSelectedMarkIds] = useState([]);
+  const [receiptComposerOpen, setReceiptComposerOpen] = useState(false);
+  const [receiptTitle, setReceiptTitle] = useState("");
+  const [receiptLearned, setReceiptLearned] = useState("");
   const scrollIntentRef = useRef(false);
   const noticeTimeoutRef = useRef(null);
   const focusTimeoutRef = useRef(null);
   const hasHydratedMarksRef = useRef(false);
   const hasHydratedProgressRef = useRef(false);
+  const surfaceTriggerRef = useRef(null);
+  const notebookContextRef = useRef({
+    scope: "section",
+    slug: initialHash || initialReadingProgress?.sectionSlug || "beginning",
+  });
 
   const entries = useMemo(
     () => [
@@ -131,6 +194,152 @@ export default function ReaderShell({
     ],
     [documentData.sections],
   );
+
+  const currentIndex = Math.max(
+    0,
+    entries.findIndex((entry) => entry.slug === activeSlug),
+  );
+  const currentEntry = entries[currentIndex] || entries[0];
+  const previousEntry = currentIndex > 0 ? entries[currentIndex - 1] : null;
+  const nextEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null;
+  const progressPercent = Math.round(progress * 100);
+  const currentLabel = currentEntry.number
+    ? `${currentEntry.number} · ${currentEntry.title}`
+    : currentEntry.title;
+  const memberName =
+    profile?.displayName ||
+    sessionUser?.readerName ||
+    sessionUser?.name ||
+    sessionUser?.email ||
+    "Reader";
+  const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
+  const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
+  const hasFloatingPanel = activeSurface !== null;
+  const contentsOpen = activeSurface === "contents";
+  const notebookOpen = activeSurface === "notebook";
+  const sevenOpen = activeSurface === "seven";
+  const appearanceOpen = activeSurface === "appearance";
+
+  const sortedBookmarks = useMemo(
+    () =>
+      readerAnnotations.bookmarks.toSorted(
+        (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+      ),
+    [readerAnnotations.bookmarks],
+  );
+  const sortedHighlights = useMemo(
+    () =>
+      readerAnnotations.highlights.toSorted(
+        (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+      ),
+    [readerAnnotations.highlights],
+  );
+  const sortedNotes = useMemo(
+    () =>
+      readerAnnotations.notes.toSorted(
+        (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
+      ),
+    [readerAnnotations.notes],
+  );
+  const marksByBlock = useMemo(
+    () => getRenderableMarksByBlock(readerAnnotations),
+    [readerAnnotations],
+  );
+
+  const matchesNotebookScope = useCallback(
+    (mark) => notebookScope === "all" || mark.sectionSlug === activeSlug,
+    [activeSlug, notebookScope],
+  );
+
+  const visibleBookmarks = useMemo(
+    () => sortedBookmarks.filter(matchesNotebookScope),
+    [matchesNotebookScope, sortedBookmarks],
+  );
+  const visibleHighlights = useMemo(
+    () => sortedHighlights.filter(matchesNotebookScope),
+    [matchesNotebookScope, sortedHighlights],
+  );
+  const visibleNotes = useMemo(
+    () => sortedNotes.filter(matchesNotebookScope),
+    [matchesNotebookScope, sortedNotes],
+  );
+  const eligibleReceiptMarks = useMemo(
+    () => [...visibleNotes, ...visibleHighlights],
+    [visibleHighlights, visibleNotes],
+  );
+  const selectedReceiptMarks = useMemo(
+    () => eligibleReceiptMarks.filter((mark) => selectedMarkIds.includes(mark.id)),
+    [eligibleReceiptMarks, selectedMarkIds],
+  );
+  const canCreateReceipt = selectedReceiptMarks.length > 0;
+
+  const clearFocusState = useCallback(() => {
+    if (focusTimeoutRef.current) {
+      window.clearTimeout(focusTimeoutRef.current);
+      focusTimeoutRef.current = null;
+    }
+
+    setActiveMarkId(null);
+    setFocusedSectionSlug(null);
+  }, []);
+
+  const restoreSurfaceFocus = useCallback(() => {
+    window.setTimeout(() => {
+      surfaceTriggerRef.current?.focus();
+    }, 0);
+  }, []);
+
+  const closeSurface = useCallback(
+    ({ restoreFocus = true, historyMode = "replace" } = {}) => {
+      if (activeSurface && URL_SYNC_SURFACES.has(activeSurface)) {
+        syncReaderUrl({ panel: null, historyMode });
+      }
+
+      setActiveSurface(null);
+      setReceiptComposerOpen(false);
+
+      if (restoreFocus) {
+        restoreSurfaceFocus();
+      }
+    },
+    [activeSurface, restoreSurfaceFocus],
+  );
+
+  const toggleSurface = useCallback(
+    (surface, trigger = null) => {
+      if (trigger?.currentTarget instanceof HTMLElement) {
+        surfaceTriggerRef.current = trigger.currentTarget;
+      }
+
+      if (activeSurface === surface) {
+        closeSurface();
+        return;
+      }
+
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      setReceiptComposerOpen(false);
+
+      if (URL_SYNC_SURFACES.has(surface)) {
+        syncReaderUrl({
+          panel: surface,
+          historyMode:
+            activeSurface && URL_SYNC_SURFACES.has(activeSurface) ? "replace" : "push",
+        });
+      } else if (activeSurface && URL_SYNC_SURFACES.has(activeSurface)) {
+        syncReaderUrl({ panel: null, historyMode: "replace" });
+      }
+
+      setActiveSurface(surface);
+    },
+    [activeSurface, closeSurface],
+  );
+
+  const dismissSurfacesWithoutFocus = useCallback(() => {
+    if (!activeSurface) return;
+    closeSurface({ restoreFocus: false });
+  }, [activeSurface, closeSurface]);
 
   useEffect(() => {
     document.body.classList.remove("is-lock-screen");
@@ -210,229 +419,37 @@ export default function ReaderShell({
 
   useEffect(() => {
     if (scrollIntentRef.current) return;
-    const nextHash = activeSlug === "beginning" ? "" : `#${activeSlug}`;
-    const nextUrl = nextHash ? `/read${nextHash}` : "/read";
-    window.history.replaceState(window.history.state, "", nextUrl);
-  }, [activeSlug]);
+    syncReaderUrl({
+      panel: URL_SYNC_SURFACES.has(activeSurface) ? activeSurface : null,
+      hash: activeSlug === "beginning" ? "" : activeSlug,
+      historyMode: "replace",
+    });
+  }, [activeSlug, activeSurface]);
 
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key !== "Escape") return;
-      setTocOpen(false);
-      setAppearanceOpen(false);
-      setMarksOpen(false);
-      setSevenOpen(false);
-      setMemberMenuOpen(false);
-      setSelectionState(null);
-      setNoteDraft("");
-      clearBrowserSelection();
+
+      if (receiptComposerOpen) {
+        setReceiptComposerOpen(false);
+        return;
+      }
+
+      if (selectionState?.mode === "note") {
+        setSelectionState(null);
+        setNoteDraft("");
+        clearBrowserSelection();
+        return;
+      }
+
+      if (activeSurface) {
+        closeSurface({ restoreFocus: false });
+      }
     };
 
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, []);
-
-  const currentIndex = Math.max(
-    0,
-    entries.findIndex((entry) => entry.slug === activeSlug),
-  );
-  const currentEntry = entries[currentIndex] || entries[0];
-  const previousEntry = currentIndex > 0 ? entries[currentIndex - 1] : null;
-  const nextEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null;
-  const progressPercent = Math.round(progress * 100);
-  const currentLabel = currentEntry.number
-    ? `${currentEntry.number} · ${currentEntry.title}`
-    : currentEntry.title;
-  const memberName =
-    profile?.displayName ||
-    sessionUser?.readerName ||
-    sessionUser?.name ||
-    sessionUser?.email ||
-    "Reader";
-  const memberEmail = sessionUser?.email || "";
-  const membershipLabel = "Reader";
-  const receiptsStatusLabel =
-    getReceiptsConnection?.status === "CONNECTED"
-      ? "GetReceipts connected"
-      : "GetReceipts not connected";
-  const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
-  const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
-  const hasFloatingPanel = tocOpen || appearanceOpen || marksOpen || sevenOpen || memberMenuOpen;
-  const sortedBookmarks = useMemo(
-    () =>
-      readerAnnotations.bookmarks.toSorted(
-        (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
-      ),
-    [readerAnnotations.bookmarks],
-  );
-  const sortedHighlights = useMemo(
-    () =>
-      readerAnnotations.highlights.toSorted(
-        (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
-      ),
-    [readerAnnotations.highlights],
-  );
-  const sortedNotes = useMemo(
-    () =>
-      readerAnnotations.notes.toSorted(
-        (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
-      ),
-    [readerAnnotations.notes],
-  );
-  const marksByBlock = useMemo(
-    () => getRenderableMarksByBlock(readerAnnotations),
-    [readerAnnotations],
-  );
-
-  const clearFocusState = useCallback(() => {
-    if (focusTimeoutRef.current) {
-      window.clearTimeout(focusTimeoutRef.current);
-      focusTimeoutRef.current = null;
-    }
-
-    setActiveMarkId(null);
-    setFocusedSectionSlug(null);
-  }, []);
-
-  const closeReaderPanels = useCallback(() => {
-    setTocOpen(false);
-    setAppearanceOpen(false);
-    setMarksOpen(false);
-    setSevenOpen(false);
-    setMemberMenuOpen(false);
-  }, []);
-
-  const openMemberMenu = useCallback(() => {
-    setTocOpen(false);
-    setAppearanceOpen(false);
-    setMarksOpen(false);
-    setSevenOpen(false);
-    setMemberMenuOpen((current) => !current);
-  }, []);
-
-  const openSettingsPanel = useCallback(() => {
-    setTocOpen(false);
-    setMarksOpen(false);
-    setSevenOpen(false);
-    setMemberMenuOpen(false);
-    setAppearanceOpen(true);
-  }, []);
-
-  const openContentsPanel = useCallback(() => {
-    setAppearanceOpen(false);
-    setMarksOpen(false);
-    setSevenOpen(false);
-    setMemberMenuOpen(false);
-    setTocOpen(true);
-  }, []);
-
-  const toggleMarksPanel = useCallback(() => {
-    setTocOpen(false);
-    setAppearanceOpen(false);
-    setSevenOpen(false);
-    setMemberMenuOpen(false);
-    setMarksOpen((current) => !current);
-  }, []);
-
-  const toggleSevenPanel = useCallback(() => {
-    setTocOpen(false);
-    setAppearanceOpen(false);
-    setMarksOpen(false);
-    setMemberMenuOpen(false);
-    setSevenOpen((current) => !current);
-  }, []);
-
-  const toggleAppearancePanel = useCallback(() => {
-    setTocOpen(false);
-    setMarksOpen(false);
-    setSevenOpen(false);
-    setMemberMenuOpen(false);
-    setAppearanceOpen((current) => !current);
-  }, []);
-
-  const handleSignOut = useCallback(() => {
-    signOut({ callbackUrl: "/" });
-  }, []);
-
-  const showSelectionNotice = useCallback((message) => {
-    if (noticeTimeoutRef.current) {
-      window.clearTimeout(noticeTimeoutRef.current);
-    }
-
-    setSelectionNotice(message);
-    noticeTimeoutRef.current = window.setTimeout(() => {
-      setSelectionNotice("");
-      noticeTimeoutRef.current = null;
-    }, 1800);
-  }, []);
-
-  const showReceiptNotice = useCallback((message) => {
-    setReceiptNotice(message);
-    window.setTimeout(() => {
-      setReceiptNotice("");
-    }, 2600);
-  }, []);
-
-  const jumpTo = useCallback(
-    (slug) => {
-      const target = document.getElementById(slug);
-      if (!target) return;
-
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      scrollIntentRef.current = true;
-      closeReaderPanels();
-      setSelectionState(null);
-      setNoteDraft("");
-      clearBrowserSelection();
-      clearFocusState();
-      target.scrollIntoView({
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
-      window.setTimeout(() => {
-        scrollIntentRef.current = false;
-      }, prefersReducedMotion ? 60 : 320);
-    },
-    [clearFocusState, closeReaderPanels],
-  );
-
-  const jumpToMark = useCallback(
-    (mark) => {
-      const selector =
-        mark.blockId && typeof CSS !== "undefined" && typeof CSS.escape === "function"
-          ? `[data-block-id="${CSS.escape(mark.blockId)}"]`
-          : null;
-      const target =
-        (selector ? document.querySelector(selector) : null) ||
-        document.getElementById(mark.sectionSlug);
-
-      if (!target) return;
-
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      scrollIntentRef.current = true;
-      closeReaderPanels();
-      setSelectionState(null);
-      setNoteDraft("");
-      clearBrowserSelection();
-      clearFocusState();
-      target.scrollIntoView({
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
-      setActiveMarkId(mark.id);
-      setFocusedSectionSlug(mark.sectionSlug);
-      focusTimeoutRef.current = window.setTimeout(() => {
-        setActiveMarkId(null);
-        setFocusedSectionSlug(null);
-        focusTimeoutRef.current = null;
-      }, 1800);
-
-      window.setTimeout(() => {
-        scrollIntentRef.current = false;
-      }, prefersReducedMotion ? 60 : 320);
-    },
-    [clearFocusState, closeReaderPanels],
-  );
+  }, [activeSurface, closeSurface, receiptComposerOpen, selectionState?.mode]);
 
   useEffect(() => {
     document.title = `${documentData.title} · ${currentEntry.title}`;
@@ -462,35 +479,23 @@ export default function ReaderShell({
 
       if (event.key.toLowerCase() === "t") {
         event.preventDefault();
-        setMarksOpen(false);
-        setAppearanceOpen(false);
-        setSevenOpen(false);
-        setMemberMenuOpen(false);
-        setTocOpen((current) => !current);
+        toggleSurface("contents");
       }
 
       if (event.key.toLowerCase() === "m") {
         event.preventDefault();
-        setTocOpen(false);
-        setAppearanceOpen(false);
-        setMemberMenuOpen(false);
-        setMarksOpen((current) => !current);
-        setSevenOpen(false);
+        toggleSurface("notebook");
       }
 
       if (event.key.toLowerCase() === "7") {
         event.preventDefault();
-        setTocOpen(false);
-        setAppearanceOpen(false);
-        setMarksOpen(false);
-        setMemberMenuOpen(false);
-        setSevenOpen((current) => !current);
+        toggleSurface("seven");
       }
     };
 
     window.addEventListener("keydown", handleReaderKeys);
     return () => window.removeEventListener("keydown", handleReaderKeys);
-  }, [jumpTo, nextEntry, previousEntry]);
+  }, [jumpTo, nextEntry, previousEntry, toggleSurface]);
 
   useEffect(() => {
     const syncSelection = () => {
@@ -507,7 +512,7 @@ export default function ReaderShell({
         return;
       }
 
-      closeReaderPanels();
+      dismissSurfacesWithoutFocus();
       setSelectionState({
         mode: "actions",
         anchor,
@@ -529,7 +534,7 @@ export default function ReaderShell({
       document.removeEventListener("selectionchange", handleSelectionChange);
       window.removeEventListener("scroll", dismissSelectionUi);
     };
-  }, [closeReaderPanels, showSelectionNotice]);
+  }, [dismissSurfacesWithoutFocus, showSelectionNotice]);
 
   useEffect(() => {
     return () => {
@@ -597,7 +602,155 @@ export default function ReaderShell({
     };
   }, [activeSlug, progressPercent]);
 
-  const handleToggleBookmark = () => {
+  useEffect(() => {
+    const eligibleIds = eligibleReceiptMarks.map((mark) => mark.id);
+    const sameContext =
+      notebookContextRef.current.scope === notebookScope &&
+      notebookContextRef.current.slug === activeSlug;
+
+    setSelectedMarkIds((current) => {
+      if (!sameContext) {
+        return eligibleIds;
+      }
+
+      const kept = current.filter((id) => eligibleIds.includes(id));
+      const additions = eligibleIds.filter((id) => !kept.includes(id));
+      return [...kept, ...additions];
+    });
+
+    notebookContextRef.current = {
+      scope: notebookScope,
+      slug: activeSlug,
+    };
+  }, [activeSlug, eligibleReceiptMarks, notebookScope]);
+
+  useEffect(() => {
+    if (activeSurface !== "notebook") {
+      setReceiptComposerOpen(false);
+    }
+  }, [activeSurface]);
+
+  useEffect(() => {
+    if (receiptComposerOpen && !canCreateReceipt) {
+      setReceiptComposerOpen(false);
+    }
+  }, [canCreateReceipt, receiptComposerOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handlePopState = () => {
+      const panel = getSyncedSurfaceFromUrl();
+      setActiveSurface((current) => {
+        if (current && !URL_SYNC_SURFACES.has(current)) {
+          return current;
+        }
+
+        return panel;
+      });
+
+      if (!panel) {
+        setReceiptComposerOpen(false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+
+    if (!activeSurface) {
+      document.body.style.removeProperty("overflow");
+      return undefined;
+    }
+
+    document.body.style.setProperty("overflow", "hidden");
+    return () => document.body.style.removeProperty("overflow");
+  }, [activeSurface]);
+
+  const showSelectionNotice = useCallback((message) => {
+    if (noticeTimeoutRef.current) {
+      window.clearTimeout(noticeTimeoutRef.current);
+    }
+
+    setSelectionNotice(message);
+    noticeTimeoutRef.current = window.setTimeout(() => {
+      setSelectionNotice("");
+      noticeTimeoutRef.current = null;
+    }, 1800);
+  }, []);
+
+  const showReceiptNotice = useCallback((message) => {
+    setReceiptNotice(message);
+    window.setTimeout(() => {
+      setReceiptNotice("");
+    }, 2600);
+  }, []);
+
+  const jumpTo = useCallback(
+    (slug) => {
+      const target = document.getElementById(slug);
+      if (!target) return;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      scrollIntentRef.current = true;
+      dismissSurfacesWithoutFocus();
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      clearFocusState();
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, prefersReducedMotion ? 60 : 320);
+    },
+    [clearFocusState, dismissSurfacesWithoutFocus],
+  );
+
+  const jumpToMark = useCallback(
+    (mark) => {
+      const selector =
+        mark.blockId && typeof CSS !== "undefined" && typeof CSS.escape === "function"
+          ? `[data-block-id="${CSS.escape(mark.blockId)}"]`
+          : null;
+      const target =
+        (selector ? document.querySelector(selector) : null) ||
+        document.getElementById(mark.sectionSlug);
+
+      if (!target) return;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      scrollIntentRef.current = true;
+      dismissSurfacesWithoutFocus();
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      clearFocusState();
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      setActiveMarkId(mark.id);
+      setFocusedSectionSlug(mark.sectionSlug);
+      focusTimeoutRef.current = window.setTimeout(() => {
+        setActiveMarkId(null);
+        setFocusedSectionSlug(null);
+        focusTimeoutRef.current = null;
+      }, 1800);
+
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, prefersReducedMotion ? 60 : 320);
+    },
+    [clearFocusState, dismissSurfacesWithoutFocus],
+  );
+
+  const handleToggleBookmark = useCallback(() => {
     setReaderAnnotations((current) =>
       toggleSectionBookmark(current, {
         sectionSlug: currentEntry.slug,
@@ -605,18 +758,18 @@ export default function ReaderShell({
         excerpt: currentEntry.title,
       }),
     );
-  };
+  }, [currentEntry.slug, currentEntry.title, currentLabel]);
 
-  const handleCreateHighlight = () => {
+  const handleCreateHighlight = useCallback(() => {
     if (!selectionState?.anchor) return;
 
     setReaderAnnotations((current) => addHighlight(current, selectionState.anchor));
     setSelectionState(null);
     setNoteDraft("");
     clearBrowserSelection();
-  };
+  }, [selectionState?.anchor]);
 
-  const handleStartNote = () => {
+  const handleStartNote = useCallback(() => {
     if (!selectionState?.anchor) return;
 
     setSelectionState((current) =>
@@ -627,24 +780,35 @@ export default function ReaderShell({
           }
         : current,
     );
-  };
+  }, [selectionState?.anchor]);
 
-  const handleSaveNote = () => {
+  const handleSaveNote = useCallback(() => {
     if (!selectionState?.anchor || !noteDraft.trim()) return;
 
     setReaderAnnotations((current) => addNote(current, selectionState.anchor, noteDraft));
     setSelectionState(null);
     setNoteDraft("");
     clearBrowserSelection();
-  };
+  }, [noteDraft, selectionState?.anchor]);
 
-  const handleCreateReceipt = async () => {
-    const currentSectionSlug =
-      activeSlug === "beginning" ? documentData.sections[0]?.slug || "beginning" : activeSlug;
-    const sourceMarks = [
-      ...readerAnnotations.highlights.filter((mark) => mark.sectionSlug === currentSectionSlug),
-      ...readerAnnotations.notes.filter((mark) => mark.sectionSlug === currentSectionSlug),
-    ];
+  const handleToggleSelectedMark = useCallback((markId) => {
+    setSelectedMarkIds((current) =>
+      current.includes(markId)
+        ? current.filter((id) => id !== markId)
+        : [...current, markId],
+    );
+  }, []);
+
+  const openReceiptComposer = useCallback(() => {
+    if (!canCreateReceipt) return;
+
+    setReceiptTitle(buildReceiptTitle(selectedReceiptMarks, currentLabel));
+    setReceiptLearned("");
+    setReceiptComposerOpen(true);
+  }, [canCreateReceipt, currentLabel, selectedReceiptMarks]);
+
+  const handleCreateReceipt = useCallback(async () => {
+    if (!canCreateReceipt) return;
 
     setCreatingReceipt(true);
     try {
@@ -654,8 +818,17 @@ export default function ReaderShell({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sourceSections: currentSectionSlug === "beginning" ? [] : [currentSectionSlug],
-          sourceMarkIds: sourceMarks.map((mark) => mark.id),
+          sourceSections: [
+            ...new Set(
+              selectedReceiptMarks
+                .map((mark) => mark.sectionSlug)
+                .filter(Boolean)
+                .filter((slug) => slug !== "beginning"),
+            ),
+          ],
+          sourceMarkIds: selectedReceiptMarks.map((mark) => mark.id),
+          title: receiptTitle.trim() || undefined,
+          learned: receiptLearned.trim() || undefined,
         }),
       });
 
@@ -671,12 +844,14 @@ export default function ReaderShell({
       } else {
         showReceiptNotice("Saved local reading draft.");
       }
+
+      setReceiptComposerOpen(false);
     } catch (error) {
       showReceiptNotice(error instanceof Error ? error.message : "Could not create receipt draft.");
     } finally {
       setCreatingReceipt(false);
     }
-  };
+  }, [canCreateReceipt, receiptLearned, receiptTitle, selectedReceiptMarks, showReceiptNotice]);
 
   return (
     <div
@@ -685,18 +860,32 @@ export default function ReaderShell({
     >
       <header className="reader-topbar">
         <div className="reader-topbar__primary">
-          <button type="button" className="reader-chrome-button" onClick={openContentsPanel}>
-            <span className="reader-button-icon">☰</span>
-            <span>Contents</span>
+          <button
+            type="button"
+            className={`reader-chrome-button reader-chrome-button--nav ${
+              contentsOpen ? "is-active" : ""
+            }`}
+            onClick={(event) => toggleSurface("contents", event)}
+            aria-label={contentsOpen ? "Close contents" : "Open contents"}
+            aria-expanded={contentsOpen}
+          >
+            <span className="reader-button-icon" aria-hidden="true">
+              ☰
+            </span>
+            <span className="reader-chrome-button__label">Contents</span>
           </button>
+
           <div className="reader-topbar__center">
             <div className="reader-topbar__title">{documentData.title}</div>
             <div className="reader-topbar__section">{currentLabel}</div>
           </div>
+
           <div className="reader-topbar__actions">
             <button
               type="button"
-              className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
+              className={`reader-chrome-button reader-chrome-button--desktop-only reader-chrome-button--icon ${
+                currentBookmarked ? "is-active" : ""
+              }`}
               onClick={handleToggleBookmark}
               aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
               title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
@@ -705,85 +894,72 @@ export default function ReaderShell({
                 <BookmarkIcon filled={currentBookmarked} />
               </span>
             </button>
+
             <button
               type="button"
-              className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
-              onClick={toggleMarksPanel}
-              aria-label={marksOpen ? "Close marks" : "Open marks"}
-              title={marksOpen ? "Close marks" : "Open marks"}
+              className={`reader-chrome-button ${notebookOpen ? "is-active" : ""}`}
+              onClick={(event) => toggleSurface("notebook", event)}
+              aria-label={notebookOpen ? "Close notebook" : "Open notebook"}
+              aria-expanded={notebookOpen}
             >
               <span className="reader-button-icon">
-                <MarksIcon />
+                <NotebookIcon />
               </span>
+              <span className="reader-chrome-button__label">Notebook</span>
             </button>
+
             <button
               type="button"
-              className={`reader-chrome-button reader-chrome-button--icon reader-chrome-button--seven ${sevenOpen ? "is-active" : ""}`}
-              onClick={toggleSevenPanel}
+              className={`reader-chrome-button reader-chrome-button--seven ${
+                sevenOpen ? "is-active" : ""
+              }`}
+              onClick={(event) => toggleSurface("seven", event)}
               aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
-              title={sevenOpen ? "Close Seven" : "Open Seven"}
+              aria-expanded={sevenOpen}
             >
               <span className="reader-button-icon">
                 <SevenIcon />
               </span>
+              <span className="reader-chrome-button__label">Ask Seven</span>
             </button>
+
             <button
               type="button"
-              className={`reader-chrome-button reader-chrome-button--icon ${appearanceOpen ? "is-active" : ""}`}
-              onClick={toggleAppearancePanel}
+              className={`reader-chrome-button reader-chrome-button--desktop-only ${
+                appearanceOpen ? "is-active" : ""
+              }`}
+              onClick={(event) => toggleSurface("appearance", event)}
               aria-label="Reader appearance"
               title="Reader appearance"
             >
-              Aa
+              <span className="reader-button-icon" aria-hidden="true">
+                Aa
+              </span>
+              <span className="reader-chrome-button__label">Appearance</span>
             </button>
-            <button
-              type="button"
-              className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
-              data-mobile-hidden="true"
-              onClick={openMemberMenu}
-              aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
-              aria-expanded={memberMenuOpen}
+
+            <Link
+              href="/account"
+              className="reader-chrome-button reader-chrome-button--desktop-only reader-account-link"
             >
               <span className="reader-member-chip" aria-hidden="true">
                 {memberInitial}
               </span>
-              <span>{memberName}</span>
-            </button>
+              <span className="reader-chrome-button__label">Account</span>
+            </Link>
           </div>
+        </div>
+
+        <div className="reader-topbar__progress" aria-hidden="true">
+          <div
+            className="reader-topbar__progress-fill"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </header>
 
-      {memberMenuOpen ? (
-        <div className="reader-member-menu" role="dialog" aria-label="Account menu">
-          <div className="reader-member-menu__header">
-            <p className="reader-member-menu__eyebrow">Signed in</p>
-            <h2 className="reader-member-menu__name">{memberName}</h2>
-            {memberEmail ? <p className="reader-member-menu__email">{memberEmail}</p> : null}
-            <div className="reader-member-menu__meta">
-              <span>{membershipLabel}</span>
-              <span>{receiptsStatusLabel}</span>
-            </div>
-          </div>
-          <div className="reader-member-menu__actions">
-            <Link
-              href="/account"
-              className="reader-member-menu__action"
-              onClick={() => setMemberMenuOpen(false)}
-            >
-              Account
-            </Link>
-            <button type="button" className="reader-member-menu__action" onClick={openSettingsPanel}>
-              Reading settings
-            </button>
-            <button type="button" className="reader-member-menu__action" onClick={handleSignOut}>
-              Log out
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {appearanceOpen && (
-        <div className="reader-appearance-menu">
+      {appearanceOpen ? (
+        <div className="reader-appearance-menu" role="dialog" aria-label="Reader appearance">
           <PreferenceGroup
             title="Text size"
             value={preferences.textSize}
@@ -803,32 +979,46 @@ export default function ReaderShell({
             onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
           />
         </div>
-      )}
+      ) : null}
 
       <div
-        className={`reader-overlay ${tocOpen || appearanceOpen || marksOpen || sevenOpen || memberMenuOpen ? "is-visible" : ""}`}
-        onClick={closeReaderPanels}
+        className={`reader-overlay ${hasFloatingPanel ? "is-visible" : ""}`}
+        onClick={() => closeSurface({ restoreFocus: false })}
       />
 
-      <aside className={`reader-toc ${tocOpen ? "is-open" : ""}`}>
+      <aside className={`reader-toc ${contentsOpen ? "is-open" : ""}`} aria-hidden={!contentsOpen}>
         <div className="reader-toc__header">
-          <div>
+          <div className="reader-toc__header-copy">
             <p className="reader-toc__eyebrow">Contents</p>
             <h2 className="reader-toc__title">{documentData.title}</h2>
             <p className="reader-toc__status">
-              {currentLabel}
+              <span>{currentLabel}</span>
               <span>{progressPercent}% read</span>
             </p>
           </div>
-          <button
-            type="button"
-            className="reader-chrome-button reader-chrome-button--icon"
-            onClick={() => setTocOpen(false)}
-            aria-label="Close contents"
-          >
-            ×
-          </button>
+
+          <div className="reader-toc__header-actions">
+            <Link
+              href="/account"
+              className="reader-toc__account"
+              onClick={() => closeSurface({ restoreFocus: false })}
+            >
+              <span className="reader-member-chip" aria-hidden="true">
+                {memberInitial}
+              </span>
+              <span>Account</span>
+            </Link>
+            <button
+              type="button"
+              className="reader-chrome-button reader-chrome-button--icon"
+              onClick={() => closeSurface()}
+              aria-label="Close contents"
+            >
+              ×
+            </button>
+          </div>
         </div>
+
         <nav className="reader-toc__nav" aria-label="Table of contents">
           {entries.map((entry) => (
             <button
@@ -841,71 +1031,23 @@ export default function ReaderShell({
               <span className="reader-toc__item-meta">{entry.number ?? "0"}</span>
             </button>
           ))}
-          <div className="reader-toc__utility">
-            <button
-              type="button"
-              className="reader-toc__utility-action"
-              onClick={() => {
-                setTocOpen(false);
-                setAppearanceOpen(false);
-                setSevenOpen(false);
-                setMemberMenuOpen(false);
-                setMarksOpen(true);
-              }}
-            >
-              Reading Marks
-            </button>
-            <button
-              type="button"
-              className="reader-toc__utility-action"
-              onClick={() => {
-                handleToggleBookmark();
-                setTocOpen(false);
-              }}
-            >
-              {currentBookmarked ? "Remove Bookmark" : "Save Bookmark"}
-            </button>
-            <button
-              type="button"
-              className="reader-toc__utility-action"
-              onClick={openSettingsPanel}
-            >
-              Reading Settings
-            </button>
-            <button
-              type="button"
-              className="reader-toc__utility-action"
-              onClick={handleCreateReceipt}
-              disabled={creatingReceipt}
-            >
-              {creatingReceipt
-                ? "Creating Receipt"
-                : getReceiptsConnection?.status === "CONNECTED"
-                  ? "Create Receipt"
-                  : "Save Reading Draft"}
-            </button>
-            <button
-              type="button"
-              className="reader-toc__utility-action"
-              onClick={openMemberMenu}
-            >
-              Account
-            </button>
-            <button type="button" className="reader-toc__utility-action" onClick={handleSignOut}>
-              Log Out
-            </button>
-          </div>
         </nav>
       </aside>
 
       <ReaderMarksPanel
-        open={marksOpen}
+        open={notebookOpen}
         currentLabel={currentLabel}
         progressPercent={progressPercent}
-        bookmarks={sortedBookmarks}
-        highlights={sortedHighlights}
-        notes={sortedNotes}
-        onClose={() => setMarksOpen(false)}
+        scope={notebookScope}
+        onScopeChange={setNotebookScope}
+        currentBookmarked={currentBookmarked}
+        onToggleBookmark={handleToggleBookmark}
+        bookmarks={visibleBookmarks}
+        highlights={visibleHighlights}
+        notes={visibleNotes}
+        selectedMarkIds={selectedMarkIds}
+        onToggleSelectedMark={handleToggleSelectedMark}
+        onClose={() => closeSurface()}
         onJumpToBookmark={jumpToMark}
         onJumpToMark={jumpToMark}
         onDeleteBookmark={(bookmarkId) =>
@@ -914,12 +1056,21 @@ export default function ReaderShell({
         onDeleteHighlight={(highlightId) =>
           setReaderAnnotations((current) => deleteHighlight(current, highlightId))
         }
-        onDeleteNote={(noteId) =>
-          setReaderAnnotations((current) => deleteNote(current, noteId))
-        }
+        onDeleteNote={(noteId) => setReaderAnnotations((current) => deleteNote(current, noteId))}
         onUpdateNote={(noteId, nextText) =>
           setReaderAnnotations((current) => updateNote(current, noteId, nextText))
         }
+        canCreateReceipt={canCreateReceipt}
+        creatingReceipt={creatingReceipt}
+        receiptComposerOpen={receiptComposerOpen}
+        receiptTitle={receiptTitle}
+        receiptLearned={receiptLearned}
+        receiptMarks={selectedReceiptMarks}
+        onOpenReceiptComposer={openReceiptComposer}
+        onCloseReceiptComposer={() => setReceiptComposerOpen(false)}
+        onChangeReceiptTitle={setReceiptTitle}
+        onChangeReceiptLearned={setReceiptLearned}
+        onSubmitReceipt={handleCreateReceipt}
       />
 
       <SevenPanel
@@ -931,7 +1082,7 @@ export default function ReaderShell({
         documentData={documentData}
         activeSlug={activeSlug}
         currentLabel={currentLabel}
-        onClose={() => setSevenOpen(false)}
+        onClose={() => closeSurface()}
       />
 
       <main className="reader-main">
@@ -943,7 +1094,7 @@ export default function ReaderShell({
               data-section-title="Beginning"
               className={`reader-beginning ${focusedSectionSlug === "beginning" ? "is-focused-source" : ""}`}
             >
-              <p className="reader-beginning__eyebrow">Reading instrument</p>
+              <p className="reader-beginning__eyebrow">Reading Instrument</p>
               <h1 className="reader-beginning__title">{documentData.title}</h1>
               <p className="reader-beginning__subtitle">{documentData.subtitle}</p>
               <MarkdownRenderer
@@ -953,30 +1104,46 @@ export default function ReaderShell({
                 marksByBlock={marksByBlock}
                 activeMarkId={activeMarkId}
               />
+              {documentData.sections[0] ? (
+                <ContinueCard
+                  title={`${documentData.sections[0].number} · ${documentData.sections[0].title}`}
+                  onContinue={() => jumpTo(documentData.sections[0].slug)}
+                />
+              ) : null}
             </section>
 
-            {documentData.sections.map((section) => (
-              <section
-                id={section.slug}
-                key={section.slug}
-                data-section-slug={section.slug}
-                data-section-title={section.title}
-                className={`reader-section ${focusedSectionSlug === section.slug ? "is-focused-source" : ""}`}
-              >
-                <div className="reader-section__divider" />
-                <div className="reader-section__meta">
-                  <span className="reader-section__number">{section.number}</span>
-                  <span className="reader-section__label">{section.title}</span>
-                </div>
-                <h2 className="reader-section__title">{section.title}</h2>
-                <MarkdownRenderer
-                  markdown={section.markdown}
-                  sectionSlug={section.slug}
-                  marksByBlock={marksByBlock}
-                  activeMarkId={activeMarkId}
-                />
-              </section>
-            ))}
+            {documentData.sections.map((section, index) => {
+              const nextSection = documentData.sections[index + 1] || null;
+
+              return (
+                <section
+                  id={section.slug}
+                  key={section.slug}
+                  data-section-slug={section.slug}
+                  data-section-title={section.title}
+                  className={`reader-section ${focusedSectionSlug === section.slug ? "is-focused-source" : ""}`}
+                >
+                  <div className="reader-section__divider" />
+                  <div className="reader-section__meta">
+                    <span className="reader-section__number">{section.number}</span>
+                    <span className="reader-section__label">{section.title}</span>
+                  </div>
+                  <h2 className="reader-section__title">{section.title}</h2>
+                  <MarkdownRenderer
+                    markdown={section.markdown}
+                    sectionSlug={section.slug}
+                    marksByBlock={marksByBlock}
+                    activeMarkId={activeMarkId}
+                  />
+                  {nextSection ? (
+                    <ContinueCard
+                      title={`${nextSection.number} · ${nextSection.title}`}
+                      onContinue={() => jumpTo(nextSection.slug)}
+                    />
+                  ) : null}
+                </section>
+              );
+            })}
           </article>
         </div>
       </main>
@@ -1020,22 +1187,12 @@ export default function ReaderShell({
           </button>
           <div className="reader-bottomrail__current">
             <span className="reader-bottomrail__current-compact">
-              {currentEntry.number ? `${currentEntry.number} · ${progressPercent}% read` : `${progressPercent}% read`}
+              {currentEntry.number
+                ? `${currentEntry.number} · ${progressPercent}% read`
+                : `${progressPercent}% read`}
             </span>
             <span className="reader-bottomrail__current-title">{currentLabel}</span>
             <span className="reader-bottomrail__current-progress">{progressPercent}% read</span>
-            <button
-              type="button"
-              className="reader-bottomrail__receipt"
-              onClick={handleCreateReceipt}
-              disabled={creatingReceipt}
-            >
-              {creatingReceipt
-                ? "Creating receipt"
-                : getReceiptsConnection?.status === "CONNECTED"
-                  ? "Create receipt"
-                  : "Save reading draft"}
-            </button>
           </div>
           <button
             type="button"

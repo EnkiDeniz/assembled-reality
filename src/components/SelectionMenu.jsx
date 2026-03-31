@@ -11,10 +11,13 @@ export default function SelectionMenu({
 }) {
   if (!selection) return null;
 
-  const menuStyle = {
-    left: `${selection.point.x}px`,
-    top: `${Math.max(selection.point.y, 16)}px`,
-  };
+  const menuStyle =
+    selection.mode === "actions"
+      ? {
+          left: `${selection.point.x}px`,
+          top: `${Math.max(selection.point.y, 16)}px`,
+        }
+      : undefined;
 
   return (
     <div className={`selection-menu ${selection.mode === "note" ? "is-note" : ""}`} style={menuStyle}>
@@ -34,11 +37,25 @@ export default function SelectionMenu({
             onMouseDown={(event) => event.preventDefault()}
             onClick={onStartNote}
           >
-            Add note
+            Add Note
           </button>
         </div>
       ) : (
         <div className="selection-menu__composer">
+          <div className="selection-menu__sheet-header">
+            <div>
+              <p className="selection-menu__eyebrow">Notebook</p>
+              <h3 className="selection-menu__title">Add Note</h3>
+            </div>
+            <button
+              type="button"
+              className="reader-chrome-button reader-chrome-button--icon"
+              onClick={onCancel}
+              aria-label="Close note composer"
+            >
+              ×
+            </button>
+          </div>
           <div className="selection-menu__quote">“{selection.anchor.quote}”</div>
           <label className="sr-only" htmlFor="selection-note">
             Note text
@@ -48,7 +65,7 @@ export default function SelectionMenu({
             className="selection-menu__textarea"
             value={noteDraft}
             onChange={(event) => onChangeNoteDraft(event.target.value)}
-            placeholder="Add your note"
+            placeholder="Capture what this passage is doing, not just what it says…"
             rows={4}
           />
           <div className="selection-menu__composer-actions">
@@ -61,7 +78,7 @@ export default function SelectionMenu({
               onClick={onSaveNote}
               disabled={!noteDraft.trim()}
             >
-              Save note
+              Save Note
             </button>
           </div>
         </div>

@@ -51,7 +51,10 @@ export default function AuthScreen({
           <p className="lock-screen__eyebrow">Reading instrument</p>
           <h1 className="lock-screen__title">{documentTitle}</h1>
           <p className="lock-screen__lede">
-            Sign in to continue.
+            Enter the manuscript with your place, notebook, and receipts intact.
+          </p>
+          <p className="auth-screen__supporting">
+            The reading surface stays primary. Sign in once, then return exactly where you left off.
           </p>
         </div>
 
@@ -76,13 +79,16 @@ export default function AuthScreen({
                 id="reader-email-link"
                 className="lock-screen__input"
                 type="email"
-                placeholder="Email for sign-in link"
+                name="email"
+                autoComplete="email"
+                spellCheck={false}
+                placeholder="Email for sign-in link…"
                 value={emailOnly}
                 onChange={(event) => setEmailOnly(event.target.value)}
                 required
               />
               <button type="submit" className="lock-screen__submit" disabled={emailSubmitting}>
-                {emailSubmitting ? "Sending" : "Send link"}
+                {emailSubmitting ? "Sending…" : "Send Link"}
               </button>
             </div>
             <div className="lock-screen__status">{emailMessage || "\u00A0"}</div>

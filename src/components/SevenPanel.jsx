@@ -5,6 +5,7 @@ import {
   buildSevenFallbackMessage,
   getNarrationText,
   getReaderSection,
+  getSectionPreview,
   getSectionOutline,
   getSevenProviderLabel,
   parseSevenAudioHeaders,
@@ -159,6 +160,10 @@ export default function SevenPanel({
     [activeSlug, documentData],
   );
   const sectionOutline = useMemo(() => getSectionOutline(documentData), [documentData]);
+  const sectionPreview = useMemo(
+    () => getSectionPreview(documentData, activeSlug),
+    [activeSlug, documentData],
+  );
   const narrationText = useMemo(
     () => getNarrationText(documentData, activeSlug),
     [activeSlug, documentData],
@@ -276,25 +281,8 @@ export default function SevenPanel({
         question: "What should I pay attention to here?",
         userLine: "What should I pay attention to here?",
       },
-      {
-        id: "connection",
-        label: "Connection",
-        helper:
-          activeSlug === "beginning"
-            ? "What is this opening trying to set up?"
-            : "How does this connect to what came before?",
-        mode: "question",
-        question:
-          activeSlug === "beginning"
-            ? "What is this opening trying to set up?"
-            : "How does this connect to what came before?",
-        userLine:
-          activeSlug === "beginning"
-            ? "What is this opening trying to set up?"
-            : "How does this connect to what came before?",
-      },
     ];
-  }, [activeSlug, currentLabel, textEnabled]);
+  }, [currentLabel, textEnabled]);
 
   const actionButtons = [
     effectiveVoiceEnabled
@@ -822,48 +810,23 @@ export default function SevenPanel({
 
       <div className="reader-seven__body">
         <div className="reader-seven__overview">
+          <div className="reader-seven__identity">
+            <p className="reader-seven__identity-eyebrow">Current Section</p>
+            <h3 className="reader-seven__identity-title">{currentLabel}</h3>
+            {sectionPreview ? (
+              <p className="reader-seven__identity-preview">{sectionPreview}</p>
+            ) : null}
+          </div>
+
           {showStatus ? (
             <p className="reader-seven__status" aria-live="polite">
               {liveStatus}
             </p>
           ) : null}
 
-          {actionButtons.length ? (
-            <div className="reader-seven__section-tools">
-              <p className="reader-seven__section-tools-label">Section tools</p>
-              <div className="reader-seven__actions">
-                {actionButtons.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className={action.className}
-                    disabled={action.disabled}
-                    onClick={action.onClick}
-                  >
-                    <span className="reader-seven__action-inner">
-                      <span className="reader-seven__action-icon">{action.icon}</span>
-                      <span>{action.label}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-        </div>
-
-        <div ref={messageListRef} className="reader-seven__messages">
           {!hasConversation && starterPrompts.length ? (
-            <div className="reader-seven__empty">
-              <div>
-                <p className="reader-seven__empty-title">Ask about this section.</p>
-                <p className="reader-seven__empty-copy">
-                  Start with a direct question or tap one of these.
-                </p>
-                <p className="reader-seven__empty-note">
-                  The top row works on the section. Reply audio appears under each Seven answer.
-                </p>
-              </div>
+            <div className="reader-seven__starter-block">
+              <p className="reader-seven__section-tools-label">Try Asking</p>
               <div className="reader-seven__starter-list" aria-label="Starter prompts">
                 {starterPrompts.map((prompt) => (
                   <button
@@ -882,6 +845,44 @@ export default function SevenPanel({
                     <span className="reader-seven__starter-helper">{prompt.helper}</span>
                   </button>
                 ))}
+              </div>
+            </div>
+          ) : null}
+
+          {actionButtons.length ? (
+            <div className="reader-seven__section-tools">
+              <p className="reader-seven__section-tools-label">Quick Actions</p>
+              <div className="reader-seven__actions">
+                {actionButtons.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    className={action.className}
+                    disabled={action.disabled}
+                    onClick={action.onClick}
+                  >
+                    <span className="reader-seven__action-inner">
+                      <span className="reader-seven__action-icon">{action.icon}</span>
+                      <span>{action.label}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div ref={messageListRef} className="reader-seven__messages">
+          {!hasConversation ? (
+            <div className="reader-seven__empty">
+              <div>
+                <p className="reader-seven__empty-title">Read with Seven.</p>
+                <p className="reader-seven__empty-copy">
+                  Ask what this section means, what matters in practice, or what deserves more attention before you move on.
+                </p>
+                <p className="reader-seven__empty-note">
+                  Reply audio appears under each Seven answer when voice is available.
+                </p>
               </div>
             </div>
           ) : null}
