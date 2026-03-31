@@ -853,7 +853,7 @@ export default function ReaderShell({
               Account
             </Link>
             <button type="button" className="reader-member-menu__action" onClick={openSettingsPanel}>
-              Settings
+              Reading settings
             </button>
             <button type="button" className="reader-member-menu__action" onClick={handleSignOut}>
               Log out

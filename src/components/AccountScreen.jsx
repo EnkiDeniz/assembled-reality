@@ -1,23 +1,121 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { clearUnlockState } from "@/lib/storage";
+import {
+  clearUnlockState,
+  DEFAULT_READER_PREFERENCES,
+  loadReaderPreferences,
+  saveReaderPreferences,
+} from "@/lib/storage";
+
+const TEXT_SIZE_OPTIONS = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
+];
+
+const PAGE_WIDTH_OPTIONS = [
+  { value: "standard", label: "Standard" },
+  { value: "wide", label: "Wide" },
+];
+
+const THEME_OPTIONS = [
+  { value: "paper", label: "Paper" },
+  { value: "dark", label: "Dark" },
+];
 
 function draftLink(draft) {
   const remote = draft?.payload?.remoteReceipt;
   return remote?.edit_url || remote?.detail_url || remote?.links?.edit || remote?.links?.detail || "";
 }
 
-export default function AccountScreen({ initialProfile, email, connectionStatus, drafts = [] }) {
+function formatStatus(value) {
+  return String(value || "disconnected")
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function PreferenceGroup({ title, description, value, options, onChange }) {
+  return (
+    <div className="account-pref-group">
+      <div className="account-pref-group__header">
+        <h3 className="account-pref-group__title">{title}</h3>
+        <p className="account-pref-group__description">{description}</p>
+      </div>
+      <div className="account-pref-group__options" role="radiogroup" aria-label={title}>
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={`account-pref-option ${active ? "is-active" : ""}`}
+              onClick={() => onChange(option.value)}
+              role="radio"
+              aria-checked={active}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StatTile({ label, value, detail = "" }) {
+  return (
+    <div className="account-stat">
+      <span className="account-stat__label">{label}</span>
+      <strong className="account-stat__value">{value}</strong>
+      {detail ? <span className="account-stat__detail">{detail}</span> : null}
+    </div>
+  );
+}
+
+export default function AccountScreen({
+  initialProfile,
+  email,
+  connectionStatus,
+  drafts = [],
+  readingSnapshot = null,
+}) {
   const [displayName, setDisplayName] = useState(initialProfile?.displayName || "");
+  const [preferences, setPreferences] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_READER_PREFERENCES;
+    }
+
+    return loadReaderPreferences();
+  });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const accountName = displayName || initialProfile?.displayName || "Reader";
+  const accountName = displayName.trim() || initialProfile?.displayName || "Reader";
   const membershipLabel =
     initialProfile?.cohort === "FOUNDING" ? "Founding reader" : "Private beta member";
+  const connectionLabel = formatStatus(connectionStatus);
+  const connectionCopy =
+    connectionStatus === "connected"
+      ? "Reading receipts can move directly into your GetReceipts flow."
+      : "Connect GetReceipts when you want reading notes to become structured drafts.";
+  const readingProgress = readingSnapshot?.progressPercent ?? 0;
+  const resumeHref = readingSnapshot?.resumeHref || "/read";
+  const receiptsCount = drafts.length;
+
+  useEffect(() => {
+    saveReaderPreferences(preferences);
+  }, [preferences]);
+
+  const handleSignOut = () => {
+    clearUnlockState();
+    signOut({ callbackUrl: "/" });
+  };
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -50,90 +148,245 @@ export default function AccountScreen({ initialProfile, email, connectionStatus,
 
   return (
     <main className="account-shell">
-      <section className="account-card">
-        <p className="lock-screen__eyebrow">Account</p>
-        <h1 className="account-card__title">{accountName}</h1>
-        <dl className="account-card__meta">
-          <div>
-            <dt>Email</dt>
-            <dd>{email}</dd>
+      <div className="account-stage">
+        <header className="account-header">
+          <div className="account-header__brand">
+            <span className="account-header__eyebrow">Assembled Reality</span>
+            <span className="account-header__title">Member account</span>
           </div>
-          <div>
-            <dt>Access</dt>
-            <dd>{membershipLabel}</dd>
-          </div>
-          <div>
-            <dt>GetReceipts</dt>
-            <dd>{connectionStatus}</dd>
-          </div>
-        </dl>
-
-        <form className="account-card__form" onSubmit={handleSave}>
-          <label className="account-card__label" htmlFor="reader-display-name">
-            Display name
-          </label>
-          <input
-            id="reader-display-name"
-            className="account-card__input"
-            type="text"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            required
-          />
-          <div className="account-card__actions">
-            <Link className="account-card__button" href="/read">
-              Back to reading
+          <div className="account-header__actions">
+            <Link className="account-button" href="/read">
+              Return to reading
             </Link>
-            <button type="submit" className="account-card__button is-primary" disabled={saving}>
-              {saving ? "Saving" : "Save"}
-            </button>
-            <a className="account-card__button" href="/connect/getreceipts">
-              Connect GetReceipts
-            </a>
-            <button
-              type="button"
-              className="account-card__button"
-              onClick={() => {
-                clearUnlockState();
-                signOut({ callbackUrl: "/" });
-              }}
-            >
-              Sign out
+            <button type="button" className="account-button" onClick={handleSignOut}>
+              Log out
             </button>
           </div>
-          <div className="account-card__status">
-            {error ? <span className="is-error">{error}</span> : message || "\u00A0"}
-          </div>
-        </form>
+        </header>
 
-        <div className="account-card__drafts">
-          <p className="account-card__label">Reading receipts</p>
-          {drafts.length === 0 ? (
-            <p className="account-card__empty">No reading receipts yet.</p>
-          ) : (
-            <div className="account-card__draft-list">
-              {drafts.map((draft) => {
-                const href = draftLink(draft);
-                return (
-                  <article key={draft.id} className="account-card__draft-item">
-                    <div>
-                      <p className="account-card__draft-title">{draft.title || "Untitled receipt"}</p>
-                      <p className="account-card__draft-meta">
-                        {draft.status.toLowerCase().replaceAll("_", " ")}
-                      </p>
-                    </div>
-                    {href ? (
-                      <a className="account-card__draft-link" href={href} target="_blank" rel="noreferrer">
-                        Open
-                      </a>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
+        <section className="account-hero">
+          <div>
+            <p className="lock-screen__eyebrow">Private beta</p>
+            <h1 className="account-hero__title">{accountName}</h1>
+            <p className="account-hero__lede">
+              Your reading identity, device settings, and session controls live here.
+            </p>
+          </div>
+          <div className="account-hero__meta" aria-label="Account status">
+            <span>{email}</span>
+            <span>{membershipLabel}</span>
+            <span>{connectionLabel}</span>
+          </div>
+        </section>
+
+        <div className="account-grid">
+          <div className="account-main">
+            <section id="profile" className="account-panel">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Profile</p>
+                  <h2 className="account-panel__title">Identity</h2>
+                  <p className="account-panel__lede">
+                    Keep your reader name current so your notes and highlights feel personal.
+                  </p>
+                </div>
+              </div>
+
+              <form className="account-form" onSubmit={handleSave}>
+                <div className="account-form__grid">
+                  <label className="account-field" htmlFor="reader-display-name">
+                    <span className="account-field__label">Display name</span>
+                    <input
+                      id="reader-display-name"
+                      className="account-input"
+                      type="text"
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                      required
+                    />
+                  </label>
+                  <div className="account-field account-field--static">
+                    <span className="account-field__label">Email</span>
+                    <span className="account-field__value">{email}</span>
+                  </div>
+                </div>
+
+                <div className="account-form__actions">
+                  <button type="submit" className="account-button is-primary" disabled={saving}>
+                    {saving ? "Saving" : "Save profile"}
+                  </button>
+                  <span className="account-form__status">
+                    {error ? <span className="is-error">{error}</span> : message || " "}
+                  </span>
+                </div>
+              </form>
+            </section>
+
+            <section id="settings" className="account-panel">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Settings</p>
+                  <h2 className="account-panel__title">Reading preferences</h2>
+                  <p className="account-panel__lede">
+                    These controls match the reader itself and save on this browser immediately.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="account-button"
+                  onClick={() => setPreferences(DEFAULT_READER_PREFERENCES)}
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div className="account-preferences">
+                <PreferenceGroup
+                  title="Text size"
+                  description="Tune the density of the reading surface."
+                  value={preferences.textSize}
+                  options={TEXT_SIZE_OPTIONS}
+                  onChange={(value) => setPreferences((current) => ({ ...current, textSize: value }))}
+                />
+                <PreferenceGroup
+                  title="Reading width"
+                  description="Choose whether the text sits in a tighter or looser column."
+                  value={preferences.pageWidth}
+                  options={PAGE_WIDTH_OPTIONS}
+                  onChange={(value) => setPreferences((current) => ({ ...current, pageWidth: value }))}
+                />
+                <PreferenceGroup
+                  title="Theme"
+                  description="Switch between the paper surface and the dark reading mode."
+                  value={preferences.theme}
+                  options={THEME_OPTIONS}
+                  onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
+                />
+              </div>
+            </section>
+
+            <section id="connections" className="account-panel">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Connections</p>
+                  <h2 className="account-panel__title">GetReceipts</h2>
+                  <p className="account-panel__lede">{connectionCopy}</p>
+                </div>
+                <div className="account-connection-status">{connectionLabel}</div>
+              </div>
+
+              <div className="account-connection">
+                <div className="account-connection__copy">
+                  <p className="account-connection__title">
+                    {connectionStatus === "connected"
+                      ? "Your account is ready to create receipt drafts from reading context."
+                      : "Connect when you want to turn reading marks into structured output."}
+                  </p>
+                  <p className="account-connection__detail">
+                    The manuscript stays the center of the experience. This is only for exporting the thinking that comes out of it.
+                  </p>
+                </div>
+                <a className="account-button is-primary" href="/connect/getreceipts">
+                  {connectionStatus === "connected" ? "Manage connection" : "Connect GetReceipts"}
+                </a>
+              </div>
+            </section>
+
+            <section id="receipts" className="account-panel">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Activity</p>
+                  <h2 className="account-panel__title">Reading receipts</h2>
+                  <p className="account-panel__lede">
+                    Drafts created from your current reading context appear here.
+                  </p>
+                </div>
+              </div>
+
+              {drafts.length === 0 ? (
+                <p className="account-empty">
+                  No reading receipts yet. When you create one from the reader, it will appear here.
+                </p>
+              ) : (
+                <div className="account-receipts">
+                  {drafts.map((draft) => {
+                    const href = draftLink(draft);
+
+                    return (
+                      <article key={draft.id} className="account-receipt">
+                        <div className="account-receipt__body">
+                          <p className="account-receipt__title">{draft.title || "Untitled receipt"}</p>
+                          <p className="account-receipt__meta">
+                            {draft.status.toLowerCase().replaceAll("_", " ")}
+                          </p>
+                        </div>
+                        {href ? (
+                          <a className="account-receipt__link" href={href} target="_blank" rel="noreferrer">
+                            Open
+                          </a>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside className="account-side">
+            <section className="account-panel account-panel--side">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Reading</p>
+                  <h2 className="account-panel__title">Snapshot</h2>
+                </div>
+              </div>
+
+              <div className="account-stats">
+                <StatTile label="Progress" value={`${readingProgress}%`} detail={readingSnapshot?.resumeLabel || "Beginning"} />
+                <StatTile label="Bookmarks" value={readingSnapshot?.bookmarkCount ?? 0} />
+                <StatTile label="Highlights" value={readingSnapshot?.highlightCount ?? 0} />
+                <StatTile label="Notes" value={readingSnapshot?.noteCount ?? 0} />
+                <StatTile label="Receipts" value={receiptsCount} />
+              </div>
+
+              <Link className="account-button is-primary" href={resumeHref}>
+                Continue reading
+              </Link>
+            </section>
+
+            <section className="account-panel account-panel--side">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Navigation</p>
+                  <h2 className="account-panel__title">Quick links</h2>
+                </div>
+              </div>
+              <nav className="account-nav" aria-label="Account sections">
+                <a href="#profile">Profile</a>
+                <a href="#settings">Reading settings</a>
+                <a href="#connections">Connections</a>
+                <a href="#receipts">Receipts</a>
+              </nav>
+            </section>
+
+            <section className="account-panel account-panel--side">
+              <div className="account-panel__header">
+                <div>
+                  <p className="account-panel__eyebrow">Session</p>
+                  <h2 className="account-panel__title">Access</h2>
+                  <p className="account-panel__lede">
+                    Sign out when you’re done, especially on a shared device.
+                  </p>
+                </div>
+              </div>
+              <button type="button" className="account-button" onClick={handleSignOut}>
+                Log out
+              </button>
+            </section>
+          </aside>
         </div>
-      </section>
+      </div>
     </main>
   );
 }
