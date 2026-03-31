@@ -2,15 +2,13 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import ReadGate from "@/components/ReadGate";
 import { authOptions } from "@/lib/auth";
-import { redirectToCanonicalHost } from "@/lib/canonical-host";
 import { getParsedDocument } from "@/lib/document";
 import { appEnv } from "@/lib/env";
 import { loadReaderPageData } from "@/lib/reader-db";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReadPage({ searchParams }) {
-  await redirectToCanonicalHost("/read", await searchParams);
+export default async function ReadPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     redirect("/");
