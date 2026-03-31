@@ -11,7 +11,7 @@ const DEFAULT_UNLOCK = { unlocked: false, method: null };
 
 export default function EntryGate({
   session,
-  documentData,
+  documentTitle,
   foundingReaders,
   authCapabilities,
 }) {
@@ -46,7 +46,7 @@ export default function EntryGate({
   if (!session?.user?.id) {
     return (
       <AuthScreen
-        documentTitle={documentData.title}
+        documentTitle={documentTitle}
         foundingReaders={foundingReaders}
         authCapabilities={authCapabilities}
         onAppleSignIn={() =>
