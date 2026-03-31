@@ -172,9 +172,16 @@ export const authOptions = {
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.readerSlug = user.readerSlug || token.readerSlug || null;
+        token.readerRole = user.readerRole || token.readerRole || "READER";
+        token.readerName = user.readerName || user.name || token.readerName || "";
       }
 
-      if (token.sub) {
+      const needsProfileHydration =
+        Boolean(token.sub) &&
+        (!token.readerSlug || !token.readerRole || !token.readerName);
+
+      if (needsProfileHydration) {
         const resolved = await prisma.user.findUnique({
           where: { id: token.sub },
           include: { readerProfile: true },

@@ -12,10 +12,8 @@ export default async function AccountPage() {
     redirect("/");
   }
 
-  const [readerData, drafts] = await Promise.all([
-    loadReaderPageData(session.user.id),
-    listReadingReceiptDraftsForUser(session.user.id),
-  ]);
+  const readerData = await loadReaderPageData(session.user.id);
+  const drafts = await listReadingReceiptDraftsForUser(session.user.id);
 
   return (
     <AccountScreen

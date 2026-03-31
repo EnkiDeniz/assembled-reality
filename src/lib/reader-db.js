@@ -115,26 +115,24 @@ export async function loadReaderPageData(userId) {
 
   const { profile, getReceiptsConnection } = resolved;
 
-  const [bookmarks, highlights, notes, progress] = await Promise.all([
-    prisma.bookmark.findMany({
-      where: { readerProfileId: profile.id },
-      orderBy: { createdAt: "desc" },
-      include: { readerProfile: true },
-    }),
-    prisma.highlight.findMany({
-      where: { readerProfileId: profile.id },
-      orderBy: { createdAt: "desc" },
-      include: { readerProfile: true },
-    }),
-    prisma.note.findMany({
-      where: { readerProfileId: profile.id },
-      orderBy: { updatedAt: "desc" },
-      include: { readerProfile: true },
-    }),
-    prisma.readingProgress.findUnique({
-      where: { readerProfileId: profile.id },
-    }),
-  ]);
+  const bookmarks = await prisma.bookmark.findMany({
+    where: { readerProfileId: profile.id },
+    orderBy: { createdAt: "desc" },
+    include: { readerProfile: true },
+  });
+  const highlights = await prisma.highlight.findMany({
+    where: { readerProfileId: profile.id },
+    orderBy: { createdAt: "desc" },
+    include: { readerProfile: true },
+  });
+  const notes = await prisma.note.findMany({
+    where: { readerProfileId: profile.id },
+    orderBy: { updatedAt: "desc" },
+    include: { readerProfile: true },
+  });
+  const progress = await prisma.readingProgress.findUnique({
+    where: { readerProfileId: profile.id },
+  });
 
   return {
     profile,
@@ -151,23 +149,21 @@ export async function loadReaderPageData(userId) {
 }
 
 export async function loadSevenAggregate() {
-  const [bookmarks, highlights, notes] = await Promise.all([
-    prisma.bookmark.findMany({
-      where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
-      orderBy: { createdAt: "desc" },
-      include: { readerProfile: true },
-    }),
-    prisma.highlight.findMany({
-      where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
-      orderBy: { createdAt: "desc" },
-      include: { readerProfile: true },
-    }),
-    prisma.note.findMany({
-      where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
-      orderBy: { updatedAt: "desc" },
-      include: { readerProfile: true },
-    }),
-  ]);
+  const bookmarks = await prisma.bookmark.findMany({
+    where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
+    orderBy: { createdAt: "desc" },
+    include: { readerProfile: true },
+  });
+  const highlights = await prisma.highlight.findMany({
+    where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
+    orderBy: { createdAt: "desc" },
+    include: { readerProfile: true },
+  });
+  const notes = await prisma.note.findMany({
+    where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
+    orderBy: { updatedAt: "desc" },
+    include: { readerProfile: true },
+  });
 
   return toAnnotationStore({ bookmarks, highlights, notes });
 }
@@ -283,9 +279,6 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
 }
 
 export async function listReadingReceiptDraftsForUser(userId) {
-  const resolved = await getReaderProfileByUserId(userId);
-  if (!resolved) return [];
-
   return prisma.readingReceiptDraft.findMany({
     where: {
       userId,

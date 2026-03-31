@@ -118,6 +118,8 @@ export default function ReaderMarksPanel({
   progressPercent,
   mode,
   canViewSeven,
+  isLoadingSharedMarks = false,
+  sharedMarksError = "",
   bookmarks,
   highlights,
   notes,
@@ -133,8 +135,22 @@ export default function ReaderMarksPanel({
   const allowMutations = mode !== "seven";
   const subtitle =
     mode === "seven"
-      ? "Collected marks from the founding readers."
+      ? isLoadingSharedMarks
+        ? "Loading collected marks from the founding readers."
+        : sharedMarksError || "Collected marks from the founding readers."
       : `${progressPercent}% read`;
+  const bookmarkEmpty =
+    mode === "seven" && (isLoadingSharedMarks || sharedMarksError)
+      ? subtitle
+      : "No bookmarks yet.";
+  const highlightEmpty =
+    mode === "seven" && (isLoadingSharedMarks || sharedMarksError)
+      ? subtitle
+      : "No highlights yet.";
+  const noteEmpty =
+    mode === "seven" && (isLoadingSharedMarks || sharedMarksError)
+      ? subtitle
+      : "No notes yet.";
 
   return (
     <aside className={`reader-marks ${open ? "is-open" : ""}`}>
@@ -169,7 +185,7 @@ export default function ReaderMarksPanel({
           </div>
         ) : null}
 
-        <MarkSection title="Bookmarks" count={bookmarks.length} empty="No bookmarks yet.">
+        <MarkSection title="Bookmarks" count={bookmarks.length} empty={bookmarkEmpty}>
           <div className="reader-marks__list">
             {bookmarks.map((bookmark) => (
               <BookmarkItem
@@ -183,7 +199,7 @@ export default function ReaderMarksPanel({
           </div>
         </MarkSection>
 
-        <MarkSection title="Highlights" count={highlights.length} empty="No highlights yet.">
+        <MarkSection title="Highlights" count={highlights.length} empty={highlightEmpty}>
           <div className="reader-marks__list">
             {highlights.map((highlight) => (
               <HighlightItem
@@ -197,7 +213,7 @@ export default function ReaderMarksPanel({
           </div>
         </MarkSection>
 
-        <MarkSection title="Notes" count={notes.length} empty="No notes yet.">
+        <MarkSection title="Notes" count={notes.length} empty={noteEmpty}>
           <div className="reader-marks__list">
             {notes.map((note) => (
               <NoteItem

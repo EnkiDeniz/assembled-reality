@@ -91,7 +91,7 @@ export default function ReaderShell({
   setPreferences,
   initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
   initialReadingProgress = null,
-  aggregateAnnotations = EMPTY_READER_ANNOTATIONS,
+  aggregateAnnotations: initialAggregateAnnotations = EMPTY_READER_ANNOTATIONS,
   profile = null,
   getReceiptsConnection = null,
   sevenTextEnabled = false,
@@ -111,6 +111,21 @@ export default function ReaderShell({
       ? initialReadingProgress.progressPercent / 100
       : 0,
   );
+  const [aggregateAnnotations, setAggregateAnnotations] = useState(
+    () => initialAggregateAnnotations || EMPTY_READER_ANNOTATIONS,
+  );
+  const [aggregateAnnotationsStatus, setAggregateAnnotationsStatus] = useState(() => ({
+    state:
+      initialAggregateAnnotations &&
+      [
+        initialAggregateAnnotations.bookmarks?.length,
+        initialAggregateAnnotations.highlights?.length,
+        initialAggregateAnnotations.notes?.length,
+      ].some(Boolean)
+        ? "ready"
+        : "idle",
+    error: "",
+  }));
   const [readerAnnotations, setReaderAnnotations] = useState(
     () => initialReaderAnnotations || EMPTY_READER_ANNOTATIONS,
   );
@@ -256,6 +271,12 @@ export default function ReaderShell({
     marksMode === "seven" && profile?.canViewSeven
       ? aggregateAnnotations || EMPTY_READER_ANNOTATIONS
       : readerAnnotations;
+  const sharedMarksLoading =
+    marksMode === "seven" && aggregateAnnotationsStatus.state === "loading";
+  const sharedMarksError =
+    marksMode === "seven" && aggregateAnnotationsStatus.state === "error"
+      ? aggregateAnnotationsStatus.error
+      : "";
   const sortedBookmarks = useMemo(
     () =>
       visibleAnnotations.bookmarks.toSorted(
@@ -429,6 +450,54 @@ export default function ReaderShell({
     window.addEventListener("keydown", handleReaderKeys);
     return () => window.removeEventListener("keydown", handleReaderKeys);
   }, [jumpTo, nextEntry, previousEntry]);
+
+  useEffect(() => {
+    if (marksMode !== "seven" || !profile?.canViewSeven) {
+      return undefined;
+    }
+
+    if (aggregateAnnotationsStatus.state === "loading" || aggregateAnnotationsStatus.state === "ready") {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+
+    setAggregateAnnotationsStatus({
+      state: "loading",
+      error: "",
+    });
+
+    fetch("/api/reader/aggregate", { signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(payload?.error || "Could not load collected marks.");
+        }
+
+        if (!active) return;
+
+        setAggregateAnnotations(payload?.annotations || EMPTY_READER_ANNOTATIONS);
+        setAggregateAnnotationsStatus({
+          state: "ready",
+          error: "",
+        });
+      })
+      .catch((error) => {
+        if (!active || controller.signal.aborted) return;
+
+        setAggregateAnnotationsStatus({
+          state: "error",
+          error: error instanceof Error ? error.message : "Could not load collected marks.",
+        });
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [aggregateAnnotationsStatus.state, marksMode, profile?.canViewSeven]);
 
   useEffect(() => {
     const syncSelection = () => {
@@ -763,6 +832,8 @@ export default function ReaderShell({
         progressPercent={progressPercent}
         mode={marksMode}
         canViewSeven={Boolean(profile?.canViewSeven)}
+        isLoadingSharedMarks={sharedMarksLoading}
+        sharedMarksError={sharedMarksError}
         bookmarks={sortedBookmarks}
         highlights={sortedHighlights}
         notes={sortedNotes}

@@ -4,7 +4,7 @@ import ReadGate from "@/components/ReadGate";
 import { authOptions } from "@/lib/auth";
 import { getParsedDocument } from "@/lib/document";
 import { appEnv } from "@/lib/env";
-import { loadReaderPageData, loadSevenAggregate } from "@/lib/reader-db";
+import { loadReaderPageData } from "@/lib/reader-db";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +14,8 @@ export default async function ReadPage() {
     redirect("/");
   }
 
-  const [documentData, readerData, aggregateAnnotations] = await Promise.all([
-    Promise.resolve(getParsedDocument()),
-    loadReaderPageData(session.user.id),
-    loadSevenAggregate(),
-  ]);
+  const documentData = getParsedDocument();
+  const readerData = await loadReaderPageData(session.user.id);
 
   return (
     <ReadGate
@@ -26,7 +23,6 @@ export default async function ReadPage() {
       documentData={documentData}
       initialAnnotations={readerData?.annotations}
       initialProgress={readerData?.progress}
-      aggregateAnnotations={aggregateAnnotations}
       profile={readerData?.profile}
       getReceiptsConnection={readerData?.getReceiptsConnection}
       sevenTextEnabled={appEnv.openai.enabled}
