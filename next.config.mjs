@@ -1,12 +1,10 @@
-import { fileURLToPath } from "node:url";
-
-const rootDirectory = fileURLToPath(new URL(".", import.meta.url));
-
 /** @type {import("next").NextConfig} */
 const nextConfig = {
   typedRoutes: false,
-  turbopack: {
-    root: rootDirectory,
+  outputFileTracingIncludes: {
+    "/": ["./content/**/*", "./docs/**/*"],
+    "/read": ["./content/**/*", "./docs/**/*"],
+    "/api/reader/receipts/from-reading": ["./content/**/*", "./docs/**/*"],
   },
 };
 

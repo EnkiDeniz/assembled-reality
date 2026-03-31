@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { cache } from "react";
 import { slugify } from "@/lib/text";
 
@@ -10,31 +11,13 @@ const APPENDIX_DOCUMENTS = [
     segments: ["docs", "operator-sentences.md"],
   },
 ];
-const DOCUMENT_PATHS = {
-  "content/assembled_reality_v07_final.md": new URL(
-    "../../content/assembled_reality_v07_final.md",
-    import.meta.url,
-  ).pathname,
-  "docs/operator-sentences.md": new URL("../../docs/operator-sentences.md", import.meta.url)
-    .pathname,
-};
-
 function normalizeMarkdown(markdown) {
   return markdown.replace(/\r\n/g, "\n").trim();
 }
 
-function resolveContentPath(...segments) {
-  const key = segments.join("/");
-  const filePath = DOCUMENT_PATHS[key];
-  if (!filePath) {
-    throw new Error(`Unsupported document path: ${key}`);
-  }
-
-  return filePath;
-}
-
 function readMarkdownFile(...segments) {
-  return fs.readFileSync(resolveContentPath(...segments), "utf8");
+  const filePath = path.join(process.cwd(), ...segments);
+  return fs.readFileSync(filePath, "utf8");
 }
 
 function stripLeadingTitle(markdown) {
@@ -48,7 +31,7 @@ function buildAppendixMarkdown(baseDocument = "") {
       return [];
     }
 
-    const filePath = resolveContentPath(...appendix.segments);
+    const filePath = path.join(process.cwd(), ...appendix.segments);
     if (!fs.existsSync(filePath)) {
       return [];
     }
