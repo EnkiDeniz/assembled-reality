@@ -151,17 +151,30 @@ export function getSectionPreview(documentData, activeSlug) {
   const paragraphs = String(section.markdown || "")
     .replace(/\r\n/g, "\n")
     .split(/\n{2,}/)
-    .map((paragraph) =>
-      stripMarkdownForSpeech(paragraph)
-        .replace(/\s+/g, " ")
-        .replace(/[-]{3,}/g, " ")
-        .trim(),
-    )
-    .filter(Boolean)
-    .filter((paragraph) => paragraph.length > 36)
-    .filter((paragraph) => !/[|]/.test(paragraph));
+    .map((paragraph) => {
+      const raw = paragraph.trim();
+      return {
+        raw,
+        clean: stripMarkdownForSpeech(raw)
+          .replace(/\s+/g, " ")
+          .replace(/[-]{3,}/g, " ")
+          .trim(),
+      };
+    })
+    .filter(({ raw, clean }) => {
+      if (!clean || clean.length <= 36) return false;
+      if (/\|/.test(raw)) return false;
+      if (/^[-:\s|]+$/m.test(raw)) return false;
+      return true;
+    })
+    .map(({ clean }) => clean);
 
-  return paragraphs[0] || stripMarkdownForSpeech(section.markdown).replace(/\s+/g, " ").trim();
+  return (
+    paragraphs[0] ||
+    stripMarkdownForSpeech(section.markdown)
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 export function getSectionOutline(documentData) {

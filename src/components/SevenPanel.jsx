@@ -55,13 +55,21 @@ function ExplainIcon() {
 const INITIAL_MESSAGE =
   "I’m Seven.";
 
-function buildWelcomeMessage({ textEnabled, voiceEnabled }) {
-  if (voiceEnabled && textEnabled) {
+function buildWelcomeMessage({ textEnabled, voiceAvailable, usingDeviceVoice }) {
+  if (voiceAvailable && textEnabled && !usingDeviceVoice) {
     return `${INITIAL_MESSAGE} I can read the current section aloud, explain it in plainer language, or answer a question about what you’re reading.`;
   }
 
-  if (voiceEnabled) {
+  if (usingDeviceVoice && textEnabled) {
+    return `${INITIAL_MESSAGE} I can read the current section aloud with your device voice, explain it in plainer language, or answer a question about what you’re reading.`;
+  }
+
+  if (voiceAvailable && !usingDeviceVoice) {
     return `${INITIAL_MESSAGE} I can read the current section aloud right now, but chat is unavailable.`;
+  }
+
+  if (usingDeviceVoice) {
+    return `${INITIAL_MESSAGE} I can read the current section aloud with your device voice right now, but chat is unavailable.`;
   }
 
   if (textEnabled) {
@@ -94,21 +102,27 @@ export default function SevenPanel({
     () => buildExcerpt(getSectionPreview(documentData, activeSlug), 180),
     [activeSlug, documentData],
   );
-  const welcomeMessage = useMemo(
-    () => buildWelcomeMessage({ textEnabled, voiceEnabled }),
-    [textEnabled, voiceEnabled],
-  );
 
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
+  const [browserSpeechEnabled, setBrowserSpeechEnabled] = useState(false);
   const [messages, setMessages] = useState(() => [
-    { id: "seven-welcome", role: "assistant", content: welcomeMessage },
+    {
+      id: "seven-welcome",
+      role: "assistant",
+      content: buildWelcomeMessage({
+        textEnabled,
+        voiceAvailable: voiceEnabled,
+        usingDeviceVoice: false,
+      }),
+    },
   ]);
   const [audioState, setAudioState] = useState({
     status: "idle",
     label: "",
     index: 0,
     total: 0,
+    mode: "provider",
   });
   const [audioError, setAudioError] = useState("");
 
@@ -118,32 +132,65 @@ export default function SevenPanel({
   const messageListRef = useRef(null);
   const composerInputRef = useRef(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const supported =
+      typeof window.speechSynthesis !== "undefined" &&
+      typeof window.SpeechSynthesisUtterance !== "undefined";
+    setBrowserSpeechEnabled(supported);
+
+    if (!supported || typeof window.speechSynthesis.addEventListener !== "function") {
+      return undefined;
+    }
+
+    const handleVoicesChanged = () => setBrowserSpeechEnabled(true);
+    window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
+  }, []);
+
+  const effectiveVoiceEnabled = voiceEnabled || browserSpeechEnabled;
+  const usingDeviceVoice = !voiceEnabled && browserSpeechEnabled;
+  const welcomeMessage = useMemo(
+    () =>
+      buildWelcomeMessage({
+        textEnabled,
+        voiceAvailable: effectiveVoiceEnabled,
+        usingDeviceVoice,
+      }),
+    [effectiveVoiceEnabled, textEnabled, usingDeviceVoice],
+  );
   const textDisabledReason = textEnabled
     ? ""
     : "Seven’s chat is unavailable right now.";
-  const voiceDisabledReason = voiceEnabled
+  const voiceDisabledReason = effectiveVoiceEnabled
     ? ""
     : "Seven’s voice is unavailable right now.";
 
-  const canListen = voiceEnabled && speechChunks.length > 0;
+  const canListen = effectiveVoiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
-  const hasCapabilities = voiceEnabled || textEnabled;
+  const hasCapabilities = effectiveVoiceEnabled || textEnabled;
   const capabilityNotice = !hasCapabilities
     ? "Seven is offline right now."
-    : !voiceEnabled
-      ? "Voice is offline right now. Text guidance is still available."
+    : usingDeviceVoice && textEnabled
+      ? "Listening is using your device voice right now."
+      : usingDeviceVoice
+        ? "Listening is using your device voice right now. Chat is offline."
+      : !effectiveVoiceEnabled
+        ? "Voice is offline right now. Text guidance is still available."
       : !textEnabled
         ? "Text guidance is offline right now. Voice is still available."
         : "";
   const panelMeta = !hasCapabilities
     ? "Seven is temporarily offline for this section."
-    : voiceEnabled && textEnabled
+    : effectiveVoiceEnabled && textEnabled
       ? "Listen now or ask about the section in view."
-      : voiceEnabled
-        ? "Read the section aloud."
+      : effectiveVoiceEnabled
+        ? usingDeviceVoice
+          ? "Read the section aloud with your device voice."
+          : "Read the section aloud."
         : "Ask about the section in view.";
   const actions = [
-    voiceEnabled
+    effectiveVoiceEnabled
       ? {
           id: "listen",
           className: "reader-seven__action is-primary",
@@ -209,12 +256,17 @@ export default function SevenPanel({
       audioRef.current = null;
     }
 
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
     clearAudioUrl();
     setAudioState({
       status: "idle",
       label: "",
       index: 0,
       total: 0,
+      mode: "provider",
     });
   }, [clearAudioUrl]);
 
@@ -248,8 +300,60 @@ export default function SevenPanel({
     return response.blob();
   }
 
+  async function playWithDeviceVoice(chunks, label, sessionId) {
+    if (
+      typeof window === "undefined" ||
+      typeof window.speechSynthesis === "undefined" ||
+      typeof window.SpeechSynthesisUtterance === "undefined"
+    ) {
+      throw new Error("Seven’s voice is unavailable right now.");
+    }
+
+    const synth = window.speechSynthesis;
+    synth.cancel();
+
+    const speakChunk = async (chunkIndex) => {
+      if (audioSessionRef.current !== sessionId) return;
+
+      setAudioState({
+        status: "playing",
+        label,
+        index: chunkIndex + 1,
+        total: chunks.length,
+        mode: "device",
+      });
+
+      await new Promise((resolve, reject) => {
+        const utterance = new window.SpeechSynthesisUtterance(chunks[chunkIndex]);
+        utterance.rate = 0.96;
+        utterance.pitch = 1;
+        utterance.onend = () => resolve();
+        utterance.onerror = () =>
+          reject(new Error("Seven could not play through your device voice."));
+        synth.speak(utterance);
+      });
+
+      if (audioSessionRef.current !== sessionId) return;
+
+      if (chunkIndex + 1 >= chunks.length) {
+        setAudioState({
+          status: "idle",
+          label: "",
+          index: 0,
+          total: 0,
+          mode: "device",
+        });
+        return;
+      }
+
+      await speakChunk(chunkIndex + 1);
+    };
+
+    await speakChunk(0);
+  }
+
   async function playText(text, label) {
-    if (!voiceEnabled) {
+    if (!effectiveVoiceEnabled) {
       setAudioError(voiceDisabledReason);
       return;
     }
@@ -267,7 +371,24 @@ export default function SevenPanel({
       label,
       index: 0,
       total: chunks.length,
+      mode: usingDeviceVoice ? "device" : "provider",
     });
+
+    if (usingDeviceVoice) {
+      try {
+        await playWithDeviceVoice(chunks, label, sessionId);
+      } catch (error) {
+        setAudioError(error instanceof Error ? error.message : "Seven could not start speaking.");
+        setAudioState({
+          status: "idle",
+          label: "",
+          index: 0,
+          total: 0,
+          mode: "device",
+        });
+      }
+      return;
+    }
 
     const playChunk = async (chunkIndex) => {
       if (audioSessionRef.current !== sessionId) return;
@@ -277,6 +398,7 @@ export default function SevenPanel({
         label,
         index: chunkIndex + 1,
         total: chunks.length,
+        mode: "provider",
       });
 
       const blob = await fetchAudioChunk(chunks[chunkIndex]);
@@ -340,18 +462,35 @@ export default function SevenPanel({
         label,
         index: chunkIndex + 1,
         total: chunks.length,
+        mode: "provider",
       });
     };
 
     try {
       await playChunk(0);
     } catch (error) {
-      setAudioError(error instanceof Error ? error.message : "Seven could not start speaking.");
+      if (browserSpeechEnabled && audioSessionRef.current === sessionId) {
+        try {
+          setAudioError("");
+          await playWithDeviceVoice(chunks, label, sessionId);
+          return;
+        } catch (fallbackError) {
+          setAudioError(
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : "Seven could not start speaking.",
+          );
+        }
+      } else {
+        setAudioError(error instanceof Error ? error.message : "Seven could not start speaking.");
+      }
+
       setAudioState({
         status: "idle",
         label: "",
         index: 0,
         total: 0,
+        mode: browserSpeechEnabled ? "device" : "provider",
       });
     }
   }
@@ -473,14 +612,20 @@ export default function SevenPanel({
 
           <div className="reader-seven__status" aria-live="polite">
             {audioState.status === "loading"
-              ? `${audioState.label}… preparing part ${audioState.index} of ${audioState.total}.`
+              ? audioState.mode === "device"
+                ? `${audioState.label}… starting your device voice.`
+                : `${audioState.label}… preparing part ${audioState.index} of ${audioState.total}.`
               : null}
             {audioState.status === "playing"
-              ? `${audioState.label}… playing part ${audioState.index} of ${audioState.total}.`
+              ? audioState.mode === "device"
+                ? `${audioState.label}… speaking through your device voice, part ${audioState.index} of ${audioState.total}.`
+                : `${audioState.label}… playing part ${audioState.index} of ${audioState.total}.`
               : null}
             {audioState.status === "idle" && audioError ? audioError : null}
-            {audioState.status === "idle" && !audioError && voiceEnabled
-              ? "Seven is ready to read this section aloud."
+            {audioState.status === "idle" && !audioError && effectiveVoiceEnabled
+              ? usingDeviceVoice
+                ? "Seven is ready to read with your device voice."
+                : "Seven is ready to read this section aloud."
               : null}
           </div>
 
@@ -501,7 +646,7 @@ export default function SevenPanel({
                   <button
                     type="button"
                     className="reader-seven__speak"
-                    disabled={!voiceEnabled}
+                    disabled={!effectiveVoiceEnabled}
                     onClick={() => playText(message.content, "Speaking Seven")}
                   >
                     <SpeakerIcon />
