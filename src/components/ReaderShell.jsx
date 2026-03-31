@@ -718,7 +718,7 @@ export default function ReaderShell({
             </button>
             <button
               type="button"
-              className={`reader-chrome-button reader-chrome-button--seven ${sevenOpen ? "is-active" : ""}`}
+              className={`reader-chrome-button reader-chrome-button--icon reader-chrome-button--seven ${sevenOpen ? "is-active" : ""}`}
               onClick={toggleSevenPanel}
               aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
               title={sevenOpen ? "Close Seven" : "Open Seven"}
@@ -726,7 +726,6 @@ export default function ReaderShell({
               <span className="reader-button-icon">
                 <SevenIcon />
               </span>
-              <span>{sevenOpen ? "Close Seven" : "Ask Seven"}</span>
             </button>
             <button
               type="button"
