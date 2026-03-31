@@ -341,6 +341,86 @@ export default function ReaderShell({
     closeSurface({ restoreFocus: false });
   }, [activeSurface, closeSurface]);
 
+  const showSelectionNotice = useCallback((message) => {
+    if (noticeTimeoutRef.current) {
+      window.clearTimeout(noticeTimeoutRef.current);
+    }
+
+    setSelectionNotice(message);
+    noticeTimeoutRef.current = window.setTimeout(() => {
+      setSelectionNotice("");
+      noticeTimeoutRef.current = null;
+    }, 1800);
+  }, []);
+
+  const showReceiptNotice = useCallback((message) => {
+    setReceiptNotice(message);
+    window.setTimeout(() => {
+      setReceiptNotice("");
+    }, 2600);
+  }, []);
+
+  const jumpTo = useCallback(
+    (slug) => {
+      const target = document.getElementById(slug);
+      if (!target) return;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      scrollIntentRef.current = true;
+      dismissSurfacesWithoutFocus();
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      clearFocusState();
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, prefersReducedMotion ? 60 : 320);
+    },
+    [clearFocusState, dismissSurfacesWithoutFocus],
+  );
+
+  const jumpToMark = useCallback(
+    (mark) => {
+      const selector =
+        mark.blockId && typeof CSS !== "undefined" && typeof CSS.escape === "function"
+          ? `[data-block-id="${CSS.escape(mark.blockId)}"]`
+          : null;
+      const target =
+        (selector ? document.querySelector(selector) : null) ||
+        document.getElementById(mark.sectionSlug);
+
+      if (!target) return;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      scrollIntentRef.current = true;
+      dismissSurfacesWithoutFocus();
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      clearFocusState();
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      setActiveMarkId(mark.id);
+      setFocusedSectionSlug(mark.sectionSlug);
+      focusTimeoutRef.current = window.setTimeout(() => {
+        setActiveMarkId(null);
+        setFocusedSectionSlug(null);
+        focusTimeoutRef.current = null;
+      }, 1800);
+
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, prefersReducedMotion ? 60 : 320);
+    },
+    [clearFocusState, dismissSurfacesWithoutFocus],
+  );
+
   useEffect(() => {
     document.body.classList.remove("is-lock-screen");
   }, []);
@@ -669,86 +749,6 @@ export default function ReaderShell({
     document.body.style.setProperty("overflow", "hidden");
     return () => document.body.style.removeProperty("overflow");
   }, [activeSurface]);
-
-  const showSelectionNotice = useCallback((message) => {
-    if (noticeTimeoutRef.current) {
-      window.clearTimeout(noticeTimeoutRef.current);
-    }
-
-    setSelectionNotice(message);
-    noticeTimeoutRef.current = window.setTimeout(() => {
-      setSelectionNotice("");
-      noticeTimeoutRef.current = null;
-    }, 1800);
-  }, []);
-
-  const showReceiptNotice = useCallback((message) => {
-    setReceiptNotice(message);
-    window.setTimeout(() => {
-      setReceiptNotice("");
-    }, 2600);
-  }, []);
-
-  const jumpTo = useCallback(
-    (slug) => {
-      const target = document.getElementById(slug);
-      if (!target) return;
-
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      scrollIntentRef.current = true;
-      dismissSurfacesWithoutFocus();
-      setSelectionState(null);
-      setNoteDraft("");
-      clearBrowserSelection();
-      clearFocusState();
-      target.scrollIntoView({
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
-      window.setTimeout(() => {
-        scrollIntentRef.current = false;
-      }, prefersReducedMotion ? 60 : 320);
-    },
-    [clearFocusState, dismissSurfacesWithoutFocus],
-  );
-
-  const jumpToMark = useCallback(
-    (mark) => {
-      const selector =
-        mark.blockId && typeof CSS !== "undefined" && typeof CSS.escape === "function"
-          ? `[data-block-id="${CSS.escape(mark.blockId)}"]`
-          : null;
-      const target =
-        (selector ? document.querySelector(selector) : null) ||
-        document.getElementById(mark.sectionSlug);
-
-      if (!target) return;
-
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      scrollIntentRef.current = true;
-      dismissSurfacesWithoutFocus();
-      setSelectionState(null);
-      setNoteDraft("");
-      clearBrowserSelection();
-      clearFocusState();
-      target.scrollIntoView({
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
-      setActiveMarkId(mark.id);
-      setFocusedSectionSlug(mark.sectionSlug);
-      focusTimeoutRef.current = window.setTimeout(() => {
-        setActiveMarkId(null);
-        setFocusedSectionSlug(null);
-        focusTimeoutRef.current = null;
-      }, 1800);
-
-      window.setTimeout(() => {
-        scrollIntentRef.current = false;
-      }, prefersReducedMotion ? 60 : 320);
-    },
-    [clearFocusState, dismissSurfacesWithoutFocus],
-  );
 
   const handleToggleBookmark = useCallback(() => {
     setReaderAnnotations((current) =>
