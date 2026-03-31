@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildExcerpt } from "../lib/text";
 import {
   buildSevenFallbackMessage,
   getNarrationText,
   getReaderSection,
   getSectionOutline,
-  getSectionPreview,
   getSevenProviderLabel,
   parseSevenAudioHeaders,
   splitTextForSpeech,
@@ -119,26 +117,6 @@ function initialVoiceStatus({ voiceEnabled, browserSpeechEnabled, preferredVoice
   };
 }
 
-function buildWelcomeMessage({ textEnabled, voiceStatus }) {
-  const lines = ["I'm Seven."];
-
-  if (textEnabled) {
-    lines.push("Ask me what this section is doing, what matters in practice, or ask for a quick summary.");
-  }
-
-  if (voiceStatus.state === "ready") {
-    lines.push(`I can also read this section aloud through ${getSevenProviderLabel(voiceStatus.provider)}.`);
-  } else if (voiceStatus.state === "device") {
-    lines.push("I can read this section aloud through your device voice.");
-  } else if (voiceStatus.state === "device_fallback") {
-    lines.push(voiceStatus.message);
-  } else if (!textEnabled) {
-    lines.push("Voice and chat are both unavailable right now.");
-  }
-
-  return lines.join(" ");
-}
-
 function buildAudioProgressText(audioState) {
   if (audioState.status === "loading") {
     return audioState.mode === "device"
@@ -153,52 +131,6 @@ function buildAudioProgressText(audioState) {
   }
 
   return "";
-}
-
-function getChatChip(chatStatus, textEnabled) {
-  if (!textEnabled) {
-    return { tone: "muted", label: "Chat offline" };
-  }
-
-  if (chatStatus.state === "error") {
-    if (chatStatus.reasonCode === "rate_limited") {
-      return { tone: "warning", label: "Chat rate limited" };
-    }
-
-    return { tone: "warning", label: "Chat issue" };
-  }
-
-  return {
-    tone: "ready",
-    label: `Chat · ${getSevenProviderLabel(chatStatus.provider)}`,
-  };
-}
-
-function getVoiceChip(voiceStatus, voiceAvailable) {
-  if (!voiceAvailable) {
-    return { tone: "muted", label: "Voice offline" };
-  }
-
-  if (voiceStatus.state === "device_fallback") {
-    return { tone: "warning", label: "Device voice fallback" };
-  }
-
-  if (voiceStatus.state === "device") {
-    return { tone: "warning", label: "Device voice" };
-  }
-
-  if (voiceStatus.state === "error") {
-    return { tone: "warning", label: "Voice issue" };
-  }
-
-  if (voiceStatus.fallbackFrom) {
-    return { tone: "warning", label: `Voice · ${getSevenProviderLabel(voiceStatus.provider)} fallback` };
-  }
-
-  return {
-    tone: "ready",
-    label: `Voice · ${getSevenProviderLabel(voiceStatus.provider)}`,
-  };
 }
 
 function createSevenApiError(payload, fallbackMessage) {
@@ -232,10 +164,6 @@ export default function SevenPanel({
     [activeSlug, documentData],
   );
   const speechChunks = useMemo(() => splitTextForSpeech(narrationText), [narrationText]);
-  const sectionPreview = useMemo(
-    () => buildExcerpt(getSectionPreview(documentData, activeSlug), 150),
-    [activeSlug, documentData],
-  );
 
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
@@ -254,20 +182,7 @@ export default function SevenPanel({
   const [voiceStatus, setVoiceStatus] = useState(() =>
     initialVoiceStatus({ voiceEnabled, browserSpeechEnabled: false, preferredVoiceProvider }),
   );
-  const [messages, setMessages] = useState(() => [
-    {
-      id: "seven-welcome",
-      role: "assistant",
-      content: buildWelcomeMessage({
-        textEnabled,
-        voiceStatus: initialVoiceStatus({
-          voiceEnabled,
-          browserSpeechEnabled: false,
-          preferredVoiceProvider,
-        }),
-      }),
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
 
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
@@ -313,25 +228,7 @@ export default function SevenPanel({
   const effectiveVoiceEnabled = voiceEnabled || browserSpeechEnabled;
   const canListen = effectiveVoiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
-
-  const welcomeMessage = useMemo(
-    () =>
-      buildWelcomeMessage({
-        textEnabled,
-        voiceStatus,
-      }),
-    [textEnabled, voiceStatus],
-  );
-
-  useEffect(() => {
-    setMessages((current) => {
-      if (current.length !== 1 || current[0]?.id !== "seven-welcome") {
-        return current;
-      }
-
-      return [{ id: "seven-welcome", role: "assistant", content: welcomeMessage }];
-    });
-  }, [welcomeMessage]);
+  const hasConversation = messages.length > 0;
 
   useEffect(() => {
     if (!messageListRef.current) return;
@@ -446,11 +343,6 @@ export default function SevenPanel({
       : null,
   ].filter(Boolean);
 
-  const statusChips = [
-    getChatChip(chatStatus, textEnabled),
-    getVoiceChip(voiceStatus, effectiveVoiceEnabled),
-  ];
-
   const liveStatus =
     buildAudioProgressText(audioState) ||
     audioError ||
@@ -467,6 +359,14 @@ export default function SevenPanel({
               : effectiveVoiceEnabled
                 ? "Read the section aloud."
                 : "Seven is offline right now.");
+  const showStatus =
+    audioState.status !== "idle" ||
+    Boolean(audioError) ||
+    chatStatus.state === "error" ||
+    voiceStatus.state === "error" ||
+    voiceStatus.state === "device_fallback" ||
+    !textEnabled ||
+    !effectiveVoiceEnabled;
 
   const clearAudioUrl = useCallback(() => {
     if (audioUrlRef.current) {
@@ -897,25 +797,11 @@ export default function SevenPanel({
 
       <div className="reader-seven__body">
         <div className="reader-seven__overview">
-          <div className="reader-seven__context">
-            <p className="reader-seven__context-label">Section</p>
-            <p className="reader-seven__context-text">{sectionPreview || "No section text yet."}</p>
-          </div>
-
-          <div className="reader-seven__status-row">
-            {statusChips.map((chip) => (
-              <span
-                key={chip.label}
-                className={`reader-seven__chip is-${chip.tone}`}
-              >
-                {chip.label}
-              </span>
-            ))}
-          </div>
-
-          <p className="reader-seven__status" aria-live="polite">
-            {liveStatus}
-          </p>
+          {showStatus ? (
+            <p className="reader-seven__status" aria-live="polite">
+              {liveStatus}
+            </p>
+          ) : null}
 
           {actionButtons.length ? (
             <div className="reader-seven__actions">
@@ -936,30 +822,39 @@ export default function SevenPanel({
             </div>
           ) : null}
 
-          {starterPrompts.length ? (
-            <div className="reader-seven__starter-list" aria-label="Starter prompts">
-              {starterPrompts.map((prompt) => (
-                <button
-                  key={prompt.id}
-                  type="button"
-                  className="reader-seven__starter"
-                  disabled={pending}
-                  onClick={() =>
-                    requestSeven({
-                      mode: prompt.mode,
-                      question: prompt.question,
-                      userLine: prompt.helper,
-                    })
-                  }
-                >
-                  <span className="reader-seven__starter-helper">{prompt.helper}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
 
         <div ref={messageListRef} className="reader-seven__messages">
+          {!hasConversation && starterPrompts.length ? (
+            <div className="reader-seven__empty">
+              <div>
+                <p className="reader-seven__empty-title">Ask about this section.</p>
+                <p className="reader-seven__empty-copy">
+                  Start with a direct question or tap one of these.
+                </p>
+              </div>
+              <div className="reader-seven__starter-list" aria-label="Starter prompts">
+                {starterPrompts.map((prompt) => (
+                  <button
+                    key={prompt.id}
+                    type="button"
+                    className="reader-seven__starter"
+                    disabled={pending}
+                    onClick={() =>
+                      requestSeven({
+                        mode: prompt.mode,
+                        question: prompt.question,
+                        userLine: prompt.helper,
+                      })
+                    }
+                  >
+                    <span className="reader-seven__starter-helper">{prompt.helper}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {messages.map((message) => (
             <article key={message.id} className={`reader-seven__message is-${message.role}`}>
               <div className="reader-seven__message-meta">
