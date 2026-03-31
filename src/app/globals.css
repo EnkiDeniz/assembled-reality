@@ -129,6 +129,17 @@ a {
   gap: 0.75rem;
 }
 
+.lock-screen__prompt {
+  margin: 0;
+  color: var(--paper-ink-faint);
+}
+
+.lock-screen__prompt--minimal {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 .lock-screen__eyebrow {
   margin: 0;
   font-size: 0.75rem;
@@ -271,6 +282,7 @@ a {
 
 .lock-screen__field--minimal {
   min-width: min(100vw - 3rem, 19rem);
+  grid-template-columns: minmax(0, 1fr);
   border-radius: 0;
   background: #fff;
   border-color: rgba(24, 20, 18, 0.14);

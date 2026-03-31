@@ -63,6 +63,10 @@ export default function UnlockScreen({
   return (
     <main className={`lock-screen ${isLandingVariant ? "lock-screen--minimal" : ""}`}>
       <div className={`lock-screen__frame ${isLandingVariant ? "lock-screen__frame--minimal" : ""}`}>
+        {isLandingVariant ? (
+          <p className="lock-screen__prompt lock-screen__prompt--minimal">say the magic word</p>
+        ) : null}
+
         {!isLandingVariant ? (
           <div className="lock-screen__header">
             <p className="lock-screen__eyebrow">Private reading instrument</p>
@@ -86,7 +90,7 @@ export default function UnlockScreen({
           onSubmit={handleSubmit}
         >
           <label className="sr-only" htmlFor="entry-code">
-            Internal entry code
+            {isLandingVariant ? "Magic word" : "Internal entry code"}
           </label>
           <div
             className={`lock-screen__field ${wrong ? "is-wrong" : ""} ${isLandingVariant ? "lock-screen__field--minimal" : ""}`}
@@ -106,13 +110,15 @@ export default function UnlockScreen({
               }}
               placeholder={isLandingVariant ? "" : "Access code"}
             />
-            <button
-              type="submit"
-              className={`lock-screen__submit ${isLandingVariant ? "lock-screen__submit--minimal" : ""}`}
-              disabled={submitting}
-            >
-              {submitting ? "..." : "Enter"}
-            </button>
+            {!isLandingVariant ? (
+              <button
+                type="submit"
+                className={`lock-screen__submit ${isLandingVariant ? "lock-screen__submit--minimal" : ""}`}
+                disabled={submitting}
+              >
+                {submitting ? "..." : "Enter"}
+              </button>
+            ) : null}
           </div>
           <div className={`lock-screen__status ${isLandingVariant ? "lock-screen__status--minimal" : ""}`}>
             {wrong ? "Not yet." : "\u00A0"}
@@ -130,10 +136,10 @@ export default function UnlockScreen({
         >
           {showPuzzle
             ? isLandingVariant
-              ? "hide puzzle"
+              ? "or solve the puzzle"
               : "Hide alternate entry"
             : isLandingVariant
-              ? "solve the puzzle"
+              ? "or solve the puzzle"
               : "Open alternate entry"}
         </button>
 
