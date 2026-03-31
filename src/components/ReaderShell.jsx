@@ -772,7 +772,6 @@ export default function ReaderShell({
             <button
               type="button"
               className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
-              data-mobile-hidden="true"
               onClick={handleToggleBookmark}
               aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
               title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
@@ -784,7 +783,6 @@ export default function ReaderShell({
             <button
               type="button"
               className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
-              data-mobile-hidden="true"
               onClick={toggleMarksPanel}
               aria-label={marksOpen ? "Close marks" : "Open marks"}
               title={marksOpen ? "Close marks" : "Open marks"}
@@ -808,7 +806,6 @@ export default function ReaderShell({
             <button
               type="button"
               className={`reader-chrome-button reader-chrome-button--icon ${appearanceOpen ? "is-active" : ""}`}
-              data-mobile-hidden="true"
               onClick={toggleAppearancePanel}
               aria-label="Reader appearance"
               title="Reader appearance"
@@ -829,39 +826,6 @@ export default function ReaderShell({
               <span>{memberName}</span>
             </button>
           </div>
-        </div>
-        <div className="reader-topbar__utility" aria-label="Reader tools">
-          <button
-            type="button"
-            className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
-            onClick={handleToggleBookmark}
-            aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
-            title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
-          >
-            <span className="reader-button-icon">
-              <BookmarkIcon filled={currentBookmarked} />
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
-            onClick={toggleMarksPanel}
-            aria-label={marksOpen ? "Close marks" : "Open marks"}
-            title={marksOpen ? "Close marks" : "Open marks"}
-          >
-            <span className="reader-button-icon">
-              <MarksIcon />
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`reader-chrome-button reader-chrome-button--icon ${appearanceOpen ? "is-active" : ""}`}
-            onClick={toggleAppearancePanel}
-            aria-label="Reader appearance"
-            title="Reader appearance"
-          >
-            Aa
-          </button>
         </div>
       </header>
 
