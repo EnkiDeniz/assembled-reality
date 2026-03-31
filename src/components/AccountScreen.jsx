@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
-  clearUnlockState,
+  buildSevenFallbackMessage,
+  getSevenProviderLabel,
+  parseSevenAudioHeaders,
+} from "@/lib/seven";
+import {
   DEFAULT_READER_PREFERENCES,
   loadReaderPreferences,
   saveReaderPreferences,
@@ -78,6 +82,36 @@ function StatTile({ label, value, detail = "" }) {
   );
 }
 
+function formatDiagnosticTime(value) {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(value);
+}
+
+function DiagnosticCard({ title, description, buttonLabel, result, onRun }) {
+  const checkedAt = result?.checkedAt ? formatDiagnosticTime(result.checkedAt) : "";
+
+  return (
+    <div className="account-diagnostic">
+      <div className="account-diagnostic__copy">
+        <p className="account-diagnostic__title">{title}</p>
+        <p className="account-diagnostic__description">{description}</p>
+        <p className={`account-diagnostic__result is-${result?.status || "idle"}`}>
+          {result?.message || "Not tested yet."}
+        </p>
+        {checkedAt ? <p className="account-diagnostic__meta">Last checked at {checkedAt}</p> : null}
+      </div>
+      <button type="button" className="account-button" disabled={result?.status === "running"} onClick={onRun}>
+        {result?.status === "running" ? "Testing..." : buttonLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function AccountScreen({
   initialProfile,
   email,
@@ -96,9 +130,20 @@ export default function AccountScreen({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [sevenDiagnostics, setSevenDiagnostics] = useState({
+    chat: {
+      status: "idle",
+      message: "",
+      checkedAt: null,
+    },
+    voice: {
+      status: "idle",
+      message: "",
+      checkedAt: null,
+    },
+  });
   const accountName = displayName.trim() || initialProfile?.displayName || "Reader";
-  const membershipLabel =
-    initialProfile?.cohort === "FOUNDING" ? "Founding reader" : "Private beta member";
+  const membershipLabel = "Reader";
   const connectionLabel = formatStatus(connectionStatus);
   const connectionCopy =
     connectionStatus === "connected"
@@ -113,7 +158,6 @@ export default function AccountScreen({
   }, [preferences]);
 
   const handleSignOut = () => {
-    clearUnlockState();
     signOut({ callbackUrl: "/" });
   };
 
@@ -146,13 +190,149 @@ export default function AccountScreen({
     }
   };
 
+  const runChatDiagnostic = async () => {
+    setSevenDiagnostics((current) => ({
+      ...current,
+      chat: {
+        ...current.chat,
+        status: "running",
+        message: "Testing Seven chat...",
+      },
+    }));
+
+    try {
+      const response = await fetch("/api/seven", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mode: "summary",
+          documentTitle: "Seven diagnostic",
+          documentSubtitle: "",
+          introMarkdown: "",
+          sectionOutline: "1. Diagnostic",
+          currentLabel: "Diagnostic",
+          currentSectionTitle: "Diagnostic",
+          currentSectionMarkdown:
+            "This is a short diagnostic paragraph used to confirm that Seven can answer a simple request.",
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      const checkedAt = new Date();
+
+      if (!response.ok || !payload?.ok) {
+        setSevenDiagnostics((current) => ({
+          ...current,
+          chat: {
+            status: "error",
+            message: payload?.error || "Seven chat diagnostic failed.",
+            checkedAt,
+          },
+        }));
+        return;
+      }
+
+      setSevenDiagnostics((current) => ({
+        ...current,
+        chat: {
+          status: "success",
+          message: `Chat responded through ${getSevenProviderLabel(payload.provider)}.`,
+          checkedAt,
+        },
+      }));
+    } catch (thrownError) {
+      setSevenDiagnostics((current) => ({
+        ...current,
+        chat: {
+          status: "error",
+          message:
+            thrownError instanceof Error
+              ? thrownError.message
+              : "Seven chat diagnostic failed.",
+          checkedAt: new Date(),
+        },
+      }));
+    }
+  };
+
+  const runVoiceDiagnostic = async () => {
+    setSevenDiagnostics((current) => ({
+      ...current,
+      voice: {
+        ...current.voice,
+        status: "running",
+        message: "Testing Seven voice...",
+      },
+    }));
+
+    try {
+      const response = await fetch("/api/seven/audio", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: "Seven diagnostic check.",
+        }),
+      });
+
+      const checkedAt = new Date();
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        setSevenDiagnostics((current) => ({
+          ...current,
+          voice: {
+            status: "error",
+            message: payload?.error || "Seven voice diagnostic failed.",
+            checkedAt,
+          },
+        }));
+        return;
+      }
+
+      const audioMeta = parseSevenAudioHeaders(response.headers);
+      await response.blob();
+
+      const message = audioMeta.fallbackFrom
+        ? buildSevenFallbackMessage({
+            fallbackTo: audioMeta.provider || "openai",
+            fallbackFrom: audioMeta.fallbackFrom,
+            reasonCode: audioMeta.fallbackReasonCode || "unknown_error",
+          })
+        : `Voice responded through ${getSevenProviderLabel(audioMeta.provider)}.`;
+
+      setSevenDiagnostics((current) => ({
+        ...current,
+        voice: {
+          status: "success",
+          message,
+          checkedAt,
+        },
+      }));
+    } catch (thrownError) {
+      setSevenDiagnostics((current) => ({
+        ...current,
+        voice: {
+          status: "error",
+          message:
+            thrownError instanceof Error
+              ? thrownError.message
+              : "Seven voice diagnostic failed.",
+          checkedAt: new Date(),
+        },
+      }));
+    }
+  };
+
   return (
     <main className="account-shell">
       <div className="account-stage">
         <header className="account-header">
           <div className="account-header__brand">
             <span className="account-header__eyebrow">Assembled Reality</span>
-            <span className="account-header__title">Member account</span>
+            <span className="account-header__title">Account</span>
           </div>
           <div className="account-header__actions">
             <Link className="account-button" href="/read">
@@ -166,7 +346,7 @@ export default function AccountScreen({
 
         <section className="account-hero">
           <div>
-            <p className="lock-screen__eyebrow">Private beta</p>
+            <p className="lock-screen__eyebrow">Account</p>
             <h1 className="account-hero__title">{accountName}</h1>
             <p className="account-hero__lede">
               Your reading identity, device settings, and session controls live here.
@@ -334,7 +514,7 @@ export default function AccountScreen({
           </div>
 
           <aside className="account-side">
-            <section className="account-panel account-panel--side">
+            <section id="seven-diagnostics" className="account-panel account-panel--side">
               <div className="account-panel__header">
                 <div>
                   <p className="account-panel__eyebrow">Reading</p>
@@ -358,6 +538,35 @@ export default function AccountScreen({
             <section className="account-panel account-panel--side">
               <div className="account-panel__header">
                 <div>
+                  <p className="account-panel__eyebrow">Seven</p>
+                  <h2 className="account-panel__title">Diagnostics</h2>
+                  <p className="account-panel__lede">
+                    Verify chat and voice directly before you head back into the reader.
+                  </p>
+                </div>
+              </div>
+
+              <div className="account-diagnostics">
+                <DiagnosticCard
+                  title="Chat"
+                  description="Checks whether Seven can answer a simple diagnostic prompt right now."
+                  buttonLabel="Test chat"
+                  result={sevenDiagnostics.chat}
+                  onRun={runChatDiagnostic}
+                />
+                <DiagnosticCard
+                  title="Voice"
+                  description="Checks whether Seven can generate voice audio and shows the active provider."
+                  buttonLabel="Test voice"
+                  result={sevenDiagnostics.voice}
+                  onRun={runVoiceDiagnostic}
+                />
+              </div>
+            </section>
+
+            <section className="account-panel account-panel--side">
+              <div className="account-panel__header">
+                <div>
                   <p className="account-panel__eyebrow">Navigation</p>
                   <h2 className="account-panel__title">Quick links</h2>
                 </div>
@@ -367,6 +576,7 @@ export default function AccountScreen({
                 <a href="#settings">Reading settings</a>
                 <a href="#connections">Connections</a>
                 <a href="#receipts">Receipts</a>
+                <a href="#seven-diagnostics">Seven diagnostics</a>
               </nav>
             </section>
 

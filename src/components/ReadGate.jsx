@@ -12,11 +12,12 @@ export default function ReadGate({
   documentData,
   initialAnnotations,
   initialProgress,
-  aggregateAnnotations,
   profile,
   getReceiptsConnection,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
+  sevenTextProvider = null,
+  sevenVoiceProvider = null,
 }) {
   const [preferences, setPreferences] = useState(() => {
     if (typeof window === "undefined") {
@@ -33,12 +34,13 @@ export default function ReadGate({
       setPreferences={setPreferences}
       initialReaderAnnotations={initialAnnotations}
       initialReadingProgress={initialProgress}
-      aggregateAnnotations={aggregateAnnotations}
       profile={profile}
       sessionUser={session?.user || null}
       getReceiptsConnection={getReceiptsConnection}
       sevenTextEnabled={sevenTextEnabled}
       sevenVoiceEnabled={sevenVoiceEnabled}
+      sevenTextProvider={sevenTextProvider}
+      sevenVoiceProvider={sevenVoiceProvider}
     />
   );
 }

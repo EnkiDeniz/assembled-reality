@@ -1,10 +1,8 @@
-import { ReaderCohort } from "@prisma/client";
 import {
   EMPTY_READER_ANNOTATIONS,
   normalizeIncomingStore,
 } from "@/lib/reader-store";
 import { buildExcerpt, slugify } from "@/lib/text";
-import { isFoundingReaderName } from "@/lib/founding-readers";
 import { prisma } from "@/lib/prisma";
 
 function toAnnotationStore({ bookmarks, highlights, notes }) {
@@ -88,8 +86,6 @@ export async function ensureReaderProfileForUser(user, preferredName) {
       userId: user.id,
       displayName: baseName,
       readerSlug,
-      cohort: isFoundingReaderName(baseName) ? ReaderCohort.FOUNDING : ReaderCohort.MEMBER,
-      canViewSeven: true,
     },
   });
 }
@@ -146,26 +142,6 @@ export async function loadReaderPageData(userId) {
         }
       : null,
   };
-}
-
-export async function loadSevenAggregate() {
-  const bookmarks = await prisma.bookmark.findMany({
-    where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
-    orderBy: { createdAt: "desc" },
-    include: { readerProfile: true },
-  });
-  const highlights = await prisma.highlight.findMany({
-    where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
-    orderBy: { createdAt: "desc" },
-    include: { readerProfile: true },
-  });
-  const notes = await prisma.note.findMany({
-    where: { readerProfile: { cohort: ReaderCohort.FOUNDING } },
-    orderBy: { updatedAt: "desc" },
-    include: { readerProfile: true },
-  });
-
-  return toAnnotationStore({ bookmarks, highlights, notes });
 }
 
 export async function saveReaderAnnotationsForUser(userId, nextStore) {

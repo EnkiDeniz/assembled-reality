@@ -16,7 +16,7 @@ function getEmailHtml({ url, brandName }) {
       <body style="margin:0;padding:0;background:#f3eee3;color:#1d1612;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
         <div style="max-width:640px;margin:0 auto;padding:40px 20px;">
           <div style="border:1px solid rgba(68,46,26,0.12);border-radius:28px;background:#faf6ef;padding:32px 28px;box-shadow:0 20px 60px rgba(68,46,26,0.08);">
-            <p style="margin:0 0 12px 0;font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:#8b735f;">Private reading instrument</p>
+            <p style="margin:0 0 12px 0;font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:#8b735f;">Reading instrument</p>
             <h1 style="margin:0 0 12px 0;font-family:'Source Serif 4',Georgia,serif;font-size:40px;line-height:1;color:#1d1612;">
               ${brandName}
             </h1>

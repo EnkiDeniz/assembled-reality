@@ -20,7 +20,7 @@ import {
 } from "../lib/annotations";
 import { EMPTY_READER_ANNOTATIONS } from "../lib/reader-store";
 import { clearBrowserSelection, getSelectionAnchor } from "../lib/selection";
-import { clearUnlockState, saveReaderPreferences } from "../lib/storage";
+import { saveReaderPreferences } from "../lib/storage";
 
 const TEXT_SIZE_LABELS = {
   small: "Small",
@@ -80,12 +80,13 @@ export default function ReaderShell({
   setPreferences,
   initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
   initialReadingProgress = null,
-  aggregateAnnotations: initialAggregateAnnotations = EMPTY_READER_ANNOTATIONS,
   profile = null,
   sessionUser = null,
   getReceiptsConnection = null,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
+  sevenTextProvider = null,
+  sevenVoiceProvider = null,
 }) {
   const initialHash =
     typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
@@ -102,25 +103,9 @@ export default function ReaderShell({
       ? initialReadingProgress.progressPercent / 100
       : 0,
   );
-  const [aggregateAnnotations, setAggregateAnnotations] = useState(
-    () => initialAggregateAnnotations || EMPTY_READER_ANNOTATIONS,
-  );
-  const [aggregateAnnotationsStatus, setAggregateAnnotationsStatus] = useState(() => ({
-    state:
-      initialAggregateAnnotations &&
-      [
-        initialAggregateAnnotations.bookmarks?.length,
-        initialAggregateAnnotations.highlights?.length,
-        initialAggregateAnnotations.notes?.length,
-      ].some(Boolean)
-        ? "ready"
-        : "idle",
-    error: "",
-  }));
   const [readerAnnotations, setReaderAnnotations] = useState(
     () => initialReaderAnnotations || EMPTY_READER_ANNOTATIONS,
   );
-  const [marksMode, setMarksMode] = useState("mine");
   const [selectionState, setSelectionState] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [selectionNotice, setSelectionNotice] = useState("");
@@ -265,8 +250,7 @@ export default function ReaderShell({
     sessionUser?.email ||
     "Reader";
   const memberEmail = sessionUser?.email || "";
-  const membershipLabel =
-    profile?.cohort === "FOUNDING" ? "Founding reader" : "Private beta member";
+  const membershipLabel = "Reader";
   const receiptsStatusLabel =
     getReceiptsConnection?.status === "CONNECTED"
       ? "GetReceipts connected"
@@ -274,40 +258,30 @@ export default function ReaderShell({
   const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
   const hasFloatingPanel = tocOpen || appearanceOpen || marksOpen || sevenOpen || memberMenuOpen;
-  const visibleAnnotations =
-    marksMode === "seven" && profile?.canViewSeven
-      ? aggregateAnnotations || EMPTY_READER_ANNOTATIONS
-      : readerAnnotations;
-  const sharedMarksLoading =
-    marksMode === "seven" && aggregateAnnotationsStatus.state === "loading";
-  const sharedMarksError =
-    marksMode === "seven" && aggregateAnnotationsStatus.state === "error"
-      ? aggregateAnnotationsStatus.error
-      : "";
   const sortedBookmarks = useMemo(
     () =>
-      visibleAnnotations.bookmarks.toSorted(
+      readerAnnotations.bookmarks.toSorted(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
       ),
-    [visibleAnnotations.bookmarks],
+    [readerAnnotations.bookmarks],
   );
   const sortedHighlights = useMemo(
     () =>
-      visibleAnnotations.highlights.toSorted(
+      readerAnnotations.highlights.toSorted(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
       ),
-    [visibleAnnotations.highlights],
+    [readerAnnotations.highlights],
   );
   const sortedNotes = useMemo(
     () =>
-      visibleAnnotations.notes.toSorted(
+      readerAnnotations.notes.toSorted(
         (left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
       ),
-    [visibleAnnotations.notes],
+    [readerAnnotations.notes],
   );
   const marksByBlock = useMemo(
-    () => getRenderableMarksByBlock(visibleAnnotations),
-    [visibleAnnotations],
+    () => getRenderableMarksByBlock(readerAnnotations),
+    [readerAnnotations],
   );
 
   const clearFocusState = useCallback(() => {
@@ -377,7 +351,6 @@ export default function ReaderShell({
   }, []);
 
   const handleSignOut = useCallback(() => {
-    clearUnlockState();
     signOut({ callbackUrl: "/" });
   }, []);
 
@@ -518,54 +491,6 @@ export default function ReaderShell({
     window.addEventListener("keydown", handleReaderKeys);
     return () => window.removeEventListener("keydown", handleReaderKeys);
   }, [jumpTo, nextEntry, previousEntry]);
-
-  useEffect(() => {
-    if (marksMode !== "seven" || !profile?.canViewSeven) {
-      return undefined;
-    }
-
-    if (aggregateAnnotationsStatus.state === "loading" || aggregateAnnotationsStatus.state === "ready") {
-      return undefined;
-    }
-
-    const controller = new AbortController();
-    let active = true;
-
-    setAggregateAnnotationsStatus({
-      state: "loading",
-      error: "",
-    });
-
-    fetch("/api/reader/aggregate", { signal: controller.signal })
-      .then(async (response) => {
-        const payload = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(payload?.error || "Could not load collected marks.");
-        }
-
-        if (!active) return;
-
-        setAggregateAnnotations(payload?.annotations || EMPTY_READER_ANNOTATIONS);
-        setAggregateAnnotationsStatus({
-          state: "ready",
-          error: "",
-        });
-      })
-      .catch((error) => {
-        if (!active || controller.signal.aborted) return;
-
-        setAggregateAnnotationsStatus({
-          state: "error",
-          error: error instanceof Error ? error.message : "Could not load collected marks.",
-        });
-      });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [aggregateAnnotationsStatus.state, marksMode, profile?.canViewSeven]);
 
   useEffect(() => {
     const syncSelection = () => {
@@ -755,7 +680,7 @@ export default function ReaderShell({
 
   return (
     <div
-      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${hasFloatingPanel ? "has-floating-panel" : ""}`}
+      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${hasFloatingPanel ? "has-floating-panel" : ""} ${sevenOpen ? "has-seven-open" : ""}`}
       data-theme={preferences.theme}
     >
       <header className="reader-topbar">
@@ -793,7 +718,7 @@ export default function ReaderShell({
             </button>
             <button
               type="button"
-              className={`reader-chrome-button ${sevenOpen ? "is-active" : ""}`}
+              className={`reader-chrome-button reader-chrome-button--seven ${sevenOpen ? "is-active" : ""}`}
               onClick={toggleSevenPanel}
               aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
               title={sevenOpen ? "Close Seven" : "Open Seven"}
@@ -801,7 +726,7 @@ export default function ReaderShell({
               <span className="reader-button-icon">
                 <SevenIcon />
               </span>
-              <span>Seven</span>
+              <span>{sevenOpen ? "Close Seven" : "Ask Seven"}</span>
             </button>
             <button
               type="button"
@@ -978,14 +903,9 @@ export default function ReaderShell({
         open={marksOpen}
         currentLabel={currentLabel}
         progressPercent={progressPercent}
-        mode={marksMode}
-        canViewSeven={Boolean(profile?.canViewSeven)}
-        isLoadingSharedMarks={sharedMarksLoading}
-        sharedMarksError={sharedMarksError}
         bookmarks={sortedBookmarks}
         highlights={sortedHighlights}
         notes={sortedNotes}
-        onChangeMode={setMarksMode}
         onClose={() => setMarksOpen(false)}
         onJumpToBookmark={jumpToMark}
         onJumpToMark={jumpToMark}
@@ -1007,6 +927,8 @@ export default function ReaderShell({
         open={sevenOpen}
         textEnabled={sevenTextEnabled}
         voiceEnabled={sevenVoiceEnabled}
+        textProvider={sevenTextProvider}
+        preferredVoiceProvider={sevenVoiceProvider}
         documentData={documentData}
         activeSlug={activeSlug}
         currentLabel={currentLabel}
@@ -1022,7 +944,7 @@ export default function ReaderShell({
               data-section-title="Beginning"
               className={`reader-beginning ${focusedSectionSlug === "beginning" ? "is-focused-source" : ""}`}
             >
-              <p className="reader-beginning__eyebrow">Private reading instrument</p>
+              <p className="reader-beginning__eyebrow">Reading instrument</p>
               <h1 className="reader-beginning__title">{documentData.title}</h1>
               <p className="reader-beginning__subtitle">{documentData.subtitle}</p>
               <MarkdownRenderer
