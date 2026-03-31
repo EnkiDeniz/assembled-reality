@@ -3,6 +3,8 @@ import { appEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
 
+const CHAT_UNAVAILABLE_MESSAGE = "Seven's chat is unavailable right now.";
+
 function buildInstruction(mode) {
   if (mode === "summary") {
     return [
@@ -52,7 +54,7 @@ export async function POST(request) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Seven's chat is unavailable right now.",
+        error: CHAT_UNAVAILABLE_MESSAGE,
       },
       { status: 503 },
     );
@@ -117,12 +119,13 @@ export async function POST(request) {
 
   const payload = await response.json();
   if (!response.ok) {
+    console.error("Seven chat request failed.", {
+      status: response.status,
+    });
     return NextResponse.json(
       {
         ok: false,
-        error:
-          payload?.error?.message ||
-          "OpenAI could not generate a Seven response right now.",
+        error: CHAT_UNAVAILABLE_MESSAGE,
       },
       { status: response.status },
     );

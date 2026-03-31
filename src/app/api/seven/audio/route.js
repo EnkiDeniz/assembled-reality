@@ -2,6 +2,8 @@ import { appEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
 
+const VOICE_UNAVAILABLE_MESSAGE = "Seven's voice is unavailable right now.";
+
 export async function POST(request) {
   const body = await request.json();
   const text = String(body?.text || "").trim();
@@ -46,15 +48,14 @@ export async function POST(request) {
     });
 
     if (!response.ok) {
-      const payload = await response.json().catch(() => null);
+      console.error("Seven voice request failed.", {
+        provider: "elevenlabs",
+        status: response.status,
+      });
       return Response.json(
         {
           ok: false,
-          error:
-            payload?.detail?.message ||
-            payload?.detail?.status ||
-            payload?.message ||
-            "ElevenLabs could not generate Seven's voice right now.",
+          error: VOICE_UNAVAILABLE_MESSAGE,
         },
         { status: response.status },
       );
@@ -73,7 +74,7 @@ export async function POST(request) {
     return Response.json(
       {
         ok: false,
-        error: "Seven's voice is unavailable right now.",
+        error: VOICE_UNAVAILABLE_MESSAGE,
       },
       { status: 503 },
     );
@@ -94,13 +95,14 @@ export async function POST(request) {
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => null);
+    console.error("Seven voice request failed.", {
+      provider: "openai",
+      status: response.status,
+    });
     return Response.json(
       {
         ok: false,
-        error:
-          payload?.error?.message ||
-          "OpenAI fallback voice could not generate Seven's audio right now.",
+        error: VOICE_UNAVAILABLE_MESSAGE,
       },
       { status: response.status },
     );
