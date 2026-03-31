@@ -1299,11 +1299,21 @@ a {
 .reader-seven__composer {
   display: grid;
   gap: 0.55rem;
-  padding: 0.75rem;
+  padding: 0.6rem;
   border: 1px solid var(--reader-border);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.44);
   box-shadow: 0 -10px 24px rgba(18, 16, 14, 0.05);
+}
+
+.reader-seven__composer.is-collapsed {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.reader-seven__composer.is-expanded {
+  grid-template-columns: 1fr;
 }
 
 .reader-shell[data-theme="dark"] .reader-seven__composer,
@@ -1322,13 +1332,20 @@ a {
 .reader-seven__composer-input {
   width: 100%;
   resize: none;
-  min-height: 3.7rem;
+  min-height: 3.2rem;
   max-height: 9rem;
   border: 1px solid var(--reader-border);
   border-radius: 1rem;
   padding: 0.8rem 0.9rem;
   background: rgba(255, 255, 255, 0.58);
   color: var(--reader-ink);
+}
+
+.reader-seven__composer.is-collapsed .reader-seven__composer-input {
+  min-height: 3rem;
+  max-height: 3rem;
+  overflow: hidden;
+  padding-block: 0.72rem;
 }
 
 .reader-shell[data-theme="dark"] .reader-seven__composer-input {
@@ -1340,6 +1357,10 @@ a {
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.reader-seven__composer.is-collapsed .reader-seven__composer-actions {
+  align-self: stretch;
 }
 
 .reader-seven__composer-note {
@@ -1365,6 +1386,10 @@ a {
 
 .reader-seven__send:disabled {
   opacity: 0.45;
+}
+
+.reader-seven__composer.is-collapsed .reader-seven__send {
+  min-width: 4.8rem;
 }
 
 .reader-marks__header {

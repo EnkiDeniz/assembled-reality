@@ -196,6 +196,7 @@ export default function SevenPanel({
   const audioSessionRef = useRef(0);
   const messageListRef = useRef(null);
   const composerInputRef = useRef(null);
+  const [composerActive, setComposerActive] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -236,21 +237,13 @@ export default function SevenPanel({
   const canListen = effectiveVoiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
   const sectionAudioActive = audioActive && audioState.sourceType === "section";
+  const hasMessages = messages.length > 0;
+  const composerExpanded = composerActive || draft.trim().length > 0;
 
   useEffect(() => {
     if (!messageListRef.current) return;
     messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
   }, [messages]);
-
-  useEffect(() => {
-    if (!open || !textEnabled || !composerInputRef.current) {
-      return;
-    }
-
-    window.setTimeout(() => {
-      composerInputRef.current?.focus();
-    }, 60);
-  }, [open, textEnabled]);
 
   const actionButtons = [
     effectiveVoiceEnabled
@@ -778,9 +771,11 @@ export default function SevenPanel({
 
       <div className="reader-seven__body">
         <div className="reader-seven__overview">
-          <div className="reader-seven__identity">
-            <p className="reader-seven__identity-preview">{sectionPreview || currentLabel}</p>
-          </div>
+          {!hasMessages ? (
+            <div className="reader-seven__identity">
+              <p className="reader-seven__identity-preview">{sectionPreview || currentLabel}</p>
+            </div>
+          ) : null}
 
           {showStatus ? (
             <p className="reader-seven__status" aria-live="polite">
@@ -870,7 +865,15 @@ export default function SevenPanel({
 
         {textEnabled ? (
           <form
-            className="reader-seven__composer"
+            className={`reader-seven__composer ${
+              composerExpanded ? "is-expanded" : "is-collapsed"
+            }`}
+            onFocus={() => setComposerActive(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setComposerActive(false);
+              }
+            }}
             onSubmit={(event) => {
               event.preventDefault();
               const question = draft.trim();
@@ -889,7 +892,7 @@ export default function SevenPanel({
               ref={composerInputRef}
               className="reader-seven__composer-input"
               aria-label="Ask Seven about this section"
-              rows={2}
+              rows={composerExpanded ? 3 : 1}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
