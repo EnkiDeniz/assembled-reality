@@ -44,7 +44,6 @@ export default function SelectionMenu({
         <div className="selection-menu__composer">
           <div className="selection-menu__sheet-header">
             <div>
-              <p className="selection-menu__eyebrow">Notebook</p>
               <h3 className="selection-menu__title">Add Note</h3>
             </div>
             <button
@@ -65,7 +64,7 @@ export default function SelectionMenu({
             className="selection-menu__textarea"
             value={noteDraft}
             onChange={(event) => onChangeNoteDraft(event.target.value)}
-            placeholder="Capture what this passage is doing, not just what it says…"
+            placeholder="Add a note..."
             rows={4}
           />
           <div className="selection-menu__composer-actions">

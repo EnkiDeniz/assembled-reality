@@ -1538,6 +1538,10 @@ a {
   gap: 0.75rem;
 }
 
+.reader-mark-card__actions--end {
+  justify-content: flex-end;
+}
+
 .reader-mark-card__secondary,
 .reader-mark-card__delete,
 .reader-note-editor__button {
@@ -3059,7 +3063,7 @@ a {
 .reader-marks__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
   padding: 0.95rem 1.1rem 1.1rem;
   border: 1px solid var(--reader-border);

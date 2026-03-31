@@ -235,7 +235,6 @@ export default function SevenPanel({
   const effectiveVoiceEnabled = voiceEnabled || browserSpeechEnabled;
   const canListen = effectiveVoiceEnabled && speechChunks.length > 0;
   const audioActive = audioState.status !== "idle";
-  const hasConversation = messages.length > 0;
   const sectionAudioActive = audioActive && audioState.sourceType === "section";
 
   useEffect(() => {
@@ -780,10 +779,7 @@ export default function SevenPanel({
       <div className="reader-seven__body">
         <div className="reader-seven__overview">
           <div className="reader-seven__identity">
-            <p className="reader-seven__identity-eyebrow">Section Snapshot</p>
-            <p className="reader-seven__identity-preview">
-              {sectionPreview || currentLabel}
-            </p>
+            <p className="reader-seven__identity-preview">{sectionPreview || currentLabel}</p>
           </div>
 
           {showStatus ? (
@@ -794,7 +790,6 @@ export default function SevenPanel({
 
           {actionButtons.length ? (
             <div className="reader-seven__section-tools">
-              <p className="reader-seven__section-tools-label">Quick Actions</p>
               <div className="reader-seven__actions">
                 {actionButtons.map((action) => (
                   <button
@@ -816,20 +811,6 @@ export default function SevenPanel({
         </div>
 
         <div ref={messageListRef} className="reader-seven__messages">
-          {!hasConversation ? (
-            <div className="reader-seven__empty">
-              <div>
-                <p className="reader-seven__empty-title">Read with Seven.</p>
-                <p className="reader-seven__empty-copy">
-                  Ask directly about this section or use the quick actions above.
-                </p>
-                <p className="reader-seven__empty-note">
-                  Reply audio appears under each Seven answer when voice is available.
-                </p>
-              </div>
-            </div>
-          ) : null}
-
           {messages.map((message) => (
             <article key={message.id} className={`reader-seven__message is-${message.role}`}>
               <div className="reader-seven__message-meta">
@@ -838,7 +819,6 @@ export default function SevenPanel({
               <p className="reader-seven__message-text">{message.content}</p>
               {message.role === "assistant" ? (
                 <div className="reader-seven__message-actions">
-                  <p className="reader-seven__message-audio-label">Reply audio</p>
                   <button
                     type="button"
                     className={`reader-seven__reply-listen ${
@@ -928,7 +908,7 @@ export default function SevenPanel({
                 });
                 setDraft("");
               }}
-              placeholder="Ask Seven about this section..."
+              placeholder="Ask Seven..."
               disabled={!textEnabled}
             />
             <div className="reader-seven__composer-actions">
@@ -943,7 +923,7 @@ export default function SevenPanel({
           </form>
         ) : (
           <div className="reader-seven__disabled">
-            Seven's chat is unavailable right now. Voice guidance can still work when the provider or device voice is available.
+            Chat unavailable.
           </div>
         )}
       </div>

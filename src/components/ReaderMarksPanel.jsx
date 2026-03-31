@@ -63,8 +63,7 @@ function BookmarkItem({ bookmark, onJump, onDelete, allowMutations }) {
           <span className="reader-mark-card__excerpt">{bookmark.excerpt}</span>
         ) : null}
       </button>
-      <div className="reader-mark-card__actions">
-        <span className="reader-mark-card__hint">Saved section marker</span>
+      <div className="reader-mark-card__actions reader-mark-card__actions--end">
         {allowMutations ? (
           <button
             type="button"
@@ -276,7 +275,7 @@ export default function ReaderMarksPanel({
       <div className="reader-marks__body">
         <SectionScopeToggle scope={scope} onChange={onScopeChange} />
 
-        <MarkSection title="Notes" count={notes.length} empty="No notes in this notebook view yet.">
+        <MarkSection title="Notes" count={notes.length} empty="No notes.">
           <div className="reader-marks__list">
             {notes.map((note) => (
               <NoteItem
@@ -296,7 +295,7 @@ export default function ReaderMarksPanel({
         <MarkSection
           title="Highlights"
           count={highlights.length}
-          empty="No highlights in this notebook view yet."
+          empty="No highlights."
         >
           <div className="reader-marks__list">
             {highlights.map((highlight) => (
@@ -313,7 +312,7 @@ export default function ReaderMarksPanel({
           </div>
         </MarkSection>
 
-        <MarkSection title="Bookmarks" count={bookmarks.length} empty="No bookmarks in this notebook view yet.">
+        <MarkSection title="Bookmarks" count={bookmarks.length} empty="No bookmarks.">
           <div className="reader-marks__list">
             {bookmarks.map((bookmark) => (
               <BookmarkItem
@@ -329,12 +328,6 @@ export default function ReaderMarksPanel({
       </div>
 
       <div className="reader-marks__footer">
-        <div className="reader-marks__footer-copy">
-          <p className="reader-marks__footer-title">Create Receipt</p>
-          <p className="reader-marks__footer-note">
-            Turn selected notes and highlights into a reading receipt.
-          </p>
-        </div>
         <button
           type="button"
           className="reader-seven__send reader-seven__send--wide"
@@ -382,7 +375,7 @@ export default function ReaderMarksPanel({
                 rows={4}
                 value={receiptLearned}
                 onChange={(event) => onChangeReceiptLearned(event.target.value)}
-                placeholder="Capture the shift in understanding that came out of this reading…"
+                placeholder="Optional"
               />
             </label>
 
