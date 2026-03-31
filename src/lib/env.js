@@ -43,6 +43,7 @@ function getOpenAiApiKey() {
 export const appEnv = {
   siteUrl: getDefaultSiteUrl(),
   authSecret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "",
+  bootstrapCode: normalizeSecret(process.env.READER_BOOTSTRAP_CODE) || "hineni",
   emailFrom:
     normalizeSecret(process.env.NEXTAUTH_EMAIL_FROM) ||
     normalizeSecret(process.env.EMAIL_FROM) ||
