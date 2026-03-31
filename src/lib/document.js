@@ -10,30 +10,31 @@ const APPENDIX_DOCUMENTS = [
     segments: ["docs", "operator-sentences.md"],
   },
 ];
-const DOCUMENT_URLS = {
+const DOCUMENT_PATHS = {
   "content/assembled_reality_v07_final.md": new URL(
     "../../content/assembled_reality_v07_final.md",
     import.meta.url,
-  ),
-  "docs/operator-sentences.md": new URL("../../docs/operator-sentences.md", import.meta.url),
+  ).pathname,
+  "docs/operator-sentences.md": new URL("../../docs/operator-sentences.md", import.meta.url)
+    .pathname,
 };
 
 function normalizeMarkdown(markdown) {
   return markdown.replace(/\r\n/g, "\n").trim();
 }
 
-function resolveContentUrl(...segments) {
+function resolveContentPath(...segments) {
   const key = segments.join("/");
-  const fileUrl = DOCUMENT_URLS[key];
-  if (!fileUrl) {
+  const filePath = DOCUMENT_PATHS[key];
+  if (!filePath) {
     throw new Error(`Unsupported document path: ${key}`);
   }
 
-  return fileUrl;
+  return filePath;
 }
 
 function readMarkdownFile(...segments) {
-  return fs.readFileSync(resolveContentUrl(...segments), "utf8");
+  return fs.readFileSync(resolveContentPath(...segments), "utf8");
 }
 
 function stripLeadingTitle(markdown) {
@@ -47,8 +48,8 @@ function buildAppendixMarkdown(baseDocument = "") {
       return [];
     }
 
-    const fileUrl = resolveContentUrl(...appendix.segments);
-    if (!fs.existsSync(fileUrl)) {
+    const filePath = resolveContentPath(...appendix.segments);
+    if (!fs.existsSync(filePath)) {
       return [];
     }
 
