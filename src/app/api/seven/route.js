@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { getParsedDocument } from "@/lib/document";
 import { appEnv } from "@/lib/env";
 import {
+  buildRelevantSectionsContext,
   buildSevenIssueMessage,
+  getReaderSection,
+  getSectionOutline,
   getSevenReasonCode,
   getSevenRetryAfterSeconds,
 } from "@/lib/seven";
@@ -23,6 +27,7 @@ function buildInstruction(mode) {
   if (mode === "question") {
     return [
       "Answer the user's question using the current section as the main anchor.",
+      "Bring in other relevant parts of the document when they help answer the question.",
       "If you need to infer beyond the provided text, say that you are inferring.",
       "Keep the answer under 220 words unless the question truly needs more.",
     ].join(" ");
@@ -78,6 +83,7 @@ export async function POST(request) {
   const {
     mode = "explain",
     question = "",
+    activeSlug = "",
     documentTitle = "Assembled Reality",
     documentSubtitle = "",
     introMarkdown = "",
@@ -87,23 +93,57 @@ export async function POST(request) {
     currentSectionMarkdown = "",
   } = body || {};
 
+  let resolvedDocumentTitle = documentTitle;
+  let resolvedDocumentSubtitle = documentSubtitle;
+  let resolvedIntroMarkdown = introMarkdown;
+  let resolvedSectionOutline = sectionOutline;
+  let resolvedCurrentLabel = currentLabel;
+  let resolvedCurrentSectionTitle = currentSectionTitle;
+  let resolvedCurrentSectionMarkdown = currentSectionMarkdown;
+  let relevantSectionsContext = "";
+
+  if (activeSlug) {
+    const documentData = getParsedDocument();
+    const currentSection = getReaderSection(documentData, activeSlug);
+
+    resolvedDocumentTitle = documentData?.title || resolvedDocumentTitle;
+    resolvedDocumentSubtitle = documentData?.subtitle || resolvedDocumentSubtitle;
+    resolvedIntroMarkdown = documentData?.introMarkdown || resolvedIntroMarkdown;
+    resolvedSectionOutline = getSectionOutline(documentData) || resolvedSectionOutline;
+    resolvedCurrentLabel = currentSection.label || resolvedCurrentLabel;
+    resolvedCurrentSectionTitle = currentSection.title || resolvedCurrentSectionTitle;
+    resolvedCurrentSectionMarkdown = currentSection.markdown || resolvedCurrentSectionMarkdown;
+
+    if (mode === "question" && question.trim()) {
+      relevantSectionsContext = buildRelevantSectionsContext({
+        documentData,
+        activeSlug,
+        question,
+      });
+    }
+  }
+
   const systemPrompt = [
     "You are Seven, the reading guide inside Assembled Reality.",
     "Your job is to explain the authored document clearly, calmly, and concretely.",
     "Treat the text as a document to interpret, not as unquestionable fact.",
     "Stay close to the provided context and do not invent claims, sections, or authorities.",
+    "When relevant context from elsewhere in the manuscript is provided, use it explicitly rather than guessing.",
     "When the writing is metaphorical, translate it into plain language without mocking it.",
     "Do not use markdown tables.",
     "Prefer language that works both on screen and when spoken aloud.",
   ].join(" ");
 
   const userPrompt = [
-    `Document: ${documentTitle}`,
-    documentSubtitle ? `Subtitle: ${documentSubtitle}` : "",
-    `Current section: ${currentLabel || currentSectionTitle}`,
-    sectionOutline ? `Section outline:\n${sectionOutline}` : "",
-    introMarkdown ? `Opening context:\n${introMarkdown}` : "",
-    `Current section markdown:\n${currentSectionMarkdown}`,
+    `Document: ${resolvedDocumentTitle}`,
+    resolvedDocumentSubtitle ? `Subtitle: ${resolvedDocumentSubtitle}` : "",
+    `Current section: ${resolvedCurrentLabel || resolvedCurrentSectionTitle}`,
+    resolvedSectionOutline ? `Section outline:\n${resolvedSectionOutline}` : "",
+    resolvedIntroMarkdown ? `Opening context:\n${resolvedIntroMarkdown}` : "",
+    `Current section markdown:\n${resolvedCurrentSectionMarkdown}`,
+    relevantSectionsContext
+      ? `Relevant sections from elsewhere in the document:\n${relevantSectionsContext}`
+      : "",
     `Instruction: ${buildInstruction(mode)}`,
     question ? `User question: ${question}` : "",
   ]

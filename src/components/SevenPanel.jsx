@@ -748,6 +748,7 @@ export default function SevenPanel({
         body: JSON.stringify({
           mode,
           question,
+          activeSlug,
           documentTitle: documentData.title,
           documentSubtitle: documentData.subtitle,
           introMarkdown: documentData.introMarkdown,

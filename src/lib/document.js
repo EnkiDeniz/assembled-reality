@@ -29,25 +29,58 @@ function stripLeadingTitle(markdown) {
   return normalizeMarkdown(markdown).replace(/^#\s+.+\n+/, "").trim();
 }
 
-function buildAppendixMarkdown(baseDocument = "") {
-  return APPENDIX_DOCUMENTS.flatMap((appendix) => {
-    const heading = `## ${appendix.number} · ${appendix.title}`;
-    if (baseDocument.includes(heading)) {
-      return [];
+function readAppendixBody(appendix) {
+  const filePath = path.join(process.cwd(), ...appendix.segments);
+  if (!fs.existsSync(filePath)) {
+    return "";
+  }
+
+  return stripLeadingTitle(readMarkdownFile(...appendix.segments));
+}
+
+function buildToc(sections) {
+  return [
+    { slug: "beginning", label: "Beginning", title: "Beginning", number: null },
+    ...sections.map((section) => ({
+      slug: section.slug,
+      label: `${section.number} · ${section.title}`,
+      title: section.title,
+      number: section.number,
+    })),
+  ];
+}
+
+function applyAuthoritativeAppendices(documentData) {
+  const sections = [...(documentData?.sections || [])];
+
+  APPENDIX_DOCUMENTS.forEach((appendix) => {
+    const markdown = readAppendixBody(appendix);
+    if (!markdown) return;
+
+    const replacement = {
+      number: appendix.number,
+      title: appendix.title,
+      slug: slugify(appendix.title),
+      markdown,
+      heading: `## ${appendix.number} · ${appendix.title}`,
+    };
+
+    const existingIndex = sections.findIndex((section) => section.number === appendix.number);
+    if (existingIndex === -1) {
+      sections.push(replacement);
+      return;
     }
 
-    const filePath = path.join(process.cwd(), ...appendix.segments);
-    if (!fs.existsSync(filePath)) {
-      return [];
-    }
+    sections[existingIndex] = replacement;
+  });
 
-    const body = stripLeadingTitle(readMarkdownFile(...appendix.segments));
-    if (!body) {
-      return [];
-    }
+  sections.sort((left, right) => Number(left.number) - Number(right.number));
 
-    return [`${heading}\n\n${body}`];
-  }).join("\n\n---\n\n");
+  return {
+    ...documentData,
+    sections,
+    toc: buildToc(sections),
+  };
 }
 
 export function parseDocument(markdown) {
@@ -80,28 +113,16 @@ export function parseDocument(markdown) {
     };
   });
 
-  const toc = [
-    { slug: "beginning", label: "Beginning", title: "Beginning", number: null },
-    ...sections.map((section) => ({
-      slug: section.slug,
-      label: `${section.number} · ${section.title}`,
-      title: section.title,
-      number: section.number,
-    })),
-  ];
-
   return {
     title,
     subtitle,
     introMarkdown,
     sections,
-    toc,
+    toc: buildToc(sections),
   };
 }
 
 export const getParsedDocument = cache(() => {
   const baseDocument = normalizeMarkdown(readMarkdownFile("content", "assembled_reality_v07_final.md"));
-  const appendixDocument = buildAppendixMarkdown(baseDocument);
-  const raw = [baseDocument, appendixDocument].filter(Boolean).join("\n\n---\n\n");
-  return parseDocument(raw);
+  return applyAuthoritativeAppendices(parseDocument(baseDocument));
 });

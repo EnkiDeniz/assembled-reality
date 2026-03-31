@@ -1,4 +1,69 @@
 const SPEECH_CHUNK_LIMIT = 3600;
+const SEARCH_STOP_WORDS = new Set([
+  "about",
+  "after",
+  "again",
+  "all",
+  "also",
+  "and",
+  "any",
+  "are",
+  "because",
+  "been",
+  "before",
+  "being",
+  "between",
+  "both",
+  "but",
+  "can",
+  "could",
+  "does",
+  "doing",
+  "down",
+  "each",
+  "even",
+  "from",
+  "had",
+  "has",
+  "have",
+  "here",
+  "into",
+  "just",
+  "more",
+  "most",
+  "much",
+  "must",
+  "only",
+  "other",
+  "ought",
+  "over",
+  "same",
+  "should",
+  "some",
+  "such",
+  "than",
+  "that",
+  "their",
+  "them",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "those",
+  "through",
+  "under",
+  "until",
+  "very",
+  "what",
+  "when",
+  "where",
+  "which",
+  "while",
+  "with",
+  "would",
+  "your",
+]);
 const SEVEN_PROVIDER_LABELS = {
   openai: "OpenAI",
   elevenlabs: "ElevenLabs",
@@ -311,4 +376,227 @@ export function getSectionOutline(documentData) {
   return (documentData?.sections || [])
     .map((section) => `${section.number}. ${section.title}`)
     .join("\n");
+}
+
+function normalizeSearchText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\r\n/g, "\n")
+    .replace(/[`*_>#~[\]()|]/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeSearchText(text) {
+  const normalized = normalizeSearchText(text);
+  if (!normalized) return [];
+
+  return [...new Set(normalized.split(" "))].filter(
+    (token) => token.length > 2 && !SEARCH_STOP_WORDS.has(token),
+  );
+}
+
+function countTokenMatches(text, tokens) {
+  if (!tokens.length) return 0;
+
+  const normalized = normalizeSearchText(text);
+  if (!normalized) return 0;
+
+  return tokens.reduce((count, token) => count + (normalized.includes(token) ? 1 : 0), 0);
+}
+
+function splitMarkdownIntoPassages(markdown, maxLength = 680) {
+  const paragraphs = String(markdown || "")
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) {
+    return [];
+  }
+
+  const passages = [];
+  let current = "";
+
+  paragraphs.forEach((paragraph) => {
+    const next = current ? `${current}\n\n${paragraph}` : paragraph;
+    if (next.length <= maxLength) {
+      current = next;
+      return;
+    }
+
+    if (current) {
+      passages.push(current);
+    }
+
+    if (paragraph.length <= maxLength) {
+      current = paragraph;
+      return;
+    }
+
+    for (let cursor = 0; cursor < paragraph.length; cursor += maxLength) {
+      passages.push(paragraph.slice(cursor, cursor + maxLength).trim());
+    }
+    current = "";
+  });
+
+  if (current) {
+    passages.push(current);
+  }
+
+  return passages;
+}
+
+function trimExcerpt(text, maxLength = 960) {
+  const normalized = String(text || "").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength).trimEnd()}…`;
+}
+
+function buildSectionExcerpt(section, tokens) {
+  const passages = splitMarkdownIntoPassages(section.markdown);
+  if (passages.length === 0) {
+    return "";
+  }
+
+  const scored = passages.map((passage, index) => ({
+    index,
+    passage,
+    score: countTokenMatches(passage, tokens) + (index === 0 ? 0.35 : 0),
+  }));
+
+  const selected = (
+    scored.some((entry) => entry.score > 0)
+      ? [...scored].sort((left, right) => right.score - left.score || left.index - right.index)
+      : scored
+  )
+    .slice(0, 2)
+    .sort((left, right) => left.index - right.index)
+    .map((entry) => entry.passage)
+    .join("\n\n");
+
+  return trimExcerpt(selected);
+}
+
+function isBackwardLookingQuestion(normalizedQuestion) {
+  return (
+    normalizedQuestion.includes("before") ||
+    normalizedQuestion.includes("earlier") ||
+    normalizedQuestion.includes("previous") ||
+    normalizedQuestion.includes("came before")
+  );
+}
+
+function isForwardLookingQuestion(normalizedQuestion) {
+  return (
+    normalizedQuestion.includes("after") ||
+    normalizedQuestion.includes("later") ||
+    normalizedQuestion.includes("ahead") ||
+    normalizedQuestion.includes("comes next")
+  );
+}
+
+function scoreSectionForQuestion({
+  section,
+  tokens,
+  normalizedQuestion,
+  activeSlug,
+  sectionIndex,
+  activeIndex,
+}) {
+  const titleMatches = countTokenMatches(section.title, tokens);
+  const labelMatches = countTokenMatches(section.label, tokens);
+  const bodyMatches = countTokenMatches(section.markdown, tokens);
+
+  let score = titleMatches * 8 + labelMatches * 5 + bodyMatches * 2;
+
+  if (section.slug === activeSlug) {
+    score += 10;
+  }
+
+  if (normalizedQuestion.includes("appendix") && /appendix/i.test(section.title)) {
+    score += 8;
+  }
+
+  if (activeIndex >= 0) {
+    const distance = Math.abs(sectionIndex - activeIndex);
+    if (distance > 0) {
+      score += Math.max(0, 2.5 - distance * 0.25);
+    }
+
+    if (isBackwardLookingQuestion(normalizedQuestion) && sectionIndex < activeIndex) {
+      score += 4;
+    }
+
+    if (isForwardLookingQuestion(normalizedQuestion) && sectionIndex > activeIndex) {
+      score += 4;
+    }
+  }
+
+  return score;
+}
+
+export function getDocumentSections(documentData) {
+  return [
+    {
+      slug: "beginning",
+      number: "0",
+      title: "Beginning",
+      label: "Beginning",
+      markdown: documentData?.introMarkdown || "",
+    },
+    ...(documentData?.sections || []).map((section) => ({
+      slug: section.slug,
+      number: section.number,
+      title: section.title,
+      label: `${section.number} · ${section.title}`,
+      markdown: section.markdown,
+    })),
+  ].filter((section) => section.markdown);
+}
+
+export function getRelevantSectionsForQuestion({
+  documentData,
+  activeSlug,
+  question = "",
+  maxSections = 4,
+} = {}) {
+  const tokens = tokenizeSearchText(question);
+  const normalizedQuestion = normalizeSearchText(question);
+  const sections = getDocumentSections(documentData);
+  const activeIndex = sections.findIndex((section) => section.slug === activeSlug);
+
+  return sections
+    .map((section, sectionIndex) => ({
+      ...section,
+      score: scoreSectionForQuestion({
+        section,
+        tokens,
+        normalizedQuestion,
+        activeSlug,
+        sectionIndex,
+        activeIndex,
+      }),
+      excerpt: buildSectionExcerpt(section, tokens),
+    }))
+    .filter((section) => section.slug !== activeSlug)
+    .filter((section) => section.score > 0 && section.excerpt)
+    .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label))
+    .slice(0, maxSections);
+}
+
+export function buildRelevantSectionsContext(options) {
+  const sections = getRelevantSectionsForQuestion(options);
+  if (sections.length === 0) {
+    return "";
+  }
+
+  return sections
+    .map((section) => [`${section.label}`, section.excerpt].filter(Boolean).join("\n"))
+    .join("\n\n---\n\n");
 }
