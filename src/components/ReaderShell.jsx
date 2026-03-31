@@ -71,20 +71,7 @@ function MarksIcon() {
 }
 
 function SevenIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M8.1 6.35h4.8v1.35l-2.35 2.1c-.72.64-1.08 1.14-1.08 1.92v.26"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="9.45" cy="14.55" r="0.7" fill="currentColor" />
-    </svg>
-  );
+  return <span className="reader-seven-icon" aria-hidden="true">7</span>;
 }
 
 export default function ReaderShell({
@@ -355,6 +342,38 @@ export default function ReaderShell({
     setSevenOpen(false);
     setMemberMenuOpen(false);
     setAppearanceOpen(true);
+  }, []);
+
+  const openContentsPanel = useCallback(() => {
+    setAppearanceOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setTocOpen(true);
+  }, []);
+
+  const toggleMarksPanel = useCallback(() => {
+    setTocOpen(false);
+    setAppearanceOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setMarksOpen((current) => !current);
+  }, []);
+
+  const toggleSevenPanel = useCallback(() => {
+    setTocOpen(false);
+    setAppearanceOpen(false);
+    setMarksOpen(false);
+    setMemberMenuOpen(false);
+    setSevenOpen((current) => !current);
+  }, []);
+
+  const toggleAppearancePanel = useCallback(() => {
+    setTocOpen(false);
+    setMarksOpen(false);
+    setSevenOpen(false);
+    setMemberMenuOpen(false);
+    setAppearanceOpen((current) => !current);
   }, []);
 
   const handleSignOut = useCallback(() => {
@@ -740,29 +759,81 @@ export default function ReaderShell({
       data-theme={preferences.theme}
     >
       <header className="reader-topbar">
-        <button
-          type="button"
-          className="reader-chrome-button"
-          onClick={() => {
-            setAppearanceOpen(false);
-            setMarksOpen(false);
-            setSevenOpen(false);
-            setMemberMenuOpen(false);
-            setTocOpen(true);
-          }}
-        >
-          <span className="reader-button-icon">☰</span>
-          <span>Contents</span>
-        </button>
-        <div className="reader-topbar__center">
-          <div className="reader-topbar__title">{documentData.title}</div>
-          <div className="reader-topbar__section">{currentLabel}</div>
+        <div className="reader-topbar__primary">
+          <button type="button" className="reader-chrome-button" onClick={openContentsPanel}>
+            <span className="reader-button-icon">☰</span>
+            <span>Contents</span>
+          </button>
+          <div className="reader-topbar__center">
+            <div className="reader-topbar__title">{documentData.title}</div>
+            <div className="reader-topbar__section">{currentLabel}</div>
+          </div>
+          <div className="reader-topbar__actions">
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
+              data-mobile-hidden="true"
+              onClick={handleToggleBookmark}
+              aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
+              title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
+            >
+              <span className="reader-button-icon">
+                <BookmarkIcon filled={currentBookmarked} />
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
+              data-mobile-hidden="true"
+              onClick={toggleMarksPanel}
+              aria-label={marksOpen ? "Close marks" : "Open marks"}
+              title={marksOpen ? "Close marks" : "Open marks"}
+            >
+              <span className="reader-button-icon">
+                <MarksIcon />
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button ${sevenOpen ? "is-active" : ""}`}
+              onClick={toggleSevenPanel}
+              aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
+              title={sevenOpen ? "Close Seven" : "Open Seven"}
+            >
+              <span className="reader-button-icon">
+                <SevenIcon />
+              </span>
+              <span>Seven</span>
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button reader-chrome-button--icon ${appearanceOpen ? "is-active" : ""}`}
+              data-mobile-hidden="true"
+              onClick={toggleAppearancePanel}
+              aria-label="Reader appearance"
+              title="Reader appearance"
+            >
+              Aa
+            </button>
+            <button
+              type="button"
+              className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
+              data-mobile-hidden="true"
+              onClick={openMemberMenu}
+              aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
+              aria-expanded={memberMenuOpen}
+            >
+              <span className="reader-member-chip" aria-hidden="true">
+                {memberInitial}
+              </span>
+              <span>{memberName}</span>
+            </button>
+          </div>
         </div>
-        <div className="reader-topbar__actions">
+        <div className="reader-topbar__utility" aria-label="Reader tools">
           <button
             type="button"
             className={`reader-chrome-button reader-chrome-button--icon ${currentBookmarked ? "is-active" : ""}`}
-            data-mobile-hidden="true"
             onClick={handleToggleBookmark}
             aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
             title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
@@ -774,14 +845,7 @@ export default function ReaderShell({
           <button
             type="button"
             className={`reader-chrome-button reader-chrome-button--icon ${marksOpen ? "is-active" : ""}`}
-            data-mobile-hidden="true"
-            onClick={() => {
-              setTocOpen(false);
-              setAppearanceOpen(false);
-              setSevenOpen(false);
-              setMemberMenuOpen(false);
-              setMarksOpen((current) => !current);
-            }}
+            onClick={toggleMarksPanel}
             aria-label={marksOpen ? "Close marks" : "Open marks"}
             title={marksOpen ? "Close marks" : "Open marks"}
           >
@@ -791,49 +855,12 @@ export default function ReaderShell({
           </button>
           <button
             type="button"
-            className={`reader-chrome-button ${sevenOpen ? "is-active" : ""}`}
-            onClick={() => {
-              setTocOpen(false);
-              setAppearanceOpen(false);
-              setMarksOpen(false);
-              setMemberMenuOpen(false);
-              setSevenOpen((current) => !current);
-            }}
-            aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
-            title={sevenOpen ? "Close Seven" : "Open Seven"}
-          >
-            <span className="reader-button-icon">
-              <SevenIcon />
-            </span>
-            <span>Seven</span>
-          </button>
-          <button
-            type="button"
-            className="reader-chrome-button reader-chrome-button--icon"
-            data-mobile-hidden="true"
-            onClick={() => {
-              setTocOpen(false);
-              setMarksOpen(false);
-              setSevenOpen(false);
-              setMemberMenuOpen(false);
-              setAppearanceOpen((current) => !current);
-            }}
+            className={`reader-chrome-button reader-chrome-button--icon ${appearanceOpen ? "is-active" : ""}`}
+            onClick={toggleAppearancePanel}
             aria-label="Reader appearance"
+            title="Reader appearance"
           >
             Aa
-          </button>
-          <button
-            type="button"
-            className={`reader-chrome-button ${memberMenuOpen ? "is-active" : ""}`}
-            data-mobile-hidden="true"
-            onClick={openMemberMenu}
-            aria-label={memberMenuOpen ? "Close account menu" : "Open account menu"}
-            aria-expanded={memberMenuOpen}
-          >
-            <span className="reader-member-chip" aria-hidden="true">
-              {memberInitial}
-            </span>
-            <span>{memberName}</span>
           </button>
         </div>
       </header>
@@ -956,6 +983,18 @@ export default function ReaderShell({
               onClick={openSettingsPanel}
             >
               Reading Settings
+            </button>
+            <button
+              type="button"
+              className="reader-toc__utility-action"
+              onClick={handleCreateReceipt}
+              disabled={creatingReceipt}
+            >
+              {creatingReceipt
+                ? "Creating Receipt"
+                : getReceiptsConnection?.status === "CONNECTED"
+                  ? "Create Receipt"
+                  : "Save Reading Draft"}
             </button>
             <button
               type="button"
@@ -1089,9 +1128,15 @@ export default function ReaderShell({
             disabled={!previousEntry}
             aria-label={previousEntry ? `Go to ${previousEntry.title}` : "No previous section"}
           >
-            Previous
+            <span className="reader-bottomrail__button-icon" aria-hidden="true">
+              ‹
+            </span>
+            <span className="reader-bottomrail__button-label">Previous</span>
           </button>
           <div className="reader-bottomrail__current">
+            <span className="reader-bottomrail__current-compact">
+              {currentEntry.number ? `${currentEntry.number} · ${progressPercent}% read` : `${progressPercent}% read`}
+            </span>
             <span className="reader-bottomrail__current-title">{currentLabel}</span>
             <span className="reader-bottomrail__current-progress">{progressPercent}% read</span>
             <button
@@ -1114,7 +1159,10 @@ export default function ReaderShell({
             disabled={!nextEntry}
             aria-label={nextEntry ? `Go to ${nextEntry.title}` : "No next section"}
           >
-            Next
+            <span className="reader-bottomrail__button-label">Next</span>
+            <span className="reader-bottomrail__button-icon" aria-hidden="true">
+              ›
+            </span>
           </button>
         </div>
       </footer>
