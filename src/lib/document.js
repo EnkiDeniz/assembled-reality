@@ -7,8 +7,13 @@ const SECTION_HEADER_RE = /^##\s+(\d+)\s+·\s+(.+)$/gm;
 const APPENDIX_DOCUMENTS = [
   {
     number: "21",
-    title: "Appendix · Operator Sentences",
+    title: "Appendix I · Operator Sentences",
     segments: ["docs", "operator-sentences.md"],
+  },
+  {
+    number: "22",
+    title: "Appendix II · Convergence Foundations",
+    segments: ["docs", "convergence-foundations.md"],
   },
 ];
 function normalizeMarkdown(markdown) {
