@@ -2721,10 +2721,6 @@ a {
     display: none;
   }
 
-  .reader-chrome-button:not(.reader-chrome-button--icon) > span:last-child {
-    display: none;
-  }
-
   .reader-topbar__actions .reader-chrome-button {
     min-width: 2.35rem;
     padding-inline: 0.55rem;
