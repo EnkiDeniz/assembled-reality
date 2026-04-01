@@ -4328,7 +4328,7 @@ a {
   inset: auto 0 0 0;
   z-index: 46;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   background: linear-gradient(180deg, rgba(18, 14, 10, 0.98), rgba(14, 10, 8, 0.98));
   color: #f4eadc;
   transform: translateY(102%);
@@ -4396,6 +4396,30 @@ a {
   padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
 }
 
+.reader-seven__guide-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1rem 0.55rem;
+}
+
+.reader-seven__guide-tab {
+  min-height: 2.15rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(244, 234, 220, 0.56);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.reader-seven__guide-tab.is-active {
+  background: rgba(205, 138, 70, 0.18);
+  color: #f4eadc;
+}
+
 .reader-seven__status,
 .reader-seven__disabled {
   margin: 0;
@@ -4416,11 +4440,66 @@ a {
   gap: 1rem;
 }
 
+.reader-seven__guide-pane--listen,
 .reader-seven__guide-pane--evidence,
 .reader-seven__guide-pane--sections {
   display: grid;
   align-content: start;
   gap: 1rem;
+}
+
+.reader-seven__listen-pane {
+  display: grid;
+  gap: 1rem;
+}
+
+.reader-seven__player {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.15rem 0 0.25rem;
+}
+
+.reader-seven__player-track {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.reader-seven__player-title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.5rem;
+  line-height: 1.08;
+  color: #f4eadc;
+}
+
+.reader-seven__player-controls,
+.reader-seven__listen-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.reader-seven__transport {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.reader-seven__transport--primary {
+  background: rgba(205, 138, 70, 0.2);
+}
+
+.reader-seven__transport:disabled {
+  opacity: 0.34;
 }
 
 .reader-seven__guide-intro {

@@ -19,6 +19,7 @@ import {
 } from "../lib/annotations";
 import {
   buildSevenFallbackMessage,
+  getNarrationText,
   getSevenProviderLabel,
   parseSevenAudioHeaders,
   splitTextForSpeech,
@@ -51,7 +52,7 @@ const THEME_LABELS = {
   dark: "Dark",
 };
 
-const URL_SYNC_SURFACES = new Set(["notebook", "seven"]);
+const URL_SYNC_SURFACES = new Set(["contents", "notebook", "seven"]);
 
 function getSyncedSurfaceFromUrl() {
   if (typeof window === "undefined") return null;
@@ -190,6 +191,28 @@ function NotebookIcon() {
         strokeWidth="1.4"
       />
     </svg>
+  );
+}
+
+function ContentsIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M4.75 5.75h10.5M4.75 10h10.5M4.75 14.25h10.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function SevenIcon() {
+  return (
+    <span className="reader-seven-icon" aria-hidden="true">
+      7
+    </span>
   );
 }
 
@@ -372,10 +395,11 @@ export default function ReaderShell({
     "Reader";
   const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
+  const contentsOpen = activeSurface === "contents";
   const notebookOpen = activeSurface === "notebook";
   const sevenOpen = activeSurface === "seven";
   const appearanceOpen = activeSurface === "appearance";
-  const hasFloatingPanel = notebookOpen || sevenOpen;
+  const hasFloatingPanel = contentsOpen || notebookOpen || sevenOpen;
   const effectiveVoiceEnabled = sevenVoiceEnabled || browserSpeechEnabled;
 
   const sortedBookmarks = useMemo(
@@ -431,9 +455,15 @@ export default function ReaderShell({
     (playerState.status === "loading" ||
       playerState.status === "playing" ||
       playerState.status === "paused");
+  const sectionTransportActive =
+    runtimeAudioState.sourceType === "section" &&
+    (playerState.status === "loading" ||
+      playerState.status === "playing" ||
+      playerState.status === "paused");
+  const listeningTransportActive = documentTransportActive || sectionTransportActive;
 
   const lyricFocusBlockId =
-    documentTransportActive && playerCursor.blockId
+    listeningTransportActive && playerCursor.blockId
       ? playerCursor.blockId
       : viewportBlockId ||
         playerCursor.blockId ||
@@ -447,7 +477,7 @@ export default function ReaderShell({
   const lyricNextBlock = lyricFocusBlockId ? getNextBlock(blocks, lyricFocusBlockId) : blocks[1] || null;
   const lyricSectionSlug = lyricFocusBlock?.sectionSlug || viewportSectionSlug;
   const displaySectionSlug =
-    documentTransportActive && playerCursor.sectionSlug ? playerCursor.sectionSlug : lyricSectionSlug;
+    listeningTransportActive && playerCursor.sectionSlug ? playerCursor.sectionSlug : lyricSectionSlug;
   const displayEntry = getSectionEntry(entries, displaySectionSlug);
   const displayLabel = displayEntry.number
     ? `${displayEntry.number} · ${displayEntry.title}`
@@ -463,13 +493,26 @@ export default function ReaderShell({
   );
 
   const playingSectionSlug =
-    documentTransportActive && playerCursor.sectionSlug ? playerCursor.sectionSlug : null;
+    runtimeAudioState.status !== "idle" &&
+    (runtimeAudioState.sourceType === "document" || runtimeAudioState.sourceType === "section")
+      ? runtimeAudioState.sourceType === "section"
+        ? runtimeAudioState.sourceId || playerCursor.sectionSlug || displaySectionSlug
+        : playerCursor.sectionSlug || displaySectionSlug
+      : null;
+
+  const canContinueDocument = blocks.length > 0 && Boolean(lyricFocusBlockId);
+  const canListenCurrentSection = Boolean(getNarrationText(documentData, displaySectionSlug));
 
   const sectionBlocks = useMemo(
     () => blocksBySection[displaySectionSlug] || [],
     [blocksBySection, displaySectionSlug],
   );
   const sectionProgress = useMemo(() => {
+    if (sectionTransportActive) {
+      if (runtimeAudioState.total <= 0) return 0;
+      return Math.min(1, runtimeAudioState.index / runtimeAudioState.total);
+    }
+
     if (sectionBlocks.length === 0) return 0;
 
     const referenceBlockId =
@@ -479,14 +522,19 @@ export default function ReaderShell({
       sectionBlocks.findIndex((block) => block.blockId === referenceBlockId),
     );
     const chunkProgress =
-      documentTransportActive &&
-      runtimeAudioState.sourceType === "document" &&
-      runtimeAudioState.total > 0
+      documentTransportActive && runtimeAudioState.total > 0
         ? runtimeAudioState.index / runtimeAudioState.total
         : 0;
 
     return Math.min(1, (currentSectionIndex + chunkProgress) / sectionBlocks.length);
-  }, [documentTransportActive, lyricFocusBlockId, playerCursor.blockId, runtimeAudioState, sectionBlocks]);
+  }, [
+    documentTransportActive,
+    lyricFocusBlockId,
+    playerCursor.blockId,
+    runtimeAudioState,
+    sectionBlocks,
+    sectionTransportActive,
+  ]);
 
   const liveStatus =
     buildAudioProgressText(runtimeAudioState) ||
@@ -1055,10 +1103,72 @@ export default function ReaderShell({
     [blocks, entries, lyricFocusBlockId, playAudioText, playerCursor.blockId, sevenVoiceEnabled],
   );
 
+  const playSectionNarration = useCallback(
+    async (slug = displaySectionSlug) => {
+      const narrationText = getNarrationText(documentData, slug);
+      if (!narrationText) {
+        setAudioError("There is nothing here for Seven to read yet.");
+        return false;
+      }
+
+      documentRunRef.current += 1;
+      const firstBlock = getFirstSectionBlock(blocks, slug) || null;
+      const blockIndex = firstBlock ? getBlockIndex(blocks, firstBlock.blockId) : -1;
+      setPlayerCursor({
+        sectionSlug: slug,
+        blockId: firstBlock?.blockId || null,
+        blockIndex,
+      });
+      setPlayerState((current) => ({
+        ...current,
+        sourceType: "section",
+        status: "loading",
+        queue: [],
+        currentIndex: -1,
+        providerMode: sevenVoiceEnabled ? "provider" : "device",
+      }));
+
+      const sectionEntry = getSectionEntry(entries, slug);
+      const completed = await playAudioText(narrationText, {
+        label: `Listening to ${sectionEntry.title}`,
+        sourceType: "section",
+        sourceId: slug,
+      });
+
+      setPlayerState((current) => ({
+        ...current,
+        sourceType: "section",
+        status: completed ? "idle" : current.status === "paused" ? "paused" : "idle",
+        queue: [],
+        currentIndex: -1,
+      }));
+
+      return completed;
+    },
+    [
+      blocks,
+      displaySectionSlug,
+      documentData,
+      entries,
+      playAudioText,
+      sevenVoiceEnabled,
+    ],
+  );
+
   const pauseDocumentPlayback = useCallback(() => {
-    if (runtimeAudioState.sourceType !== "document") return;
+    if (
+      runtimeAudioState.sourceType !== "document" &&
+      runtimeAudioState.sourceType !== "section"
+    ) {
+      return;
+    }
+
     pauseRuntimeAudio();
-    setPlayerState((current) => ({ ...current, status: "paused" }));
+    setPlayerState((current) => ({
+      ...current,
+      sourceType: runtimeAudioState.sourceType || current.sourceType,
+      status: "paused",
+    }));
   }, [pauseRuntimeAudio, runtimeAudioState.sourceType]);
 
   const resumeDocumentPlayback = useCallback(async () => {
@@ -1087,10 +1197,56 @@ export default function ReaderShell({
     runtimeAudioState.status,
   ]);
 
+  const resumeSectionPlayback = useCallback(async () => {
+    if (runtimeAudioState.sourceType === "section" && runtimeAudioState.status === "paused") {
+      await resumeRuntimeAudio();
+      setPlayerState((current) => ({ ...current, sourceType: "section", status: "playing" }));
+      return;
+    }
+
+    await playSectionNarration(playerCursor.sectionSlug || displaySectionSlug);
+  }, [
+    displaySectionSlug,
+    playSectionNarration,
+    playerCursor.sectionSlug,
+    resumeRuntimeAudio,
+    runtimeAudioState.sourceType,
+    runtimeAudioState.status,
+  ]);
+
+  const handleContinueDocument = useCallback(async () => {
+    if (runtimeAudioState.sourceType === "message") {
+      stopRuntimeAudio();
+    }
+
+    if (playerState.sourceType === "document" && playerState.status === "paused") {
+      await resumeDocumentPlayback();
+      return;
+    }
+
+    if (!canContinueDocument) {
+      await playSectionNarration(displaySectionSlug);
+      return;
+    }
+
+    await playDocumentQueue({ startBlockId: lyricFocusBlockId });
+  }, [
+    canContinueDocument,
+    displaySectionSlug,
+    lyricFocusBlockId,
+    playDocumentQueue,
+    playSectionNarration,
+    playerState.sourceType,
+    playerState.status,
+    resumeDocumentPlayback,
+    runtimeAudioState.sourceType,
+    stopRuntimeAudio,
+  ]);
+
   const handlePrimaryPlayPause = useCallback(async () => {
     if (runtimeAudioState.sourceType === "message") {
       stopRuntimeAudio();
-      await resumeDocumentPlayback();
+      await playSectionNarration(displaySectionSlug);
       return;
     }
 
@@ -1100,60 +1256,70 @@ export default function ReaderShell({
     }
 
     if (playerState.status === "paused") {
+      if (playerState.sourceType === "document") {
+        await resumeDocumentPlayback();
+        return;
+      }
+
+      await resumeSectionPlayback();
+      return;
+    }
+
+    if (playerState.sourceType === "document" && runtimeAudioState.status === "paused") {
       await resumeDocumentPlayback();
       return;
     }
 
-    await resumeDocumentPlayback();
+    await playSectionNarration(displaySectionSlug);
   }, [
+    displaySectionSlug,
     pauseDocumentPlayback,
     playerState.status,
+    playerState.sourceType,
+    playSectionNarration,
     resumeDocumentPlayback,
+    resumeSectionPlayback,
     runtimeAudioState.sourceType,
+    runtimeAudioState.status,
     stopRuntimeAudio,
   ]);
 
   const selectSection = useCallback(
-    async (slug, { startPlayback = true, closeOverlay = true } = {}) => {
+    async (
+      slug,
+      { startPlayback = false, closeOverlay = true, playbackMode = "section" } = {},
+    ) => {
       const firstBlock = getFirstSectionBlock(blocks, slug);
-      if (!firstBlock) {
-        const target = document.getElementById(slug);
-        if (target) {
-          scrollIntentRef.current = true;
-          target.scrollIntoView({ behavior: getScrollBehavior(), block: "start" });
-          window.setTimeout(() => {
-            scrollIntentRef.current = false;
-          }, 320);
-        }
-        if (closeOverlay) closeSurface({ restoreFocus: false });
-        return;
-      }
-
       if (closeOverlay) {
         closeSurface({ restoreFocus: false });
       }
 
       if (startPlayback) {
-        await playDocumentQueue({ startBlockId: firstBlock.blockId });
+        if (playbackMode === "document" && firstBlock) {
+          await playDocumentQueue({ startBlockId: firstBlock.blockId });
+          return;
+        }
+
+        await playSectionNarration(slug);
         return;
       }
 
-      const target = firstBlock.element || document.getElementById(slug);
+      const target = firstBlock?.element || document.getElementById(slug);
       if (target) {
         scrollIntentRef.current = true;
-        target.scrollIntoView({ behavior: getScrollBehavior(), block: "center" });
+        target.scrollIntoView({ behavior: getScrollBehavior(), block: "start" });
         window.setTimeout(() => {
           scrollIntentRef.current = false;
         }, 320);
       }
     },
-    [blocks, closeSurface, playDocumentQueue],
+    [blocks, closeSurface, playDocumentQueue, playSectionNarration],
   );
 
   const handleMoveSection = useCallback(
-    async (offset) => {
+    async (offset, options = {}) => {
       const originSlug =
-        (documentTransportActive && playerCursor.sectionSlug) || viewportSectionSlug;
+        (listeningTransportActive && playerCursor.sectionSlug) || viewportSectionSlug;
       const originIndex = Math.max(
         0,
         entries.findIndex((entry) => entry.slug === originSlug),
@@ -1161,9 +1327,13 @@ export default function ReaderShell({
       const targetEntry = entries[originIndex + offset];
       if (!targetEntry) return;
 
-      await selectSection(targetEntry.slug, { startPlayback: true, closeOverlay: false });
+      await selectSection(targetEntry.slug, {
+        startPlayback: false,
+        closeOverlay: false,
+        ...options,
+      });
     },
-    [documentTransportActive, entries, playerCursor.sectionSlug, selectSection, viewportSectionSlug],
+    [entries, listeningTransportActive, playerCursor.sectionSlug, selectSection, viewportSectionSlug],
   );
 
   const playMessageAudio = useCallback(
@@ -1186,6 +1356,28 @@ export default function ReaderShell({
     if (runtimeAudioState.sourceType !== "message") return;
     stopRuntimeAudio();
   }, [runtimeAudioState.sourceType, stopRuntimeAudio]);
+
+  const jumpTo = useCallback(
+    (slug) => {
+      const target = document.getElementById(slug);
+      if (!target) return;
+
+      scrollIntentRef.current = true;
+      dismissSurfacesWithoutFocus();
+      setSelectionState(null);
+      setNoteDraft("");
+      clearBrowserSelection();
+      clearFocusState();
+      target.scrollIntoView({
+        behavior: getScrollBehavior(),
+        block: "start",
+      });
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, 320);
+    },
+    [clearFocusState, dismissSurfacesWithoutFocus],
+  );
 
   const jumpToMark = useCallback(
     (mark) => {
@@ -1287,7 +1479,11 @@ export default function ReaderShell({
   }, [activeSurface, sevenView]);
 
   useEffect(() => {
-    if (runtimeAudioState.sourceType !== "document" || runtimeAudioState.status === "idle") {
+    if (
+      (runtimeAudioState.sourceType !== "document" &&
+        runtimeAudioState.sourceType !== "section") ||
+      runtimeAudioState.status === "idle"
+    ) {
       return;
     }
 
@@ -1301,6 +1497,7 @@ export default function ReaderShell({
 
       return {
         ...current,
+        sourceType: runtimeAudioState.sourceType,
         status: runtimeAudioState.status,
         providerMode: runtimeAudioState.mode,
       };
@@ -1458,17 +1655,22 @@ export default function ReaderShell({
 
       if ((event.key === "ArrowRight" || event.key === "j") && nextEntry) {
         event.preventDefault();
-        handleMoveSection(1);
+        jumpTo(nextEntry.slug);
       }
 
       if ((event.key === "ArrowLeft" || event.key === "k") && previousEntry) {
         event.preventDefault();
-        handleMoveSection(-1);
+        jumpTo(previousEntry.slug);
       }
 
       if (event.key.toLowerCase() === "t") {
         event.preventDefault();
-        openSevenView("sections");
+        toggleSurface("contents");
+      }
+
+      if (event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        openSevenView("listen");
       }
 
       if (event.key.toLowerCase() === "m") {
@@ -1490,8 +1692,8 @@ export default function ReaderShell({
     window.addEventListener("keydown", handleReaderKeys);
     return () => window.removeEventListener("keydown", handleReaderKeys);
   }, [
-    handleMoveSection,
     handlePrimaryPlayPause,
+    jumpTo,
     nextEntry,
     openSevenView,
     previousEntry,
@@ -1620,6 +1822,18 @@ export default function ReaderShell({
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+
+    if (!activeSurface) {
+      document.body.style.removeProperty("overflow");
+      return undefined;
+    }
+
+    document.body.style.setProperty("overflow", "hidden");
+    return () => document.body.style.removeProperty("overflow");
+  }, [activeSurface]);
 
   useEffect(() => () => stopRuntimeAudio(), [stopRuntimeAudio]);
 
@@ -1856,9 +2070,20 @@ export default function ReaderShell({
         <div className="reader-player-topbar__actions">
           <button
             type="button"
+            className={`reader-player-topbar__utility ${contentsOpen ? "is-active" : ""}`}
+            onClick={(event) => toggleSurface("contents", event)}
+            aria-label={contentsOpen ? "Close contents" : "Open contents"}
+            title={contentsOpen ? "Close contents" : "Open contents"}
+          >
+            <ContentsIcon />
+          </button>
+
+          <button
+            type="button"
             className="reader-player-topbar__counter"
-            onClick={(event) => openSevenView("sections", event)}
-            aria-label="Open sections"
+            onClick={(event) => openSevenView("listen", event)}
+            aria-label="Open listening"
+            title="Listen"
           >
             <span>{entries.findIndex((entry) => entry.slug === displaySectionSlug) + 1}</span>
             <span>/</span>
@@ -1883,6 +2108,23 @@ export default function ReaderShell({
             title={notebookOpen ? "Close notebook" : "Open notebook"}
           >
             <NotebookIcon />
+          </button>
+
+          <button
+            type="button"
+            className={`reader-player-topbar__utility ${sevenOpen ? "is-active" : ""}`}
+            onClick={(event) => {
+              if (sevenOpen) {
+                closeSurface();
+                return;
+              }
+
+              openSevenView("guide", event);
+            }}
+            aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
+            title="Seven"
+          >
+            <SevenIcon />
           </button>
 
           <button
@@ -1938,6 +2180,44 @@ export default function ReaderShell({
         onClick={() => closeSurface({ restoreFocus: false })}
       />
 
+      <aside className={`reader-toc ${contentsOpen ? "is-open" : ""}`} aria-hidden={!contentsOpen}>
+        <div className="reader-toc__header">
+          <div className="reader-toc__header-copy">
+            <p className="reader-toc__eyebrow">Contents</p>
+            <h2 className="reader-toc__title">{documentData.title}</h2>
+            <p className="reader-toc__status">
+              <span>{currentLabel}</span>
+              <span>{progressPercent}% read</span>
+            </p>
+          </div>
+
+          <div className="reader-toc__header-actions">
+            <button
+              type="button"
+              className="reader-player-topbar__utility"
+              onClick={() => closeSurface()}
+              aria-label="Close contents"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <nav className="reader-toc__nav" aria-label="Table of contents">
+          {entries.map((entry) => (
+            <button
+              key={entry.slug}
+              type="button"
+              className={`reader-toc__item ${entry.slug === viewportSectionSlug ? "is-active" : ""}`}
+              onClick={() => jumpTo(entry.slug)}
+            >
+              <span className="reader-toc__item-label">{entry.title}</span>
+              <span className="reader-toc__item-meta">{entry.number ?? "0"}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+
       <ReaderMarksPanel
         open={notebookOpen}
         currentLabel={currentLabel}
@@ -1966,6 +2246,7 @@ export default function ReaderShell({
       <SevenPanel
         open={sevenOpen}
         view={sevenView}
+        onChangeView={setSevenView}
         textEnabled={sevenTextEnabled}
         textProvider={sevenTextProvider}
         effectiveVoiceEnabled={effectiveVoiceEnabled}
@@ -1980,7 +2261,18 @@ export default function ReaderShell({
         onRemoveEvidenceItem={removeEvidenceItem}
         onShowNotice={showReceiptNotice}
         onClose={() => closeSurface()}
-        onSelectSection={selectSection}
+        onSelectSection={(slug) =>
+          selectSection(slug, { startPlayback: true, playbackMode: "section" })
+        }
+        onNavigateSection={(slug) => selectSection(slug, { startPlayback: false })}
+        onMoveSection={(offset) =>
+          handleMoveSection(offset, { startPlayback: true, playbackMode: "section" })
+        }
+        onPlayPauseSection={() => void handlePrimaryPlayPause()}
+        onContinueDocument={() => void handleContinueDocument()}
+        canContinueDocument={canContinueDocument}
+        canListenCurrentSection={canListenCurrentSection}
+        audioState={runtimeAudioState}
         sectionEntries={sectionEntries}
         playingSectionSlug={playingSectionSlug}
         messageAudioState={runtimeAudioState}
@@ -2083,7 +2375,7 @@ export default function ReaderShell({
           <button
             type="button"
             className="reader-player-rail__transport-button"
-            onClick={() => handleMoveSection(-1)}
+            onClick={() => previousEntry && jumpTo(previousEntry.slug)}
             disabled={!previousEntry}
             aria-label={
               previousEntry ? `Go to previous section, ${previousEntry.title}` : "No previous section"
@@ -2098,8 +2390,8 @@ export default function ReaderShell({
             onClick={() => void handlePrimaryPlayPause()}
             aria-label={
               playerState.status === "playing"
-                ? `Pause ${displayEntry.title}`
-                : `Play ${displayEntry.title}`
+                ? `Pause listening to ${displayEntry.title}`
+                : `Listen to ${displayEntry.title}`
             }
           >
             {playerState.status === "playing" ? <PauseIcon /> : <PlayIcon />}
@@ -2108,7 +2400,7 @@ export default function ReaderShell({
           <button
             type="button"
             className="reader-player-rail__transport-button"
-            onClick={() => handleMoveSection(1)}
+            onClick={() => nextEntry && jumpTo(nextEntry.slug)}
             disabled={!nextEntry}
             aria-label={nextEntry ? `Go to next section, ${nextEntry.title}` : "No next section"}
           >
@@ -2124,7 +2416,18 @@ export default function ReaderShell({
             className={`reader-player-rail__tab ${!sevenOpen ? "is-active" : ""}`}
             onClick={() => closeSurface({ restoreFocus: false })}
           >
-            Player
+            Read
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={sevenOpen && sevenView === "listen"}
+            className={`reader-player-rail__tab ${
+              sevenOpen && sevenView === "listen" ? "is-active" : ""
+            }`}
+            onClick={(event) => openSevenView("listen", event)}
+          >
+            Listen
           </button>
           <button
             type="button"
