@@ -106,18 +106,6 @@ function SevenIcon() {
   );
 }
 
-function ContinueCard({ title, onContinue }) {
-  return (
-    <div className="reader-continue-card">
-      <p className="reader-continue-card__eyebrow">Keep Reading</p>
-      <h3 className="reader-continue-card__title">{title}</h3>
-      <button type="button" className="reader-continue-card__action" onClick={onContinue}>
-        Continue to This Section
-      </button>
-    </div>
-  );
-}
-
 export default function ReaderShell({
   documentData,
   preferences,
@@ -1148,17 +1136,9 @@ export default function ReaderShell({
                 marksByBlock={marksByBlock}
                 activeMarkId={activeMarkId}
               />
-              {documentData.sections[0] ? (
-                <ContinueCard
-                  title={`${documentData.sections[0].number} · ${documentData.sections[0].title}`}
-                  onContinue={() => jumpTo(documentData.sections[0].slug)}
-                />
-              ) : null}
             </section>
 
-            {documentData.sections.map((section, index) => {
-              const nextSection = documentData.sections[index + 1] || null;
-
+            {documentData.sections.map((section) => {
               return (
                 <section
                   id={section.slug}
@@ -1179,12 +1159,6 @@ export default function ReaderShell({
                     marksByBlock={marksByBlock}
                     activeMarkId={activeMarkId}
                   />
-                  {nextSection ? (
-                    <ContinueCard
-                      title={`${nextSection.number} · ${nextSection.title}`}
-                      onContinue={() => jumpTo(nextSection.slug)}
-                    />
-                  ) : null}
                 </section>
               );
             })}

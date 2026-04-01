@@ -3636,10 +3636,6 @@ a {
   min-width: 8.75rem;
 }
 
-.reader-continue-card {
-  display: none;
-}
-
 .selection-menu__sheet-header {
   display: flex;
   align-items: flex-start;
@@ -3851,43 +3847,6 @@ a {
 
   .reader-book {
     border-radius: 1.35rem;
-  }
-
-  .reader-continue-card {
-    display: grid;
-    gap: 0.55rem;
-    margin-top: 1.4rem;
-    padding: 1rem;
-    border: 1px solid var(--reader-border);
-    border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.44);
-  }
-
-  .reader-continue-card__eyebrow {
-    margin: 0;
-    font-size: 0.68rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--reader-ink-faint);
-  }
-
-  .reader-continue-card__title {
-    margin: 0;
-    font-family: var(--font-display), Georgia, serif;
-    font-size: 1.15rem;
-    line-height: 1.15;
-    color: var(--reader-ink);
-  }
-
-  .reader-continue-card__action {
-    justify-self: start;
-    min-height: 2.5rem;
-    border: 1px solid var(--reader-border);
-    border-radius: 999px;
-    background: rgba(160, 106, 63, 0.12);
-    border-color: rgba(160, 106, 63, 0.22);
-    padding: 0 0.95rem;
-    color: var(--reader-ink);
   }
 
   .reader-bottomrail {
