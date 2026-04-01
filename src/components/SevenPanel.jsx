@@ -573,12 +573,12 @@ export default function SevenPanel({
         : voiceStatus.state === "device"
           ? voiceStatus.message
           : textEnabled && effectiveVoiceEnabled
-            ? "Ask, listen, and review evidence from here."
+            ? "Ready."
             : textEnabled
-              ? "Ask about the section from here."
+              ? "Chat available."
               : effectiveVoiceEnabled
-                ? "Read the section aloud."
-                : "Seven is offline right now.");
+                ? "Listening available."
+                : "Seven offline.");
 
   const showStatus =
     audioState.status !== "idle" ||
@@ -1318,10 +1318,10 @@ export default function SevenPanel({
 
           {view === "listen" ? (
             <div className="reader-seven__guide-pane reader-seven__guide-pane--listen">
-              <div className="reader-seven__empty">
-                <p className="reader-seven__empty-title">Listen from the current section</p>
+              <div className="reader-seven__empty reader-seven__empty--compact">
+                <p className="reader-seven__empty-title">{playerSection.title}</p>
                 <p className="reader-seven__empty-copy">
-                  The transport above stays tied to the manuscript. Move section by section, keep the text central, and let chat or evidence work happen alongside it.
+                  Section {playerSectionIndex + 1} of {sectionEntries.length}
                 </p>
               </div>
             </div>
@@ -1332,13 +1332,7 @@ export default function SevenPanel({
               <div ref={messageListRef} className="reader-seven__messages">
                 {messages.length === 0 ? (
                   <div className="reader-seven__empty">
-                    <p className="reader-seven__empty-title">Ask from the text you are in</p>
-                    <p className="reader-seven__empty-copy">
-                      Seven can explain this section, compare nearby passages, and surface citations you can review before turning them into evidence.
-                    </p>
-                    <p className="reader-seven__empty-note">
-                      Assistant replies are guidance. Evidence only enters your reviewed set when you explicitly accept source passages.
-                    </p>
+                    <p className="reader-seven__empty-title">Start with a question.</p>
                   </div>
                 ) : (
                   messages.map((message) => (
@@ -1461,7 +1455,7 @@ export default function SevenPanel({
                       });
                       setDraft("");
                     }}
-                    placeholder="Ask Seven..."
+                    placeholder="Ask about this section"
                     disabled={!textEnabled}
                   />
                   <div className="reader-seven__composer-actions">
@@ -1485,7 +1479,7 @@ export default function SevenPanel({
               <div className="reader-seven__evidence-header">
                 <div>
                   <p className="reader-seven__eyebrow">Reviewed evidence</p>
-                  <h3 className="reader-seven__evidence-title">Evidence Set</h3>
+                  <h3 className="reader-seven__evidence-title">Evidence</h3>
                 </div>
                 <button
                   type="button"
@@ -1494,19 +1488,15 @@ export default function SevenPanel({
                   }`}
                   onClick={handleAddCurrentSectionEvidence}
                 >
-                  {currentSectionEvidence ? "In Evidence" : "Add Current Section"}
+                  {currentSectionEvidence ? "In Evidence" : "Add Section"}
                 </button>
               </div>
 
-              <p className="reader-seven__evidence-note">
-                Reader-selected passages and notes can enter directly. Seven can suggest citations, but you decide what becomes evidence.
-              </p>
-
               {evidenceItems.length === 0 ? (
                 <div className="reader-seven__empty">
-                  <p className="reader-seven__empty-title">No reviewed evidence yet</p>
+                  <p className="reader-seven__empty-title">No evidence yet.</p>
                   <p className="reader-seven__empty-copy">
-                    Add a selected passage, a note, a highlight, or an accepted Seven citation to begin building a receipt.
+                    Add a passage, note, or citation.
                   </p>
                 </div>
               ) : (

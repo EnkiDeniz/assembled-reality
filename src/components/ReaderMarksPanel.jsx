@@ -299,10 +299,7 @@ export default function ReaderMarksPanel({
 
       <div className="reader-marks__footer">
         <div className="reader-marks__footer-copy">
-          <p className="reader-marks__footer-title">Review Evidence in Seven</p>
-          <p className="reader-marks__footer-note">
-            Build receipts from reviewed evidence inside the guide workspace.
-          </p>
+          <p className="reader-marks__footer-title">Review in Seven</p>
         </div>
         <button
           type="button"

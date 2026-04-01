@@ -1266,6 +1266,10 @@ a {
   background: rgba(255, 255, 255, 0.44);
 }
 
+.reader-seven__empty--compact {
+  gap: 0.35rem;
+}
+
 .reader-seven__empty-title {
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
@@ -1277,13 +1281,6 @@ a {
 .reader-seven__empty-copy {
   margin: 0.28rem 0 0;
   font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--reader-ink-faint);
-}
-
-.reader-seven__empty-note {
-  margin: 0.45rem 0 0;
-  font-size: 0.75rem;
   line-height: 1.45;
   color: var(--reader-ink-faint);
 }
@@ -3411,7 +3408,8 @@ a {
 .reader-marks__footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 0.95rem 1.1rem 1.1rem;
   border: 1px solid var(--reader-border);
@@ -3422,19 +3420,13 @@ a {
 
 .reader-marks__footer-copy {
   display: grid;
-  gap: 0.18rem;
+  gap: 0;
 }
 
 .reader-marks__footer-title {
   margin: 0;
   font-size: 0.96rem;
   color: var(--reader-ink);
-}
-
-.reader-marks__footer-note {
-  margin: 0;
-  color: var(--reader-ink-faint);
-  line-height: 1.45;
 }
 
 .reader-mark-card {
