@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { getParsedDocument } from "@/lib/document";
+import { getParsedDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { appEnv } from "@/lib/env";
+import { appendConversationExchangeForUser } from "@/lib/reader-workspace";
 import {
+  buildSevenCitations,
   buildRelevantSectionsContext,
   buildSevenIssueMessage,
   getReaderSection,
@@ -83,6 +85,7 @@ export async function POST(request) {
   const {
     mode = "explain",
     question = "",
+    documentKey = PRIMARY_DOCUMENT_KEY,
     activeSlug = "",
     documentTitle = "Assembled Reality",
     documentSubtitle = "",
@@ -101,11 +104,14 @@ export async function POST(request) {
   let resolvedCurrentSectionTitle = currentSectionTitle;
   let resolvedCurrentSectionMarkdown = currentSectionMarkdown;
   let relevantSectionsContext = "";
+  let citations = [];
+  let resolvedDocumentKey = documentKey || PRIMARY_DOCUMENT_KEY;
 
   if (activeSlug) {
     const documentData = getParsedDocument();
     const currentSection = getReaderSection(documentData, activeSlug);
 
+    resolvedDocumentKey = documentData?.documentKey || resolvedDocumentKey;
     resolvedDocumentTitle = documentData?.title || resolvedDocumentTitle;
     resolvedDocumentSubtitle = documentData?.subtitle || resolvedDocumentSubtitle;
     resolvedIntroMarkdown = documentData?.introMarkdown || resolvedIntroMarkdown;
@@ -113,6 +119,12 @@ export async function POST(request) {
     resolvedCurrentLabel = currentSection.label || resolvedCurrentLabel;
     resolvedCurrentSectionTitle = currentSection.title || resolvedCurrentSectionTitle;
     resolvedCurrentSectionMarkdown = currentSection.markdown || resolvedCurrentSectionMarkdown;
+    citations = buildSevenCitations({
+      documentData,
+      activeSlug,
+      mode,
+      question,
+    });
 
     if (mode === "question" && question.trim()) {
       relevantSectionsContext = buildRelevantSectionsContext({
@@ -226,9 +238,20 @@ export async function POST(request) {
       );
     }
 
+    const exchange = await appendConversationExchangeForUser(session.user.id, {
+      documentKey: resolvedDocumentKey,
+      userLine: question || buildInstruction(mode),
+      answer,
+      citations,
+    });
+
     return NextResponse.json({
       ok: true,
       answer,
+      citations,
+      threadId: exchange?.threadId || null,
+      userMessageId: exchange?.userMessage?.id || null,
+      messageId: exchange?.assistantMessage?.id || null,
       provider: "openai",
     });
   } catch (error) {

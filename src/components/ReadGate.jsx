@@ -14,6 +14,8 @@ export default function ReadGate({
   initialProgress,
   profile,
   getReceiptsConnection,
+  initialConversationThread,
+  initialEvidenceSet,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
   sevenTextProvider = null,
@@ -37,6 +39,8 @@ export default function ReadGate({
       profile={profile}
       sessionUser={session?.user || null}
       getReceiptsConnection={getReceiptsConnection}
+      initialConversationThread={initialConversationThread}
+      initialEvidenceSet={initialEvidenceSet}
       sevenTextEnabled={sevenTextEnabled}
       sevenVoiceEnabled={sevenVoiceEnabled}
       sevenTextProvider={sevenTextProvider}

@@ -151,32 +151,49 @@ export async function createRemoteReadingReceiptDraft(connection, payload) {
 
 export function buildReadingReceiptPayload({
   profile,
-  sections,
-  marks,
-  learned,
+  documentKey,
+  title,
+  evidenceItems,
+  interpretation,
+  implications,
+  stance,
+  linkedMessageIds,
 }) {
-  const sectionTitles = sections.map((section) => section.title).join(", ");
-  const excerpt = marks[0]?.excerpt || "";
+  const items = Array.isArray(evidenceItems) ? evidenceItems : [];
+  const sectionTitles = [...new Set(items.map((item) => item.sectionTitle).filter(Boolean))].join(", ");
+  const excerpt = items[0]?.excerpt || "";
+  const markIds = items.map((item) => item.sourceMarkId).filter(Boolean);
+  const evidenceIds = items.map((item) => item.id);
 
   return {
-    aim: `Read and internalize ${sectionTitles || "Assembled Reality"}`,
-    tried: `Read ${sections.length} section(s) inside the Assembled Reality reader and annotated passages for later use.`,
+    aim: title || `Read and internalize ${sectionTitles || "Assembled Reality"}`,
+    tried: `Reviewed evidence inside the Assembled Reality reader and assembled a human interpretation receipt.`,
     outcome: excerpt
-      ? `Completed the reading pass and captured key passages including: "${excerpt}"`
-      : "Completed the reading pass and captured key passages for later use.",
-    learned: learned || "The reading changed the operator's understanding and produced notes or highlights worth preserving.",
-    decision: "Turn the reading into a traceable receipt and return to the document with clearer next actions.",
+      ? `Reviewed source passages including: "${excerpt}"`
+      : "Reviewed source passages inside the reader.",
+    learned:
+      interpretation ||
+      "The reading produced a grounded human interpretation tied to reviewed evidence.",
+    decision:
+      implications ||
+      "Capture the interpretation as a receipt and return to the document with clearer next actions.",
     owner: profile.displayName,
     temporal: "retrospective",
     visibility: "private",
     tags: ["assembled-reality", "reader"],
     metadata: {
       source_app: "assembled_reality",
-      source_flow: "assembled_reality_reader_v3",
+      source_flow: "assembled_reality_reader_v4",
       assembled_reality: {
+        document_key: documentKey,
         reader_slug: profile.readerSlug,
-        section_slugs: sections.map((section) => section.slug),
-        mark_ids: marks.map((mark) => mark.id),
+        section_slugs: [...new Set(items.map((item) => item.sectionSlug).filter(Boolean))],
+        mark_ids: markIds,
+        evidence_item_ids: evidenceIds,
+        linked_message_ids: Array.isArray(linkedMessageIds) ? linkedMessageIds : [],
+        stance: stance || "tentative",
+        interpretation: interpretation || "",
+        implications: implications || "",
       },
     },
   };

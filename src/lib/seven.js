@@ -600,3 +600,47 @@ export function buildRelevantSectionsContext(options) {
     .map((section) => [`${section.label}`, section.excerpt].filter(Boolean).join("\n"))
     .join("\n\n---\n\n");
 }
+
+export function buildSevenCitations({
+  documentData,
+  activeSlug,
+  mode = "question",
+  question = "",
+  maxCitations = 3,
+} = {}) {
+  const sections = [];
+  const currentSection = getReaderSection(documentData, activeSlug);
+  const tokens = tokenizeSearchText(question);
+  const currentExcerpt = buildSectionExcerpt(currentSection, tokens);
+
+  if (currentExcerpt) {
+    sections.push({
+      id: `${currentSection.slug}-current`,
+      sectionSlug: currentSection.slug,
+      sectionTitle: currentSection.title,
+      sectionLabel: currentSection.label,
+      excerpt: currentExcerpt,
+      reason: "current_section",
+    });
+  }
+
+  if (mode === "question" && question.trim()) {
+    getRelevantSectionsForQuestion({
+      documentData,
+      activeSlug,
+      question,
+      maxSections: Math.max(0, maxCitations - sections.length),
+    }).forEach((section, index) => {
+      sections.push({
+        id: `${section.slug}-${index + 1}`,
+        sectionSlug: section.slug,
+        sectionTitle: section.title,
+        sectionLabel: section.label,
+        excerpt: section.excerpt,
+        reason: "related_section",
+      });
+    });
+  }
+
+  return sections.slice(0, maxCitations);
+}

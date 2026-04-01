@@ -3,6 +3,8 @@ import path from "node:path";
 import { cache } from "react";
 import { slugify } from "@/lib/text";
 
+export const PRIMARY_DOCUMENT_KEY = "assembled-reality-v07-final";
+
 const SECTION_HEADER_RE = /^##\s+(\d+)\s+·\s+(.+)$/gm;
 const APPENDIX_DOCUMENTS = [
   {
@@ -114,6 +116,7 @@ export function parseDocument(markdown) {
   });
 
   return {
+    documentKey: PRIMARY_DOCUMENT_KEY,
     title,
     subtitle,
     introMarkdown,

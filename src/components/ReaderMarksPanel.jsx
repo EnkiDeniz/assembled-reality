@@ -40,7 +40,7 @@ function SectionScopeToggle({ scope, onChange }) {
   );
 }
 
-function ReceiptToggle({ selected, onClick }) {
+function EvidenceToggle({ selected, onClick }) {
   return (
     <button
       type="button"
@@ -48,7 +48,7 @@ function ReceiptToggle({ selected, onClick }) {
       onClick={onClick}
       aria-pressed={selected}
     >
-      {selected ? "Included" : "Include"}
+      {selected ? "In Evidence" : "Add to Evidence"}
     </button>
   );
 }
@@ -83,7 +83,7 @@ function HighlightItem({
   selected,
   onJump,
   onDelete,
-  onToggleSelection,
+  onToggleEvidence,
   allowMutations,
 }) {
   return (
@@ -93,7 +93,7 @@ function HighlightItem({
         <span className="reader-mark-card__excerpt">“{highlight.excerpt}”</span>
       </button>
       <div className="reader-mark-card__actions">
-        <ReceiptToggle selected={selected} onClick={() => onToggleSelection(highlight.id)} />
+        <EvidenceToggle selected={selected} onClick={() => onToggleEvidence(highlight)} />
         {allowMutations ? (
           <button
             type="button"
@@ -114,7 +114,7 @@ function NoteItem({
   onJump,
   onDelete,
   onSave,
-  onToggleSelection,
+  onToggleEvidence,
   allowMutations,
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -165,7 +165,7 @@ function NoteItem({
 
       <div className="reader-mark-card__actions">
         <div className="reader-mark-card__actions-group">
-          <ReceiptToggle selected={selected} onClick={() => onToggleSelection(note.id)} />
+          <EvidenceToggle selected={selected} onClick={() => onToggleEvidence(note)} />
           {!isEditing && allowMutations ? (
             <button
               type="button"
@@ -190,22 +190,6 @@ function NoteItem({
   );
 }
 
-function ReceiptExcerptList({ marks }) {
-  return (
-    <div className="reader-receipt-sheet__list">
-      {marks.map((mark) => (
-        <article key={mark.id} className="reader-receipt-sheet__item">
-          <p className="reader-receipt-sheet__eyebrow">{mark.sectionTitle}</p>
-          <p className="reader-receipt-sheet__excerpt">“{mark.excerpt}”</p>
-          {mark.type === "note" && mark.noteText ? (
-            <p className="reader-receipt-sheet__note">{mark.noteText}</p>
-          ) : null}
-        </article>
-      ))}
-    </div>
-  );
-}
-
 export default function ReaderMarksPanel({
   open,
   currentLabel,
@@ -217,8 +201,9 @@ export default function ReaderMarksPanel({
   bookmarks,
   highlights,
   notes,
-  selectedMarkIds,
-  onToggleSelectedMark,
+  evidenceMarkIds,
+  onToggleMarkEvidence,
+  onOpenSeven,
   onClose,
   onJumpToBookmark,
   onJumpToMark,
@@ -226,21 +211,10 @@ export default function ReaderMarksPanel({
   onDeleteHighlight,
   onDeleteNote,
   onUpdateNote,
-  canCreateReceipt,
-  creatingReceipt,
-  receiptComposerOpen,
-  receiptTitle,
-  receiptLearned,
-  receiptMarks,
-  onOpenReceiptComposer,
-  onCloseReceiptComposer,
-  onChangeReceiptTitle,
-  onChangeReceiptLearned,
-  onSubmitReceipt,
 }) {
   const allowMutations = true;
   const subtitle = `${progressPercent}% read`;
-  const selectedSet = useMemo(() => new Set(selectedMarkIds), [selectedMarkIds]);
+  const evidenceMarkIdSet = useMemo(() => new Set(evidenceMarkIds), [evidenceMarkIds]);
 
   return (
     <aside className={`reader-marks ${open ? "is-open" : ""}`} aria-hidden={!open}>
@@ -281,31 +255,27 @@ export default function ReaderMarksPanel({
               <NoteItem
                 key={`${note.id}-${note.updatedAt}`}
                 note={note}
-                selected={selectedSet.has(note.id)}
+                selected={evidenceMarkIdSet.has(note.id)}
                 onJump={onJumpToMark}
                 onDelete={onDeleteNote}
                 onSave={onUpdateNote}
-                onToggleSelection={onToggleSelectedMark}
+                onToggleEvidence={onToggleMarkEvidence}
                 allowMutations={allowMutations}
               />
             ))}
           </div>
         </MarkSection>
 
-        <MarkSection
-          title="Highlights"
-          count={highlights.length}
-          empty="No highlights."
-        >
+        <MarkSection title="Highlights" count={highlights.length} empty="No highlights.">
           <div className="reader-marks__list">
             {highlights.map((highlight) => (
               <HighlightItem
                 key={highlight.id}
                 highlight={highlight}
-                selected={selectedSet.has(highlight.id)}
+                selected={evidenceMarkIdSet.has(highlight.id)}
                 onJump={onJumpToMark}
                 onDelete={onDeleteHighlight}
-                onToggleSelection={onToggleSelectedMark}
+                onToggleEvidence={onToggleMarkEvidence}
                 allowMutations={allowMutations}
               />
             ))}
@@ -328,79 +298,20 @@ export default function ReaderMarksPanel({
       </div>
 
       <div className="reader-marks__footer">
+        <div className="reader-marks__footer-copy">
+          <p className="reader-marks__footer-title">Review Evidence in Seven</p>
+          <p className="reader-marks__footer-note">
+            Build receipts from reviewed evidence inside the guide workspace.
+          </p>
+        </div>
         <button
           type="button"
           className="reader-seven__send reader-seven__send--wide"
-          disabled={!canCreateReceipt || creatingReceipt}
-          onClick={onOpenReceiptComposer}
+          onClick={onOpenSeven}
         >
-          {creatingReceipt ? "Creating…" : "Create Receipt"}
+          Open Seven
         </button>
       </div>
-
-      {receiptComposerOpen ? (
-        <div className="reader-receipt-sheet" role="dialog" aria-label="Create receipt">
-          <div className="reader-receipt-sheet__header">
-            <div>
-              <p className="reader-marks__eyebrow">Synthesis</p>
-              <h3 className="reader-receipt-sheet__title">Create Receipt</h3>
-            </div>
-            <button
-              type="button"
-              className="reader-chrome-button reader-chrome-button--icon"
-              onClick={onCloseReceiptComposer}
-              aria-label="Close receipt composer"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="reader-receipt-sheet__body">
-            <label className="reader-receipt-sheet__field" htmlFor="receipt-title">
-              <span className="reader-receipt-sheet__label">Title</span>
-              <input
-                id="receipt-title"
-                className="reader-receipt-sheet__input"
-                type="text"
-                value={receiptTitle}
-                onChange={(event) => onChangeReceiptTitle(event.target.value)}
-              />
-            </label>
-
-            <label className="reader-receipt-sheet__field" htmlFor="receipt-learned">
-              <span className="reader-receipt-sheet__label">What did you learn?</span>
-              <textarea
-                id="receipt-learned"
-                className="reader-receipt-sheet__textarea"
-                rows={4}
-                value={receiptLearned}
-                onChange={(event) => onChangeReceiptLearned(event.target.value)}
-                placeholder="Optional"
-              />
-            </label>
-
-            <ReceiptExcerptList marks={receiptMarks} />
-          </div>
-
-          <div className="reader-receipt-sheet__actions">
-            <button
-              type="button"
-              className="reader-mark-card__secondary"
-              onClick={onCloseReceiptComposer}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="reader-seven__send"
-              disabled={!canCreateReceipt || creatingReceipt}
-              onClick={onSubmitReceipt}
-            >
-              {creatingReceipt ? "Creating…" : "Create Receipt"}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </aside>
   );
 }

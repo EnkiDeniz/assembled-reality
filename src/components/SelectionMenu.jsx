@@ -4,6 +4,7 @@ export default function SelectionMenu({
   selection,
   noteDraft,
   onHighlight,
+  onAddToEvidence,
   onStartNote,
   onChangeNoteDraft,
   onSaveNote,
@@ -38,6 +39,14 @@ export default function SelectionMenu({
             onClick={onStartNote}
           >
             Add Note
+          </button>
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onAddToEvidence}
+          >
+            Add to Evidence
           </button>
         </div>
       ) : (

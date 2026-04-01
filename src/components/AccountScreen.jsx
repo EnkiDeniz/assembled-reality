@@ -475,14 +475,14 @@ export default function AccountScreen({
                 <p className="account-panel__eyebrow">Activity</p>
                 <h2 className="account-panel__title">Reading Receipts</h2>
                 <p className="account-panel__lede">
-                  Drafts created from your notebook selections appear here.
+                  Drafts created from reviewed evidence appear here.
                 </p>
               </div>
             </div>
 
             {drafts.length === 0 ? (
               <p className="account-empty">
-                No reading receipts yet. Create one from the notebook when a set of notes or highlights is ready to carry forward.
+                No reading receipts yet. Create one in Seven after you review and assemble evidence worth carrying forward.
               </p>
             ) : (
               <div className="account-receipts">
@@ -527,7 +527,7 @@ export default function AccountScreen({
                     : "Connect when you want to turn notebook material into structured output."}
                 </p>
                 <p className="account-connection__detail">
-                  The manuscript stays the center of the experience. This handoff is only for the thinking that comes out of it.
+                  The manuscript stays the center of the experience. This handoff is only for the reviewed interpretation work that comes out of it.
                 </p>
               </div>
               <a className="account-button is-primary" href="/connect/getreceipts">

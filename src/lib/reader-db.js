@@ -244,9 +244,20 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
     data: {
       userId,
       readerProfileId: profile.id,
+      documentKey: draftInput.documentKey || "assembled-reality-v07-final",
+      conversationThreadId: draftInput.conversationThreadId || null,
       getReceiptsReceiptId: draftInput.getReceiptsReceiptId || null,
       status: draftInput.status || "LOCAL_DRAFT",
       title: draftInput.title || null,
+      interpretation: draftInput.interpretation || null,
+      implications: draftInput.implications || null,
+      stance: draftInput.stance || "TENTATIVE",
+      linkedEvidenceItemIds: Array.isArray(draftInput.linkedEvidenceItemIds)
+        ? draftInput.linkedEvidenceItemIds
+        : [],
+      linkedMessageIds: Array.isArray(draftInput.linkedMessageIds)
+        ? draftInput.linkedMessageIds
+        : [],
       sourceSections: Array.isArray(draftInput.sourceSections) ? draftInput.sourceSections : [],
       sourceMarkIds: Array.isArray(draftInput.sourceMarkIds) ? draftInput.sourceMarkIds : [],
       payload: draftInput.payload || null,

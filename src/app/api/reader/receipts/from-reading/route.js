@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getRequiredSession } from "@/lib/server-session";
-import { getParsedDocument } from "@/lib/document";
 import {
   buildReadingReceiptPayload,
   createRemoteReadingReceiptDraft,
@@ -8,20 +7,14 @@ import {
 } from "@/lib/getreceipts";
 import {
   createReadingReceiptDraftForUser,
-  loadReaderPageData,
+  getReaderProfileByUserId,
 } from "@/lib/reader-db";
+import { getEvidenceItemsForUser } from "@/lib/reader-workspace";
+import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 
 export const dynamic = "force-dynamic";
 
-function pickSourceSections(documentData, slugs) {
-  const wanted = new Set(slugs);
-  return documentData.sections.filter((section) => wanted.has(section.slug));
-}
-
-function pickMarks(annotations, markIds) {
-  const wanted = new Set(markIds);
-  return [...annotations.highlights, ...annotations.notes].filter((mark) => wanted.has(mark.id));
-}
+const RECEIPT_STANCES = new Set(["TENTATIVE", "WORKING", "CONFIDENT"]);
 
 export async function POST(request) {
   const session = await getRequiredSession();
@@ -30,27 +23,70 @@ export async function POST(request) {
   }
 
   const body = await request.json();
-  const sourceSections = Array.isArray(body?.sourceSections) ? body.sourceSections : [];
-  const sourceMarkIds = Array.isArray(body?.sourceMarkIds) ? body.sourceMarkIds : [];
+  const documentKey = String(body?.documentKey || PRIMARY_DOCUMENT_KEY).trim();
+  const title = String(body?.title || "").trim();
+  const interpretation = String(body?.interpretation || "").trim();
+  const implications = String(body?.implications || "").trim();
+  const rawStance = String(body?.stance || "tentative").trim().toUpperCase();
+  const stance = RECEIPT_STANCES.has(rawStance) ? rawStance : "TENTATIVE";
+  const evidenceItemIds = Array.isArray(body?.evidenceItemIds) ? body.evidenceItemIds : [];
+  const linkedMessageIds = Array.isArray(body?.linkedMessageIds) ? body.linkedMessageIds : [];
+  const conversationThreadId = String(body?.threadId || "").trim() || null;
 
-  const [documentData, readerData] = await Promise.all([
-    Promise.resolve(getParsedDocument()),
-    loadReaderPageData(session.user.id),
+  if (!title) {
+    return NextResponse.json({ error: "Receipt title is required." }, { status: 400 });
+  }
+
+  if (!interpretation) {
+    return NextResponse.json({ error: "Interpretation is required." }, { status: 400 });
+  }
+
+  if (evidenceItemIds.length === 0) {
+    return NextResponse.json(
+      { error: "At least one reviewed evidence item is required." },
+      { status: 400 },
+    );
+  }
+
+  const [resolved, evidenceItems] = await Promise.all([
+    getReaderProfileByUserId(session.user.id),
+    getEvidenceItemsForUser(session.user.id, {
+      documentKey,
+      evidenceItemIds,
+    }),
   ]);
 
-  if (!readerData?.profile) {
+  if (!resolved?.profile) {
     return NextResponse.json({ error: "Reader profile not found" }, { status: 404 });
   }
 
-  const sections = pickSourceSections(documentData, sourceSections);
-  const marks = pickMarks(readerData.annotations, sourceMarkIds);
+  if (evidenceItems.length === 0 || evidenceItems.length !== evidenceItemIds.length) {
+    return NextResponse.json(
+      { error: "The reviewed evidence set could not be resolved." },
+      { status: 400 },
+    );
+  }
+
+  const sourceSections = [
+    ...new Set(evidenceItems.map((item) => item.sectionSlug).filter(Boolean)),
+  ];
+  const sourceMarkIds = evidenceItems.map((item) => item.sourceMarkId).filter(Boolean);
+  const resolvedLinkedMessageIds = [
+    ...new Set([
+      ...linkedMessageIds.filter(Boolean),
+      ...evidenceItems.map((item) => item.sourceMessageId).filter(Boolean),
+    ]),
+  ];
   const payload = buildReadingReceiptPayload({
-    profile: readerData.profile,
-    sections,
-    marks,
-    learned: body?.learned || "",
+    profile: resolved.profile,
+    documentKey,
+    title,
+    evidenceItems,
+    interpretation,
+    implications,
+    stance: stance.toLowerCase(),
+    linkedMessageIds: resolvedLinkedMessageIds,
   });
-  const title = body?.title || `Reading receipt · ${sections[0]?.title || "Beginning"}`;
   const connection = await getGetReceiptsConnectionForUser(session.user.id);
 
   let remoteReceipt = null;
@@ -67,12 +103,26 @@ export async function POST(request) {
   }
 
   const draft = await createReadingReceiptDraftForUser(session.user.id, {
-    title,
+    documentKey,
+    conversationThreadId,
     status: draftStatus,
+    title,
+    interpretation,
+    implications: implications || null,
+    stance,
+    linkedEvidenceItemIds: evidenceItems.map((item) => item.id),
+    linkedMessageIds: resolvedLinkedMessageIds,
     getReceiptsReceiptId: remoteReceipt?.id || null,
     sourceSections,
     sourceMarkIds,
     payload: {
+      documentKey,
+      title,
+      interpretation,
+      implications,
+      stance: stance.toLowerCase(),
+      evidenceItems,
+      linkedMessageIds: resolvedLinkedMessageIds,
       ...payload,
       remoteReceipt,
       remoteError,
@@ -85,6 +135,11 @@ export async function POST(request) {
       id: draft.id,
       status: draft.status,
       title: draft.title,
+      interpretation: draft.interpretation,
+      implications: draft.implications,
+      stance: String(draft.stance || "").toLowerCase(),
+      linkedEvidenceItemIds: draft.linkedEvidenceItemIds,
+      linkedMessageIds: draft.linkedMessageIds,
       sourceSections: draft.sourceSections,
       sourceMarkIds: draft.sourceMarkIds,
       payload: draft.payload,

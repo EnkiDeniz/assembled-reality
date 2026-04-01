@@ -64,19 +64,6 @@ function syncReaderUrl({ panel = null, hash = undefined, historyMode = "replace"
   window.history[method](window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-function buildReceiptTitle(selectedMarks, currentLabel) {
-  const titles = [...new Set(selectedMarks.map((mark) => mark.sectionTitle).filter(Boolean))];
-  if (titles.length === 1) {
-    return `Reading receipt · ${titles[0]}`;
-  }
-
-  if (titles.length > 1) {
-    return `Reading receipt · ${titles[0]} + ${titles.length - 1}`;
-  }
-
-  return `Reading receipt · ${currentLabel}`;
-}
-
 function BookmarkIcon({ filled }) {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
@@ -137,6 +124,8 @@ export default function ReaderShell({
   setPreferences,
   initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
   initialReadingProgress = null,
+  initialConversationThread = null,
+  initialEvidenceSet = null,
   profile = null,
   sessionUser = null,
   getReceiptsConnection: _getReceiptsConnection = null,
@@ -163,24 +152,17 @@ export default function ReaderShell({
   const [noteDraft, setNoteDraft] = useState("");
   const [selectionNotice, setSelectionNotice] = useState("");
   const [receiptNotice, setReceiptNotice] = useState("");
-  const [creatingReceipt, setCreatingReceipt] = useState(false);
+  const [evidenceItems, setEvidenceItems] = useState(() => initialEvidenceSet?.items || []);
+  const [sevenView, setSevenView] = useState("chat");
   const [activeMarkId, setActiveMarkId] = useState(null);
   const [focusedSectionSlug, setFocusedSectionSlug] = useState(null);
   const [notebookScope, setNotebookScope] = useState("section");
-  const [selectedMarkIds, setSelectedMarkIds] = useState([]);
-  const [receiptComposerOpen, setReceiptComposerOpen] = useState(false);
-  const [receiptTitle, setReceiptTitle] = useState("");
-  const [receiptLearned, setReceiptLearned] = useState("");
   const scrollIntentRef = useRef(false);
   const noticeTimeoutRef = useRef(null);
   const focusTimeoutRef = useRef(null);
   const hasHydratedMarksRef = useRef(false);
   const hasHydratedProgressRef = useRef(false);
   const surfaceTriggerRef = useRef(null);
-  const notebookContextRef = useRef({
-    scope: "section",
-    slug: initialHash || initialReadingProgress?.sectionSlug || "beginning",
-  });
 
   const entries = useMemo(
     () => [
@@ -263,15 +245,10 @@ export default function ReaderShell({
     () => sortedNotes.filter(matchesNotebookScope),
     [matchesNotebookScope, sortedNotes],
   );
-  const eligibleReceiptMarks = useMemo(
-    () => [...visibleNotes, ...visibleHighlights],
-    [visibleHighlights, visibleNotes],
+  const evidenceMarkIds = useMemo(
+    () => evidenceItems.map((item) => item.sourceMarkId).filter(Boolean),
+    [evidenceItems],
   );
-  const selectedReceiptMarks = useMemo(
-    () => eligibleReceiptMarks.filter((mark) => selectedMarkIds.includes(mark.id)),
-    [eligibleReceiptMarks, selectedMarkIds],
-  );
-  const canCreateReceipt = selectedReceiptMarks.length > 0;
 
   const clearFocusState = useCallback(() => {
     if (focusTimeoutRef.current) {
@@ -296,7 +273,6 @@ export default function ReaderShell({
       }
 
       setActiveSurface(null);
-      setReceiptComposerOpen(false);
 
       if (restoreFocus) {
         restoreSurfaceFocus();
@@ -319,7 +295,6 @@ export default function ReaderShell({
       setSelectionState(null);
       setNoteDraft("");
       clearBrowserSelection();
-      setReceiptComposerOpen(false);
 
       if (URL_SYNC_SURFACES.has(surface)) {
         syncReaderUrl({
@@ -510,11 +485,6 @@ export default function ReaderShell({
     const handleEscape = (event) => {
       if (event.key !== "Escape") return;
 
-      if (receiptComposerOpen) {
-        setReceiptComposerOpen(false);
-        return;
-      }
-
       if (selectionState?.mode === "note") {
         setSelectionState(null);
         setNoteDraft("");
@@ -529,7 +499,7 @@ export default function ReaderShell({
 
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [activeSurface, closeSurface, receiptComposerOpen, selectionState?.mode]);
+  }, [activeSurface, closeSurface, selectionState?.mode]);
 
   useEffect(() => {
     document.title = `${documentData.title} · ${currentEntry.title}`;
@@ -683,40 +653,6 @@ export default function ReaderShell({
   }, [activeSlug, progressPercent]);
 
   useEffect(() => {
-    const eligibleIds = eligibleReceiptMarks.map((mark) => mark.id);
-    const sameContext =
-      notebookContextRef.current.scope === notebookScope &&
-      notebookContextRef.current.slug === activeSlug;
-
-    setSelectedMarkIds((current) => {
-      if (!sameContext) {
-        return eligibleIds;
-      }
-
-      const kept = current.filter((id) => eligibleIds.includes(id));
-      const additions = eligibleIds.filter((id) => !kept.includes(id));
-      return [...kept, ...additions];
-    });
-
-    notebookContextRef.current = {
-      scope: notebookScope,
-      slug: activeSlug,
-    };
-  }, [activeSlug, eligibleReceiptMarks, notebookScope]);
-
-  useEffect(() => {
-    if (activeSurface !== "notebook") {
-      setReceiptComposerOpen(false);
-    }
-  }, [activeSurface]);
-
-  useEffect(() => {
-    if (receiptComposerOpen && !canCreateReceipt) {
-      setReceiptComposerOpen(false);
-    }
-  }, [canCreateReceipt, receiptComposerOpen]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
     const handlePopState = () => {
@@ -728,10 +664,6 @@ export default function ReaderShell({
 
         return panel;
       });
-
-      if (!panel) {
-        setReceiptComposerOpen(false);
-      }
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -791,67 +723,185 @@ export default function ReaderShell({
     clearBrowserSelection();
   }, [noteDraft, selectionState?.anchor]);
 
-  const handleToggleSelectedMark = useCallback((markId) => {
-    setSelectedMarkIds((current) =>
-      current.includes(markId)
-        ? current.filter((id) => id !== markId)
-        : [...current, markId],
+  const addEvidenceItem = useCallback(
+    async (input, successMessage = "Added to evidence.") => {
+      try {
+        const response = await fetch("/api/reader/evidence", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            documentKey: documentData.documentKey,
+            ...input,
+          }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok || !payload?.item) {
+          throw new Error(payload?.error || "Could not add to evidence.");
+        }
+
+        setEvidenceItems((current) => {
+          const existingIndex = current.findIndex((item) => item.id === payload.item.id);
+          if (existingIndex === -1) {
+            return [...current, payload.item];
+          }
+
+          const next = [...current];
+          next[existingIndex] = payload.item;
+          return next;
+        });
+        showReceiptNotice(successMessage);
+        return payload.item;
+      } catch (error) {
+        showReceiptNotice(error instanceof Error ? error.message : "Could not add to evidence.");
+        return null;
+      }
+    },
+    [documentData.documentKey, showReceiptNotice],
+  );
+
+  const removeEvidenceItem = useCallback(
+    async (itemId, successMessage = "Removed from evidence.") => {
+      try {
+        const response = await fetch("/api/reader/evidence", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ itemId }),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.error || "Could not remove from evidence.");
+        }
+
+        setEvidenceItems((current) => current.filter((item) => item.id !== itemId));
+        showReceiptNotice(successMessage);
+        return true;
+      } catch (error) {
+        showReceiptNotice(error instanceof Error ? error.message : "Could not remove from evidence.");
+        return false;
+      }
+    },
+    [showReceiptNotice],
+  );
+
+  const handleAddSelectionToEvidence = useCallback(() => {
+    if (!selectionState?.anchor) return;
+
+    void addEvidenceItem(
+      {
+        origin: "reader",
+        sourceType: "passage",
+        sectionSlug: selectionState.anchor.sectionSlug,
+        sectionTitle: selectionState.anchor.sectionTitle,
+        blockId: selectionState.anchor.blockId,
+        startOffset: selectionState.anchor.startOffset,
+        endOffset: selectionState.anchor.endOffset,
+        quote: selectionState.anchor.quote,
+        excerpt: selectionState.anchor.quote,
+      },
+      "Added passage to evidence.",
     );
-  }, []);
+    setSevenView("evidence");
+    setSelectionState(null);
+    setNoteDraft("");
+    clearBrowserSelection();
+  }, [addEvidenceItem, selectionState?.anchor]);
 
-  const openReceiptComposer = useCallback(() => {
-    if (!canCreateReceipt) return;
+  const handleToggleMarkEvidence = useCallback(
+    (mark) => {
+      const existing = evidenceItems.find((item) => item.sourceMarkId === mark.id);
+      if (existing) {
+        void removeEvidenceItem(existing.id, "Removed mark from evidence.");
+        return;
+      }
 
-    setReceiptTitle(buildReceiptTitle(selectedReceiptMarks, currentLabel));
-    setReceiptLearned("");
-    setReceiptComposerOpen(true);
-  }, [canCreateReceipt, currentLabel, selectedReceiptMarks]);
-
-  const handleCreateReceipt = useCallback(async () => {
-    if (!canCreateReceipt) return;
-
-    setCreatingReceipt(true);
-    try {
-      const response = await fetch("/api/reader/receipts/from-reading", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      void addEvidenceItem(
+        {
+          origin: "reader",
+          sourceType: mark.type === "note" ? "note" : "highlight",
+          sectionSlug: mark.sectionSlug,
+          sectionTitle: mark.sectionTitle,
+          blockId: mark.blockId || null,
+          startOffset: mark.startOffset,
+          endOffset: mark.endOffset,
+          quote: mark.quote || mark.excerpt,
+          excerpt: mark.excerpt || mark.quote,
+          noteText: mark.noteText || "",
+          sourceMarkId: mark.id,
         },
-        body: JSON.stringify({
-          sourceSections: [
-            ...new Set(
-              selectedReceiptMarks
-                .map((mark) => mark.sectionSlug)
-                .filter(Boolean)
-                .filter((slug) => slug !== "beginning"),
-            ),
-          ],
-          sourceMarkIds: selectedReceiptMarks.map((mark) => mark.id),
-          title: receiptTitle.trim() || undefined,
-          learned: receiptLearned.trim() || undefined,
-        }),
+        mark.type === "note" ? "Added note to evidence." : "Added highlight to evidence.",
+      );
+      setSevenView("evidence");
+    },
+    [addEvidenceItem, evidenceItems, removeEvidenceItem],
+  );
+
+  const handleDeleteHighlight = useCallback(
+    (highlightId) => {
+      setReaderAnnotations((current) => deleteHighlight(current, highlightId));
+      const existing = evidenceItems.find((item) => item.sourceMarkId === highlightId);
+      if (existing) {
+        void removeEvidenceItem(existing.id, "Removed highlight from evidence.");
+      }
+    },
+    [evidenceItems, removeEvidenceItem],
+  );
+
+  const handleDeleteNote = useCallback(
+    (noteId) => {
+      setReaderAnnotations((current) => deleteNote(current, noteId));
+      const existing = evidenceItems.find((item) => item.sourceMarkId === noteId);
+      if (existing) {
+        void removeEvidenceItem(existing.id, "Removed note from evidence.");
+      }
+    },
+    [evidenceItems, removeEvidenceItem],
+  );
+
+  const handleUpdateNote = useCallback(
+    (noteId, nextText) => {
+      let nextNote = null;
+      setReaderAnnotations((current) => {
+        const updated = updateNote(current, noteId, nextText);
+        nextNote = updated.notes.find((note) => note.id === noteId) || null;
+        return updated;
       });
 
-      const payload = await response.json();
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Could not create receipt draft.");
+      const existing = evidenceItems.find((item) => item.sourceMarkId === noteId);
+      if (existing && nextNote) {
+        void addEvidenceItem(
+          {
+            origin: "reader",
+            sourceType: "note",
+            sectionSlug: nextNote.sectionSlug,
+            sectionTitle: nextNote.sectionTitle,
+            blockId: nextNote.blockId || null,
+            startOffset: nextNote.startOffset,
+            endOffset: nextNote.endOffset,
+            quote: nextNote.quote || nextNote.excerpt,
+            excerpt: nextNote.excerpt || nextNote.quote,
+            noteText: nextNote.noteText || "",
+            sourceMarkId: nextNote.id,
+          },
+          "Updated note in evidence.",
+        );
       }
+    },
+    [addEvidenceItem, evidenceItems],
+  );
 
-      if (payload?.remoteReceipt?.id) {
-        showReceiptNotice("Receipt draft created in GetReceipts.");
-      } else if (payload?.remoteError) {
-        showReceiptNotice("Saved local draft. GetReceipts handoff needs attention.");
-      } else {
-        showReceiptNotice("Saved local reading draft.");
-      }
-
-      setReceiptComposerOpen(false);
-    } catch (error) {
-      showReceiptNotice(error instanceof Error ? error.message : "Could not create receipt draft.");
-    } finally {
-      setCreatingReceipt(false);
-    }
-  }, [canCreateReceipt, receiptLearned, receiptTitle, selectedReceiptMarks, showReceiptNotice]);
+  const handleOpenSevenEvidence = useCallback(
+    (trigger = null) => {
+      setSevenView("evidence");
+      toggleSurface("seven", trigger);
+    },
+    [toggleSurface],
+  );
 
   return (
     <div
@@ -1045,32 +1095,18 @@ export default function ReaderShell({
         bookmarks={visibleBookmarks}
         highlights={visibleHighlights}
         notes={visibleNotes}
-        selectedMarkIds={selectedMarkIds}
-        onToggleSelectedMark={handleToggleSelectedMark}
+        evidenceMarkIds={evidenceMarkIds}
+        onToggleMarkEvidence={handleToggleMarkEvidence}
+        onOpenSeven={handleOpenSevenEvidence}
         onClose={() => closeSurface()}
         onJumpToBookmark={jumpToMark}
         onJumpToMark={jumpToMark}
         onDeleteBookmark={(bookmarkId) =>
           setReaderAnnotations((current) => deleteBookmark(current, bookmarkId))
         }
-        onDeleteHighlight={(highlightId) =>
-          setReaderAnnotations((current) => deleteHighlight(current, highlightId))
-        }
-        onDeleteNote={(noteId) => setReaderAnnotations((current) => deleteNote(current, noteId))}
-        onUpdateNote={(noteId, nextText) =>
-          setReaderAnnotations((current) => updateNote(current, noteId, nextText))
-        }
-        canCreateReceipt={canCreateReceipt}
-        creatingReceipt={creatingReceipt}
-        receiptComposerOpen={receiptComposerOpen}
-        receiptTitle={receiptTitle}
-        receiptLearned={receiptLearned}
-        receiptMarks={selectedReceiptMarks}
-        onOpenReceiptComposer={openReceiptComposer}
-        onCloseReceiptComposer={() => setReceiptComposerOpen(false)}
-        onChangeReceiptTitle={setReceiptTitle}
-        onChangeReceiptLearned={setReceiptLearned}
-        onSubmitReceipt={handleCreateReceipt}
+        onDeleteHighlight={handleDeleteHighlight}
+        onDeleteNote={handleDeleteNote}
+        onUpdateNote={handleUpdateNote}
       />
 
       <SevenPanel
@@ -1082,6 +1118,13 @@ export default function ReaderShell({
         documentData={documentData}
         activeSlug={activeSlug}
         currentLabel={currentLabel}
+        view={sevenView}
+        onChangeView={setSevenView}
+        initialThread={initialConversationThread}
+        evidenceItems={evidenceItems}
+        onAddEvidenceItem={addEvidenceItem}
+        onRemoveEvidenceItem={removeEvidenceItem}
+        onShowNotice={showReceiptNotice}
         onNavigateSection={jumpTo}
         onClose={() => closeSurface()}
       />
@@ -1153,6 +1196,7 @@ export default function ReaderShell({
         selection={selectionState}
         noteDraft={noteDraft}
         onHighlight={handleCreateHighlight}
+        onAddToEvidence={handleAddSelectionToEvidence}
         onStartNote={handleStartNote}
         onChangeNoteDraft={setNoteDraft}
         onSaveNote={handleSaveNote}

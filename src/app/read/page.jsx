@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getParsedDocument } from "@/lib/document";
 import { appEnv } from "@/lib/env";
 import { loadReaderPageData } from "@/lib/reader-db";
+import { loadReaderWorkspaceForUser } from "@/lib/reader-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,10 @@ export default async function ReadPage() {
   }
 
   const documentData = getParsedDocument();
-  const readerData = await loadReaderPageData(session.user.id);
+  const [readerData, workspace] = await Promise.all([
+    loadReaderPageData(session.user.id),
+    loadReaderWorkspaceForUser(session.user.id, documentData.documentKey),
+  ]);
 
   return (
     <ReadGate
@@ -25,6 +29,8 @@ export default async function ReadPage() {
       initialProgress={readerData?.progress}
       profile={readerData?.profile}
       getReceiptsConnection={readerData?.getReceiptsConnection}
+      initialConversationThread={workspace?.thread || null}
+      initialEvidenceSet={workspace?.evidenceSet || null}
       sevenTextEnabled={appEnv.openai.enabled}
       sevenVoiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
       sevenTextProvider={appEnv.openai.enabled ? "openai" : null}
