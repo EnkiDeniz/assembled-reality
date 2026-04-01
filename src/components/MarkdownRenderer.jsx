@@ -1,11 +1,16 @@
+"use client";
+
 import {
   Children,
   cloneElement,
   isValidElement,
+  useEffect,
+  useRef,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { normalizeReaderBlockText } from "@/lib/reader-player";
 
 function getBlockId(node, sectionSlug, fallback) {
   const start = node?.position?.start?.offset;
@@ -119,12 +124,56 @@ function renderBlockChildren(children, blockId, marksByBlock, activeMarkId) {
   return annotateChildren(children, state, marks, activeMarkId);
 }
 
-function Block({ as, node, sectionSlug, fallback, children, marksByBlock, activeMarkId, ...props }) {
+function Block({
+  as,
+  node,
+  sectionSlug,
+  fallback,
+  children,
+  className = "",
+  marksByBlock,
+  activeMarkId,
+  activeBlockId = null,
+  nextBlockId = null,
+  onRegisterBlock,
+  onUnregisterBlock,
+  playable = false,
+  ...props
+}) {
   const blockId = getBlockId(node, sectionSlug, fallback);
   const Tag = as;
+  const elementRef = useRef(null);
+
+  useEffect(() => {
+    if (!playable || !elementRef.current) return undefined;
+
+    const text = normalizeReaderBlockText(elementRef.current.textContent);
+    if (!text) return undefined;
+
+    onRegisterBlock?.({
+      blockId,
+      sectionSlug,
+      text,
+      element: elementRef.current,
+    });
+
+    return () => onUnregisterBlock?.(blockId);
+  }, [blockId, onRegisterBlock, onUnregisterBlock, playable, sectionSlug, children]);
 
   return (
-    <Tag data-block-id={blockId} {...props}>
+    <Tag
+      ref={elementRef}
+      {...props}
+      className={[
+        className,
+        playable ? "reader-block" : "",
+        activeBlockId === blockId ? "is-player-active" : "",
+        nextBlockId === blockId ? "is-player-next" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-block-id={blockId}
+    >
       {renderBlockChildren(children, blockId, marksByBlock, activeMarkId)}
     </Tag>
   );
@@ -136,6 +185,10 @@ export default function MarkdownRenderer({
   className = "",
   marksByBlock = {},
   activeMarkId = null,
+  activeBlockId = null,
+  nextBlockId = null,
+  onRegisterBlock,
+  onUnregisterBlock,
 }) {
   return (
     <div className={`markdown-flow ${className}`.trim()}>
@@ -151,6 +204,11 @@ export default function MarkdownRenderer({
                 fallback="p"
                 marksByBlock={marksByBlock}
                 activeMarkId={activeMarkId}
+                activeBlockId={activeBlockId}
+                nextBlockId={nextBlockId}
+                onRegisterBlock={onRegisterBlock}
+                onUnregisterBlock={onUnregisterBlock}
+                playable
               >
                 {children}
               </Block>
@@ -165,6 +223,11 @@ export default function MarkdownRenderer({
                 fallback="blockquote"
                 marksByBlock={marksByBlock}
                 activeMarkId={activeMarkId}
+                activeBlockId={activeBlockId}
+                nextBlockId={nextBlockId}
+                onRegisterBlock={onRegisterBlock}
+                onUnregisterBlock={onUnregisterBlock}
+                playable
               >
                 {children}
               </Block>
@@ -179,6 +242,11 @@ export default function MarkdownRenderer({
                 fallback="li"
                 marksByBlock={marksByBlock}
                 activeMarkId={activeMarkId}
+                activeBlockId={activeBlockId}
+                nextBlockId={nextBlockId}
+                onRegisterBlock={onRegisterBlock}
+                onUnregisterBlock={onUnregisterBlock}
+                playable
               >
                 {children}
               </Block>
