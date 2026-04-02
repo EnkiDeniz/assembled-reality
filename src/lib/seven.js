@@ -378,6 +378,26 @@ export function getSectionOutline(documentData) {
     .join("\n");
 }
 
+export function getConversationStarters(sectionTitle, sectionNumber) {
+  if (!sectionTitle || sectionTitle === "Beginning") {
+    return [
+      "What is this document about?",
+      "What are the main arguments?",
+      "Summarize the key ideas.",
+      "What should I pay attention to?",
+    ];
+  }
+
+  const short = sectionTitle.length > 40 ? "this section" : `"${sectionTitle}"`;
+
+  return [
+    `What is the main argument of ${short}?`,
+    `How does section ${sectionNumber} connect to the larger thesis?`,
+    `What evidence supports the claims here?`,
+    `Summarize the key takeaways from ${short}.`,
+  ];
+}
+
 function normalizeSearchText(text) {
   return String(text || "")
     .toLowerCase()

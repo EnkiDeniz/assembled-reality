@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// eslint-disable-next-line no-unused-vars -- motion.button used in JSX
+import { AnimatePresence, motion } from "motion/react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderListenTray from "./ReaderListenTray";
 import ReaderMarksPanel from "./ReaderMarksPanel";
@@ -282,6 +284,13 @@ export default function ReaderShell({
     }),
   );
   const [audioError, setAudioError] = useState("");
+  const [audioTimeState, setAudioTimeState] = useState({
+    elapsed: 0,
+    duration: 0,
+    chunkElapsed: 0,
+    chunkDuration: 0,
+  });
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [progress, setProgress] = useState(
     typeof initialReadingProgress?.progressPercent === "number"
       ? initialReadingProgress.progressPercent / 100
@@ -313,6 +322,7 @@ export default function ReaderShell({
   const audioSessionRef = useRef(0);
   const documentRunRef = useRef(0);
   const lastAutoscrollBlockRef = useRef(null);
+  const chunkDurationsRef = useRef([]);
 
   const entries = useMemo(
     () => [
@@ -729,6 +739,27 @@ export default function ReaderShell({
     }
   }, [runtimeAudioState.status, stopRuntimeAudio]);
 
+  const handleSpeedChange = useCallback(
+    (rate) => {
+      setPlaybackSpeed(rate);
+      if (audioRef.current) {
+        audioRef.current.playbackRate = rate;
+      }
+    },
+    [],
+  );
+
+  const handleAudioSkip = useCallback(
+    (offsetSeconds) => {
+      if (!audioRef.current) return;
+      audioRef.current.currentTime = Math.max(
+        0,
+        Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + offsetSeconds),
+      );
+    },
+    [],
+  );
+
   const fetchAudioChunk = useCallback(async (text) => {
     const response = await fetch("/api/seven/audio", {
       method: "POST",
@@ -819,6 +850,8 @@ export default function ReaderShell({
       }
 
       stopRuntimeAudio();
+      chunkDurationsRef.current = new Array(chunks.length).fill(0);
+      setAudioTimeState({ elapsed: 0, duration: 0, chunkElapsed: 0, chunkDuration: 0 });
       const sessionId = audioSessionRef.current;
       setRuntimeAudioState({
         status: "loading",
@@ -900,6 +933,32 @@ export default function ReaderShell({
 
         const audio = new Audio(url);
         audioRef.current = audio;
+        audio.playbackRate = playbackSpeed;
+
+        const priorChunksDuration = chunkDurationsRef.current
+          .slice(0, chunkIndex)
+          .reduce((sum, d) => sum + d, 0);
+
+        audio.addEventListener("loadedmetadata", () => {
+          chunkDurationsRef.current[chunkIndex] = audio.duration;
+          const known = chunkDurationsRef.current.filter((d) => d > 0);
+          const avgDuration = known.reduce((s, d) => s + d, 0) / known.length;
+          const knownSum = known.reduce((s, d) => s + d, 0);
+          const unknownCount = chunks.length - known.length;
+          setAudioTimeState((prev) => ({
+            ...prev,
+            chunkDuration: audio.duration,
+            duration: knownSum + avgDuration * unknownCount,
+          }));
+        });
+
+        audio.addEventListener("timeupdate", () => {
+          setAudioTimeState((prev) => ({
+            ...prev,
+            chunkElapsed: audio.currentTime,
+            elapsed: priorChunksDuration + audio.currentTime,
+          }));
+        });
 
         await new Promise((resolve, reject) => {
           audio.addEventListener("ended", resolve, { once: true });
@@ -1007,6 +1066,7 @@ export default function ReaderShell({
       clearAudioUrl,
       effectiveVoiceEnabled,
       fetchAudioChunk,
+      playbackSpeed,
       playWithDeviceVoice,
       sevenVoiceEnabled,
       sevenVoiceProvider,
@@ -2249,6 +2309,15 @@ export default function ReaderShell({
         state={listenTrayState}
         currentLabel={displayLabel}
         progress={sectionProgress}
+        elapsed={audioTimeState.elapsed}
+        duration={audioTimeState.duration}
+        speed={playbackSpeed}
+        voiceLabel={
+          runtimeAudioState.mode === "device"
+            ? "Seven · Device voice"
+            : `Seven · ${getSevenProviderLabel(voiceStatus.provider || sevenVoiceProvider)}`
+        }
+        isDeviceMode={runtimeAudioState.mode === "device"}
         canListenCurrentSection={canListenCurrentSection}
         canContinueDocument={canContinueDocument}
         canGoPrevious={Boolean(previousEntry)}
@@ -2265,6 +2334,8 @@ export default function ReaderShell({
         onContinue={() => void handleContinueDocument()}
         onPrevious={() => void handlePlaybackSectionStep(-1)}
         onNext={() => void handlePlaybackSectionStep(1)}
+        onSpeedChange={handleSpeedChange}
+        onSkip={handleAudioSkip}
       />
 
       <SevenPanel
@@ -2367,6 +2438,24 @@ export default function ReaderShell({
 
       {selectionNotice ? <div className="reader-toast">{selectionNotice}</div> : null}
       {receiptNotice ? <div className="reader-toast is-receipt">{receiptNotice}</div> : null}
+
+      <AnimatePresence>
+        {!sevenOpen && listenTrayState !== "open" ? (
+          <motion.button
+            key="reader-fab"
+            type="button"
+            className="reader-fab"
+            onClick={(event) => openSevenView("guide", event)}
+            aria-label="Ask Seven"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: "spring", damping: 20, stiffness: 400 }}
+          >
+            <span className="reader-fab__glyph">7</span>
+          </motion.button>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

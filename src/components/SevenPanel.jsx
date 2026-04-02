@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// eslint-disable-next-line no-unused-vars -- motion.button used in JSX
+import { motion } from "motion/react";
 import {
+  getConversationStarters,
   getReaderSection,
   getSectionOutline,
   getSectionPreview,
@@ -667,8 +670,36 @@ export default function SevenPanel({
 
             <div ref={messageListRef} className="reader-seven__messages">
               {messages.length === 0 ? (
-                <div className="reader-seven__empty">
-                  <p className="reader-seven__empty-title">Start with a question.</p>
+                <div className="reader-seven__idle">
+                  <span className="reader-seven__idle-glyph" aria-hidden="true">7</span>
+                  <p className="reader-seven__idle-subtitle">Ask about this section</p>
+                  <p className="reader-seven__idle-section">{currentLabel}</p>
+                  <div className="reader-seven__starters">
+                    {getConversationStarters(
+                      currentSection.title,
+                      currentSection.number,
+                    ).map((starter, index) => (
+                      <motion.button
+                        key={starter}
+                        type="button"
+                        className="reader-seven__starter-chip"
+                        disabled={pending || !textEnabled}
+                        initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ delay: index * 0.06, duration: 0.3 }}
+                        onClick={() => {
+                          setDraft("");
+                          requestSeven({
+                            mode: "question",
+                            question: starter,
+                            userLine: starter,
+                          });
+                        }}
+                      >
+                        {starter}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 messages.map((message) => {
