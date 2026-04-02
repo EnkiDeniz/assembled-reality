@@ -35,7 +35,7 @@ export default async function ReadPage() {
       sevenVoiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
       sevenTextProvider={appEnv.openai.enabled ? "openai" : null}
       sevenVoiceProvider={
-        appEnv.elevenlabs.enabled ? "elevenlabs" : appEnv.openai.enabled ? "openai" : null
+        appEnv.openai.enabled ? "openai" : appEnv.elevenlabs.enabled ? "elevenlabs" : null
       }
     />
   );
