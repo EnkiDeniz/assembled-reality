@@ -22,7 +22,6 @@ import {
 import {
   buildSevenFallbackMessage,
   getNarrationText,
-  getSevenProviderLabel,
   parseSevenAudioHeaders,
   splitTextForSpeech,
 } from "../lib/seven";
@@ -107,7 +106,7 @@ function initialVoiceStatus({ voiceEnabled, browserSpeechEnabled, preferredVoice
       provider: preferredVoiceProvider,
       fallbackFrom: null,
       reasonCode: "",
-      message: `Voice is ready through ${getSevenProviderLabel(preferredVoiceProvider)}.`,
+      message: "Voice is ready.",
     };
   }
 
@@ -117,7 +116,7 @@ function initialVoiceStatus({ voiceEnabled, browserSpeechEnabled, preferredVoice
       provider: "device",
       fallbackFrom: null,
       reasonCode: "",
-      message: "Listening is available through your device voice.",
+      message: "Voice is ready.",
     };
   }
 
@@ -126,7 +125,7 @@ function initialVoiceStatus({ voiceEnabled, browserSpeechEnabled, preferredVoice
     provider: preferredVoiceProvider,
     fallbackFrom: null,
     reasonCode: "provider_unavailable",
-    message: "Seven's voice is unavailable right now.",
+    message: "Voice is unavailable right now.",
   };
 }
 
@@ -961,7 +960,7 @@ export default function ReaderShell({
                 fallbackFrom: meta.fallbackFrom,
                 reasonCode: meta.fallbackReasonCode || "unknown_error",
               })
-            : `Voice is ready through ${getSevenProviderLabel(meta.provider || sevenVoiceProvider)}.`,
+            : "Voice is ready.",
         });
 
         clearAudioUrl();
@@ -2194,10 +2193,10 @@ export default function ReaderShell({
             className={`reader-player-topbar__utility reader-player-topbar__tools ${toolsOpen ? "is-active" : ""}`}
             onClick={(event) => openOverlay("more", event)}
             aria-expanded={toolsOpen}
-            aria-label="Open reader tools"
+            aria-label="Open document actions"
           >
             <MoreIcon />
-            <span className="reader-player-topbar__tools-label">Tools</span>
+            <span className="reader-player-topbar__tools-label">More</span>
           </button>
         </div>
       </header>
@@ -2215,18 +2214,18 @@ export default function ReaderShell({
       ) : null}
 
       {toolsOpen ? (
-        <div className="reader-more-sheet" role="dialog" aria-label="Reader tools">
+        <div className="reader-more-sheet" role="dialog" aria-label="Document actions">
           <div className="reader-more-sheet__header">
             <div className="reader-more-sheet__heading">
-              <p className="reader-more-sheet__eyebrow">Reader</p>
-              <h2 className="reader-more-sheet__title">Tools</h2>
+              <p className="reader-more-sheet__eyebrow">Current document</p>
+              <h2 className="reader-more-sheet__title">{documentData.title}</h2>
               <p className="reader-more-sheet__current">{currentLabel}</p>
             </div>
             <button
               type="button"
               className="reader-more-sheet__close"
               onClick={() => closeOverlay()}
-              aria-label="Close reader tools"
+              aria-label="Close document actions"
             >
               ×
             </button>
@@ -2251,12 +2250,22 @@ export default function ReaderShell({
             </button>
             <button
               type="button"
-              className={`reader-more-sheet__quick-button ${currentBookmarked ? "is-active" : ""}`}
+              className={`reader-more-sheet__quick-button ${sevenOpen ? "is-active" : ""}`}
+              onClick={(event) => openSevenView("guide", event)}
+            >
+              <SevenIcon />
+              <span>Seven</span>
+            </button>
+          </div>
+
+          <div className="reader-more-sheet__actions">
+            <button
+              type="button"
+              className="reader-more-sheet__link"
               onClick={handleToggleBookmark}
               aria-pressed={currentBookmarked}
             >
-              <BookmarkIcon filled={currentBookmarked} />
-              <span>{currentBookmarked ? "Bookmarked" : "Bookmark"}</span>
+              {currentBookmarked ? "Remove bookmark" : "Bookmark this section"}
             </button>
           </div>
 
@@ -2311,6 +2320,13 @@ export default function ReaderShell({
           </div>
 
           <div className="reader-toc__header-actions">
+            <button
+              type="button"
+              className="reader-toc__back"
+              onClick={() => jumpTo(viewportSectionSlug)}
+            >
+              Back to current
+            </button>
             <button
               type="button"
               className="reader-player-topbar__utility"
@@ -2370,9 +2386,7 @@ export default function ReaderShell({
         duration={audioTimeState.duration}
         speed={playbackSpeed}
         voiceLabel={
-          runtimeAudioState.mode === "device"
-            ? "Seven · Device voice"
-            : `Seven · ${getSevenProviderLabel(voiceStatus.provider || sevenVoiceProvider)}`
+          runtimeAudioState.mode === "device" ? "Device narration" : "Seven narration"
         }
         isDeviceMode={runtimeAudioState.mode === "device"}
         canListenCurrentSection={canListenCurrentSection}

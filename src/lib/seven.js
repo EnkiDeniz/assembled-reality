@@ -127,11 +127,10 @@ export function getSevenReasonCode({ status = 0, detail = "", code = "", type = 
 
 export function buildSevenIssueMessage({
   feature = "chat",
-  provider = "",
+  provider: _provider = "",
   reasonCode = "unknown_error",
   retryAfterSeconds = null,
 } = {}) {
-  const providerLabel = getSevenProviderLabel(provider);
   const featureLabel = feature === "voice" ? "voice" : "chat";
 
   if (reasonCode === "rate_limited") {
@@ -141,15 +140,15 @@ export function buildSevenIssueMessage({
   }
 
   if (reasonCode === "quota_exceeded") {
-    return `Seven's ${providerLabel} ${featureLabel} is unavailable because the provider quota is exhausted.`;
+    return `Seven's ${featureLabel} is unavailable right now. Try again shortly.`;
   }
 
   if (reasonCode === "auth_failed") {
-    return `Seven's ${providerLabel} ${featureLabel} is unavailable because the provider credentials were rejected.`;
+    return `Seven's ${featureLabel} is unavailable right now.`;
   }
 
   if (reasonCode === "provider_unavailable") {
-    return `Seven's ${providerLabel} ${featureLabel} is unavailable right now because the provider is not responding.`;
+    return `Seven's ${featureLabel} is unavailable right now.`;
   }
 
   return `Seven's ${featureLabel} is unavailable right now.`;
@@ -157,26 +156,24 @@ export function buildSevenIssueMessage({
 
 export function buildSevenFallbackMessage({
   fallbackTo = "device",
-  fallbackFrom = "",
+  fallbackFrom: _fallbackFrom = "",
   reasonCode = "unknown_error",
 } = {}) {
-  const fallbackLabel =
-    fallbackTo === "device" ? "your device voice" : getSevenProviderLabel(fallbackTo);
-  const sourceLabel = fallbackFrom ? getSevenProviderLabel(fallbackFrom) : "provider audio";
+  const fallbackLabel = fallbackTo === "device" ? "your device voice" : "Seven voice";
 
   if (reasonCode === "quota_exceeded") {
-    return `Seven switched to ${fallbackLabel} because ${sourceLabel} ran out of quota.`;
+    return `Seven switched to ${fallbackLabel} to keep reading going.`;
   }
 
   if (reasonCode === "rate_limited") {
-    return `Seven switched to ${fallbackLabel} because ${sourceLabel} is rate limited.`;
+    return `Seven switched to ${fallbackLabel} to keep reading going.`;
   }
 
   if (reasonCode === "auth_failed") {
-    return `Seven switched to ${fallbackLabel} because ${sourceLabel} rejected the request.`;
+    return `Seven switched to ${fallbackLabel} to keep reading going.`;
   }
 
-  return `Seven switched to ${fallbackLabel} because provider audio is unavailable right now.`;
+  return `Seven switched to ${fallbackLabel} to keep reading going.`;
 }
 
 export function parseSevenAudioHeaders(headers) {

@@ -8,7 +8,6 @@ import {
   getReaderSection,
   getSectionOutline,
   getSectionPreview,
-  getSevenProviderLabel,
   stripMarkdownForSpeech,
 } from "../lib/seven";
 
@@ -91,7 +90,7 @@ function initialChatStatus({ textEnabled, textProvider }) {
     provider: textProvider,
     reasonCode: "",
     retryAfterSeconds: null,
-    message: `Chat is ready through ${getSevenProviderLabel(textProvider)}.`,
+    message: "Seven is ready.",
   };
 }
 
@@ -443,7 +442,7 @@ export default function SevenPanel({
           provider: payload.provider || textProvider,
           reasonCode: "",
           retryAfterSeconds: null,
-          message: `Chat is ready through ${getSevenProviderLabel(payload.provider || textProvider)}.`,
+          message: "Seven is ready.",
         });
 
         setMessages((current) => {

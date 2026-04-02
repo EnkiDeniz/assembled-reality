@@ -100,6 +100,7 @@ export default function DocumentLibraryScreen({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState("");
 
   const accountName = profile?.displayName || "Reader";
   const canonicalDocuments = useMemo(
@@ -122,6 +123,32 @@ export default function DocumentLibraryScreen({
 
     return ranked.find((document) => (document.progressPercent || 0) > 0) || ranked[0] || null;
   }, [documents]);
+
+  const sectionLinks = useMemo(
+    () =>
+      [
+        continueDocument ? { id: "continue", label: "Continue" } : null,
+        { id: "documents", label: "Your documents" },
+        { id: "canonical", label: "Assembled Reality" },
+        { id: "import", label: "Import" },
+      ].filter(Boolean),
+    [continueDocument],
+  );
+
+  const handleOpenFilePicker = () => {
+    document.getElementById("import")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setSelectedFileName(file?.name || "");
+    setError("");
+    setMessage("");
+  };
 
   const handleUpload = async (event) => {
     event.preventDefault();
@@ -151,6 +178,7 @@ export default function DocumentLibraryScreen({
       }
 
       setMessage(`Imported ${payload.document.title}. Opening it in the reader...`);
+      setSelectedFileName(file.name);
       startTransition(() => {
         router.push(payload.document.href);
       });
@@ -168,99 +196,121 @@ export default function DocumentLibraryScreen({
   return (
     <main className="library-shell library-shell--authenticated-reset">
       <div className="library-shell__inner">
-        <header className="library-header">
-          <div className="library-header__copy">
-            <p className="library-section-eyebrow">Library</p>
-            <h1 className="library-header__title">Keep reading, then bring in the next document.</h1>
-            <p className="library-header__lede">
-              Canonical and imported texts now live in one authenticated library instead of a
-              separate upload flow.
+        <header className="library-topbar">
+          <div className="library-topbar__copy">
+            <h1 className="library-topbar__title">Library</h1>
+            <p className="library-topbar__meta">
+              <span>{canonicalDocuments.length} canonical</span>
+              <span>{uploadedDocuments.length} imported</span>
             </p>
           </div>
 
-          <div className="library-header__actions">
-            <Link
-              href={continueDocument?.href || "/read"}
-              className="library-header__action is-primary"
+          <div className="library-topbar__actions">
+            <button
+              type="button"
+              className="library-topbar__action is-primary"
+              onClick={handleOpenFilePicker}
             >
-              {continueDocument ? "Continue reading" : "Open reader"}
-            </Link>
-            <Link href="/account" className="library-header__action">
+              Import
+            </button>
+            <Link href="/account" className="library-topbar__action">
               {accountName}
             </Link>
           </div>
         </header>
 
+        <nav className="library-nav" aria-label="Library sections">
+          {sectionLinks.map((link) => (
+            <a key={link.id} href={`#${link.id}`} className="library-nav__button">
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
         {continueDocument ? (
-          <section className="library-panel">
+          <section id="continue" className="library-panel">
             <LibrarySectionHeader eyebrow="Continue" title="Pick up where you left off" />
             <DocumentCard document={continueDocument} featured />
           </section>
         ) : null}
 
         <div className="library-stage">
-          <section className="library-panel">
+          <section id="documents" className="library-panel">
             <LibrarySectionHeader
-              eyebrow="Canonical"
-              title="Core reading"
-              meta={`${canonicalDocuments.length} document${canonicalDocuments.length === 1 ? "" : "s"}`}
+              eyebrow="Imported"
+              title="Your documents"
+              meta={`${uploadedDocuments.length} document${uploadedDocuments.length === 1 ? "" : "s"}`}
             />
-            <div className="library-grid">
-              {canonicalDocuments.map((document) => (
-                <DocumentCard key={document.documentKey} document={document} />
-              ))}
-            </div>
+
+            {uploadedDocuments.length ? (
+              <div className="library-grid">
+                {uploadedDocuments.map((document) => (
+                  <DocumentCard key={document.documentKey} document={document} />
+                ))}
+              </div>
+            ) : (
+              <div className="library-empty">
+                <p className="library-empty__title">Nothing imported yet.</p>
+                <p className="library-empty__copy">Choose a file and it will show up here.</p>
+              </div>
+            )}
           </section>
 
-          <section className="library-panel library-panel--import">
-            <LibrarySectionHeader eyebrow="Import" title="Bring a document into the reader" />
-            <p className="library-upload__description">
-              Upload `.md`, `.doc`, `.docx`, or `.pdf`. The importer normalizes each file into the
-              same sectioned reading shape the app already uses.
-            </p>
+          <section id="import" className="library-panel library-panel--import">
+            <LibrarySectionHeader eyebrow="Import" title="Import" />
 
             <form className="library-upload__form" onSubmit={handleUpload}>
-              <label className="library-upload__input-shell" htmlFor="library-upload-input">
-                <span className="library-upload__input-label">Choose file</span>
-                <input
-                  id="library-upload-input"
-                  ref={fileInputRef}
-                  className="library-upload__input"
-                  type="file"
-                  accept=".md,.markdown,.doc,.docx,.pdf"
+              <input
+                id="library-upload-input"
+                ref={fileInputRef}
+                className="library-upload__native-input"
+                type="file"
+                accept=".md,.markdown,.doc,.docx,.pdf"
+                disabled={uploading}
+                onChange={handleFileChange}
+              />
+
+              <div className="library-upload__controls">
+                <button
+                  type="button"
+                  className="library-upload__picker"
+                  onClick={handleOpenFilePicker}
                   disabled={uploading}
-                />
-              </label>
+                >
+                  Choose file
+                </button>
+                <p className={`library-upload__selected ${selectedFileName ? "has-file" : ""}`}>
+                  {selectedFileName || "No file selected"}
+                </p>
+              </div>
               <button type="submit" className="library-upload__submit" disabled={uploading}>
                 {uploading ? "Importing..." : "Import and open"}
               </button>
             </form>
 
+            <p className="library-upload__formats">Markdown, Word, and PDF</p>
             {message ? <p className="library-upload__message">{message}</p> : null}
             {error ? <p className="library-upload__error">{error}</p> : null}
           </section>
         </div>
 
-        <section className="library-panel">
+        <section id="canonical" className="library-panel">
           <LibrarySectionHeader
-            eyebrow="Your documents"
-            title="Imported reading"
-            meta={`${uploadedDocuments.length} document${uploadedDocuments.length === 1 ? "" : "s"}`}
+            eyebrow="Canonical"
+            title="Assembled Reality"
+            meta={`${canonicalDocuments.length} document${canonicalDocuments.length === 1 ? "" : "s"}`}
           />
 
-          {uploadedDocuments.length ? (
+          {canonicalDocuments.length ? (
             <div className="library-grid">
-              {uploadedDocuments.map((document) => (
+              {canonicalDocuments.map((document) => (
                 <DocumentCard key={document.documentKey} document={document} />
               ))}
             </div>
           ) : (
             <div className="library-empty">
-              <p className="library-empty__title">No personal documents yet.</p>
-              <p className="library-empty__copy">
-                Import a Markdown, Word, or PDF file and it will appear here in the same reader as
-                the canonical manuscript.
-              </p>
+              <p className="library-empty__title">No canonical document available.</p>
+              <p className="library-empty__copy">The core text will appear here when it is ready.</p>
             </div>
           )}
         </section>
