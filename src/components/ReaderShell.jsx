@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 // eslint-disable-next-line no-unused-vars -- motion.button used in JSX
 import { AnimatePresence, motion } from "motion/react";
 import MarkdownRenderer from "./MarkdownRenderer";
@@ -50,24 +51,30 @@ const PAGE_WIDTH_LABELS = {
 };
 
 const THEME_LABELS = {
-  paper: "Paper",
   dark: "Dark",
+  light: "Light",
 };
 
-const URL_SYNC_SURFACES = new Set(["contents", "notebook", "seven"]);
+const URL_SYNC_OVERLAYS = new Set([
+  "contents",
+  "notebook",
+  "seven",
+  "appearance",
+  "listen",
+]);
 
-function getSyncedSurfaceFromUrl() {
+function getSyncedOverlayFromUrl() {
   if (typeof window === "undefined") return null;
 
   const panel = new URLSearchParams(window.location.search).get("panel");
-  return URL_SYNC_SURFACES.has(panel) ? panel : null;
+  return URL_SYNC_OVERLAYS.has(panel) ? panel : null;
 }
 
 function syncReaderUrl({ panel = null, hash = undefined, historyMode = "replace" } = {}) {
   if (typeof window === "undefined") return;
 
   const url = new URL(window.location.href);
-  if (panel && URL_SYNC_SURFACES.has(panel)) {
+  if (panel && URL_SYNC_OVERLAYS.has(panel)) {
     url.searchParams.set("panel", panel);
   } else {
     url.searchParams.delete("panel");
@@ -236,6 +243,11 @@ function SevenIcon() {
   );
 }
 
+function normalizeSevenView(view) {
+  if (view === "evidence" || view === "receipt") return view;
+  return "guide";
+}
+
 export default function ReaderShell({
   documentData,
   preferences,
@@ -252,11 +264,12 @@ export default function ReaderShell({
   sevenTextProvider = null,
   sevenVoiceProvider = null,
 }) {
+  const router = useRouter();
   const initialHash =
     typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
   const initialSectionSlug = initialHash || initialReadingProgress?.sectionSlug || "beginning";
 
-  const [activeSurface, setActiveSurface] = useState(() => getSyncedSurfaceFromUrl());
+  const [activeOverlay, setActiveOverlay] = useState(() => getSyncedOverlayFromUrl());
   const [viewportSectionSlug, setViewportSectionSlug] = useState(initialSectionSlug);
   const [viewportBlockId, setViewportBlockId] = useState(null);
   const [playerCursor, setPlayerCursor] = useState({
@@ -306,7 +319,7 @@ export default function ReaderShell({
   const [receiptNotice, setReceiptNotice] = useState("");
   const [evidenceItems, setEvidenceItems] = useState(() => initialEvidenceSet?.items || []);
   const [sevenView, setSevenView] = useState("guide");
-  const [listenTrayState, setListenTrayState] = useState("closed");
+  const [listenTrayCollapsed, setListenTrayCollapsed] = useState(false);
   const [activeMarkId, setActiveMarkId] = useState(null);
   const [focusedSectionSlug, setFocusedSectionSlug] = useState(null);
   const [notebookScope, setNotebookScope] = useState("section");
@@ -367,11 +380,12 @@ export default function ReaderShell({
     "Reader";
   const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
-  const contentsOpen = activeSurface === "contents";
-  const notebookOpen = activeSurface === "notebook";
-  const sevenOpen = activeSurface === "seven";
-  const appearanceOpen = activeSurface === "appearance";
-  const hasFloatingPanel = contentsOpen || notebookOpen || sevenOpen;
+  const contentsOpen = activeOverlay === "contents";
+  const notebookOpen = activeOverlay === "notebook";
+  const sevenOpen = activeOverlay === "seven";
+  const appearanceOpen = activeOverlay === "appearance";
+  const listenOpen = activeOverlay === "listen";
+  const hasOpenOverlay = Boolean(activeOverlay);
   const effectiveVoiceEnabled = sevenVoiceEnabled || browserSpeechEnabled;
 
   const sortedBookmarks = useMemo(
@@ -438,6 +452,11 @@ export default function ReaderShell({
     (playerState.status === "loading" || playerState.status === "playing");
   const continueDocumentActive =
     runtimeAudioState.sourceType === "document" && runtimeAudioState.status !== "idle";
+  const listenTrayState = listenOpen
+    ? "open"
+    : listenTrayCollapsed && listeningTransportActive
+      ? "collapsed"
+      : "closed";
 
   const lyricFocusBlockId =
     listeningTransportActive && playerCursor.blockId
@@ -557,29 +576,33 @@ export default function ReaderShell({
     }, 0);
   }, []);
 
-  const closeSurface = useCallback(
+  const closeOverlay = useCallback(
     ({ restoreFocus = true, historyMode = "replace" } = {}) => {
-      if (activeSurface && URL_SYNC_SURFACES.has(activeSurface)) {
+      if (activeOverlay && URL_SYNC_OVERLAYS.has(activeOverlay)) {
         syncReaderUrl({ panel: null, historyMode });
       }
 
-      setActiveSurface(null);
+      if (activeOverlay === "listen" && listeningTransportActive) {
+        setListenTrayCollapsed(true);
+      }
+
+      setActiveOverlay(null);
 
       if (restoreFocus) {
         restoreSurfaceFocus();
       }
     },
-    [activeSurface, restoreSurfaceFocus],
+    [activeOverlay, listeningTransportActive, restoreSurfaceFocus],
   );
 
-  const toggleSurface = useCallback(
-    (surface, trigger = null) => {
+  const openOverlay = useCallback(
+    (overlay, trigger = null) => {
       if (trigger?.currentTarget instanceof HTMLElement) {
         surfaceTriggerRef.current = trigger.currentTarget;
       }
 
-      if (activeSurface === surface) {
-        closeSurface();
+      if (activeOverlay === overlay) {
+        closeOverlay();
         return;
       }
 
@@ -587,68 +610,69 @@ export default function ReaderShell({
       setNoteDraft("");
       clearBrowserSelection();
 
-      if (URL_SYNC_SURFACES.has(surface)) {
+      if (activeOverlay === "listen" && listeningTransportActive && overlay !== "listen") {
+        setListenTrayCollapsed(true);
+      } else if (overlay === "listen") {
+        setListenTrayCollapsed(false);
+      }
+
+      if (URL_SYNC_OVERLAYS.has(overlay)) {
         syncReaderUrl({
-          panel: surface,
+          panel: overlay,
           historyMode:
-            activeSurface && URL_SYNC_SURFACES.has(activeSurface) ? "replace" : "push",
+            activeOverlay && URL_SYNC_OVERLAYS.has(activeOverlay) ? "replace" : "push",
         });
-      } else if (activeSurface && URL_SYNC_SURFACES.has(activeSurface)) {
+      } else if (activeOverlay && URL_SYNC_OVERLAYS.has(activeOverlay)) {
         syncReaderUrl({ panel: null, historyMode: "replace" });
       }
 
-      setActiveSurface(surface);
+      setActiveOverlay(overlay);
     },
-    [activeSurface, closeSurface],
+    [activeOverlay, closeOverlay, listeningTransportActive],
   );
 
   const dismissSurfacesWithoutFocus = useCallback(() => {
-    if (!activeSurface) return;
-    closeSurface({ restoreFocus: false });
-  }, [activeSurface, closeSurface]);
+    if (!activeOverlay) return;
+    closeOverlay({ restoreFocus: false });
+  }, [activeOverlay, closeOverlay]);
 
   const openSevenView = useCallback(
     (view, trigger = null) => {
-      setSevenView(view === "evidence" ? "evidence" : "guide");
+      setSevenView(normalizeSevenView(view));
       if (trigger?.currentTarget instanceof HTMLElement) {
         surfaceTriggerRef.current = trigger.currentTarget;
       }
 
-      setListenTrayState((current) => {
-        if (listeningTransportActive) {
-          return "collapsed";
-        }
-
-        return current === "open" ? "closed" : current;
-      });
-
-      if (activeSurface === "seven") {
+      if (activeOverlay === "seven") {
         return;
       }
 
-      toggleSurface("seven", trigger);
+      openOverlay("seven", trigger);
     },
-    [activeSurface, listeningTransportActive, toggleSurface],
+    [activeOverlay, openOverlay],
   );
 
   const openListenTray = useCallback(() => {
-    if (activeSurface) {
-      closeSurface({ restoreFocus: false });
-    }
-
-    setListenTrayState("open");
-  }, [activeSurface, closeSurface]);
+    openOverlay("listen");
+  }, [openOverlay]);
 
   const collapseListenTray = useCallback(() => {
-    setListenTrayState((current) => {
-      if (current === "closed") return current;
-      return listeningTransportActive ? "collapsed" : "closed";
-    });
-  }, [listeningTransportActive]);
+    if (listenOpen) {
+      closeOverlay({ restoreFocus: false });
+      return;
+    }
+
+    setListenTrayCollapsed(listeningTransportActive);
+  }, [closeOverlay, listenOpen, listeningTransportActive]);
 
   const closeListenTray = useCallback(() => {
-    setListenTrayState(listeningTransportActive ? "collapsed" : "closed");
-  }, [listeningTransportActive]);
+    if (listenOpen) {
+      closeOverlay({ restoreFocus: false });
+      return;
+    }
+
+    setListenTrayCollapsed(listeningTransportActive);
+  }, [closeOverlay, listenOpen, listeningTransportActive]);
 
   const showSelectionNotice = useCallback((message) => {
     if (noticeTimeoutRef.current) {
@@ -670,9 +694,8 @@ export default function ReaderShell({
   }, []);
 
   const openAccountPage = useCallback(() => {
-    if (typeof window === "undefined") return;
-    window.location.assign("/account");
-  }, []);
+    router.push("/account");
+  }, [router]);
 
   const clearAudioUrl = useCallback(() => {
     if (audioUrlRef.current) {
@@ -1521,18 +1544,14 @@ export default function ReaderShell({
   useEffect(() => {
     setPlayerState((current) => ({
       ...current,
-      overlay: activeSurface === "seven" ? sevenView : listenTrayState === "open" ? "listen" : null,
+      overlay: activeOverlay === "seven" ? sevenView : activeOverlay === "listen" ? "listen" : null,
     }));
-  }, [activeSurface, listenTrayState, sevenView]);
+  }, [activeOverlay, sevenView]);
 
   useEffect(() => {
-    if (listeningTransportActive) {
-      setListenTrayState((current) => (current === "closed" ? "collapsed" : current));
-      return;
-    }
-
-    setListenTrayState((current) => (current === "collapsed" ? "closed" : current));
-  }, [listeningTransportActive]);
+    if (activeOverlay === "listen") return;
+    setListenTrayCollapsed(listeningTransportActive);
+  }, [activeOverlay, listeningTransportActive]);
 
   useEffect(() => {
     if (
@@ -1667,11 +1686,11 @@ export default function ReaderShell({
   useEffect(() => {
     if (scrollIntentRef.current) return;
     syncReaderUrl({
-      panel: URL_SYNC_SURFACES.has(activeSurface) ? activeSurface : null,
+      panel: URL_SYNC_OVERLAYS.has(activeOverlay) ? activeOverlay : null,
       hash: viewportSectionSlug === "beginning" ? "" : viewportSectionSlug,
       historyMode: "replace",
     });
-  }, [activeSurface, viewportSectionSlug]);
+  }, [activeOverlay, viewportSectionSlug]);
 
   useEffect(() => {
     const handleEscape = (event) => {
@@ -1684,14 +1703,14 @@ export default function ReaderShell({
         return;
       }
 
-      if (activeSurface) {
-        closeSurface({ restoreFocus: false });
+      if (activeOverlay) {
+        closeOverlay({ restoreFocus: false });
       }
     };
 
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [activeSurface, closeSurface, selectionState?.mode]);
+  }, [activeOverlay, closeOverlay, selectionState?.mode]);
 
   useEffect(() => {
     document.title = `${documentData.title} · ${displayEntry.title}`;
@@ -1721,7 +1740,7 @@ export default function ReaderShell({
 
       if (event.key.toLowerCase() === "t") {
         event.preventDefault();
-        toggleSurface("contents");
+        openOverlay("contents");
       }
 
       if (event.key.toLowerCase() === "l") {
@@ -1731,7 +1750,7 @@ export default function ReaderShell({
 
       if (event.key.toLowerCase() === "m") {
         event.preventDefault();
-        toggleSurface("notebook");
+        openOverlay("notebook");
       }
 
       if (event.key.toLowerCase() === "7") {
@@ -1752,9 +1771,9 @@ export default function ReaderShell({
     jumpTo,
     nextEntry,
     openListenTray,
+    openOverlay,
     openSevenView,
     previousEntry,
-    toggleSurface,
   ]);
 
   useEffect(() => {
@@ -1866,14 +1885,7 @@ export default function ReaderShell({
     if (typeof window === "undefined") return undefined;
 
     const handlePopState = () => {
-      const panel = getSyncedSurfaceFromUrl();
-      setActiveSurface((current) => {
-        if (current && !URL_SYNC_SURFACES.has(current)) {
-          return current;
-        }
-
-        return panel;
-      });
+      setActiveOverlay(getSyncedOverlayFromUrl());
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -1883,14 +1895,14 @@ export default function ReaderShell({
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
 
-    if (!activeSurface) {
+    if (!activeOverlay) {
       document.body.style.removeProperty("overflow");
       return undefined;
     }
 
     document.body.style.setProperty("overflow", "hidden");
     return () => document.body.style.removeProperty("overflow");
-  }, [activeSurface]);
+  }, [activeOverlay]);
 
   useEffect(() => () => stopRuntimeAudio(), [stopRuntimeAudio]);
 
@@ -2111,8 +2123,8 @@ export default function ReaderShell({
 
   return (
     <div
-      className={`reader-shell text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${
-        hasFloatingPanel ? "has-floating-panel" : ""
+      className={`reader-shell reader-shell--authenticated-reset text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${
+        hasOpenOverlay ? "has-floating-panel" : ""
       } ${lyricFocusBlockId ? "has-lyric-focus" : ""}`}
       data-theme={preferences.theme}
     >
@@ -2138,7 +2150,7 @@ export default function ReaderShell({
           <button
             type="button"
             className={`reader-player-topbar__utility ${contentsOpen ? "is-active" : ""}`}
-            onClick={(event) => toggleSurface("contents", event)}
+            onClick={(event) => openOverlay("contents", event)}
             aria-label={contentsOpen ? "Close contents" : "Open contents"}
             title={contentsOpen ? "Close contents" : "Open contents"}
           >
@@ -2174,7 +2186,7 @@ export default function ReaderShell({
             className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
               notebookOpen ? "is-active" : ""
             }`}
-            onClick={(event) => toggleSurface("notebook", event)}
+            onClick={(event) => openOverlay("notebook", event)}
             aria-label={notebookOpen ? "Close notebook" : "Open notebook"}
             title={notebookOpen ? "Close notebook" : "Open notebook"}
           >
@@ -2186,7 +2198,7 @@ export default function ReaderShell({
             className={`reader-player-topbar__utility ${sevenOpen ? "is-active" : ""}`}
             onClick={(event) => {
               if (sevenOpen) {
-                closeSurface();
+                closeOverlay();
                 return;
               }
 
@@ -2203,7 +2215,7 @@ export default function ReaderShell({
             className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
               appearanceOpen ? "is-active" : ""
             }`}
-            onClick={(event) => toggleSurface("appearance", event)}
+            onClick={(event) => openOverlay("appearance", event)}
             aria-label="Reader appearance"
             title="Reader appearance"
           >
@@ -2224,8 +2236,86 @@ export default function ReaderShell({
         </div>
       </header>
 
+      <nav className="reader-mobile-actions" aria-label="Reader actions">
+        <button
+          type="button"
+          className={`reader-mobile-actions__button ${contentsOpen ? "is-active" : ""}`}
+          onClick={(event) => openOverlay("contents", event)}
+        >
+          <ContentsIcon />
+          <span>Contents</span>
+        </button>
+        <button
+          type="button"
+          className={`reader-mobile-actions__button ${listenTrayState !== "closed" ? "is-active" : ""}`}
+          onClick={() => openListenTray()}
+        >
+          <span>Listen</span>
+        </button>
+        <button
+          type="button"
+          className={`reader-mobile-actions__button ${currentBookmarked ? "is-active" : ""}`}
+          onClick={handleToggleBookmark}
+        >
+          <BookmarkIcon filled={currentBookmarked} />
+          <span>Bookmark</span>
+        </button>
+        <button
+          type="button"
+          className={`reader-mobile-actions__button ${notebookOpen ? "is-active" : ""}`}
+          onClick={(event) => openOverlay("notebook", event)}
+        >
+          <NotebookIcon />
+          <span>Notebook</span>
+        </button>
+        <button
+          type="button"
+          className={`reader-mobile-actions__button ${sevenOpen ? "is-active" : ""}`}
+          onClick={(event) => {
+            if (sevenOpen) {
+              closeOverlay();
+              return;
+            }
+
+            openSevenView("guide", event);
+          }}
+        >
+          <SevenIcon />
+          <span>Seven</span>
+        </button>
+        <button
+          type="button"
+          className={`reader-mobile-actions__button ${appearanceOpen ? "is-active" : ""}`}
+          onClick={(event) => openOverlay("appearance", event)}
+        >
+          <span>Aa</span>
+          <span>Display</span>
+        </button>
+        <button
+          type="button"
+          className="reader-mobile-actions__button"
+          onClick={openAccountPage}
+        >
+          <span className="reader-member-chip" aria-hidden="true">
+            {memberInitial}
+          </span>
+          <span>Account</span>
+        </button>
+      </nav>
+
       {appearanceOpen ? (
         <div className="reader-appearance-menu" role="dialog" aria-label="Reader appearance">
+          <div className="reader-appearance-menu__header">
+            <p className="reader-appearance-menu__title">Display</p>
+            <button
+              type="button"
+              className="reader-appearance-menu__close"
+              onClick={() => closeOverlay()}
+              aria-label="Close display settings"
+            >
+              ×
+            </button>
+          </div>
           <PreferenceGroup
             title="Text size"
             value={preferences.textSize}
@@ -2248,8 +2338,8 @@ export default function ReaderShell({
       ) : null}
 
       <div
-        className={`reader-overlay ${hasFloatingPanel ? "is-visible" : ""}`}
-        onClick={() => closeSurface({ restoreFocus: false })}
+        className={`reader-overlay ${hasOpenOverlay ? "is-visible" : ""}`}
+        onClick={() => closeOverlay({ restoreFocus: false })}
       />
 
       <aside className={`reader-toc ${contentsOpen ? "is-open" : ""}`} aria-hidden={!contentsOpen}>
@@ -2267,7 +2357,7 @@ export default function ReaderShell({
             <button
               type="button"
               className="reader-player-topbar__utility"
-              onClick={() => closeSurface()}
+              onClick={() => closeOverlay()}
               aria-label="Close contents"
             >
               ×
@@ -2304,7 +2394,7 @@ export default function ReaderShell({
         evidenceMarkIds={evidenceMarkIds}
         onToggleMarkEvidence={handleToggleMarkEvidence}
         onOpenSeven={(trigger) => openSevenView("evidence", trigger)}
-        onClose={() => closeSurface()}
+        onClose={() => closeOverlay()}
         onJumpToBookmark={jumpToMark}
         onJumpToMark={jumpToMark}
         onDeleteBookmark={(bookmarkId) =>
@@ -2365,7 +2455,7 @@ export default function ReaderShell({
         onAddEvidenceItem={addEvidenceItem}
         onRemoveEvidenceItem={removeEvidenceItem}
         onShowNotice={showReceiptNotice}
-        onClose={() => closeSurface()}
+        onClose={() => closeOverlay()}
         onOpenListen={() => openListenTray()}
         messageAudioState={runtimeAudioState}
         onPlayMessage={playMessageAudio}
@@ -2450,7 +2540,7 @@ export default function ReaderShell({
       {receiptNotice ? <div className="reader-toast is-receipt">{receiptNotice}</div> : null}
 
       <AnimatePresence>
-        {!sevenOpen && !hasFloatingPanel && listenTrayState !== "open" ? (
+        {!sevenOpen && !hasOpenOverlay && listenTrayState !== "open" ? (
           <motion.button
             key="reader-fab"
             type="button"

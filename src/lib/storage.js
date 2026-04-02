@@ -3,10 +3,28 @@ const SESSION_UNLOCK_KEY = UNLOCK_KEY;
 const PREFS_KEY = "assembled-reality:reader-preferences";
 
 export const DEFAULT_READER_PREFERENCES = {
-  theme: "paper",
+  theme: "dark",
   textSize: "medium",
   pageWidth: "standard",
 };
+
+function normalizeTheme(theme) {
+  if (theme === "paper") return "dark";
+  if (theme === "light" || theme === "dark") return theme;
+  return DEFAULT_READER_PREFERENCES.theme;
+}
+
+export function normalizeReaderPreferences(value) {
+  const next = {
+    ...DEFAULT_READER_PREFERENCES,
+    ...(value && typeof value === "object" ? value : {}),
+  };
+
+  return {
+    ...next,
+    theme: normalizeTheme(next.theme),
+  };
+}
 
 export function loadUnlockState() {
   if (typeof window === "undefined") return null;
@@ -47,7 +65,10 @@ export function loadReaderPreferences() {
   try {
     const raw = window.localStorage.getItem(PREFS_KEY);
     if (!raw) return DEFAULT_READER_PREFERENCES;
-    return { ...DEFAULT_READER_PREFERENCES, ...JSON.parse(raw) };
+
+    const preferences = normalizeReaderPreferences(JSON.parse(raw));
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify(preferences));
+    return preferences;
   } catch {
     return DEFAULT_READER_PREFERENCES;
   }
@@ -55,5 +76,5 @@ export function loadReaderPreferences() {
 
 export function saveReaderPreferences(value) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(PREFS_KEY, JSON.stringify(value));
+  window.localStorage.setItem(PREFS_KEY, JSON.stringify(normalizeReaderPreferences(value)));
 }

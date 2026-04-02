@@ -27,8 +27,8 @@ const PAGE_WIDTH_OPTIONS = [
 ];
 
 const THEME_OPTIONS = [
-  { value: "paper", label: "Paper" },
   { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
 ];
 
 function draftLink(draft) {
@@ -329,7 +329,10 @@ export default function AccountScreen({
   };
 
   return (
-    <main className="account-shell">
+    <main
+      className="account-shell account-shell--authenticated-reset"
+      data-theme={preferences.theme}
+    >
       <div className="account-stage">
         <header className="account-header">
           <div className="account-header__brand">
@@ -463,7 +466,7 @@ export default function AccountScreen({
               />
               <PreferenceGroup
                 title="Theme"
-                description="Switch between the paper surface and the dark reading mode."
+                description="Choose between the dark default and a neutral light reading mode."
                 value={preferences.theme}
                 options={THEME_OPTIONS}
                 onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}

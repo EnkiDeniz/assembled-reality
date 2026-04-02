@@ -48,7 +48,7 @@ function GuideTabs({ view, onChangeView }) {
   return (
     <div className="reader-seven__guide-tabs" role="tablist" aria-label="Seven workspace">
       {tabs.map((tab) => {
-        const active = view === tab.value;
+        const active = view === tab.value || (view === "receipt" && tab.value === "evidence");
 
         return (
           <button
@@ -316,7 +316,8 @@ export default function SevenPanel({
   onPlayMessage,
   onStopMessage,
 }) {
-  const resolvedView = view === "evidence" ? "evidence" : "guide";
+  const resolvedView =
+    view === "evidence" || view === "receipt" ? view : "guide";
   const currentSection = useMemo(
     () => getReaderSection(documentData, activeSlug),
     [activeSlug, documentData],
@@ -334,7 +335,6 @@ export default function SevenPanel({
     initialChatStatus({ textEnabled, textProvider }),
   );
   const [composerActive, setComposerActive] = useState(false);
-  const [receiptComposerOpen, setReceiptComposerOpen] = useState(false);
   const [lockedEvidenceItems, setLockedEvidenceItems] = useState([]);
   const [creatingReceipt, setCreatingReceipt] = useState(false);
   const [receiptError, setReceiptError] = useState("");
@@ -359,11 +359,6 @@ export default function SevenPanel({
     if (!messageListRef.current) return;
     messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
   }, [messages]);
-
-  useEffect(() => {
-    if (open) return;
-    setReceiptComposerOpen(false);
-  }, [open]);
 
   const composerExpanded = composerActive || draft.trim().length > 0;
   const includedCitationKeys = useMemo(
@@ -569,8 +564,8 @@ export default function SevenPanel({
     setReceiptImplications("");
     setReceiptStance("tentative");
     setReceiptError("");
-    setReceiptComposerOpen(true);
-  }, [currentLabel, evidenceItems, onShowNotice]);
+    onChangeView?.("receipt");
+  }, [currentLabel, evidenceItems, onChangeView, onShowNotice]);
 
   const handleCreateReceipt = useCallback(async () => {
     if (!receiptTitle.trim() || !receiptInterpretation.trim() || lockedEvidenceItems.length === 0) {
@@ -614,7 +609,7 @@ export default function SevenPanel({
         onShowNotice?.("Saved local interpretation receipt.");
       }
 
-      setReceiptComposerOpen(false);
+      onChangeView?.("evidence");
     } catch (error) {
       setReceiptError(error instanceof Error ? error.message : "Could not create receipt.");
     } finally {
@@ -629,9 +624,11 @@ export default function SevenPanel({
     receiptStance,
     receiptTitle,
     threadId,
+    onChangeView,
   ]);
 
-  const overlayTitle = resolvedView === "evidence" ? "Evidence" : "Guide";
+  const overlayTitle =
+    resolvedView === "receipt" ? "Receipt" : resolvedView === "evidence" ? "Evidence" : "Guide";
 
   return (
     <aside className={`reader-seven ${open ? "is-open" : ""} is-view-${resolvedView}`}>
@@ -884,7 +881,7 @@ export default function SevenPanel({
           </div>
         ) : null}
 
-        {receiptComposerOpen ? (
+        {resolvedView === "receipt" ? (
           <ReceiptComposer
             currentLabel={currentLabel}
             evidenceItems={lockedEvidenceItems}
@@ -898,7 +895,7 @@ export default function SevenPanel({
             onChangeInterpretation={setReceiptInterpretation}
             onChangeImplications={setReceiptImplications}
             onChangeStance={setReceiptStance}
-            onClose={() => setReceiptComposerOpen(false)}
+            onClose={() => onChangeView?.("evidence")}
             onSubmit={handleCreateReceipt}
           />
         ) : null}

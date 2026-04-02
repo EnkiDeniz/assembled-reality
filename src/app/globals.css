@@ -5931,3 +5931,518 @@ a {
     border-radius: 1.35rem 1.35rem 0 0;
   }
 }
+
+/* Authenticated UI reset */
+
+.reader-shell.reader-shell--authenticated-reset,
+.account-shell.account-shell--authenticated-reset {
+  --auth-app-bg: #081018;
+  --auth-panel-bg: rgba(14, 20, 30, 0.86);
+  --auth-panel-bg-strong: rgba(18, 26, 38, 0.96);
+  --auth-panel-bg-soft: rgba(255, 255, 255, 0.05);
+  --auth-doc-bg: rgba(10, 15, 24, 0.94);
+  --auth-border: rgba(165, 194, 224, 0.18);
+  --auth-border-strong: rgba(165, 194, 224, 0.28);
+  --auth-text: #f4f8fc;
+  --auth-text-muted: rgba(244, 248, 252, 0.76);
+  --auth-text-faint: rgba(244, 248, 252, 0.5);
+  --auth-accent: #5ad0ff;
+  --auth-accent-strong: #9fe5ff;
+  --auth-scrim: rgba(4, 8, 14, 0.68);
+  --auth-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+  --reader-bg: var(--auth-app-bg);
+  --reader-surface: var(--auth-panel-bg);
+  --reader-border: var(--auth-border);
+  --reader-border-strong: var(--auth-border-strong);
+  --reader-ink: var(--auth-text);
+  --reader-ink-soft: var(--auth-text-muted);
+  --reader-ink-faint: var(--auth-text-faint);
+  --reader-accent: var(--auth-accent);
+  --reader-accent-strong: var(--auth-accent-strong);
+  --reader-ui-surface: var(--auth-panel-bg-strong);
+  --paper-bg: var(--auth-app-bg);
+  --paper-surface: var(--auth-panel-bg);
+  --paper-border: var(--auth-border);
+  --paper-border-strong: var(--auth-border-strong);
+  --paper-ink: var(--auth-text);
+  --paper-ink-soft: var(--auth-text-muted);
+  --paper-ink-faint: var(--auth-text-faint);
+  --paper-accent: var(--auth-accent);
+}
+
+.reader-shell.reader-shell--authenticated-reset[data-theme="light"],
+.account-shell.account-shell--authenticated-reset[data-theme="light"] {
+  color-scheme: light;
+  --auth-app-bg: #edf3f8;
+  --auth-panel-bg: rgba(255, 255, 255, 0.86);
+  --auth-panel-bg-strong: rgba(255, 255, 255, 0.96);
+  --auth-panel-bg-soft: rgba(15, 23, 42, 0.04);
+  --auth-doc-bg: rgba(251, 253, 255, 0.96);
+  --auth-border: rgba(15, 23, 42, 0.12);
+  --auth-border-strong: rgba(15, 23, 42, 0.18);
+  --auth-text: #0f1728;
+  --auth-text-muted: rgba(15, 23, 42, 0.74);
+  --auth-text-faint: rgba(15, 23, 42, 0.48);
+  --auth-accent: #0ea5e9;
+  --auth-accent-strong: #38bdf8;
+  --auth-scrim: rgba(15, 23, 42, 0.18);
+  --auth-shadow: 0 28px 80px rgba(15, 23, 42, 0.12);
+}
+
+.reader-shell.reader-shell--authenticated-reset {
+  --reader-topbar-offset: 8rem;
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(90, 208, 255, 0.12), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(90, 208, 255, 0.08), transparent 32%),
+    var(--auth-app-bg);
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-progress-bar {
+  background: linear-gradient(90deg, var(--auth-accent), rgba(90, 208, 255, 0.32));
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-player-ambient {
+  background:
+    radial-gradient(90% 52% at 50% 100%, rgba(90, 208, 255, 0.12), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+}
+
+.reader-shell.reader-shell--authenticated-reset[data-theme="light"] .reader-player-ambient {
+  background:
+    radial-gradient(90% 52% at 50% 100%, rgba(14, 165, 233, 0.12), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-overlay {
+  z-index: 58;
+  background: var(--auth-scrim);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar,
+.reader-shell.reader-shell--authenticated-reset .reader-appearance-menu,
+.reader-shell.reader-shell--authenticated-reset .reader-toc,
+.reader-shell.reader-shell--authenticated-reset .reader-marks,
+.reader-shell.reader-shell--authenticated-reset .reader-seven,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__surface,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__capsule,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__capsule-action {
+  border: 1px solid var(--auth-border);
+  background: var(--auth-panel-bg);
+  box-shadow: var(--auth-shadow);
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar {
+  z-index: 72;
+  border-radius: 1.7rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--auth-panel-bg-strong) 88%, transparent), var(--auth-panel-bg)),
+    radial-gradient(120% 140% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 70%);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar__utility,
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar__counter,
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar__listen,
+.reader-shell.reader-shell--authenticated-reset .reader-pref-option,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__guide-tab,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__reply-listen,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__send,
+.reader-shell.reader-shell--authenticated-reset .reader-seven .reader-mark-card__secondary,
+.reader-shell.reader-shell--authenticated-reset .reader-seven .reader-mark-card__receipt-toggle,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__window-button,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__transport-button,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__secondary-button,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__shortcut {
+  border: 1px solid var(--auth-border);
+  background: var(--auth-panel-bg-soft);
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar__utility.is-active,
+.reader-shell.reader-shell--authenticated-reset .reader-player-topbar__listen.is-active,
+.reader-shell.reader-shell--authenticated-reset .reader-pref-option.is-active,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__guide-tab.is-active,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__reply-listen.is-active,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__send,
+.reader-shell.reader-shell--authenticated-reset .reader-seven .reader-mark-card__receipt-toggle.is-selected,
+.reader-shell.reader-shell--authenticated-reset .reader-mobile-actions__button.is-active {
+  border-color: color-mix(in srgb, var(--auth-accent) 46%, var(--auth-border));
+  background: color-mix(in srgb, var(--auth-accent) 22%, transparent);
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-member-chip {
+  background: color-mix(in srgb, var(--auth-accent) 22%, transparent);
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-main {
+  padding:
+    calc(var(--reader-topbar-offset) + env(safe-area-inset-top))
+    clamp(1rem, 4vw, 2.5rem)
+    calc(12rem + env(safe-area-inset-bottom));
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-book {
+  padding: clamp(1.2rem, 2vw, 1.8rem);
+  border: 1px solid var(--auth-border);
+  border-radius: 2rem;
+  background: var(--auth-doc-bg);
+  box-shadow: var(--auth-shadow);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-beginning,
+.reader-shell.reader-shell--authenticated-reset .reader-section {
+  padding-inline: clamp(0.45rem, 1vw, 0.85rem);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-section__divider {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--auth-accent) 42%, transparent), transparent);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-shell.has-lyric-focus .reader-block,
+.reader-shell.reader-shell--authenticated-reset.has-lyric-focus .reader-block {
+  border-left-color: transparent;
+}
+
+.reader-shell.reader-shell--authenticated-reset.has-lyric-focus .reader-block.is-player-active {
+  border-left-color: color-mix(in srgb, var(--auth-accent) 76%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--auth-accent) 12%, transparent), transparent 58%);
+  box-shadow: -4px 0 18px color-mix(in srgb, var(--auth-accent) 12%, transparent);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-mobile-actions {
+  display: none;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-mobile-actions__button {
+  min-height: 2.8rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 999px;
+  background: var(--auth-panel-bg);
+  color: var(--auth-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: var(--auth-shadow);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-appearance-menu {
+  z-index: 74;
+  border-radius: 1.5rem;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-appearance-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-appearance-menu__title {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--auth-text-faint);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-appearance-menu__close {
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 999px;
+  background: var(--auth-panel-bg-soft);
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-toc,
+.reader-shell.reader-shell--authenticated-reset .reader-marks,
+.reader-shell.reader-shell--authenticated-reset .reader-seven {
+  z-index: 70;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-toc,
+.reader-shell.reader-shell--authenticated-reset .reader-marks {
+  background: var(--auth-panel-bg-strong);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven {
+  color: var(--auth-text);
+  background: var(--auth-panel-bg-strong);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__eyebrow,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__message-meta,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__identity-eyebrow,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__citation-label,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__evidence-meta,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-label,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__status,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__disabled,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__section-meta,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__section-index {
+  color: var(--auth-text-faint);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__meta,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__message-text,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__citation-excerpt,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__evidence-excerpt,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__evidence-note,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__identity-preview,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__idle-subtitle,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__evidence-title,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__empty-title,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-title,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__player-title {
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__idle-section,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__empty-copy,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__message.is-user .reader-seven__message-text,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__status,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__voice,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__time {
+  color: var(--auth-text-muted);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__message,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__citation,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__evidence-item,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-item,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__guide-intro,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__composer {
+  border-color: var(--auth-border);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__composer-input,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-input,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-textarea,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-select {
+  border: 1px solid var(--auth-border);
+  background: var(--auth-panel-bg-soft);
+  color: var(--auth-text);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__composer-input::placeholder,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-input::placeholder,
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-textarea::placeholder {
+  color: var(--auth-text-faint);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-composer {
+  position: relative;
+  inset: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-seven__receipt-error {
+  color: #ff8e73;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray {
+  z-index: 76;
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__surface,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__capsule,
+.reader-shell.reader-shell--authenticated-reset .reader-listen-tray__capsule-action {
+  background: var(--auth-panel-bg-strong);
+}
+
+.reader-shell.reader-shell--authenticated-reset .reader-fab {
+  background: var(--auth-panel-bg-strong);
+  border: 1px solid var(--auth-border);
+  color: var(--auth-text);
+  box-shadow: var(--auth-shadow);
+}
+
+.account-shell.account-shell--authenticated-reset {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(90, 208, 255, 0.12), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(90, 208, 255, 0.08), transparent 32%),
+    var(--auth-app-bg);
+  color: var(--auth-text);
+}
+
+.account-shell.account-shell--authenticated-reset .account-stage {
+  gap: 1.5rem;
+}
+
+.account-shell.account-shell--authenticated-reset .account-header,
+.account-shell.account-shell--authenticated-reset .account-hero,
+.account-shell.account-shell--authenticated-reset .account-panel {
+  border: 1px solid var(--auth-border);
+  background: var(--auth-panel-bg);
+  box-shadow: var(--auth-shadow);
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+}
+
+.account-shell.account-shell--authenticated-reset .account-button,
+.account-shell.account-shell--authenticated-reset .account-input,
+.account-shell.account-shell--authenticated-reset .account-field--static,
+.account-shell.account-shell--authenticated-reset .account-pref-option,
+.account-shell.account-shell--authenticated-reset .account-receipt,
+.account-shell.account-shell--authenticated-reset .account-diagnostic,
+.account-shell.account-shell--authenticated-reset .account-stat {
+  border-color: var(--auth-border);
+  background: var(--auth-panel-bg-soft);
+  color: var(--auth-text);
+}
+
+.account-shell.account-shell--authenticated-reset .account-button.is-primary,
+.account-shell.account-shell--authenticated-reset .account-pref-option.is-active {
+  border-color: color-mix(in srgb, var(--auth-accent) 46%, var(--auth-border));
+  background: color-mix(in srgb, var(--auth-accent) 18%, transparent);
+  color: var(--auth-text);
+}
+
+.account-shell.account-shell--authenticated-reset .account-panel__eyebrow,
+.account-shell.account-shell--authenticated-reset .account-header__eyebrow,
+.account-shell.account-shell--authenticated-reset .account-stat__label,
+.account-shell.account-shell--authenticated-reset .account-field__label,
+.account-shell.account-shell--authenticated-reset .account-pref-group__description,
+.account-shell.account-shell--authenticated-reset .account-panel__lede,
+.account-shell.account-shell--authenticated-reset .account-empty,
+.account-shell.account-shell--authenticated-reset .account-receipt__meta,
+.account-shell.account-shell--authenticated-reset .account-diagnostic__description,
+.account-shell.account-shell--authenticated-reset .account-diagnostic__meta {
+  color: var(--auth-text-faint);
+}
+
+.account-shell.account-shell--authenticated-reset .account-hero__lede,
+.account-shell.account-shell--authenticated-reset .account-stat__detail,
+.account-shell.account-shell--authenticated-reset .account-field__value,
+.account-shell.account-shell--authenticated-reset .account-diagnostic__result,
+.account-shell.account-shell--authenticated-reset .account-receipt__title {
+  color: var(--auth-text-muted);
+}
+
+.account-shell.account-shell--authenticated-reset .account-hero__meta span,
+.account-shell.account-shell--authenticated-reset .account-form__status {
+  border-color: var(--auth-border);
+  background: var(--auth-panel-bg-soft);
+  color: var(--auth-text);
+}
+
+@media (min-width: 980px) {
+  .reader-shell.reader-shell--authenticated-reset .reader-main {
+    padding-right: clamp(21rem, 25vw, 27rem);
+    padding-bottom: 6rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-seven {
+    bottom: calc(max(1.5rem, env(safe-area-inset-bottom)) + 9.2rem);
+    border-radius: 1.8rem;
+  }
+}
+
+@media (max-width: 979px) {
+  .reader-shell.reader-shell--authenticated-reset {
+    --reader-topbar-offset: 12rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar {
+    top: max(0.9rem, env(safe-area-inset-top));
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-mobile-actions {
+    position: fixed;
+    top: calc(max(0.9rem, env(safe-area-inset-top)) + 4.8rem);
+    left: 1rem;
+    right: 1rem;
+    z-index: 71;
+    display: flex;
+    gap: 0.55rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: none;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-mobile-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-appearance-menu {
+    display: grid !important;
+    top: auto;
+    right: 1rem;
+    left: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-main {
+    padding-top: calc(var(--reader-topbar-offset) + env(safe-area-inset-top));
+    padding-bottom: calc(15rem + env(safe-area-inset-bottom));
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-book {
+    padding: 1rem;
+    border-radius: 1.6rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-seven {
+    top: 0;
+    bottom: 0;
+    border-radius: 1.6rem 1.6rem 0 0;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-seven__body {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  .reader-shell.reader-shell--authenticated-reset {
+    --reader-topbar-offset: 12.6rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar {
+    gap: 0.7rem;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__identity {
+    max-width: min(11.5rem, 44vw);
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__actions {
+    gap: 0.35rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__listen,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__utility {
+    min-height: 2.35rem;
+    min-width: 2.35rem;
+    padding-inline: 0.76rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-main {
+    padding-inline: 1rem;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-mobile-actions {
+    left: 0.85rem;
+    right: 0.85rem;
+  }
+}
