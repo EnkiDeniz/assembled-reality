@@ -2440,7 +2440,7 @@ export default function ReaderShell({
       {receiptNotice ? <div className="reader-toast is-receipt">{receiptNotice}</div> : null}
 
       <AnimatePresence>
-        {!sevenOpen && listenTrayState !== "open" ? (
+        {!sevenOpen && !hasFloatingPanel && listenTrayState !== "open" ? (
           <motion.button
             key="reader-fab"
             type="button"

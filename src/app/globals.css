@@ -2936,16 +2936,9 @@ a {
     0 3px 8px rgba(0, 0, 0, 0.24);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 979px) {
   .reader-fab {
-    width: 46px;
-    height: 46px;
-    right: 1rem;
-    bottom: max(1.25rem, env(safe-area-inset-bottom));
-  }
-
-  .reader-fab__glyph {
-    font-size: 1.25rem;
+    display: none;
   }
 }
 

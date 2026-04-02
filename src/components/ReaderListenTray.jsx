@@ -1,7 +1,5 @@
 "use client";
 
-// eslint-disable-next-line no-unused-vars -- motion.div used in JSX
-import { AnimatePresence, motion } from "motion/react";
 import * as Slider from "@radix-ui/react-slider";
 
 const SPEED_OPTIONS = [1, 1.25, 1.5, 2, 0.75];
@@ -209,20 +207,13 @@ export default function ReaderListenTray({
     onSpeedChange?.(next);
   };
 
-  const springTransition = { type: "spring", damping: 30, stiffness: 300 };
+  if (!visibleState) {
+    return null;
+  }
 
-  return (
-    <AnimatePresence mode="wait">
-      {isCollapsed ? (
-        <motion.div
-          key="collapsed"
-          className="reader-listen-tray is-collapsed"
-          aria-live="polite"
-          initial={{ y: "100%", opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "100%", opacity: 0 }}
-          transition={springTransition}
-        >
+  if (isCollapsed) {
+    return (
+      <div className="reader-listen-tray is-collapsed" aria-live="polite">
           <button
             type="button"
             className="reader-listen-tray__capsule"
@@ -248,17 +239,12 @@ export default function ReaderListenTray({
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
           </button>
-        </motion.div>
-      ) : visibleState === "open" ? (
-        <motion.div
-          key="open"
-          className="reader-listen-tray is-open"
-          aria-live="polite"
-          initial={{ y: "105%", opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "105%", opacity: 0 }}
-          transition={springTransition}
-        >
+      </div>
+    );
+  }
+
+  return (
+    <div className="reader-listen-tray is-open" aria-live="polite">
           <div className="reader-listen-tray__surface">
         <div className="reader-listen-tray__header">
           <div className="reader-listen-tray__copy">
@@ -386,8 +372,6 @@ export default function ReaderListenTray({
           </button>
         </div>
       </div>
-    </motion.div>
-      ) : null}
-    </AnimatePresence>
+    </div>
   );
 }
