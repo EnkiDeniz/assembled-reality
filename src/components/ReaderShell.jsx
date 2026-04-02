@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-// eslint-disable-next-line no-unused-vars -- motion.button used in JSX
-import { AnimatePresence, motion } from "motion/react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderListenTray from "./ReaderListenTray";
 import ReaderMarksPanel from "./ReaderMarksPanel";
@@ -178,8 +176,16 @@ function scrollReaderTarget(target, { behavior = "smooth", block = "start" } = {
   }
 
   const topbar = document.querySelector(".reader-player-topbar");
+  const utilityRail = document.querySelector(".reader-utility-rail");
   const topbarHeight = topbar instanceof HTMLElement ? topbar.getBoundingClientRect().height : 0;
-  const top = target.getBoundingClientRect().top + window.scrollY - topbarHeight - 20;
+  const utilityRailHeight =
+    utilityRail instanceof HTMLElement ? utilityRail.getBoundingClientRect().height : 0;
+  const top =
+    target.getBoundingClientRect().top +
+    window.scrollY -
+    topbarHeight -
+    utilityRailHeight -
+    28;
 
   window.scrollTo({
     top: Math.max(0, top),
@@ -256,8 +262,6 @@ export default function ReaderShell({
   initialReadingProgress = null,
   initialConversationThread = null,
   initialEvidenceSet = null,
-  profile = null,
-  sessionUser = null,
   getReceiptsConnection: _getReceiptsConnection = null,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
@@ -372,13 +376,6 @@ export default function ReaderShell({
   const currentLabel = currentEntry.number
     ? `${currentEntry.number} · ${currentEntry.title}`
     : currentEntry.title;
-  const memberName =
-    profile?.displayName ||
-    sessionUser?.readerName ||
-    sessionUser?.name ||
-    sessionUser?.email ||
-    "Reader";
-  const memberInitial = memberName.trim().charAt(0).toUpperCase() || "R";
   const currentBookmarked = hasSectionBookmark(readerAnnotations, currentEntry.slug);
   const contentsOpen = activeOverlay === "contents";
   const notebookOpen = activeOverlay === "notebook";
@@ -693,8 +690,8 @@ export default function ReaderShell({
     }, 2600);
   }, []);
 
-  const openAccountPage = useCallback(() => {
-    router.push("/account");
+  const openLibraryPage = useCallback(() => {
+    router.push("/library");
   }, [router]);
 
   const clearAudioUrl = useCallback(() => {
@@ -1836,7 +1833,10 @@ export default function ReaderShell({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(readerAnnotations),
+          body: JSON.stringify({
+            documentKey: documentData.documentKey,
+            ...readerAnnotations,
+          }),
           signal: controller.signal,
         });
       } catch {
@@ -1848,7 +1848,7 @@ export default function ReaderShell({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [readerAnnotations]);
+  }, [documentData.documentKey, readerAnnotations]);
 
   useEffect(() => {
     if (!hasHydratedProgressRef.current) {
@@ -1865,6 +1865,7 @@ export default function ReaderShell({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            documentKey: documentData.documentKey,
             sectionSlug: viewportSectionSlug,
             progressPercent,
           }),
@@ -1879,7 +1880,7 @@ export default function ReaderShell({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [progressPercent, viewportSectionSlug]);
+  }, [documentData.documentKey, progressPercent, viewportSectionSlug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -2136,6 +2137,16 @@ export default function ReaderShell({
       <div className="reader-player-ambient" aria-hidden="true" />
 
       <header className="reader-player-topbar">
+        <button
+          type="button"
+          className="reader-player-topbar__library"
+          onClick={openLibraryPage}
+          aria-label="Return to library"
+          title="Library"
+        >
+          <span>Library</span>
+        </button>
+
         <div className="reader-player-topbar__identity">
           <p className="reader-player-topbar__book">{documentData.title}</p>
           <p className="reader-player-topbar__section">{displayLabel}</p>
@@ -2145,101 +2156,12 @@ export default function ReaderShell({
             <span>{entries.length}</span>
           </p>
         </div>
-
-        <div className="reader-player-topbar__actions">
-          <button
-            type="button"
-            className={`reader-player-topbar__utility ${contentsOpen ? "is-active" : ""}`}
-            onClick={(event) => openOverlay("contents", event)}
-            aria-label={contentsOpen ? "Close contents" : "Open contents"}
-            title={contentsOpen ? "Close contents" : "Open contents"}
-          >
-            <ContentsIcon />
-          </button>
-
-          <button
-            type="button"
-            className={`reader-player-topbar__listen ${
-              listenTrayState !== "closed" ? "is-active" : ""
-            }`}
-            onClick={() => openListenTray()}
-            aria-label="Open listening"
-            title="Listen"
-          >
-            <span>Listen</span>
-          </button>
-
-          <button
-            type="button"
-            className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
-              currentBookmarked ? "is-active" : ""
-            }`}
-            onClick={handleToggleBookmark}
-            aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
-            title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
-          >
-            <BookmarkIcon filled={currentBookmarked} />
-          </button>
-
-          <button
-            type="button"
-            className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
-              notebookOpen ? "is-active" : ""
-            }`}
-            onClick={(event) => openOverlay("notebook", event)}
-            aria-label={notebookOpen ? "Close notebook" : "Open notebook"}
-            title={notebookOpen ? "Close notebook" : "Open notebook"}
-          >
-            <NotebookIcon />
-          </button>
-
-          <button
-            type="button"
-            className={`reader-player-topbar__utility ${sevenOpen ? "is-active" : ""}`}
-            onClick={(event) => {
-              if (sevenOpen) {
-                closeOverlay();
-                return;
-              }
-
-              openSevenView("guide", event);
-            }}
-            aria-label={sevenOpen ? "Close Seven" : "Open Seven"}
-            title="Seven"
-          >
-            <SevenIcon />
-          </button>
-
-          <button
-            type="button"
-            className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
-              appearanceOpen ? "is-active" : ""
-            }`}
-            onClick={(event) => openOverlay("appearance", event)}
-            aria-label="Reader appearance"
-            title="Reader appearance"
-          >
-            <span>Aa</span>
-          </button>
-
-          <button
-            type="button"
-            className="reader-player-topbar__utility reader-account-link"
-            onClick={openAccountPage}
-            aria-label="Account"
-            title="Account"
-          >
-            <span className="reader-member-chip" aria-hidden="true">
-              {memberInitial}
-            </span>
-          </button>
-        </div>
       </header>
 
-      <nav className="reader-mobile-actions" aria-label="Reader actions">
+      <nav className="reader-utility-rail" aria-label="Reader tools">
         <button
           type="button"
-          className={`reader-mobile-actions__button ${contentsOpen ? "is-active" : ""}`}
+          className={`reader-utility-rail__button ${contentsOpen ? "is-active" : ""}`}
           onClick={(event) => openOverlay("contents", event)}
         >
           <ContentsIcon />
@@ -2247,14 +2169,14 @@ export default function ReaderShell({
         </button>
         <button
           type="button"
-          className={`reader-mobile-actions__button ${listenTrayState !== "closed" ? "is-active" : ""}`}
+          className={`reader-utility-rail__button ${listenTrayState !== "closed" ? "is-active" : ""}`}
           onClick={() => openListenTray()}
         >
           <span>Listen</span>
         </button>
         <button
           type="button"
-          className={`reader-mobile-actions__button ${currentBookmarked ? "is-active" : ""}`}
+          className={`reader-utility-rail__button ${currentBookmarked ? "is-active" : ""}`}
           onClick={handleToggleBookmark}
         >
           <BookmarkIcon filled={currentBookmarked} />
@@ -2262,7 +2184,7 @@ export default function ReaderShell({
         </button>
         <button
           type="button"
-          className={`reader-mobile-actions__button ${notebookOpen ? "is-active" : ""}`}
+          className={`reader-utility-rail__button ${notebookOpen ? "is-active" : ""}`}
           onClick={(event) => openOverlay("notebook", event)}
         >
           <NotebookIcon />
@@ -2270,7 +2192,7 @@ export default function ReaderShell({
         </button>
         <button
           type="button"
-          className={`reader-mobile-actions__button ${sevenOpen ? "is-active" : ""}`}
+          className={`reader-utility-rail__button ${sevenOpen ? "is-active" : ""}`}
           onClick={(event) => {
             if (sevenOpen) {
               closeOverlay();
@@ -2285,21 +2207,11 @@ export default function ReaderShell({
         </button>
         <button
           type="button"
-          className={`reader-mobile-actions__button ${appearanceOpen ? "is-active" : ""}`}
+          className={`reader-utility-rail__button ${appearanceOpen ? "is-active" : ""}`}
           onClick={(event) => openOverlay("appearance", event)}
         >
           <span>Aa</span>
           <span>Display</span>
-        </button>
-        <button
-          type="button"
-          className="reader-mobile-actions__button"
-          onClick={openAccountPage}
-        >
-          <span className="reader-member-chip" aria-hidden="true">
-            {memberInitial}
-          </span>
-          <span>Account</span>
         </button>
       </nav>
 
@@ -2538,24 +2450,6 @@ export default function ReaderShell({
 
       {selectionNotice ? <div className="reader-toast">{selectionNotice}</div> : null}
       {receiptNotice ? <div className="reader-toast is-receipt">{receiptNotice}</div> : null}
-
-      <AnimatePresence>
-        {!sevenOpen && !hasOpenOverlay && listenTrayState !== "open" ? (
-          <motion.button
-            key="reader-fab"
-            type="button"
-            className="reader-fab"
-            onClick={(event) => openSevenView("guide", event)}
-            aria-label="Ask Seven"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: "spring", damping: 20, stiffness: 400 }}
-          >
-            <span className="reader-fab__glyph">7</span>
-          </motion.button>
-        ) : null}
-      </AnimatePresence>
     </div>
   );
 }
