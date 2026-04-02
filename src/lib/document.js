@@ -85,16 +85,17 @@ function applyAuthoritativeAppendices(documentData) {
   };
 }
 
-export function parseDocument(markdown) {
+export function parseDocument(markdown, { documentKey = PRIMARY_DOCUMENT_KEY } = {}) {
   const normalized = normalizeMarkdown(markdown);
-  const titleMatch = normalized.match(/^#\s+(.+)$/m);
-  const subtitleMatch = normalized.match(/^###\s+(.+)$/m);
+  const firstSectionIndex = normalized.search(/^##\s+\d+\s+·\s+.+$/m);
+  const preambleSource =
+    firstSectionIndex === -1 ? normalized : normalized.slice(0, firstSectionIndex).trim();
+  const titleMatch = preambleSource.match(/^#\s+(.+)$/m);
+  const subtitleMatch = preambleSource.match(/^###\s+(.+)$/m);
   const title = titleMatch?.[1]?.trim() || "ASSEMBLED REALITY";
   const subtitle = subtitleMatch?.[1]?.trim() || "";
 
-  const firstSectionIndex = normalized.search(/^##\s+\d+\s+·\s+.+$/m);
-  const introSource = firstSectionIndex === -1 ? normalized : normalized.slice(0, firstSectionIndex).trim();
-  const introMarkdown = introSource
+  const introMarkdown = preambleSource
     .split("\n")
     .filter((line) => !line.startsWith("# ") && !line.startsWith("### "))
     .join("\n")
@@ -116,7 +117,7 @@ export function parseDocument(markdown) {
   });
 
   return {
-    documentKey: PRIMARY_DOCUMENT_KEY,
+    documentKey,
     title,
     subtitle,
     introMarkdown,

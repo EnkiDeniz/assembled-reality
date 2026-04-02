@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getParsedDocument } from "@/lib/document";
-import { listReadingReceiptDraftsForUser, loadReaderPageData } from "@/lib/reader-db";
+import { getReaderDocumentDataForUser, getReaderDocumentHref } from "@/lib/reader-documents";
+import {
+  listReadingReceiptDraftsForUser,
+  loadLatestReadingSnapshotForUser,
+  loadReaderPageData,
+} from "@/lib/reader-db";
 import AccountScreen from "@/components/AccountScreen";
 
 export const dynamic = "force-dynamic";
@@ -13,24 +17,26 @@ export default async function AccountPage() {
     redirect("/");
   }
 
-  const readerData = await loadReaderPageData(session.user.id);
-  const drafts = await listReadingReceiptDraftsForUser(session.user.id);
-  const documentData = getParsedDocument();
-  const progress = readerData?.progress || null;
-  const sectionSlug = progress?.sectionSlug || "beginning";
+  const [readerData, drafts, snapshot] = await Promise.all([
+    loadReaderPageData(session.user.id),
+    listReadingReceiptDraftsForUser(session.user.id),
+    loadLatestReadingSnapshotForUser(session.user.id),
+  ]);
+
+  const documentData = await getReaderDocumentDataForUser(
+    session.user.id,
+    snapshot?.documentKey,
+  );
+  const sectionSlug = snapshot?.sectionSlug || "beginning";
   const matchedSection =
     sectionSlug === "beginning"
       ? null
-      : documentData.sections.find((section) => section.slug === sectionSlug) || null;
+      : documentData?.sections.find((section) => section.slug === sectionSlug) || null;
   const resumeLabel = matchedSection
     ? `${matchedSection.number} · ${matchedSection.title}`
     : "Beginning";
-  const resumeHref = sectionSlug === "beginning" ? "/read" : `/read#${sectionSlug}`;
-  const annotations = readerData?.annotations || {
-    bookmarks: [],
-    highlights: [],
-    notes: [],
-  };
+  const baseResumeHref = getReaderDocumentHref(snapshot?.documentKey);
+  const resumeHref = sectionSlug === "beginning" ? baseResumeHref : `${baseResumeHref}#${sectionSlug}`;
 
   return (
     <AccountScreen
@@ -39,12 +45,12 @@ export default async function AccountPage() {
       connectionStatus={readerData?.getReceiptsConnection?.status?.toLowerCase() || "disconnected"}
       drafts={drafts}
       readingSnapshot={{
-        progressPercent: progress?.progressPercent || 0,
+        progressPercent: snapshot?.progressPercent || 0,
         resumeLabel,
         resumeHref,
-        bookmarkCount: annotations.bookmarks.length,
-        highlightCount: annotations.highlights.length,
-        noteCount: annotations.notes.length,
+        bookmarkCount: snapshot?.bookmarkCount || 0,
+        highlightCount: snapshot?.highlightCount || 0,
+        noteCount: snapshot?.noteCount || 0,
       }}
     />
   );

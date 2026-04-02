@@ -2,6 +2,11 @@ import {
   EMPTY_READER_ANNOTATIONS,
   normalizeIncomingStore,
 } from "@/lib/reader-store";
+import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import {
+  getReaderDocumentHref,
+  getReaderDocumentSummaryForUser,
+} from "@/lib/reader-documents";
 import { buildExcerpt, slugify } from "@/lib/text";
 import { prisma } from "@/lib/prisma";
 
@@ -105,29 +110,43 @@ export async function getReaderProfileByUserId(userId) {
   };
 }
 
-export async function loadReaderPageData(userId) {
+export async function loadReaderPageData(userId, documentKey = PRIMARY_DOCUMENT_KEY) {
   const resolved = await getReaderProfileByUserId(userId);
   if (!resolved) return null;
 
   const { profile, getReceiptsConnection } = resolved;
 
   const bookmarks = await prisma.bookmark.findMany({
-    where: { readerProfileId: profile.id },
+    where: {
+      readerProfileId: profile.id,
+      documentKey,
+    },
     orderBy: { createdAt: "desc" },
     include: { readerProfile: true },
   });
   const highlights = await prisma.highlight.findMany({
-    where: { readerProfileId: profile.id },
+    where: {
+      readerProfileId: profile.id,
+      documentKey,
+    },
     orderBy: { createdAt: "desc" },
     include: { readerProfile: true },
   });
   const notes = await prisma.note.findMany({
-    where: { readerProfileId: profile.id },
+    where: {
+      readerProfileId: profile.id,
+      documentKey,
+    },
     orderBy: { updatedAt: "desc" },
     include: { readerProfile: true },
   });
   const progress = await prisma.readingProgress.findUnique({
-    where: { readerProfileId: profile.id },
+    where: {
+      readerProfileId_documentKey: {
+        readerProfileId: profile.id,
+        documentKey,
+      },
+    },
   });
 
   return {
@@ -136,6 +155,7 @@ export async function loadReaderPageData(userId) {
     annotations: toAnnotationStore({ bookmarks, highlights, notes }),
     progress: progress
       ? {
+          documentKey: progress.documentKey,
           sectionSlug: progress.sectionSlug,
           progressPercent: progress.progressPercent,
           updatedAt: progress.updatedAt.toISOString(),
@@ -144,7 +164,11 @@ export async function loadReaderPageData(userId) {
   };
 }
 
-export async function saveReaderAnnotationsForUser(userId, nextStore) {
+export async function saveReaderAnnotationsForUser(
+  userId,
+  documentKey = PRIMARY_DOCUMENT_KEY,
+  nextStore,
+) {
   const resolved = await getReaderProfileByUserId(userId);
   if (!resolved) return null;
 
@@ -152,15 +176,31 @@ export async function saveReaderAnnotationsForUser(userId, nextStore) {
   const store = normalizeIncomingStore(nextStore);
 
   await prisma.$transaction([
-    prisma.bookmark.deleteMany({ where: { readerProfileId: profile.id } }),
-    prisma.highlight.deleteMany({ where: { readerProfileId: profile.id } }),
-    prisma.note.deleteMany({ where: { readerProfileId: profile.id } }),
+    prisma.bookmark.deleteMany({
+      where: {
+        readerProfileId: profile.id,
+        documentKey,
+      },
+    }),
+    prisma.highlight.deleteMany({
+      where: {
+        readerProfileId: profile.id,
+        documentKey,
+      },
+    }),
+    prisma.note.deleteMany({
+      where: {
+        readerProfileId: profile.id,
+        documentKey,
+      },
+    }),
     ...(store.bookmarks.length
       ? [
           prisma.bookmark.createMany({
             data: store.bookmarks.map((bookmark) => ({
               id: bookmark.id,
               readerProfileId: profile.id,
+              documentKey,
               sectionSlug: bookmark.sectionSlug,
               label: bookmark.label,
               excerpt: buildExcerpt(bookmark.excerpt || bookmark.label),
@@ -175,6 +215,7 @@ export async function saveReaderAnnotationsForUser(userId, nextStore) {
             data: store.highlights.map((highlight) => ({
               id: highlight.id,
               readerProfileId: profile.id,
+              documentKey,
               sectionSlug: highlight.sectionSlug,
               sectionTitle: highlight.sectionTitle,
               blockId: highlight.blockId,
@@ -194,6 +235,7 @@ export async function saveReaderAnnotationsForUser(userId, nextStore) {
             data: store.notes.map((note) => ({
               id: note.id,
               readerProfileId: profile.id,
+              documentKey,
               sectionSlug: note.sectionSlug,
               sectionTitle: note.sectionTitle,
               blockId: note.blockId,
@@ -210,24 +252,35 @@ export async function saveReaderAnnotationsForUser(userId, nextStore) {
       : []),
   ]);
 
-  return loadReaderPageData(userId);
+  return loadReaderPageData(userId, documentKey);
 }
 
-export async function saveReadingProgressForUser(userId, nextProgress) {
+export async function saveReadingProgressForUser(
+  userId,
+  documentKey = PRIMARY_DOCUMENT_KEY,
+  nextProgress,
+) {
   const resolved = await getReaderProfileByUserId(userId);
   if (!resolved || !nextProgress?.sectionSlug) return null;
 
   const { profile } = resolved;
 
   return prisma.readingProgress.upsert({
-    where: { readerProfileId: profile.id },
+    where: {
+      readerProfileId_documentKey: {
+        readerProfileId: profile.id,
+        documentKey,
+      },
+    },
     update: {
+      documentKey,
       sectionSlug: nextProgress.sectionSlug,
       progressPercent: Math.max(0, Math.min(100, Number(nextProgress.progressPercent) || 0)),
       updatedAt: new Date(),
     },
     create: {
       readerProfileId: profile.id,
+      documentKey,
       sectionSlug: nextProgress.sectionSlug,
       progressPercent: Math.max(0, Math.min(100, Number(nextProgress.progressPercent) || 0)),
     },
@@ -244,7 +297,7 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
     data: {
       userId,
       readerProfileId: profile.id,
-      documentKey: draftInput.documentKey || "assembled-reality-v07-final",
+      documentKey: draftInput.documentKey || PRIMARY_DOCUMENT_KEY,
       conversationThreadId: draftInput.conversationThreadId || null,
       getReceiptsReceiptId: draftInput.getReceiptsReceiptId || null,
       status: draftInput.status || "LOCAL_DRAFT",
@@ -273,6 +326,56 @@ export async function listReadingReceiptDraftsForUser(userId) {
     orderBy: { createdAt: "desc" },
     take: 12,
   });
+}
+
+export async function loadLatestReadingSnapshotForUser(userId) {
+  const resolved = await getReaderProfileByUserId(userId);
+  if (!resolved?.profile) {
+    return null;
+  }
+
+  const latestProgress = await prisma.readingProgress.findFirst({
+    where: {
+      readerProfileId: resolved.profile.id,
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+  });
+
+  const documentKey = latestProgress?.documentKey || PRIMARY_DOCUMENT_KEY;
+  const [documentSummary, bookmarkCount, highlightCount, noteCount] = await Promise.all([
+    getReaderDocumentSummaryForUser(userId, documentKey),
+    prisma.bookmark.count({
+      where: {
+        readerProfileId: resolved.profile.id,
+        documentKey,
+      },
+    }),
+    prisma.highlight.count({
+      where: {
+        readerProfileId: resolved.profile.id,
+        documentKey,
+      },
+    }),
+    prisma.note.count({
+      where: {
+        readerProfileId: resolved.profile.id,
+        documentKey,
+      },
+    }),
+  ]);
+
+  return {
+    documentKey,
+    documentTitle: documentSummary?.title || "Assembled Reality",
+    progressPercent: latestProgress?.progressPercent || 0,
+    sectionSlug: latestProgress?.sectionSlug || "beginning",
+    resumeHref: getReaderDocumentHref(documentKey),
+    bookmarkCount,
+    highlightCount,
+    noteCount,
+  };
 }
 
 export async function updateReaderProfileForUser(userId, input) {

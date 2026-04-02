@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getParsedDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { appEnv } from "@/lib/env";
+import { getReaderDocumentDataForUser } from "@/lib/reader-documents";
 import { appendConversationExchangeForUser } from "@/lib/reader-workspace";
 import {
   buildSevenCitations,
@@ -108,7 +109,20 @@ export async function POST(request) {
   let resolvedDocumentKey = documentKey || PRIMARY_DOCUMENT_KEY;
 
   if (activeSlug) {
-    const documentData = getParsedDocument();
+    const documentData = await getReaderDocumentDataForUser(session.user.id, resolvedDocumentKey);
+    if (!documentData) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Document not found.",
+          provider: "openai",
+          reasonCode: "document_not_found",
+          retryable: false,
+        },
+        { status: 404 },
+      );
+    }
+
     const currentSection = getReaderSection(documentData, activeSlug);
 
     resolvedDocumentKey = documentData?.documentKey || resolvedDocumentKey;

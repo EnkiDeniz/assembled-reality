@@ -19,7 +19,7 @@ export default function EntryGate({
 
   useEffect(() => {
     if (session?.user?.id) {
-      router.replace("/read");
+      router.replace("/library");
     }
   }, [router, session?.user?.id]);
 
@@ -31,7 +31,7 @@ export default function EntryGate({
     saveUnlockState(nextState);
 
     if (session?.user?.id) {
-      router.replace("/read");
+      router.replace("/library");
     }
   };
 

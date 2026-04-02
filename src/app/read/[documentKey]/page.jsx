@@ -1,21 +1,26 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import ReadGate from "@/components/ReadGate";
 import { authOptions } from "@/lib/auth";
-import { getParsedDocument } from "@/lib/document";
 import { appEnv } from "@/lib/env";
 import { loadReaderPageData } from "@/lib/reader-db";
+import { getReaderDocumentDataForUser } from "@/lib/reader-documents";
 import { loadReaderWorkspaceForUser } from "@/lib/reader-workspace";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReadPage() {
+export default async function ReaderDocumentPage({ params }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     redirect("/");
   }
 
-  const documentData = getParsedDocument();
+  const documentKey = String(params?.documentKey || "").trim();
+  const documentData = await getReaderDocumentDataForUser(session.user.id, documentKey);
+  if (!documentData) {
+    notFound();
+  }
+
   const [readerData, workspace] = await Promise.all([
     loadReaderPageData(session.user.id, documentData.documentKey),
     loadReaderWorkspaceForUser(session.user.id, documentData.documentKey),

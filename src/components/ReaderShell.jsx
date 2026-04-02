@@ -57,7 +57,7 @@ const URL_SYNC_OVERLAYS = new Set([
   "contents",
   "notebook",
   "seven",
-  "appearance",
+  "more",
   "listen",
 ]);
 
@@ -65,6 +65,7 @@ function getSyncedOverlayFromUrl() {
   if (typeof window === "undefined") return null;
 
   const panel = new URLSearchParams(window.location.search).get("panel");
+  if (panel === "appearance") return "more";
   return URL_SYNC_OVERLAYS.has(panel) ? panel : null;
 }
 
@@ -176,15 +177,11 @@ function scrollReaderTarget(target, { behavior = "smooth", block = "start" } = {
   }
 
   const topbar = document.querySelector(".reader-player-topbar");
-  const utilityRail = document.querySelector(".reader-utility-rail");
   const topbarHeight = topbar instanceof HTMLElement ? topbar.getBoundingClientRect().height : 0;
-  const utilityRailHeight =
-    utilityRail instanceof HTMLElement ? utilityRail.getBoundingClientRect().height : 0;
   const top =
     target.getBoundingClientRect().top +
     window.scrollY -
     topbarHeight -
-    utilityRailHeight -
     28;
 
   window.scrollTo({
@@ -246,6 +243,16 @@ function SevenIcon() {
     <span className="reader-seven-icon" aria-hidden="true">
       7
     </span>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="5" cy="10" r="1.3" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.3" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -380,9 +387,10 @@ export default function ReaderShell({
   const contentsOpen = activeOverlay === "contents";
   const notebookOpen = activeOverlay === "notebook";
   const sevenOpen = activeOverlay === "seven";
-  const appearanceOpen = activeOverlay === "appearance";
+  const moreOpen = activeOverlay === "more";
   const listenOpen = activeOverlay === "listen";
   const hasOpenOverlay = Boolean(activeOverlay);
+  const hasTrailingPanel = notebookOpen || sevenOpen;
   const effectiveVoiceEnabled = sevenVoiceEnabled || browserSpeechEnabled;
 
   const sortedBookmarks = useMemo(
@@ -471,9 +479,14 @@ export default function ReaderShell({
   const displayLabel = displayEntry.number
     ? `${displayEntry.number} · ${displayEntry.title}`
     : displayEntry.title;
+  const displayIndex = Math.max(
+    1,
+    entries.findIndex((entry) => entry.slug === displaySectionSlug) + 1,
+  );
 
   const canContinueDocument = blocks.length > 0 && Boolean(lyricFocusBlockId);
   const canListenCurrentSection = Boolean(getNarrationText(documentData, displaySectionSlug));
+  const shouldShowBottomDock = listenTrayState === "closed";
 
   const sectionBlocks = useMemo(
     () => blocksBySection[displaySectionSlug] || [],
@@ -649,8 +662,8 @@ export default function ReaderShell({
     [activeOverlay, openOverlay],
   );
 
-  const openListenTray = useCallback(() => {
-    openOverlay("listen");
+  const openListenTray = useCallback((trigger = null) => {
+    openOverlay("listen", trigger);
   }, [openOverlay]);
 
   const collapseListenTray = useCallback(() => {
@@ -693,6 +706,11 @@ export default function ReaderShell({
   const openLibraryPage = useCallback(() => {
     router.push("/library");
   }, [router]);
+
+  const openAccountPage = useCallback(() => {
+    closeOverlay({ restoreFocus: false });
+    router.push("/account");
+  }, [closeOverlay, router]);
 
   const clearAudioUrl = useCallback(() => {
     if (audioUrlRef.current) {
@@ -1755,6 +1773,11 @@ export default function ReaderShell({
         openSevenView("guide");
       }
 
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        openOverlay("more");
+      }
+
       if (event.key === " ") {
         event.preventDefault();
         void handlePrimaryPlayPause();
@@ -2126,7 +2149,9 @@ export default function ReaderShell({
     <div
       className={`reader-shell reader-shell--authenticated-reset text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${
         hasOpenOverlay ? "has-floating-panel" : ""
-      } ${lyricFocusBlockId ? "has-lyric-focus" : ""}`}
+      } ${lyricFocusBlockId ? "has-lyric-focus" : ""} ${
+        hasTrailingPanel ? "has-trailing-panel" : ""
+      }`}
       data-theme={preferences.theme}
     >
       <div
@@ -2149,103 +2174,129 @@ export default function ReaderShell({
 
         <div className="reader-player-topbar__identity">
           <p className="reader-player-topbar__book">{documentData.title}</p>
-          <p className="reader-player-topbar__section">{displayLabel}</p>
-          <p className="reader-player-topbar__meta">
-            <span>{entries.findIndex((entry) => entry.slug === displaySectionSlug) + 1}</span>
-            <span>/</span>
-            <span>{entries.length}</span>
-          </p>
+          <div className="reader-player-topbar__details">
+            <p className="reader-player-topbar__section">{displayLabel}</p>
+            <p className="reader-player-topbar__meta">
+              <span>{displayIndex}</span>
+              <span>/</span>
+              <span>{entries.length}</span>
+            </p>
+          </div>
         </div>
+
+        <button
+          type="button"
+          className={`reader-player-topbar__listen ${listenTrayState !== "closed" ? "is-active" : ""}`}
+          onClick={(event) => openListenTray(event)}
+          aria-pressed={listenTrayState !== "closed"}
+        >
+          <span>{listenTrayState === "closed" ? "Listen" : "Listening"}</span>
+        </button>
       </header>
 
-      <nav className="reader-utility-rail" aria-label="Reader tools">
-        <button
-          type="button"
-          className={`reader-utility-rail__button ${contentsOpen ? "is-active" : ""}`}
-          onClick={(event) => openOverlay("contents", event)}
-        >
-          <ContentsIcon />
-          <span>Contents</span>
-        </button>
-        <button
-          type="button"
-          className={`reader-utility-rail__button ${listenTrayState !== "closed" ? "is-active" : ""}`}
-          onClick={() => openListenTray()}
-        >
-          <span>Listen</span>
-        </button>
-        <button
-          type="button"
-          className={`reader-utility-rail__button ${currentBookmarked ? "is-active" : ""}`}
-          onClick={handleToggleBookmark}
-        >
-          <BookmarkIcon filled={currentBookmarked} />
-          <span>Bookmark</span>
-        </button>
-        <button
-          type="button"
-          className={`reader-utility-rail__button ${notebookOpen ? "is-active" : ""}`}
-          onClick={(event) => openOverlay("notebook", event)}
-        >
-          <NotebookIcon />
-          <span>Notebook</span>
-        </button>
-        <button
-          type="button"
-          className={`reader-utility-rail__button ${sevenOpen ? "is-active" : ""}`}
-          onClick={(event) => {
-            if (sevenOpen) {
-              closeOverlay();
-              return;
-            }
+      {shouldShowBottomDock ? (
+        <nav className="reader-bottom-dock" aria-label="Reader tools">
+          <button
+            type="button"
+            className={`reader-bottom-dock__button ${contentsOpen ? "is-active" : ""}`}
+            onClick={(event) => openOverlay("contents", event)}
+            aria-expanded={contentsOpen}
+          >
+            <ContentsIcon />
+            <span>Contents</span>
+          </button>
+          <button
+            type="button"
+            className={`reader-bottom-dock__button ${notebookOpen ? "is-active" : ""}`}
+            onClick={(event) => openOverlay("notebook", event)}
+            aria-expanded={notebookOpen}
+          >
+            <NotebookIcon />
+            <span>Notebook</span>
+          </button>
+          <button
+            type="button"
+            className={`reader-bottom-dock__button ${sevenOpen ? "is-active" : ""}`}
+            onClick={(event) => {
+              if (sevenOpen) {
+                closeOverlay();
+                return;
+              }
 
-            openSevenView("guide", event);
-          }}
-        >
-          <SevenIcon />
-          <span>Seven</span>
-        </button>
-        <button
-          type="button"
-          className={`reader-utility-rail__button ${appearanceOpen ? "is-active" : ""}`}
-          onClick={(event) => openOverlay("appearance", event)}
-        >
-          <span>Aa</span>
-          <span>Display</span>
-        </button>
-      </nav>
+              openSevenView("guide", event);
+            }}
+            aria-expanded={sevenOpen}
+          >
+            <SevenIcon />
+            <span>Seven</span>
+          </button>
+          <button
+            type="button"
+            className={`reader-bottom-dock__button ${currentBookmarked ? "is-active" : ""}`}
+            onClick={handleToggleBookmark}
+            aria-pressed={currentBookmarked}
+          >
+            <BookmarkIcon filled={currentBookmarked} />
+            <span>Bookmark</span>
+          </button>
+          <button
+            type="button"
+            className={`reader-bottom-dock__button ${moreOpen ? "is-active" : ""}`}
+            onClick={(event) => openOverlay("more", event)}
+            aria-expanded={moreOpen}
+          >
+            <MoreIcon />
+            <span>More</span>
+          </button>
+        </nav>
+      ) : null}
 
-      {appearanceOpen ? (
-        <div className="reader-appearance-menu" role="dialog" aria-label="Reader appearance">
-          <div className="reader-appearance-menu__header">
-            <p className="reader-appearance-menu__title">Display</p>
+      {moreOpen ? (
+        <div className="reader-more-sheet" role="dialog" aria-label="Reader settings">
+          <div className="reader-more-sheet__header">
+            <div className="reader-more-sheet__heading">
+              <p className="reader-more-sheet__eyebrow">Reader</p>
+              <h2 className="reader-more-sheet__title">More</h2>
+            </div>
             <button
               type="button"
-              className="reader-appearance-menu__close"
+              className="reader-more-sheet__close"
               onClick={() => closeOverlay()}
-              aria-label="Close display settings"
+              aria-label="Close more options"
             >
               ×
             </button>
           </div>
-          <PreferenceGroup
-            title="Text size"
-            value={preferences.textSize}
-            options={TEXT_SIZE_LABELS}
-            onChange={(value) => setPreferences((current) => ({ ...current, textSize: value }))}
-          />
-          <PreferenceGroup
-            title="Reading width"
-            value={preferences.pageWidth}
-            options={PAGE_WIDTH_LABELS}
-            onChange={(value) => setPreferences((current) => ({ ...current, pageWidth: value }))}
-          />
-          <PreferenceGroup
-            title="Theme"
-            value={preferences.theme}
-            options={THEME_LABELS}
-            onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
-          />
+          <div className="reader-more-sheet__section">
+            <p className="reader-more-sheet__section-title">Display</p>
+            <PreferenceGroup
+              title="Text size"
+              value={preferences.textSize}
+              options={TEXT_SIZE_LABELS}
+              onChange={(value) => setPreferences((current) => ({ ...current, textSize: value }))}
+            />
+            <PreferenceGroup
+              title="Reading width"
+              value={preferences.pageWidth}
+              options={PAGE_WIDTH_LABELS}
+              onChange={(value) => setPreferences((current) => ({ ...current, pageWidth: value }))}
+            />
+            <PreferenceGroup
+              title="Theme"
+              value={preferences.theme}
+              options={THEME_LABELS}
+              onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
+            />
+          </div>
+          <div className="reader-more-sheet__actions">
+            <button
+              type="button"
+              className="reader-more-sheet__link"
+              onClick={openAccountPage}
+            >
+              Open account
+            </button>
+          </div>
         </div>
       ) : null}
 

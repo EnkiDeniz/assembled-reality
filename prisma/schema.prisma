@@ -50,6 +50,13 @@ enum EvidenceSourceType {
   CITATION
 }
 
+enum ReaderDocumentFormat {
+  MARKDOWN
+  DOC
+  DOCX
+  PDF
+}
+
 model User {
   id                  String                 @id @default(cuid())
   name                String?
@@ -63,6 +70,7 @@ model User {
   readingReceiptDrafts ReadingReceiptDraft[]
   readerConversationThreads ReaderConversationThread[]
   readerEvidenceSets   ReaderEvidenceSet[]
+  readerDocuments      ReaderDocument[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 }
@@ -90,6 +98,7 @@ model ReaderProfile {
 model Bookmark {
   id            String        @id @default(cuid())
   readerProfileId String
+  documentKey   String        @default("assembled-reality-v07-final")
   sectionSlug   String
   label         String
   excerpt       String?
@@ -97,13 +106,14 @@ model Bookmark {
   updatedAt     DateTime      @updatedAt
   readerProfile ReaderProfile @relation(fields: [readerProfileId], references: [id], onDelete: Cascade)
 
-  @@unique([readerProfileId, sectionSlug])
-  @@index([readerProfileId, createdAt])
+  @@unique([readerProfileId, documentKey, sectionSlug])
+  @@index([readerProfileId, documentKey, createdAt])
 }
 
 model Highlight {
   id            String        @id @default(cuid())
   readerProfileId String
+  documentKey   String        @default("assembled-reality-v07-final")
   sectionSlug   String
   sectionTitle  String
   blockId       String
@@ -116,13 +126,14 @@ model Highlight {
   updatedAt     DateTime      @updatedAt
   readerProfile ReaderProfile @relation(fields: [readerProfileId], references: [id], onDelete: Cascade)
 
-  @@index([readerProfileId, sectionSlug])
-  @@index([readerProfileId, blockId])
+  @@index([readerProfileId, documentKey, sectionSlug])
+  @@index([readerProfileId, documentKey, blockId])
 }
 
 model Note {
   id            String        @id @default(cuid())
   readerProfileId String
+  documentKey   String        @default("assembled-reality-v07-final")
   sectionSlug   String
   sectionTitle  String
   blockId       String
@@ -135,20 +146,41 @@ model Note {
   updatedAt     DateTime      @updatedAt
   readerProfile ReaderProfile @relation(fields: [readerProfileId], references: [id], onDelete: Cascade)
 
-  @@index([readerProfileId, sectionSlug])
-  @@index([readerProfileId, blockId])
+  @@index([readerProfileId, documentKey, sectionSlug])
+  @@index([readerProfileId, documentKey, blockId])
 }
 
 model ReadingProgress {
   id              String        @id @default(cuid())
   readerProfileId String
+  documentKey     String        @default("assembled-reality-v07-final")
   sectionSlug     String
   progressPercent Int           @default(0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   readerProfile   ReaderProfile @relation(fields: [readerProfileId], references: [id], onDelete: Cascade)
 
-  @@unique([readerProfileId])
+  @@unique([readerProfileId, documentKey])
+  @@index([readerProfileId, updatedAt])
+}
+
+model ReaderDocument {
+  id              String               @id @default(cuid())
+  userId          String
+  documentKey     String               @unique
+  title           String
+  subtitle        String?
+  format          ReaderDocumentFormat @default(MARKDOWN)
+  mimeType        String?
+  originalFilename String?
+  contentMarkdown String               @db.Text
+  wordCount       Int                  @default(0)
+  sectionCount    Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
 }
 
 model GetReceiptsConnection {
