@@ -35,67 +35,8 @@ function SpeakerIcon() {
   );
 }
 
-function SkipPreviousIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M6.35 5.25v9.5M14.6 5.95 8.55 10l6.05 4.05V5.95Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.45"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M7.1 5.6 14.6 10l-7.5 4.4V5.6Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M7.15 5.4v9.2M12.85 5.4v9.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.65"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SkipNextIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M13.65 5.25v9.5M5.4 5.95 11.45 10 5.4 14.05V5.95Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.45"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function GuideTabs({ view, onChangeView }) {
   const tabs = [
-    { value: "listen", label: "Listen" },
     { value: "guide", label: "Guide" },
     { value: "evidence", label: "Evidence" },
   ];
@@ -358,21 +299,12 @@ export default function SevenPanel({
   onRemoveEvidenceItem,
   onShowNotice,
   onClose,
-  onSelectSection,
-  onNavigateSection,
-  onMoveSection,
-  onPlayPauseSection,
-  onContinueDocument,
-  canContinueDocument = false,
-  canListenCurrentSection = false,
-  audioState = null,
-  sectionEntries = [],
-  playingSectionSlug = null,
+  onOpenListen,
   messageAudioState = null,
   onPlayMessage,
   onStopMessage,
 }) {
-  const resolvedView = view === "sections" ? "listen" : view;
+  const resolvedView = view === "evidence" ? "evidence" : "guide";
   const currentSection = useMemo(
     () => getReaderSection(documentData, activeSlug),
     [activeSlug, documentData],
@@ -443,13 +375,6 @@ export default function SevenPanel({
       ) || null,
     [currentSection.slug, evidenceItems, sectionPreview],
   );
-  const sectionListeningActive =
-    (audioState?.sourceType === "section" || audioState?.sourceType === "document") &&
-    audioState?.status !== "idle";
-  const sectionListeningPlaying =
-    sectionListeningActive &&
-    (audioState?.status === "playing" || audioState?.status === "loading");
-  const continueDocumentActive = audioState?.sourceType === "document" && audioState?.status !== "idle";
 
   const requestSeven = useCallback(
     async ({ mode, question, userLine }) => {
@@ -694,8 +619,7 @@ export default function SevenPanel({
     threadId,
   ]);
 
-  const overlayTitle =
-    resolvedView === "evidence" ? "Evidence" : resolvedView === "listen" ? "Listen" : "Guide";
+  const overlayTitle = resolvedView === "evidence" ? "Evidence" : "Guide";
 
   return (
     <aside className={`reader-seven ${open ? "is-open" : ""} is-view-${resolvedView}`}>
@@ -704,14 +628,25 @@ export default function SevenPanel({
           <p className="reader-seven__eyebrow">{overlayTitle}</p>
           <p className="reader-seven__meta">{currentLabel}</p>
         </div>
-        <button
-          type="button"
-          className="reader-seven__close"
-          onClick={onClose}
-          aria-label={`Close ${overlayTitle}`}
-        >
-          ×
-        </button>
+        <div className="reader-seven__header-actions">
+          {onOpenListen ? (
+            <button
+              type="button"
+              className="reader-seven__shortcut"
+              onClick={onOpenListen}
+            >
+              Listen
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="reader-seven__close"
+            onClick={onClose}
+            aria-label={`Close ${overlayTitle}`}
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       <GuideTabs view={resolvedView} onChangeView={onChangeView} />
@@ -721,100 +656,6 @@ export default function SevenPanel({
           <p className="reader-seven__status" aria-live="polite">
             {liveStatus}
           </p>
-        ) : null}
-
-        {resolvedView === "listen" ? (
-          <div className="reader-seven__guide-pane reader-seven__guide-pane--listen">
-            <div className="reader-seven__listen-pane">
-              <div className="reader-seven__guide-intro">
-                <p className="reader-seven__identity-eyebrow">Read first, listen fast</p>
-                <p className="reader-seven__identity-preview">{sectionPreview || currentLabel}</p>
-              </div>
-
-              <div className="reader-seven__player">
-                <div className="reader-seven__player-track">
-                  <p className="reader-seven__eyebrow">Current section</p>
-                  <h3 className="reader-seven__player-title">{currentLabel}</h3>
-                </div>
-
-                <div className="reader-seven__player-controls">
-                  <button
-                    type="button"
-                    className="reader-seven__transport"
-                    onClick={() => onMoveSection?.(-1)}
-                    aria-label="Previous section"
-                  >
-                    <SkipPreviousIcon />
-                  </button>
-                  <button
-                    type="button"
-                    className="reader-seven__transport reader-seven__transport--primary"
-                    onClick={() => onPlayPauseSection?.()}
-                    disabled={!effectiveVoiceEnabled || !canListenCurrentSection}
-                  >
-                    {sectionListeningPlaying ? <PauseIcon /> : <PlayIcon />}
-                    <span>{sectionListeningPlaying ? "Pause section" : "Play section"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="reader-seven__transport"
-                    onClick={() => onMoveSection?.(1)}
-                    aria-label="Next section"
-                  >
-                    <SkipNextIcon />
-                  </button>
-                </div>
-
-                <div className="reader-seven__listen-actions">
-                  <button
-                    type="button"
-                    className="reader-mark-card__secondary"
-                    onClick={() => onNavigateSection?.(activeSlug)}
-                  >
-                    Read here
-                  </button>
-                  <button
-                    type="button"
-                    className="reader-mark-card__secondary"
-                    onClick={() => onContinueDocument?.()}
-                    disabled={!canContinueDocument}
-                  >
-                    {continueDocumentActive ? "Continue book" : "Continue through book"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="reader-seven__sections-list" role="list">
-                {sectionEntries.map((section, index) => {
-                  const isActive = section.slug === activeSlug;
-                  const isPlaying = playingSectionSlug === section.slug;
-
-                  return (
-                    <button
-                      key={section.slug}
-                      type="button"
-                      className={`reader-seven__section-row ${
-                        isActive ? "is-active" : ""
-                      } ${isPlaying ? "is-playing" : ""}`}
-                      onClick={() => onSelectSection?.(section.slug)}
-                    >
-                      <span className="reader-seven__section-index">
-                        {isPlaying ? "♪" : section.number ?? index + 1}
-                      </span>
-                      <span className="reader-seven__section-copy">
-                        <span className="reader-seven__section-title">{section.title}</span>
-                        {typeof section.blockCount === "number" && section.blockCount > 0 ? (
-                          <span className="reader-seven__section-meta">
-                            {section.blockCount} passage{section.blockCount === 1 ? "" : "s"}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
         ) : null}
 
         {resolvedView === "guide" ? (

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import ReaderListenTray from "./ReaderListenTray";
 import ReaderMarksPanel from "./ReaderMarksPanel";
 import SelectionMenu from "./SelectionMenu";
 import SevenPanel from "./SevenPanel";
@@ -216,64 +217,6 @@ function SevenIcon() {
   );
 }
 
-function SkipPreviousIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M6.35 5.25v9.5M14.6 5.95 8.55 10l6.05 4.05V5.95Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.45"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M7.1 5.6 14.6 10l-7.5 4.4V5.6Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M7.15 5.4v9.2M12.85 5.4v9.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.65"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SkipNextIcon() {
-  return (
-    <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M13.65 5.25v9.5M5.4 5.95 11.45 10 5.4 14.05V5.95Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.45"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 export default function ReaderShell({
   documentData,
   preferences,
@@ -336,6 +279,7 @@ export default function ReaderShell({
   const [receiptNotice, setReceiptNotice] = useState("");
   const [evidenceItems, setEvidenceItems] = useState(() => initialEvidenceSet?.items || []);
   const [sevenView, setSevenView] = useState("guide");
+  const [listenTrayState, setListenTrayState] = useState("closed");
   const [activeMarkId, setActiveMarkId] = useState(null);
   const [focusedSectionSlug, setFocusedSectionSlug] = useState(null);
   const [notebookScope, setNotebookScope] = useState("section");
@@ -461,6 +405,11 @@ export default function ReaderShell({
       playerState.status === "playing" ||
       playerState.status === "paused");
   const listeningTransportActive = documentTransportActive || sectionTransportActive;
+  const listeningPlaying =
+    listeningTransportActive &&
+    (playerState.status === "loading" || playerState.status === "playing");
+  const continueDocumentActive =
+    runtimeAudioState.sourceType === "document" && runtimeAudioState.status !== "idle";
 
   const lyricFocusBlockId =
     listeningTransportActive && playerCursor.blockId
@@ -482,23 +431,6 @@ export default function ReaderShell({
   const displayLabel = displayEntry.number
     ? `${displayEntry.number} · ${displayEntry.title}`
     : displayEntry.title;
-
-  const sectionEntries = useMemo(
-    () =>
-      entries.map((entry) => ({
-        ...entry,
-        blockCount: (blocksBySection[entry.slug] || []).length,
-      })),
-    [blocksBySection, entries],
-  );
-
-  const playingSectionSlug =
-    runtimeAudioState.status !== "idle" &&
-    (runtimeAudioState.sourceType === "document" || runtimeAudioState.sourceType === "section")
-      ? runtimeAudioState.sourceType === "section"
-        ? runtimeAudioState.sourceId || playerCursor.sectionSlug || displaySectionSlug
-        : playerCursor.sectionSlug || displaySectionSlug
-      : null;
 
   const canContinueDocument = blocks.length > 0 && Boolean(lyricFocusBlockId);
   const canListenCurrentSection = Boolean(getNarrationText(documentData, displaySectionSlug));
@@ -653,10 +585,18 @@ export default function ReaderShell({
 
   const openSevenView = useCallback(
     (view, trigger = null) => {
-      setSevenView(view);
+      setSevenView(view === "evidence" ? "evidence" : "guide");
       if (trigger?.currentTarget instanceof HTMLElement) {
         surfaceTriggerRef.current = trigger.currentTarget;
       }
+
+      setListenTrayState((current) => {
+        if (listeningTransportActive) {
+          return "collapsed";
+        }
+
+        return current === "open" ? "closed" : current;
+      });
 
       if (activeSurface === "seven") {
         return;
@@ -664,8 +604,27 @@ export default function ReaderShell({
 
       toggleSurface("seven", trigger);
     },
-    [activeSurface, toggleSurface],
+    [activeSurface, listeningTransportActive, toggleSurface],
   );
+
+  const openListenTray = useCallback(() => {
+    if (activeSurface) {
+      closeSurface({ restoreFocus: false });
+    }
+
+    setListenTrayState("open");
+  }, [activeSurface, closeSurface]);
+
+  const collapseListenTray = useCallback(() => {
+    setListenTrayState((current) => {
+      if (current === "closed") return current;
+      return listeningTransportActive ? "collapsed" : "closed";
+    });
+  }, [listeningTransportActive]);
+
+  const closeListenTray = useCallback(() => {
+    setListenTrayState(listeningTransportActive ? "collapsed" : "closed");
+  }, [listeningTransportActive]);
 
   const showSelectionNotice = useCallback((message) => {
     if (noticeTimeoutRef.current) {
@@ -1219,6 +1178,10 @@ export default function ReaderShell({
       stopRuntimeAudio();
     }
 
+    if (playerState.sourceType === "document" && playerState.status === "playing") {
+      return;
+    }
+
     if (playerState.sourceType === "document" && playerState.status === "paused") {
       await resumeDocumentPlayback();
       return;
@@ -1247,6 +1210,10 @@ export default function ReaderShell({
     if (runtimeAudioState.sourceType === "message") {
       stopRuntimeAudio();
       await playSectionNarration(displaySectionSlug);
+      return;
+    }
+
+    if (playerState.status === "loading") {
       return;
     }
 
@@ -1290,8 +1257,17 @@ export default function ReaderShell({
       { startPlayback = false, closeOverlay = true, playbackMode = "section" } = {},
     ) => {
       const firstBlock = getFirstSectionBlock(blocks, slug);
+      const target = firstBlock?.element || document.getElementById(slug);
       if (closeOverlay) {
         closeSurface({ restoreFocus: false });
+      }
+
+      if (target) {
+        scrollIntentRef.current = true;
+        target.scrollIntoView({ behavior: getScrollBehavior(), block: startPlayback ? "center" : "start" });
+        window.setTimeout(() => {
+          scrollIntentRef.current = false;
+        }, 320);
       }
 
       if (startPlayback) {
@@ -1304,14 +1280,7 @@ export default function ReaderShell({
         return;
       }
 
-      const target = firstBlock?.element || document.getElementById(slug);
-      if (target) {
-        scrollIntentRef.current = true;
-        target.scrollIntoView({ behavior: getScrollBehavior(), block: "start" });
-        window.setTimeout(() => {
-          scrollIntentRef.current = false;
-        }, 320);
-      }
+      return;
     },
     [blocks, closeSurface, playDocumentQueue, playSectionNarration],
   );
@@ -1340,9 +1309,17 @@ export default function ReaderShell({
     async (messageId, text) => {
       documentRunRef.current += 1;
       stopRuntimeAudio();
-      setPlayerState((current) =>
-        current.queue.length > 0 ? { ...current, status: "paused" } : current,
-      );
+      setPlayerState((current) => {
+        if (current.sourceType !== "document" && current.sourceType !== "section") {
+          return current;
+        }
+
+        if (current.status === "idle" && current.queue.length === 0) {
+          return current;
+        }
+
+        return { ...current, status: "paused" };
+      });
       await playAudioText(text, {
         label: "Playing Seven's reply",
         sourceType: "message",
@@ -1474,9 +1451,18 @@ export default function ReaderShell({
   useEffect(() => {
     setPlayerState((current) => ({
       ...current,
-      overlay: activeSurface === "seven" ? sevenView : null,
+      overlay: activeSurface === "seven" ? sevenView : listenTrayState === "open" ? "listen" : null,
     }));
-  }, [activeSurface, sevenView]);
+  }, [activeSurface, listenTrayState, sevenView]);
+
+  useEffect(() => {
+    if (listeningTransportActive) {
+      setListenTrayState((current) => (current === "closed" ? "collapsed" : current));
+      return;
+    }
+
+    setListenTrayState((current) => (current === "collapsed" ? "closed" : current));
+  }, [listeningTransportActive]);
 
   useEffect(() => {
     if (
@@ -1670,7 +1656,7 @@ export default function ReaderShell({
 
       if (event.key.toLowerCase() === "l") {
         event.preventDefault();
-        openSevenView("listen");
+        openListenTray();
       }
 
       if (event.key.toLowerCase() === "m") {
@@ -1695,6 +1681,7 @@ export default function ReaderShell({
     handlePrimaryPlayPause,
     jumpTo,
     nextEntry,
+    openListenTray,
     openSevenView,
     previousEntry,
     toggleSurface,
@@ -2065,6 +2052,11 @@ export default function ReaderShell({
         <div className="reader-player-topbar__identity">
           <p className="reader-player-topbar__book">{documentData.title}</p>
           <p className="reader-player-topbar__section">{displayLabel}</p>
+          <p className="reader-player-topbar__meta">
+            <span>{entries.findIndex((entry) => entry.slug === displaySectionSlug) + 1}</span>
+            <span>/</span>
+            <span>{entries.length}</span>
+          </p>
         </div>
 
         <div className="reader-player-topbar__actions">
@@ -2080,19 +2072,21 @@ export default function ReaderShell({
 
           <button
             type="button"
-            className="reader-player-topbar__counter"
-            onClick={(event) => openSevenView("listen", event)}
+            className={`reader-player-topbar__listen ${
+              listenTrayState !== "closed" ? "is-active" : ""
+            }`}
+            onClick={() => openListenTray()}
             aria-label="Open listening"
             title="Listen"
           >
-            <span>{entries.findIndex((entry) => entry.slug === displaySectionSlug) + 1}</span>
-            <span>/</span>
-            <span>{entries.length}</span>
+            <span>Listen</span>
           </button>
 
           <button
             type="button"
-            className={`reader-player-topbar__utility ${currentBookmarked ? "is-active" : ""}`}
+            className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
+              currentBookmarked ? "is-active" : ""
+            }`}
             onClick={handleToggleBookmark}
             aria-label={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
             title={currentBookmarked ? "Remove bookmark" : "Add bookmark"}
@@ -2102,7 +2096,9 @@ export default function ReaderShell({
 
           <button
             type="button"
-            className={`reader-player-topbar__utility ${notebookOpen ? "is-active" : ""}`}
+            className={`reader-player-topbar__utility reader-player-topbar__utility--desktop ${
+              notebookOpen ? "is-active" : ""
+            }`}
             onClick={(event) => toggleSurface("notebook", event)}
             aria-label={notebookOpen ? "Close notebook" : "Open notebook"}
             title={notebookOpen ? "Close notebook" : "Open notebook"}
@@ -2243,6 +2239,30 @@ export default function ReaderShell({
         onUpdateNote={handleUpdateNote}
       />
 
+      <ReaderListenTray
+        state={listenTrayState}
+        currentLabel={displayLabel}
+        progress={sectionProgress}
+        canListenCurrentSection={canListenCurrentSection}
+        canContinueDocument={canContinueDocument}
+        canGoPrevious={Boolean(previousEntry)}
+        canGoNext={Boolean(nextEntry)}
+        isPlaying={listeningPlaying}
+        isLoading={playerState.status === "loading"}
+        continueDocumentActive={continueDocumentActive}
+        liveStatus={liveStatus}
+        showStatus={showStatus}
+        onExpand={() => openListenTray()}
+        onCollapse={collapseListenTray}
+        onClose={closeListenTray}
+        onPlayPause={() => void handlePrimaryPlayPause()}
+        onContinue={() => void handleContinueDocument()}
+        onPrevious={() =>
+          void handleMoveSection(-1, { startPlayback: true, playbackMode: "section" })
+        }
+        onNext={() => void handleMoveSection(1, { startPlayback: true, playbackMode: "section" })}
+      />
+
       <SevenPanel
         open={sevenOpen}
         view={sevenView}
@@ -2261,20 +2281,7 @@ export default function ReaderShell({
         onRemoveEvidenceItem={removeEvidenceItem}
         onShowNotice={showReceiptNotice}
         onClose={() => closeSurface()}
-        onSelectSection={(slug) =>
-          selectSection(slug, { startPlayback: true, playbackMode: "section" })
-        }
-        onNavigateSection={(slug) => selectSection(slug, { startPlayback: false })}
-        onMoveSection={(offset) =>
-          handleMoveSection(offset, { startPlayback: true, playbackMode: "section" })
-        }
-        onPlayPauseSection={() => void handlePrimaryPlayPause()}
-        onContinueDocument={() => void handleContinueDocument()}
-        canContinueDocument={canContinueDocument}
-        canListenCurrentSection={canListenCurrentSection}
-        audioState={runtimeAudioState}
-        sectionEntries={sectionEntries}
-        playingSectionSlug={playingSectionSlug}
+        onOpenListen={() => openListenTray()}
         messageAudioState={runtimeAudioState}
         onPlayMessage={playMessageAudio}
         onStopMessage={stopMessageAudio}
@@ -2356,103 +2363,6 @@ export default function ReaderShell({
 
       {selectionNotice ? <div className="reader-toast">{selectionNotice}</div> : null}
       {receiptNotice ? <div className="reader-toast is-receipt">{receiptNotice}</div> : null}
-
-      <footer className="reader-player-rail">
-        <div className="reader-player-rail__progress" aria-hidden="true">
-          <div
-            className="reader-player-rail__progress-fill"
-            style={{ width: `${sectionProgress * 100}%` }}
-          />
-        </div>
-
-        {showStatus ? (
-          <p className="reader-player-rail__status" aria-live="polite">
-            {liveStatus}
-          </p>
-        ) : null}
-
-        <div className="reader-player-rail__transport">
-          <button
-            type="button"
-            className="reader-player-rail__transport-button"
-            onClick={() => previousEntry && jumpTo(previousEntry.slug)}
-            disabled={!previousEntry}
-            aria-label={
-              previousEntry ? `Go to previous section, ${previousEntry.title}` : "No previous section"
-            }
-          >
-            <SkipPreviousIcon />
-          </button>
-
-          <button
-            type="button"
-            className="reader-player-rail__transport-button reader-player-rail__transport-button--primary"
-            onClick={() => void handlePrimaryPlayPause()}
-            aria-label={
-              playerState.status === "playing"
-                ? `Pause listening to ${displayEntry.title}`
-                : `Listen to ${displayEntry.title}`
-            }
-          >
-            {playerState.status === "playing" ? <PauseIcon /> : <PlayIcon />}
-          </button>
-
-          <button
-            type="button"
-            className="reader-player-rail__transport-button"
-            onClick={() => nextEntry && jumpTo(nextEntry.slug)}
-            disabled={!nextEntry}
-            aria-label={nextEntry ? `Go to next section, ${nextEntry.title}` : "No next section"}
-          >
-            <SkipNextIcon />
-          </button>
-        </div>
-
-        <div className="reader-player-rail__tabs" role="tablist" aria-label="Player views">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={!sevenOpen}
-            className={`reader-player-rail__tab ${!sevenOpen ? "is-active" : ""}`}
-            onClick={() => closeSurface({ restoreFocus: false })}
-          >
-            Read
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={sevenOpen && sevenView === "listen"}
-            className={`reader-player-rail__tab ${
-              sevenOpen && sevenView === "listen" ? "is-active" : ""
-            }`}
-            onClick={(event) => openSevenView("listen", event)}
-          >
-            Listen
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={sevenOpen && sevenView === "guide"}
-            className={`reader-player-rail__tab ${
-              sevenOpen && sevenView === "guide" ? "is-active" : ""
-            }`}
-            onClick={(event) => openSevenView("guide", event)}
-          >
-            Guide
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={sevenOpen && sevenView === "evidence"}
-            className={`reader-player-rail__tab ${
-              sevenOpen && sevenView === "evidence" ? "is-active" : ""
-            }`}
-            onClick={(event) => openSevenView("evidence", event)}
-          >
-            Evidence
-          </button>
-        </div>
-      </footer>
     </div>
   );
 }
