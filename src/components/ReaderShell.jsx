@@ -291,6 +291,7 @@ export default function ReaderShell({
     chunkDuration: 0,
   });
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const playbackSpeedRef = useRef(1);
   const [progress, setProgress] = useState(
     typeof initialReadingProgress?.progressPercent === "number"
       ? initialReadingProgress.progressPercent / 100
@@ -741,6 +742,7 @@ export default function ReaderShell({
 
   const handleSpeedChange = useCallback(
     (rate) => {
+      playbackSpeedRef.current = rate;
       setPlaybackSpeed(rate);
       if (audioRef.current) {
         audioRef.current.playbackRate = rate;
@@ -933,7 +935,7 @@ export default function ReaderShell({
 
         const audio = new Audio(url);
         audioRef.current = audio;
-        audio.playbackRate = playbackSpeed;
+        audio.playbackRate = playbackSpeedRef.current;
 
         const priorChunksDuration = chunkDurationsRef.current
           .slice(0, chunkIndex)
@@ -952,7 +954,11 @@ export default function ReaderShell({
           }));
         });
 
+        let lastTimeUpdate = 0;
         audio.addEventListener("timeupdate", () => {
+          const now = Date.now();
+          if (now - lastTimeUpdate < 500) return;
+          lastTimeUpdate = now;
           setAudioTimeState((prev) => ({
             ...prev,
             chunkElapsed: audio.currentTime,
@@ -1066,7 +1072,6 @@ export default function ReaderShell({
       clearAudioUrl,
       effectiveVoiceEnabled,
       fetchAudioChunk,
-      playbackSpeed,
       playWithDeviceVoice,
       sevenVoiceEnabled,
       sevenVoiceProvider,

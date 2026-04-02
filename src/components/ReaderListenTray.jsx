@@ -1,7 +1,5 @@
 "use client";
 
-import * as Slider from "@radix-ui/react-slider";
-
 const SPEED_OPTIONS = [1, 1.25, 1.5, 2, 0.75];
 
 function formatTime(seconds) {
@@ -274,21 +272,11 @@ export default function ReaderListenTray({
 
         <div className="reader-listen-tray__scrubber">
           <span className="reader-listen-tray__time">{elapsedDisplay}</span>
-          <Slider.Root
-            className="reader-listen-tray__slider"
-            value={[progressNormalized * 100]}
-            max={100}
-            step={0.1}
-            disabled={isDeviceMode || !hasTime}
-            aria-label="Audio progress"
-          >
-            <Slider.Track className="reader-listen-tray__slider-track">
-              <Slider.Range className="reader-listen-tray__slider-range" />
-            </Slider.Track>
-            {!isDeviceMode && hasTime ? (
-              <Slider.Thumb className="reader-listen-tray__slider-thumb" />
-            ) : null}
-          </Slider.Root>
+          <div className="reader-listen-tray__slider" role="progressbar" aria-label="Audio progress" aria-valuenow={Math.round(progressNormalized * 100)} aria-valuemin={0} aria-valuemax={100}>
+            <div className="reader-listen-tray__slider-track">
+              <div className="reader-listen-tray__slider-range" style={{ width: `${progressNormalized * 100}%` }} />
+            </div>
+          </div>
           <span className="reader-listen-tray__time">{remainingDisplay}</span>
         </div>
 
