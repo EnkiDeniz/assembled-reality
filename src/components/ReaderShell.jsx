@@ -1269,20 +1269,20 @@ export default function ReaderShell({
         stopRuntimeAudio();
       }
 
-      await playSectionNarration(targetEntry.slug);
-
       const firstBlock = getFirstSectionBlock(blocks, targetEntry.slug);
       const target = firstBlock?.element || document.getElementById(targetEntry.slug);
-      if (!target) return;
+      if (target) {
+        scrollIntentRef.current = true;
+        target.scrollIntoView({
+          behavior: getScrollBehavior(),
+          block: "center",
+        });
+        window.setTimeout(() => {
+          scrollIntentRef.current = false;
+        }, 320);
+      }
 
-      scrollIntentRef.current = true;
-      target.scrollIntoView({
-        behavior: getScrollBehavior(),
-        block: "center",
-      });
-      window.setTimeout(() => {
-        scrollIntentRef.current = false;
-      }, 320);
+      await playSectionNarration(targetEntry.slug);
     },
     [
       blocks,
