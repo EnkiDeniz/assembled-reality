@@ -387,7 +387,7 @@ export default function ReaderShell({
   const contentsOpen = activeOverlay === "contents";
   const notebookOpen = activeOverlay === "notebook";
   const sevenOpen = activeOverlay === "seven";
-  const moreOpen = activeOverlay === "more";
+  const toolsOpen = activeOverlay === "more";
   const listenOpen = activeOverlay === "listen";
   const hasOpenOverlay = Boolean(activeOverlay);
   const hasTrailingPanel = notebookOpen || sevenOpen;
@@ -462,6 +462,7 @@ export default function ReaderShell({
     : listenTrayCollapsed && listeningTransportActive
       ? "collapsed"
       : "closed";
+  const showSevenLauncher = !hasOpenOverlay && listenTrayState === "closed";
 
   const lyricFocusBlockId =
     listeningTransportActive && playerCursor.blockId
@@ -486,7 +487,6 @@ export default function ReaderShell({
 
   const canContinueDocument = blocks.length > 0 && Boolean(lyricFocusBlockId);
   const canListenCurrentSection = Boolean(getNarrationText(documentData, displaySectionSlug));
-  const shouldShowBottomDock = listenTrayState === "closed";
 
   const sectionBlocks = useMemo(
     () => blocksBySection[displaySectionSlug] || [],
@@ -2184,89 +2184,86 @@ export default function ReaderShell({
           </div>
         </div>
 
-        <button
-          type="button"
-          className={`reader-player-topbar__listen ${listenTrayState !== "closed" ? "is-active" : ""}`}
-          onClick={(event) => openListenTray(event)}
-          aria-pressed={listenTrayState !== "closed"}
-        >
-          <span>{listenTrayState === "closed" ? "Listen" : "Listening"}</span>
-        </button>
-      </header>
-
-      {shouldShowBottomDock ? (
-        <nav className="reader-bottom-dock" aria-label="Reader tools">
+        <div className="reader-player-topbar__actions">
           <button
             type="button"
-            className={`reader-bottom-dock__button ${contentsOpen ? "is-active" : ""}`}
-            onClick={(event) => openOverlay("contents", event)}
-            aria-expanded={contentsOpen}
+            className={`reader-player-topbar__listen ${listenTrayState !== "closed" ? "is-active" : ""}`}
+            onClick={(event) => openListenTray(event)}
+            aria-pressed={listenTrayState !== "closed"}
           >
-            <ContentsIcon />
-            <span>Contents</span>
+            <span>{listenTrayState === "closed" ? "Listen" : "Listening"}</span>
           </button>
           <button
             type="button"
-            className={`reader-bottom-dock__button ${notebookOpen ? "is-active" : ""}`}
-            onClick={(event) => openOverlay("notebook", event)}
-            aria-expanded={notebookOpen}
-          >
-            <NotebookIcon />
-            <span>Notebook</span>
-          </button>
-          <button
-            type="button"
-            className={`reader-bottom-dock__button ${sevenOpen ? "is-active" : ""}`}
-            onClick={(event) => {
-              if (sevenOpen) {
-                closeOverlay();
-                return;
-              }
-
-              openSevenView("guide", event);
-            }}
-            aria-expanded={sevenOpen}
-          >
-            <SevenIcon />
-            <span>Seven</span>
-          </button>
-          <button
-            type="button"
-            className={`reader-bottom-dock__button ${currentBookmarked ? "is-active" : ""}`}
-            onClick={handleToggleBookmark}
-            aria-pressed={currentBookmarked}
-          >
-            <BookmarkIcon filled={currentBookmarked} />
-            <span>Bookmark</span>
-          </button>
-          <button
-            type="button"
-            className={`reader-bottom-dock__button ${moreOpen ? "is-active" : ""}`}
+            className={`reader-player-topbar__utility reader-player-topbar__tools ${toolsOpen ? "is-active" : ""}`}
             onClick={(event) => openOverlay("more", event)}
-            aria-expanded={moreOpen}
+            aria-expanded={toolsOpen}
+            aria-label="Open reader tools"
           >
             <MoreIcon />
-            <span>More</span>
+            <span className="reader-player-topbar__tools-label">Tools</span>
           </button>
-        </nav>
+        </div>
+      </header>
+
+      {showSevenLauncher ? (
+        <button
+          type="button"
+          className="reader-seven-launcher"
+          onClick={(event) => openSevenView("guide", event)}
+          aria-label="Open Seven"
+        >
+          <SevenIcon />
+          <span>Seven</span>
+        </button>
       ) : null}
 
-      {moreOpen ? (
-        <div className="reader-more-sheet" role="dialog" aria-label="Reader settings">
+      {toolsOpen ? (
+        <div className="reader-more-sheet" role="dialog" aria-label="Reader tools">
           <div className="reader-more-sheet__header">
             <div className="reader-more-sheet__heading">
               <p className="reader-more-sheet__eyebrow">Reader</p>
-              <h2 className="reader-more-sheet__title">More</h2>
+              <h2 className="reader-more-sheet__title">Tools</h2>
+              <p className="reader-more-sheet__current">{currentLabel}</p>
             </div>
             <button
               type="button"
               className="reader-more-sheet__close"
               onClick={() => closeOverlay()}
-              aria-label="Close more options"
+              aria-label="Close reader tools"
             >
               ×
             </button>
           </div>
+
+          <div className="reader-more-sheet__quick-actions">
+            <button
+              type="button"
+              className={`reader-more-sheet__quick-button ${contentsOpen ? "is-active" : ""}`}
+              onClick={(event) => openOverlay("contents", event)}
+            >
+              <ContentsIcon />
+              <span>Contents</span>
+            </button>
+            <button
+              type="button"
+              className={`reader-more-sheet__quick-button ${notebookOpen ? "is-active" : ""}`}
+              onClick={(event) => openOverlay("notebook", event)}
+            >
+              <NotebookIcon />
+              <span>Notebook</span>
+            </button>
+            <button
+              type="button"
+              className={`reader-more-sheet__quick-button ${currentBookmarked ? "is-active" : ""}`}
+              onClick={handleToggleBookmark}
+              aria-pressed={currentBookmarked}
+            >
+              <BookmarkIcon filled={currentBookmarked} />
+              <span>{currentBookmarked ? "Bookmarked" : "Bookmark"}</span>
+            </button>
+          </div>
+
           <div className="reader-more-sheet__section">
             <p className="reader-more-sheet__section-title">Display</p>
             <PreferenceGroup
@@ -2288,6 +2285,7 @@ export default function ReaderShell({
               onChange={(value) => setPreferences((current) => ({ ...current, theme: value }))}
             />
           </div>
+
           <div className="reader-more-sheet__actions">
             <button
               type="button"
