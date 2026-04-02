@@ -5935,7 +5935,8 @@ a {
 /* Authenticated UI reset */
 
 .reader-shell.reader-shell--authenticated-reset,
-.account-shell.account-shell--authenticated-reset {
+.account-shell.account-shell--authenticated-reset,
+.library-shell.library-shell--authenticated-reset {
   --auth-app-bg: #081018;
   --auth-panel-bg: rgba(14, 20, 30, 0.86);
   --auth-panel-bg-strong: rgba(18, 26, 38, 0.96);
@@ -5971,7 +5972,8 @@ a {
 }
 
 .reader-shell.reader-shell--authenticated-reset[data-theme="light"],
-.account-shell.account-shell--authenticated-reset[data-theme="light"] {
+.account-shell.account-shell--authenticated-reset[data-theme="light"],
+.library-shell.library-shell--authenticated-reset[data-theme="light"] {
   color-scheme: light;
   --auth-app-bg: #edf3f8;
   --auth-panel-bg: rgba(255, 255, 255, 0.86);
@@ -6845,8 +6847,7 @@ a {
 }
 
 .library-card.is-featured {
-  grid-template-columns: minmax(0, 1.35fr) minmax(14rem, 0.95fr);
-  align-items: stretch;
+  grid-template-columns: 1fr;
   padding: 1.2rem;
 }
 
@@ -6887,13 +6888,23 @@ a {
 }
 
 .library-card.is-featured .library-card__title {
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-size: clamp(1.65rem, 2.7vw, 2.15rem);
 }
 
 .library-card__footer {
   display: grid;
   gap: 0.55rem;
   align-content: end;
+}
+
+.library-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--auth-accent-strong);
 }
 
 .library-card__progress-copy strong {
@@ -6987,7 +6998,6 @@ a {
 
 @media (max-width: 780px) {
   .library-header,
-  .library-card.is-featured,
   .library-upload__form {
     grid-template-columns: 1fr;
   }

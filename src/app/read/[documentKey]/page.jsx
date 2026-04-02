@@ -15,7 +15,8 @@ export default async function ReaderDocumentPage({ params }) {
     redirect("/");
   }
 
-  const documentKey = String(params?.documentKey || "").trim();
+  const resolvedParams = await params;
+  const documentKey = String(resolvedParams?.documentKey || "").trim();
   const documentData = await getReaderDocumentDataForUser(session.user.id, documentKey);
   if (!documentData) {
     notFound();

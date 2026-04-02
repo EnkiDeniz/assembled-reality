@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import MarkdownRenderer from "./MarkdownRenderer";
@@ -702,10 +703,6 @@ export default function ReaderShell({
       setReceiptNotice("");
     }, 2600);
   }, []);
-
-  const openLibraryPage = useCallback(() => {
-    router.push("/library");
-  }, [router]);
 
   const openAccountPage = useCallback(() => {
     closeOverlay({ restoreFocus: false });
@@ -2162,15 +2159,14 @@ export default function ReaderShell({
       <div className="reader-player-ambient" aria-hidden="true" />
 
       <header className="reader-player-topbar">
-        <button
-          type="button"
+        <Link
+          href="/library"
           className="reader-player-topbar__library"
-          onClick={openLibraryPage}
           aria-label="Return to library"
           title="Library"
         >
           <span>Library</span>
-        </button>
+        </Link>
 
         <div className="reader-player-topbar__identity">
           <p className="reader-player-topbar__book">{documentData.title}</p>

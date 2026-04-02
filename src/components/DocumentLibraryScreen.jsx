@@ -44,9 +44,9 @@ function DocumentCard({ document, featured = false }) {
       <div className="library-card__header">
         <div className="library-card__badges">
           <span className="library-card__badge">{document.formatLabel}</span>
-          {document.sourceType === "builtin" ? (
-            <span className="library-card__badge is-accent">Canonical</span>
-          ) : null}
+          <span className="library-card__badge is-accent">
+            {document.sourceType === "builtin" ? "Canonical" : "Imported"}
+          </span>
         </div>
         <span className="library-card__meta">
           {document.sectionCount} section{document.sectionCount === 1 ? "" : "s"}
@@ -73,6 +73,7 @@ function DocumentCard({ document, featured = false }) {
           </span>
           {document.originalFilename ? <span>{document.originalFilename}</span> : null}
         </div>
+        <span className="library-card__cta">Open document</span>
       </div>
     </Link>
   );
