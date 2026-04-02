@@ -3310,6 +3310,7 @@ a {
 
 .reader-account-link {
   text-decoration: none;
+  pointer-events: auto;
   min-width: 2.6rem;
   justify-content: center;
   padding-inline: 0.45rem;
@@ -3979,11 +3980,6 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  pointer-events: none;
-}
-
-.reader-player-topbar__identity,
-.reader-player-topbar__actions {
   pointer-events: auto;
 }
 
@@ -4015,6 +4011,8 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  position: relative;
+  z-index: 1;
 }
 
 .reader-player-topbar__counter,

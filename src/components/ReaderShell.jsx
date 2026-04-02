@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderListenTray from "./ReaderListenTray";
@@ -643,6 +642,11 @@ export default function ReaderShell({
     window.setTimeout(() => {
       setReceiptNotice("");
     }, 2600);
+  }, []);
+
+  const openAccountPage = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.location.assign("/account");
   }, []);
 
   const clearAudioUrl = useCallback(() => {
@@ -2122,16 +2126,17 @@ export default function ReaderShell({
             <span>Aa</span>
           </button>
 
-          <Link
-            href="/account"
+          <button
+            type="button"
             className="reader-player-topbar__utility reader-account-link"
+            onClick={openAccountPage}
             aria-label="Account"
             title="Account"
           >
             <span className="reader-member-chip" aria-hidden="true">
               {memberInitial}
             </span>
-          </Link>
+          </button>
         </div>
       </header>
 
