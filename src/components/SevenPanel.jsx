@@ -9,6 +9,7 @@ import {
   getSectionOutline,
   getSectionPreview,
   getSevenProviderLabel,
+  stripMarkdownForSpeech,
 } from "../lib/seven";
 
 const RECEIPT_STANCE_OPTIONS = [
@@ -115,6 +116,14 @@ function buildReceiptTitle(items, currentLabel) {
   return `Interpretation receipt · ${currentLabel}`;
 }
 
+function cleanExcerpt(text, maxLength) {
+  var limit = maxLength || 240;
+  var cleaned = stripMarkdownForSpeech(text);
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= limit) return cleaned;
+  return cleaned.slice(0, limit).replace(/\s\S*$/, "") + "\u2026";
+}
+
 function CitationCard({ citation, included, onAdd }) {
   return (
     <article className={`reader-seven__citation ${included ? "is-included" : ""}`}>
@@ -122,7 +131,7 @@ function CitationCard({ citation, included, onAdd }) {
         <p className="reader-seven__citation-label">
           {citation.sectionLabel || citation.sectionTitle}
         </p>
-        <p className="reader-seven__citation-excerpt">“{citation.excerpt}”</p>
+        <p className="reader-seven__citation-excerpt">"{cleanExcerpt(citation.excerpt)}"</p>
       </div>
       <button
         type="button"
@@ -145,7 +154,7 @@ function EvidenceItemCard({ item, onRemove }) {
           <span>{item.origin === "seven" ? "Seven" : "Reader"}</span>
           <span>{item.sourceType}</span>
         </p>
-        <p className="reader-seven__evidence-excerpt">“{item.excerpt}”</p>
+        <p className="reader-seven__evidence-excerpt">"{cleanExcerpt(item.excerpt)}"</p>
         {item.noteText ? <p className="reader-seven__evidence-note">{item.noteText}</p> : null}
       </div>
       <button
@@ -257,7 +266,7 @@ function ReceiptComposer({
             {evidenceItems.map((item) => (
               <article key={item.id} className="reader-seven__receipt-item">
                 <p className="reader-seven__citation-label">{item.sectionTitle}</p>
-                <p className="reader-seven__citation-excerpt">“{item.excerpt}”</p>
+                <p className="reader-seven__citation-excerpt">"{item.excerpt}"</p>
                 {item.noteText ? <p className="reader-seven__evidence-note">{item.noteText}</p> : null}
               </article>
             ))}
