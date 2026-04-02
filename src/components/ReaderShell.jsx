@@ -2111,6 +2111,11 @@ export default function ReaderShell({
       } ${lyricFocusBlockId ? "has-lyric-focus" : ""}`}
       data-theme={preferences.theme}
     >
+      <div
+        className="reader-progress-bar"
+        aria-hidden="true"
+        style={{ transform: `scaleX(${progress})` }}
+      />
       <div className="reader-player-ambient" aria-hidden="true" />
 
       <header className="reader-player-topbar">
