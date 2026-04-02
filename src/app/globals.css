@@ -9,13 +9,13 @@
 
 :root {
   color-scheme: light;
-  --paper-bg: #f5f0e7;
-  --paper-surface: rgba(255, 252, 246, 0.94);
-  --paper-border: rgba(28, 24, 20, 0.12);
-  --paper-border-strong: rgba(28, 24, 20, 0.22);
-  --paper-ink: #181412;
-  --paper-ink-soft: #4f473f;
-  --paper-ink-faint: #847a70;
+  --paper-bg: #f7f7f5;
+  --paper-surface: rgba(255, 255, 255, 0.92);
+  --paper-border: rgba(28, 24, 20, 0.1);
+  --paper-border-strong: rgba(28, 24, 20, 0.2);
+  --paper-ink: #1a1a1a;
+  --paper-ink-soft: #555;
+  --paper-ink-faint: #8a8a8a;
   --paper-accent: #a06a3f;
   --reader-max-width: 48rem;
   --reader-text-size: 1.16rem;
@@ -44,18 +44,14 @@ body {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(160, 106, 63, 0.1), transparent 24%),
-    linear-gradient(180deg, #fbf8f2 0%, var(--paper-bg) 100%);
+  background: var(--paper-bg);
   color: var(--paper-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body.is-lock-screen {
-  background:
-    radial-gradient(circle at top left, rgba(160, 106, 63, 0.12), transparent 24%),
-    linear-gradient(180deg, #fbf8f2 0%, var(--paper-bg) 100%);
+  background: var(--paper-bg);
 }
 
 body.is-lock-screen-minimal {
@@ -90,10 +86,7 @@ a {
   min-height: 100vh;
   place-items: center;
   padding: 2rem 1.5rem;
-  background:
-    radial-gradient(circle at top left, rgba(160, 106, 63, 0.14), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(160, 106, 63, 0.08), transparent 28%),
-    linear-gradient(180deg, #fbf8f2 0%, var(--paper-bg) 100%);
+  background: var(--paper-bg);
   color: var(--paper-ink);
 }
 
@@ -564,11 +557,9 @@ a {
   --reader-ink: var(--paper-ink);
   --reader-ink-soft: var(--paper-ink-soft);
   --reader-ink-faint: var(--paper-ink-faint);
-  --reader-chrome: rgba(255, 252, 247, 0.84);
+  --reader-chrome: rgba(255, 255, 255, 0.82);
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(160, 106, 63, 0.1), transparent 24%),
-    linear-gradient(180deg, #fbf8f2 0%, var(--reader-bg) 100%);
+  background: var(--reader-bg);
   color: var(--reader-ink);
 }
 
@@ -1437,7 +1428,7 @@ a {
 }
 
 .reader-seven__message.is-assistant {
-  border-left: 3px solid var(--reader-border-strong);
+  border-left: 3px solid rgba(244, 234, 220, 0.12);
 }
 
 .reader-shell[data-theme="dark"] .reader-seven__message.is-user {
@@ -4191,7 +4182,7 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 1.9rem;
   background:
-    linear-gradient(180deg, rgba(255, 249, 242, 0.76), rgba(244, 234, 221, 0.62)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 248, 246, 0.65)),
     radial-gradient(110% 120% at 50% 0%, rgba(255, 255, 255, 0.34), transparent 65%);
   box-shadow:
     0 22px 60px rgba(78, 50, 25, 0.12),
@@ -4616,6 +4607,7 @@ a {
 
 .reader-toc.is-open,
 .reader-marks.is-open {
+  transform: translateX(0);
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -5405,7 +5397,7 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 1.8rem;
   background:
-    linear-gradient(180deg, rgba(255, 249, 242, 0.76), rgba(244, 234, 221, 0.6)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 248, 246, 0.65)),
     radial-gradient(110% 120% at 50% 0%, rgba(255, 255, 255, 0.34), transparent 65%);
   box-shadow:
     0 24px 60px rgba(78, 50, 25, 0.16),
@@ -5654,7 +5646,7 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(255, 249, 242, 0.76), rgba(244, 234, 221, 0.6)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 248, 246, 0.65)),
     radial-gradient(110% 120% at 50% 0%, rgba(255, 255, 255, 0.34), transparent 65%);
 }
 
@@ -5731,57 +5723,29 @@ a {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.reader-shell[data-theme="paper"] .reader-seven__eyebrow,
-.reader-shell[data-theme="paper"] .reader-seven__message-meta,
-.reader-shell[data-theme="paper"] .reader-seven__identity-eyebrow,
-.reader-shell[data-theme="paper"] .reader-seven__citation-label,
-.reader-shell[data-theme="paper"] .reader-seven__evidence-meta,
-.reader-shell[data-theme="paper"] .reader-seven__receipt-label {
-  color: var(--reader-ink-faint);
-}
-
-.reader-shell[data-theme="paper"] .reader-seven__meta,
-.reader-shell[data-theme="paper"] .reader-seven__identity-preview,
-.reader-shell[data-theme="paper"] .reader-seven__message-text,
-.reader-shell[data-theme="paper"] .reader-seven__citation-excerpt,
-.reader-shell[data-theme="paper"] .reader-seven__evidence-excerpt,
-.reader-shell[data-theme="paper"] .reader-seven__evidence-note,
-.reader-shell[data-theme="paper"] .reader-seven__evidence-title,
-.reader-shell[data-theme="paper"] .reader-seven__empty-title,
-.reader-shell[data-theme="paper"] .reader-seven__idle-subtitle,
-.reader-shell[data-theme="paper"] .reader-seven__receipt-title,
-.reader-shell[data-theme="paper"] .reader-seven__section-title {
-  color: var(--reader-ink);
-}
-
-.reader-shell[data-theme="paper"] .reader-seven__message.is-user .reader-seven__message-text,
-.reader-shell[data-theme="paper"] .reader-seven__status,
-.reader-shell[data-theme="paper"] .reader-seven__disabled,
-.reader-shell[data-theme="paper"] .reader-seven__empty-copy,
-.reader-shell[data-theme="paper"] .reader-seven__idle-section,
-.reader-shell[data-theme="paper"] .reader-seven__section-meta,
-.reader-shell[data-theme="paper"] .reader-seven__section-index {
-  color: var(--reader-ink-soft);
-}
+/* Seven panel has a dark background in paper theme (player-first),
+   so text colors must stay light — do NOT override to var(--reader-ink) here.
+   The player-first styles at ~4641 set the correct cream-on-dark colors. */
 
 .reader-shell[data-theme="paper"] .reader-seven__starter-chip {
-  border-color: rgba(160, 106, 63, 0.18);
-  background: rgba(160, 106, 63, 0.06);
-  color: var(--reader-ink-soft);
+  border-color: rgba(244, 234, 220, 0.14);
+  background: rgba(244, 234, 220, 0.06);
+  color: rgba(244, 234, 220, 0.72);
 }
 
 .reader-shell[data-theme="paper"] .reader-seven__starter-chip:hover {
-  background: rgba(160, 106, 63, 0.12);
-  border-color: rgba(160, 106, 63, 0.28);
+  background: rgba(244, 234, 220, 0.1);
+  border-color: rgba(244, 234, 220, 0.22);
 }
 
+/* Seven panel is dark even in paper theme — use light borders */
 .reader-shell[data-theme="paper"] .reader-seven__message,
 .reader-shell[data-theme="paper"] .reader-seven__citation,
 .reader-shell[data-theme="paper"] .reader-seven__evidence-item,
 .reader-shell[data-theme="paper"] .reader-seven__receipt-item,
 .reader-shell[data-theme="paper"] .reader-seven__guide-intro,
 .reader-shell[data-theme="paper"] .reader-seven__composer {
-  border-color: rgba(28, 20, 15, 0.08);
+  border-color: rgba(244, 234, 220, 0.08);
 }
 
 .reader-seven__header-actions {
@@ -5810,6 +5774,7 @@ a {
   color: var(--reader-ink);
 }
 
+/* Seven panel is dark in paper theme — use light-on-dark styles */
 .reader-shell[data-theme="paper"] .reader-seven__guide-tab,
 .reader-shell[data-theme="paper"] .reader-seven__reply-listen,
 .reader-shell[data-theme="paper"] .reader-seven__send,
@@ -5819,8 +5784,8 @@ a {
 .reader-shell[data-theme="paper"] .reader-seven__receipt-input,
 .reader-shell[data-theme="paper"] .reader-seven__receipt-textarea,
 .reader-shell[data-theme="paper"] .reader-seven__receipt-select {
-  background: rgba(28, 20, 15, 0.06);
-  color: var(--reader-ink);
+  background: rgba(244, 234, 220, 0.06);
+  color: #f4eadc;
 }
 
 .reader-shell[data-theme="paper"] .reader-seven__guide-tab.is-active,
@@ -5828,13 +5793,13 @@ a {
 .reader-shell[data-theme="paper"] .reader-seven .reader-mark-card__receipt-toggle.is-selected,
 .reader-shell[data-theme="paper"] .reader-seven .reader-mark-card__receipt-toggle.is-selected:hover,
 .reader-shell[data-theme="paper"] .reader-seven__send {
-  background: rgba(184, 116, 59, 0.18);
+  background: rgba(205, 138, 70, 0.22);
 }
 
 .reader-shell[data-theme="paper"] .reader-seven__composer-input::placeholder,
 .reader-shell[data-theme="paper"] .reader-seven__receipt-input::placeholder,
 .reader-shell[data-theme="paper"] .reader-seven__receipt-textarea::placeholder {
-  color: var(--reader-ink-faint);
+  color: rgba(244, 234, 220, 0.4);
 }
 
 @media (min-width: 980px) {
