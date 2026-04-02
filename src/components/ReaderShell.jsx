@@ -1251,44 +1251,9 @@ export default function ReaderShell({
     stopRuntimeAudio,
   ]);
 
-  const selectSection = useCallback(
-    async (
-      slug,
-      { startPlayback = false, closeOverlay = true, playbackMode = "section" } = {},
-    ) => {
-      const firstBlock = getFirstSectionBlock(blocks, slug);
-      const target = firstBlock?.element || document.getElementById(slug);
-      if (closeOverlay) {
-        closeSurface({ restoreFocus: false });
-      }
-
-      if (target) {
-        scrollIntentRef.current = true;
-        target.scrollIntoView({ behavior: getScrollBehavior(), block: startPlayback ? "center" : "start" });
-        window.setTimeout(() => {
-          scrollIntentRef.current = false;
-        }, 320);
-      }
-
-      if (startPlayback) {
-        if (playbackMode === "document" && firstBlock) {
-          await playDocumentQueue({ startBlockId: firstBlock.blockId });
-          return;
-        }
-
-        await playSectionNarration(slug);
-        return;
-      }
-
-      return;
-    },
-    [blocks, closeSurface, playDocumentQueue, playSectionNarration],
-  );
-
-  const handleMoveSection = useCallback(
-    async (offset, options = {}) => {
-      const originSlug =
-        (listeningTransportActive && playerCursor.sectionSlug) || viewportSectionSlug;
+  const handlePlaybackSectionStep = useCallback(
+    async (offset) => {
+      const originSlug = playerCursor.sectionSlug || displaySectionSlug || viewportSectionSlug;
       const originIndex = Math.max(
         0,
         entries.findIndex((entry) => entry.slug === originSlug),
@@ -1296,13 +1261,35 @@ export default function ReaderShell({
       const targetEntry = entries[originIndex + offset];
       if (!targetEntry) return;
 
-      await selectSection(targetEntry.slug, {
-        startPlayback: false,
-        closeOverlay: false,
-        ...options,
+      if (runtimeAudioState.sourceType === "message") {
+        stopRuntimeAudio();
+      }
+
+      await playSectionNarration(targetEntry.slug);
+
+      const firstBlock = getFirstSectionBlock(blocks, targetEntry.slug);
+      const target = firstBlock?.element || document.getElementById(targetEntry.slug);
+      if (!target) return;
+
+      scrollIntentRef.current = true;
+      target.scrollIntoView({
+        behavior: getScrollBehavior(),
+        block: "center",
       });
+      window.setTimeout(() => {
+        scrollIntentRef.current = false;
+      }, 320);
     },
-    [entries, listeningTransportActive, playerCursor.sectionSlug, selectSection, viewportSectionSlug],
+    [
+      blocks,
+      displaySectionSlug,
+      entries,
+      playSectionNarration,
+      playerCursor.sectionSlug,
+      runtimeAudioState.sourceType,
+      stopRuntimeAudio,
+      viewportSectionSlug,
+    ],
   );
 
   const playMessageAudio = useCallback(
@@ -2137,7 +2124,7 @@ export default function ReaderShell({
 
           <Link
             href="/account"
-            className="reader-player-topbar__utility reader-player-topbar__utility--desktop reader-account-link"
+            className="reader-player-topbar__utility reader-account-link"
             aria-label="Account"
             title="Account"
           >
@@ -2257,10 +2244,8 @@ export default function ReaderShell({
         onClose={closeListenTray}
         onPlayPause={() => void handlePrimaryPlayPause()}
         onContinue={() => void handleContinueDocument()}
-        onPrevious={() =>
-          void handleMoveSection(-1, { startPlayback: true, playbackMode: "section" })
-        }
-        onNext={() => void handleMoveSection(1, { startPlayback: true, playbackMode: "section" })}
+        onPrevious={() => void handlePlaybackSectionStep(-1)}
+        onNext={() => void handlePlaybackSectionStep(1)}
       />
 
       <SevenPanel

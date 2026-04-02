@@ -18,10 +18,12 @@ export default function EntryGate({
   const [unlockState, setUnlockState] = useState(() => loadUnlockState() || DEFAULT_UNLOCK);
 
   useEffect(() => {
-    if (session?.user?.id && unlockState.unlocked) {
+    if (session?.user?.id) {
       router.replace("/read");
     }
-  }, [router, session?.user?.id, unlockState.unlocked]);
+  }, [router, session?.user?.id]);
+
+  if (session?.user?.id) return null;
 
   const handleUnlock = (method) => {
     const nextState = { unlocked: true, method };
@@ -36,8 +38,6 @@ export default function EntryGate({
   if (!unlockState.unlocked) {
     return <UnlockScreen onUnlock={handleUnlock} variant="landing" />;
   }
-
-  if (session?.user?.id) return null;
 
   return (
     <AuthScreen

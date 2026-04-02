@@ -3974,7 +3974,7 @@ a {
   top: max(1rem, env(safe-area-inset-top));
   left: clamp(1rem, 3vw, 2.5rem);
   right: clamp(1rem, 3vw, 2.5rem);
-  z-index: 30;
+  z-index: 45;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -4892,7 +4892,6 @@ a {
 
 @media (max-width: 979px) {
   .reader-player-topbar__utility--desktop,
-  .reader-account-link,
   .reader-appearance-menu {
     display: none !important;
   }
