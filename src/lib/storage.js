@@ -1,4 +1,5 @@
 const UNLOCK_KEY = "assembled-reality:unlock";
+const SESSION_UNLOCK_KEY = UNLOCK_KEY;
 const PREFS_KEY = "assembled-reality:reader-preferences";
 
 export const DEFAULT_READER_PREFERENCES = {
@@ -11,8 +12,17 @@ export function loadUnlockState() {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.sessionStorage.getItem(UNLOCK_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const persisted = window.localStorage.getItem(UNLOCK_KEY);
+    if (persisted) {
+      return JSON.parse(persisted);
+    }
+
+    const raw = window.sessionStorage.getItem(SESSION_UNLOCK_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    window.localStorage.setItem(UNLOCK_KEY, JSON.stringify(parsed));
+    return parsed;
   } catch {
     return null;
   }
@@ -20,12 +30,15 @@ export function loadUnlockState() {
 
 export function saveUnlockState(value) {
   if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(UNLOCK_KEY, JSON.stringify(value));
+  const serialized = JSON.stringify(value);
+  window.localStorage.setItem(UNLOCK_KEY, serialized);
+  window.sessionStorage.setItem(SESSION_UNLOCK_KEY, serialized);
 }
 
 export function clearUnlockState() {
   if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(UNLOCK_KEY);
+  window.localStorage.removeItem(UNLOCK_KEY);
+  window.sessionStorage.removeItem(SESSION_UNLOCK_KEY);
 }
 
 export function loadReaderPreferences() {

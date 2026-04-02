@@ -9,6 +9,7 @@ import {
   parseSevenAudioHeaders,
 } from "@/lib/seven";
 import {
+  clearUnlockState,
   DEFAULT_READER_PREFERENCES,
   loadReaderPreferences,
   saveReaderPreferences,
@@ -158,6 +159,7 @@ export default function AccountScreen({
   }, [preferences]);
 
   const handleSignOut = () => {
+    clearUnlockState();
     signOut({ callbackUrl: "/" });
   };
 
