@@ -955,6 +955,8 @@ a {
 .reader-toc__nav {
   height: calc(100vh - 9rem);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: grid;
   gap: 0.3rem;
   padding: 0.4rem;
@@ -3399,6 +3401,8 @@ a {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 0.75rem 0.95rem;
   border: 1px solid var(--reader-border);
   border-top: 0;
@@ -3992,6 +3996,7 @@ a {
     inset 0 1px 0 rgba(255, 255, 255, 0.56);
   backdrop-filter: blur(22px) saturate(145%);
   -webkit-backdrop-filter: blur(22px) saturate(145%);
+  isolation: isolate;
   pointer-events: auto;
 }
 
@@ -4011,6 +4016,7 @@ a {
   min-width: 0;
   flex: 1 1 auto;
   max-width: min(28rem, 60vw);
+  overflow: hidden;
 }
 
 .reader-player-topbar__book {
@@ -4029,11 +4035,13 @@ a {
   font-style: italic;
   color: var(--reader-ink);
   text-wrap: balance;
+  overflow: hidden;
 }
 
 .reader-player-topbar__actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 0.45rem;
   flex: 0 0 auto;
   position: relative;
@@ -4080,6 +4088,9 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.22rem;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .reader-player-topbar__counter {
@@ -4087,6 +4098,7 @@ a {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--reader-ink-soft);
+  white-space: nowrap;
 }
 
 .reader-player-topbar__utility {
@@ -4244,10 +4256,19 @@ a {
 .reader-shell.has-lyric-focus .reader-block {
   opacity: 0.34;
   color: var(--reader-ink-soft);
+  border-left: 3px solid transparent;
+  padding-left: 1rem;
+  margin-left: -1rem;
+  background: transparent;
+  border-radius: 0.25rem;
+  box-shadow: none;
   transition:
-    opacity 260ms ease,
-    color 260ms ease,
-    transform 260ms ease;
+    opacity 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 320ms cubic-bezier(0.4, 0, 0.2, 1);
   will-change: opacity, transform;
 }
 
@@ -4260,6 +4281,15 @@ a {
   opacity: 1;
   color: var(--reader-ink);
   transform: translateY(-0.08rem);
+  border-left-color: var(--paper-accent);
+  background: linear-gradient(90deg, rgba(160, 106, 63, 0.06), transparent 60%);
+  box-shadow: -4px 0 16px rgba(160, 106, 63, 0.08);
+}
+
+.reader-shell[data-theme="dark"].has-lyric-focus .reader-block.is-player-active {
+  border-left-color: rgba(184, 116, 59, 0.6);
+  background: linear-gradient(90deg, rgba(184, 116, 59, 0.08), transparent 60%);
+  box-shadow: -4px 0 16px rgba(184, 116, 59, 0.06);
 }
 
 .reader-shell.has-lyric-focus .reader-block:hover {
@@ -4356,6 +4386,7 @@ a {
   color: #f4eadc;
   transform: translateY(102%);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transition:
     transform 240ms ease,
@@ -4365,7 +4396,30 @@ a {
 .reader-seven.is-open {
   transform: translateY(0);
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+}
+
+.reader-toc,
+.reader-marks {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition:
+    transform 240ms ease,
+    opacity 180ms ease,
+    visibility 0s linear 240ms;
+}
+
+.reader-toc.is-open,
+.reader-marks.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform 240ms ease,
+    opacity 180ms ease;
 }
 
 .reader-seven__header {
@@ -4417,6 +4471,8 @@ a {
   display: grid;
   gap: 0.9rem;
   padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .reader-seven__guide-tabs {
@@ -4544,6 +4600,8 @@ a {
 .reader-seven__sections-list {
   min-height: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 
@@ -5062,6 +5120,9 @@ a {
     color 180ms ease,
     transform 180ms ease,
     opacity 180ms ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .reader-shell[data-theme="paper"] .reader-player-topbar__listen {
@@ -5082,6 +5143,9 @@ a {
 
 .reader-shell.has-lyric-focus .reader-block {
   opacity: 0.52;
+  padding-left: 0.75rem;
+  margin-left: -0.75rem;
+  border-left-width: 2px;
 }
 
 .reader-shell.has-lyric-focus .reader-block.is-player-next {
@@ -5090,6 +5154,7 @@ a {
 
 .reader-shell.has-lyric-focus .reader-block.is-player-active {
   transform: translateY(-0.03rem);
+  box-shadow: -3px 0 12px rgba(160, 106, 63, 0.06);
 }
 
 .reader-listen-tray {
@@ -5100,7 +5165,7 @@ a {
   z-index: 35;
   display: flex;
   justify-content: center;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .reader-listen-tray__surface,
@@ -5202,6 +5267,8 @@ a {
     background 180ms ease,
     transform 180ms ease,
     opacity 180ms ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .reader-listen-tray__window-button {
@@ -5505,7 +5572,7 @@ a {
 
   .reader-player-topbar {
     padding: 0.8rem 0.9rem;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .reader-player-topbar__identity {
@@ -5514,6 +5581,12 @@ a {
 
   .reader-player-topbar__meta {
     font-size: 0.62rem;
+  }
+
+  .reader-player-topbar__section {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .reader-player-topbar__listen,
