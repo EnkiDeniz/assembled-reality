@@ -160,6 +160,24 @@ function getScrollBehavior() {
   return prefersReducedMotion ? "auto" : "smooth";
 }
 
+function scrollReaderTarget(target, { behavior = "smooth", block = "start" } = {}) {
+  if (typeof window === "undefined" || !target) return;
+
+  if (block === "center") {
+    target.scrollIntoView({ behavior, block: "center" });
+    return;
+  }
+
+  const topbar = document.querySelector(".reader-player-topbar");
+  const topbarHeight = topbar instanceof HTMLElement ? topbar.getBoundingClientRect().height : 0;
+  const top = target.getBoundingClientRect().top + window.scrollY - topbarHeight - 20;
+
+  window.scrollTo({
+    top: Math.max(0, top),
+    behavior,
+  });
+}
+
 function BookmarkIcon({ filled }) {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
@@ -413,11 +431,7 @@ export default function ReaderShell({
   const lyricFocusBlockId =
     listeningTransportActive && playerCursor.blockId
       ? playerCursor.blockId
-      : viewportBlockId ||
-        playerCursor.blockId ||
-        getFirstSectionBlock(blocks, viewportSectionSlug)?.blockId ||
-        blocks[0]?.blockId ||
-        null;
+      : viewportBlockId || getFirstSectionBlock(blocks, viewportSectionSlug)?.blockId || blocks[0]?.blockId || null;
 
   const lyricFocusBlock = lyricFocusBlockId
     ? blocks.find((block) => block.blockId === lyricFocusBlockId) || null
@@ -425,7 +439,7 @@ export default function ReaderShell({
   const lyricNextBlock = lyricFocusBlockId ? getNextBlock(blocks, lyricFocusBlockId) : blocks[1] || null;
   const lyricSectionSlug = lyricFocusBlock?.sectionSlug || viewportSectionSlug;
   const displaySectionSlug =
-    listeningTransportActive && playerCursor.sectionSlug ? playerCursor.sectionSlug : lyricSectionSlug;
+    listeningTransportActive && playerCursor.sectionSlug ? playerCursor.sectionSlug : viewportSectionSlug;
   const displayEntry = getSectionEntry(entries, displaySectionSlug);
   const displayLabel = displayEntry.number
     ? `${displayEntry.number} · ${displayEntry.title}`
@@ -1273,9 +1287,9 @@ export default function ReaderShell({
       const target = firstBlock?.element || document.getElementById(targetEntry.slug);
       if (target) {
         scrollIntentRef.current = true;
-        target.scrollIntoView({
+        scrollReaderTarget(target, {
           behavior: getScrollBehavior(),
-          block: "center",
+          block: "start",
         });
         window.setTimeout(() => {
           scrollIntentRef.current = false;
@@ -1336,7 +1350,7 @@ export default function ReaderShell({
       setNoteDraft("");
       clearBrowserSelection();
       clearFocusState();
-      target.scrollIntoView({
+      scrollReaderTarget(target, {
         behavior: getScrollBehavior(),
         block: "start",
       });
@@ -1503,7 +1517,7 @@ export default function ReaderShell({
 
       scrollIntentRef.current = true;
       window.requestAnimationFrame(() => {
-        target.scrollIntoView({ block: "start", behavior: "auto" });
+        scrollReaderTarget(target, { block: "start", behavior: "auto" });
         window.setTimeout(() => {
           scrollIntentRef.current = false;
         }, 120);
