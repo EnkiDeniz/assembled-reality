@@ -47,7 +47,8 @@ const IMAGE_DERIVATION_OPTIONS = [
   { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
   { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
 ];
-const IMAGE_ACCEPT_VALUE = ".txt,.md,.markdown,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.gif";
+const SOURCE_ACCEPT_VALUE =
+  ".txt,.md,.markdown,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.gif,.m4a,.mp3,.wav,.webm,.mp4";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -164,13 +165,6 @@ function getImageDerivationLabel(value = "") {
   );
 }
 
-function getImageDerivationShortLabel(value = "") {
-  return (
-    IMAGE_DERIVATION_OPTIONS.find((option) => option.value === value)?.shortLabel ||
-    IMAGE_DERIVATION_OPTIONS[0].shortLabel
-  );
-}
-
 function getImageDerivationDetail(value = "") {
   if (value === "notes") {
     return "Best for spaces, objects, site visits, and visual observations.";
@@ -190,6 +184,46 @@ function isImageFilename(value = "") {
 function isImageFileLike(file) {
   if (!file) return false;
   return String(file.type || "").trim().toLowerCase().startsWith("image/") || isImageFilename(file.name || "");
+}
+
+function extractSingleUrlText(text = "") {
+  const normalized = String(text || "").trim();
+  if (!normalized || /\s/.test(normalized)) return "";
+
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "";
+    }
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function formatAssetDuration(durationMs = 0) {
+  const totalSeconds = Math.max(0, Math.round(Number(durationMs || 0) / 1000));
+  if (!totalSeconds) return "";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getSourceAssetLabel(asset) {
+  if (!asset) return "";
+  if (asset.kind === "link") {
+    try {
+      return new URL(asset.canonicalUrl || asset.sourceUrl || asset.url || "").hostname;
+    } catch {
+      return asset.label || "Original link";
+    }
+  }
+
+  if (asset.kind === "audio") {
+    return asset.originalFilename || asset.label || "Original audio";
+  }
+
+  return asset.originalFilename || asset.label || "Original source";
 }
 
 function dataUrlMimeType(dataUrl = "") {
@@ -792,16 +826,24 @@ function getDocumentKindLabel(document) {
   if (document.derivationKind === "image-notes") {
     return "Image → Notes";
   }
+  if (document.derivationKind === "link-document") {
+    return "Link → Doc";
+  }
+  if (document.derivationKind === "audio-transcript") {
+    return "Audio → Transcript";
+  }
   return document.formatLabel || "Document";
 }
 
-function getPrimaryImageSourceAsset(document) {
+function getPrimarySourceAsset(document, kind = "") {
   const assets = Array.isArray(document?.sourceAssets) ? document.sourceAssets : [];
-  return (
-    assets.find((asset) => String(asset?.mimeType || "").startsWith("image/")) ||
-    assets[0] ||
-    null
-  );
+  const normalizedKind = String(kind || "").trim().toLowerCase();
+
+  if (normalizedKind) {
+    return assets.find((asset) => String(asset?.kind || "").trim().toLowerCase() === normalizedKind) || null;
+  }
+
+  return assets[0] || null;
 }
 
 function getDocumentBlockCount(document) {
@@ -929,7 +971,7 @@ function WorkspaceShelf({
         onClick={onUpload}
         disabled={uploading}
       >
-        {uploading ? "Importing..." : "+ Upload source"}
+        {uploading ? "Importing..." : "+ Drop anything"}
       </button>
     </div>
   );
@@ -949,7 +991,9 @@ function WorkspaceLaunchpad({
   onOpenProject,
   onPasteClipboard,
   onPasteSource,
+  onPasteLink,
   onUpload,
+  onImportFolder,
   uploading = false,
   pastePendingMode = "",
   clipboardCount = 0,
@@ -1024,7 +1068,7 @@ function WorkspaceLaunchpad({
         <span className="assembler-home__eyebrow">Project</span>
         <h1 className="assembler-home__title">{activeProject?.title || "Main Project"}</h1>
         <p className="assembler-home__body">
-          {activeProject?.subtitle || "Continue where you left off or start from fresh source material."}
+          {activeProject?.subtitle || "Drop anything: documents, images, screenshots, links, or voice memos."}
         </p>
       </div>
 
@@ -1087,7 +1131,7 @@ function WorkspaceLaunchpad({
             <WorkspaceActionIcon kind="upload" />
           </span>
           <span className="assembler-home__action-label">
-            {uploading ? "Importing…" : "Upload source"}
+            {uploading ? "Importing…" : "Drop anything"}
           </span>
         </button>
 
@@ -1103,6 +1147,30 @@ function WorkspaceLaunchpad({
           <span className="assembler-home__action-label">
             {pastePendingMode === "source" ? "Pasting…" : "Paste source"}
           </span>
+        </button>
+
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={onPasteLink}
+          disabled={busy}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="browse" />
+          </span>
+          <span className="assembler-home__action-label">Paste link</span>
+        </button>
+
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={onImportFolder}
+          disabled={busy}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="browse" />
+          </span>
+          <span className="assembler-home__action-label">Import folder</span>
         </button>
       </div>
 
@@ -1549,6 +1617,88 @@ function ImageIntakeChooser({
               </span>
             </button>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkIntakeChooser({
+  open = false,
+  draft = null,
+  pending = false,
+  onFetchLink,
+  onPasteRaw,
+  onClose,
+}) {
+  if (!open || !draft?.url) return null;
+
+  return (
+    <div className="assembler-image-chooser assembler-image-chooser--link">
+      <button
+        type="button"
+        className="assembler-image-chooser__backdrop"
+        aria-label="Close link import chooser"
+        onClick={pending ? undefined : onClose}
+      />
+
+      <div
+        className="assembler-image-chooser__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="link-intake-title"
+      >
+        <div className="assembler-image-chooser__header">
+          <div className="assembler-image-chooser__copy">
+            <span className="assembler-sheet__eyebrow">Pasted link</span>
+            <h2 id="link-intake-title" className="assembler-image-chooser__title">
+              Turn this link into a source?
+            </h2>
+            <p className="assembler-image-chooser__body">
+              Fetch the readable page as a source document, or keep the raw URL text instead.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={pending ? undefined : onClose}
+            disabled={pending}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="assembler-image-chooser__meta">
+          <span className="assembler-link-chooser__url">{draft.url}</span>
+        </div>
+
+        <div className="assembler-image-chooser__actions">
+          <button
+            type="button"
+            className="assembler-image-chooser__action is-primary"
+            onClick={onFetchLink}
+            disabled={pending}
+          >
+            <span className="assembler-image-chooser__action-label">LINK → DOC</span>
+            <span className="assembler-image-chooser__action-title">Fetch link source</span>
+            <span className="assembler-image-chooser__action-detail">
+              Extract the readable page and keep the original URL as provenance.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-image-chooser__action"
+            onClick={onPasteRaw}
+            disabled={pending}
+          >
+            <span className="assembler-image-chooser__action-label">RAW TEXT</span>
+            <span className="assembler-image-chooser__action-title">Paste raw URL</span>
+            <span className="assembler-image-chooser__action-detail">
+              Keep the link as text instead of fetching the page.
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -2531,6 +2681,7 @@ export default function WorkspaceShell({
   resumeSessionSummary = null,
 }) {
   const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
   const aiInputRef = useRef(null);
   const blockRefs = useRef({});
   const audioRef = useRef(null);
@@ -2592,6 +2743,8 @@ export default function WorkspaceShell({
     IMAGE_DERIVATION_OPTIONS[0].value,
   );
   const [pendingImageIntake, setPendingImageIntake] = useState(null);
+  const [pendingLinkIntake, setPendingLinkIntake] = useState(null);
+  const [dropActive, setDropActive] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
@@ -2647,7 +2800,11 @@ export default function WorkspaceShell({
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
     diagnostics: activeDocument?.intakeDiagnostics,
   });
-  const activeDocumentImageAsset = getPrimaryImageSourceAsset(activeDocument);
+  const activeDocumentAsset =
+    getPrimarySourceAsset(activeDocument, "image") ||
+    getPrimarySourceAsset(activeDocument, "link") ||
+    getPrimarySourceAsset(activeDocument, "audio") ||
+    getPrimarySourceAsset(activeDocument);
   const canPolishActiveDocument =
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
@@ -2786,6 +2943,13 @@ export default function WorkspaceShell({
 
   useEffect(() => {
     setDeviceVoiceSupported(browserSupportsDeviceVoice());
+  }, []);
+
+  useEffect(() => {
+    if (!folderInputRef.current) return;
+
+    folderInputRef.current.setAttribute("webkitdirectory", "");
+    folderInputRef.current.setAttribute("directory", "");
   }, []);
 
   useEffect(() => {
@@ -3024,11 +3188,15 @@ export default function WorkspaceShell({
       if (event.key === "Escape" && pendingImageIntake && !uploading && !pastePendingMode) {
         setPendingImageIntake(null);
       }
+
+      if (event.key === "Escape" && pendingLinkIntake && !uploading && !pastePendingMode) {
+        setPendingLinkIntake(null);
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, mobileComposeOpen, pendingImageIntake, pastePendingMode, uploading, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
     async function handlePaste(event) {
@@ -3477,6 +3645,109 @@ export default function WorkspaceShell({
     return payload.document;
   }
 
+  async function createLinkSource(url) {
+    const normalizedUrl = extractSingleUrlText(url);
+    if (!normalizedUrl) {
+      throw new Error("Paste a valid public link.");
+    }
+
+    const response = await fetch("/api/workspace/link", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        projectKey: activeProjectKey,
+        url: normalizedUrl,
+      }),
+    });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.document?.documentKey) {
+      throw new Error(payload?.error || "Could not create a source from that link.");
+    }
+
+    upsertDocument(payload.document, { replaceLogs: true });
+    attachDocumentToActiveProject(payload.document, { role: "SOURCE" });
+    setLaunchpadOpen(false);
+    await loadDocument(payload.document.documentKey);
+
+    const intakeWarning = getPrimaryDiagnosticMessage(payload.intake);
+    setFeedback(
+      [
+        `Created ${payload.document.title} from link.`,
+        intakeWarning || "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      intakeWarning ? "" : "success",
+    );
+
+    return payload;
+  }
+
+  async function importFileBatch(files, { bundleName = "" } = {}) {
+    const normalizedFiles = Array.from(files || []).filter(Boolean);
+    if (!normalizedFiles.length) return;
+
+    if (normalizedFiles.length === 1 && !normalizedFiles[0]?.webkitRelativePath) {
+      await handleUpload(normalizedFiles[0]);
+      return;
+    }
+
+    setUploading(true);
+    setFeedback(
+      `Importing ${normalizedFiles.length} source${normalizedFiles.length === 1 ? "" : "s"}...`,
+    );
+
+    try {
+      const formData = new FormData();
+      normalizedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+      formData.append("projectKey", activeProjectKey);
+      if (bundleName) {
+        formData.append("bundleName", bundleName);
+      }
+
+      const response = await fetch("/api/workspace/folder", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !Array.isArray(payload?.results) || !payload.results.length) {
+        throw new Error(payload?.error || "Could not import this folder.");
+      }
+
+      payload.results.forEach((result) => {
+        if (!result?.document?.documentKey) return;
+        upsertDocument(result.document, { replaceLogs: true });
+        attachDocumentToActiveProject(result.document, { role: "SOURCE" });
+      });
+
+      setLaunchpadOpen(false);
+
+      const firstDocument = payload.results[0]?.document;
+      if (firstDocument?.documentKey) {
+        await loadDocument(firstDocument.documentKey);
+      }
+
+      const skippedCount = Array.isArray(payload?.skipped) ? payload.skipped.length : 0;
+      setFeedback(
+        `Imported ${payload.results.length} source${payload.results.length === 1 ? "" : "s"}${
+          skippedCount ? `, skipped ${skippedCount}` : ""
+        }.`,
+        "success",
+      );
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not import this folder.", "error");
+    } finally {
+      setUploading(false);
+      setDropActive(false);
+    }
+  }
+
   async function handleUpload(file, options = {}) {
     if (!file) return;
 
@@ -3556,6 +3827,59 @@ export default function WorkspaceShell({
     } finally {
       setUploading(false);
     }
+  }
+
+  async function handlePasteLink() {
+    if (pastePendingMode || uploading) return;
+
+    try {
+      const clipboardPayload = await readClipboardPayloadFromNavigator();
+      const url = extractSingleUrlText(clipboardPayload?.text || "");
+
+      if (!url) {
+        throw new Error("Clipboard does not contain a public link.");
+      }
+
+      setPendingLinkIntake({
+        url,
+        payload: clipboardPayload,
+      });
+      setFeedback("Choose how to use this link.");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not read a link from the clipboard.", "error");
+    }
+  }
+
+  function openFolderPicker() {
+    folderInputRef.current?.click();
+  }
+
+  function handleDragEnter(event) {
+    if (!event.dataTransfer?.types?.includes("Files")) return;
+    event.preventDefault();
+    setDropActive(true);
+  }
+
+  function handleDragOver(event) {
+    if (!event.dataTransfer?.types?.includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDropActive(true);
+  }
+
+  function handleDragLeave(event) {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setDropActive(false);
+  }
+
+  function handleDrop(event) {
+    if (!event.dataTransfer?.files?.length) return;
+    event.preventDefault();
+    const droppedFiles = Array.from(event.dataTransfer.files || []);
+    const bundleName = droppedFiles[0]?.webkitRelativePath
+      ? droppedFiles[0].webkitRelativePath.split("/")[0]
+      : "";
+    void importFileBatch(droppedFiles, { bundleName });
   }
 
   function buildEditedBlock(block, nextText, updatedAt = new Date().toISOString()) {
@@ -3857,11 +4181,24 @@ export default function WorkspaceShell({
 
     try {
       const clipboardPayload = payload || (await readClipboardPayloadFromNavigator());
+      const urlFromClipboard =
+        !clipboardPayload?.imageDataUrl
+          ? extractSingleUrlText(clipboardPayload?.text || "")
+          : "";
       const resolvedImageMimeType =
         clipboardPayload?.imageMimeType ||
         dataUrlMimeType(clipboardPayload?.imageDataUrl || "");
       const hasImagePayload = Boolean(clipboardPayload?.imageDataUrl);
       const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
+
+      if (mode === "source" && urlFromClipboard && !options.forceRawText) {
+        setPendingLinkIntake({
+          url: urlFromClipboard,
+          payload: clipboardPayload,
+        });
+        setFeedback("Choose how to use this link.");
+        return;
+      }
 
       if (hasImagePayload && !normalizedImageMode) {
         setPendingImageIntake({
@@ -3927,6 +4264,7 @@ export default function WorkspaceShell({
         setAiOpen(false);
         setViewMode("doc");
         setPendingImageIntake(null);
+        setPendingLinkIntake(null);
         await loadDocument(result.document.documentKey);
 
         const intakeWarning = getPrimaryDiagnosticMessage(result.intake);
@@ -3961,6 +4299,7 @@ export default function WorkspaceShell({
       setLaunchpadOpen(false);
       setAiOpen(false);
       setViewMode("doc");
+      setPendingLinkIntake(null);
 
       const intakeWarning = getPrimaryDiagnosticMessage(result.intake);
       const blockLabel = `${pastedBlocks.length} block${pastedBlocks.length === 1 ? "" : "s"}`;
@@ -4784,16 +5123,43 @@ export default function WorkspaceShell({
   }
 
   return (
-    <main className="assembler-page">
+    <main
+      className={`assembler-page ${dropActive ? "is-dropping" : ""}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <input
         ref={fileInputRef}
         className="terminal-file-input"
         type="file"
-        accept={IMAGE_ACCEPT_VALUE}
+        accept={SOURCE_ACCEPT_VALUE}
+        multiple
         onChange={(event) => {
-          const [file] = event.target.files || [];
-          if (!file) return;
-          handleUpload(file);
+          const files = Array.from(event.target.files || []);
+          if (!files.length) return;
+          void importFileBatch(files, {
+            bundleName: files[0]?.webkitRelativePath
+              ? files[0].webkitRelativePath.split("/")[0]
+              : "",
+          });
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={folderInputRef}
+        className="terminal-file-input"
+        type="file"
+        multiple
+        onChange={(event) => {
+          const files = Array.from(event.target.files || []);
+          if (!files.length) return;
+          void importFileBatch(files, {
+            bundleName: files[0]?.webkitRelativePath
+              ? files[0].webkitRelativePath.split("/")[0]
+              : "Imported Folder",
+          });
           event.target.value = "";
         }}
       />
@@ -4841,7 +5207,9 @@ export default function WorkspaceShell({
               onOpenProject={openProject}
               onPasteSource={() => void pasteIntoWorkspace("source")}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
+              onPasteLink={() => void handlePasteLink()}
               onUpload={() => fileInputRef.current?.click()}
+              onImportFolder={openFolderPicker}
               lastUsedMode={lastUsedMode}
               resumeSessionSummary={resumeSessionSummaryState}
             />
@@ -4977,29 +5345,42 @@ export default function WorkspaceShell({
                           <span>{activeDocument.derivationModel}</span>
                         ) : null}
                       </div>
-                      {activeDocumentImageAsset ? (
+                      {activeDocumentAsset ? (
                         <div className="assembler-document__asset">
-                          <img
-                            className="assembler-document__asset-thumb"
-                            src={activeDocumentImageAsset.url}
-                            alt={`Original image for ${activeDocument.title}`}
-                          />
+                          {activeDocumentAsset.kind === "image" ? (
+                            <img
+                              className="assembler-document__asset-thumb"
+                              src={activeDocumentAsset.url}
+                              alt={`Original image for ${activeDocument.title}`}
+                            />
+                          ) : (
+                            <div className="assembler-document__asset-thumb assembler-document__asset-thumb--icon">
+                              {activeDocumentAsset.kind === "audio" ? "AUDIO" : "LINK"}
+                            </div>
+                          )}
                           <div className="assembler-document__asset-copy">
                             <span className="assembler-document__asset-badge">
-                              {getImageDerivationShortLabel(
-                                activeDocument.derivationKind === "image-notes" ? "notes" : "document",
-                              )}
+                              {getDocumentKindLabel(activeDocument).toUpperCase()}
                             </span>
                             <span className="assembler-document__asset-label">
-                              {activeDocumentImageAsset.originalFilename || "Original image"}
+                              {getSourceAssetLabel(activeDocumentAsset)}
                             </span>
+                            {activeDocumentAsset.kind === "audio" && activeDocumentAsset.durationMs ? (
+                              <span className="assembler-document__asset-detail">
+                                {formatAssetDuration(activeDocumentAsset.durationMs)}
+                              </span>
+                            ) : null}
                             <a
                               className="assembler-document__asset-link"
-                              href={activeDocumentImageAsset.url}
+                              href={activeDocumentAsset.url}
                               target="_blank"
                               rel="noreferrer"
                             >
-                              Open original image
+                              {activeDocumentAsset.kind === "image"
+                                ? "Open original image"
+                                : activeDocumentAsset.kind === "audio"
+                                  ? "Open original audio"
+                                  : "Open original link"}
                             </a>
                           </div>
                         </div>
@@ -5205,7 +5586,44 @@ export default function WorkspaceShell({
             }
           }}
         />
+        <LinkIntakeChooser
+          open={Boolean(pendingLinkIntake)}
+          draft={pendingLinkIntake}
+          pending={Boolean(pastePendingMode) || uploading}
+          onFetchLink={() => {
+            const pendingUrl = pendingLinkIntake?.url || "";
+            setPendingLinkIntake(null);
+            setPastePendingMode("source");
+            setFeedback("Fetching link source...");
+            void createLinkSource(pendingUrl)
+              .catch((error) => {
+                setFeedback(
+                  error instanceof Error ? error.message : "Could not create a source from that link.",
+                  "error",
+                );
+              })
+              .finally(() => {
+                setPastePendingMode("");
+              });
+          }}
+          onPasteRaw={() => {
+            const nextPayload = pendingLinkIntake?.payload || null;
+            setPendingLinkIntake(null);
+            if (nextPayload) {
+              void pasteIntoWorkspace("source", nextPayload, { forceRawText: true });
+            }
+          }}
+          onClose={() => setPendingLinkIntake(null)}
+        />
       </div>
+      {dropActive ? (
+        <div className="assembler-drop-overlay" aria-hidden="true">
+          <div className="assembler-drop-overlay__panel">
+            <span className="assembler-drop-overlay__eyebrow">Drop anything</span>
+            <strong>Files, folders, images, screenshots, links, voice memos</strong>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

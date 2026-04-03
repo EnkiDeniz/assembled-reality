@@ -81,6 +81,12 @@ enum ReaderProjectDocumentRole {
   ASSEMBLY
 }
 
+enum ReaderSourceAssetKind {
+  IMAGE
+  LINK
+  AUDIO
+}
+
 model User {
   id                  String                 @id @default(cuid())
   name                String?
@@ -95,6 +101,7 @@ model User {
   readerConversationThreads ReaderConversationThread[]
   readerEvidenceSets   ReaderEvidenceSet[]
   readerDocuments      ReaderDocument[]
+  readerSourceAssets   ReaderSourceAsset[]
   readerProjects       ReaderProject[]
   readerListeningSessions ReaderListeningSession[]
   createdAt           DateTime               @default(now())
@@ -209,8 +216,38 @@ model ReaderDocument {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceAssets    ReaderSourceAsset[]
 
   @@index([userId, updatedAt])
+}
+
+model ReaderSourceAsset {
+  id               String                @id
+  userId           String
+  documentKey      String
+  projectKey       String?
+  kind             ReaderSourceAssetKind @default(IMAGE)
+  blobUrl          String?
+  blobPath         String?
+  sourceUrl        String?
+  canonicalUrl     String?
+  label            String?
+  mimeType         String?
+  originalFilename String?
+  width            Int?
+  height           Int?
+  durationMs       Int?
+  byteSize         Int?
+  sha256           String?
+  metadataJson     Json?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document         ReaderDocument        @relation(fields: [documentKey], references: [documentKey], onDelete: Cascade)
+
+  @@unique([userId, documentKey, kind])
+  @@index([documentKey])
+  @@index([userId, createdAt])
 }
 
 model ReaderProject {

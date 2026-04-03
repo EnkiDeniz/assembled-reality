@@ -1,7 +1,14 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
-import { buildWorkspaceBlocksFromDocument } from "@/lib/document-blocks";
+import {
+  buildWorkspaceBlocksFromDocument,
+  buildWorkspaceMarkdown,
+  createWorkspaceLogEntry,
+  normalizeWorkspaceBlocks,
+  normalizeWorkspaceLogEntries,
+} from "@/lib/document-blocks";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
 import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
@@ -13,6 +20,10 @@ import {
   getWorkspaceDocumentFromRecord,
 } from "@/lib/workspace-documents";
 import { parseDocument } from "@/lib/document";
+import {
+  createReaderSourceAssetForUser,
+  listReaderSourceAssetsByDocumentKeysForUser,
+} from "@/lib/source-assets";
 
 function getReaderDocumentModel() {
   return prisma.readerDocument || null;
@@ -35,7 +46,14 @@ function formatDocumentFormat(value, originalFilename = "") {
   return "Markdown";
 }
 
-function serializeDocumentSummary(documentData, record = null, progressPercent = 0) {
+function countWords(text) {
+  return String(text || "")
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean).length;
+}
+
+function serializeDocumentSummary(documentData, record = null, progressPercent = 0, sourceAssets = []) {
   const isBuiltin = documentData?.documentType === "builtin";
 
   return {
@@ -66,6 +84,11 @@ function serializeDocumentSummary(documentData, record = null, progressPercent =
       : [],
     hiddenFromProjectHome: Boolean(documentData?.hiddenFromProjectHome),
     sourceFiles: Array.isArray(documentData?.sourceFiles) ? documentData.sourceFiles : [],
+    sourceAssetIds: Array.isArray(documentData?.sourceAssetIds) ? documentData.sourceAssetIds : [],
+    sourceAssets: Array.isArray(sourceAssets) ? sourceAssets : Array.isArray(documentData?.sourceAssets) ? documentData.sourceAssets : [],
+    derivationKind: documentData?.derivationKind || "",
+    derivationModel: documentData?.derivationModel || "",
+    derivationStatus: documentData?.derivationStatus || "",
   };
 }
 
@@ -74,9 +97,9 @@ async function serializeBuiltinDocumentForUser(userId, progressPercent = 0) {
   return serializeDocumentSummary(documentData || getBuiltinWorkspaceDocument(), null, progressPercent);
 }
 
-function serializeUploadedDocument(record, progressPercent = 0) {
+function serializeUploadedDocument(record, progressPercent = 0, sourceAssets = []) {
   const documentData = getWorkspaceDocumentFromRecord(record, "upload");
-  return serializeDocumentSummary(documentData, record, progressPercent);
+  return serializeDocumentSummary(documentData, record, progressPercent, sourceAssets);
 }
 
 async function buildProgressMapForUser(userId) {
@@ -150,11 +173,19 @@ export async function listReaderDocumentsForUser(userId) {
     userId,
     progressMap.get(PRIMARY_DOCUMENT_KEY) || 0,
   );
+  const assetsByDocumentKey = await listReaderSourceAssetsByDocumentKeysForUser(
+    userId,
+    uploadedDocuments.map((record) => record.documentKey),
+  );
 
   return [
     builtinDocument,
     ...uploadedDocuments.map((record) =>
-      serializeUploadedDocument(record, progressMap.get(record.documentKey) || 0),
+      serializeUploadedDocument(
+        record,
+        progressMap.get(record.documentKey) || 0,
+        assetsByDocumentKey.get(record.documentKey) || [],
+      ),
     ),
   ];
 }
@@ -171,10 +202,16 @@ export async function createReaderDocumentForUser(
     contentMarkdown,
     wordCount = 0,
     sectionCount = 0,
+    blocks = null,
+    logEntries = [],
     sourceFiles = [],
+    sourceAssetIds = [],
     intakeKind = "upload",
     intakeDiagnostics = [],
     hiddenFromProjectHome = false,
+    derivationKind = "",
+    derivationModel = "",
+    derivationStatus = "",
   },
 ) {
   const readerDocumentModel = getReaderDocumentModel();
@@ -186,23 +223,54 @@ export async function createReaderDocumentForUser(
   const normalizedSubtitle = String(subtitle || "").trim();
   const baseKey = slugify(normalizedTitle) || slugify(originalFilename) || "uploaded-document";
   const documentKey = await ensureUniqueDocumentKey(baseKey);
-  const parsedDocument = parseDocument(contentMarkdown, { documentKey });
-  const blocks = buildWorkspaceBlocksFromDocument(parsedDocument, {
-    documentKey,
-    defaultSourceDocumentKey: documentKey,
-    defaultIsEditable: true,
-  });
+  const parsedDocument =
+    Array.isArray(blocks) && blocks.length > 0
+      ? null
+      : parseDocument(contentMarkdown, { documentKey });
+  const persistedBlocks =
+    Array.isArray(blocks) && blocks.length > 0
+      ? normalizeWorkspaceBlocks(
+          blocks.map((block, index) => ({
+            ...block,
+            documentKey,
+            sourceDocumentKey: block.sourceDocumentKey || documentKey,
+            sourcePosition:
+              Number.isFinite(Number(block.sourcePosition)) ? Number(block.sourcePosition) : index,
+            isEditable: true,
+          })),
+          {
+            documentKey,
+            defaultSourceDocumentKey: documentKey,
+            defaultIsEditable: true,
+          },
+        )
+      : buildWorkspaceBlocksFromDocument(parsedDocument, {
+          documentKey,
+          defaultSourceDocumentKey: documentKey,
+          defaultIsEditable: true,
+        });
+  const persistedLogEntries = normalizeWorkspaceLogEntries(logEntries, documentKey);
   const storedContentMarkdown = buildStoredWorkspaceContent({
     title: normalizedTitle,
     subtitle: normalizedSubtitle,
     documentType: "source",
     sourceFiles: sourceFiles.length ? sourceFiles : originalFilename ? [originalFilename] : [],
-    blocks,
-    logEntries: [],
+    sourceAssetIds,
+    blocks: persistedBlocks,
+    logEntries: persistedLogEntries,
     intakeKind,
     intakeDiagnostics,
     hiddenFromProjectHome,
+    derivationKind,
+    derivationModel,
+    derivationStatus,
   });
+  const resolvedWordCount =
+    Number(wordCount) > 0
+      ? Number(wordCount)
+      : countWords(persistedBlocks.map((block) => block.plainText || block.text).join(" "));
+  const resolvedSectionCount =
+    Number(sectionCount) > 0 ? Number(sectionCount) : persistedBlocks.length;
 
   const record = await readerDocumentModel.create({
     data: {
@@ -214,8 +282,8 @@ export async function createReaderDocumentForUser(
       mimeType: mimeType || null,
       originalFilename: originalFilename || null,
       contentMarkdown: storedContentMarkdown,
-      wordCount,
-      sectionCount,
+      wordCount: resolvedWordCount,
+      sectionCount: resolvedSectionCount,
     },
   });
 
@@ -226,6 +294,273 @@ export async function createReaderDocumentForUser(
   });
 
   return serializeUploadedDocument(record, 0);
+}
+
+export async function createImageDerivedDocumentForUser(
+  userId,
+  {
+    title,
+    subtitle = "",
+    projectKey = DEFAULT_PROJECT_KEY,
+    originalFilename = "",
+    mimeType = "",
+    blocks = [],
+    wordCount = 0,
+    sectionCount = 0,
+    intakeKind = "upload-image-document",
+    intakeDiagnostics = [],
+    derivationKind = "ocr-document",
+    derivationModel = "",
+    derivationStatus = "succeeded",
+    sourceAsset,
+  },
+) {
+  return createAssetDerivedDocumentForUser(userId, {
+    title,
+    subtitle,
+    projectKey,
+    originalFilename,
+    mimeType,
+    blocks,
+    wordCount,
+    sectionCount,
+    intakeKind,
+    intakeDiagnostics,
+    derivationKind,
+    derivationModel,
+    derivationStatus,
+    sourceAsset,
+    assetKind: "IMAGE",
+    defaultOperation:
+      derivationKind === "image-notes" ? "summarized" : "extracted",
+    sourceAction: String(intakeKind || "").startsWith("paste-image-")
+      ? "PASTED_IMAGE"
+      : "UPLOADED_IMAGE",
+    sourceDetail:
+      String(intakeKind || "").startsWith("paste-image-") || !sourceAsset?.originalFilename
+        ? "Added image source from the clipboard."
+        : `Added image source "${sourceAsset.originalFilename}".`,
+    derivedAction: "DERIVED_IMAGE_SOURCE",
+    derivedDetail: `Created ${
+      derivationKind === "image-notes" ? "source notes" : "source document"
+    } via ${derivationModel || "OpenAI"}.`,
+  });
+}
+
+export async function createLinkDerivedDocumentForUser(
+  userId,
+  {
+    title,
+    subtitle = "",
+    projectKey = DEFAULT_PROJECT_KEY,
+    blocks = [],
+    wordCount = 0,
+    sectionCount = 0,
+    intakeKind = "link-source",
+    intakeDiagnostics = [],
+    derivationKind = "link-document",
+    derivationModel = "",
+    derivationStatus = "succeeded",
+    sourceAsset,
+  },
+) {
+  return createAssetDerivedDocumentForUser(userId, {
+    title,
+    subtitle,
+    projectKey,
+    mimeType: "text/markdown",
+    blocks,
+    wordCount,
+    sectionCount,
+    intakeKind,
+    intakeDiagnostics,
+    derivationKind,
+    derivationModel,
+    derivationStatus,
+    sourceAsset,
+    assetKind: "LINK",
+    defaultOperation: "extracted",
+    sourceAction: "LINK_ADDED",
+    sourceDetail: sourceAsset?.canonicalUrl
+      ? `Added link source ${sourceAsset.canonicalUrl}.`
+      : "Added link source.",
+    derivedAction: "DERIVED_LINK_SOURCE",
+    derivedDetail: `Created source document from ${sourceAsset?.label || "link"}.`,
+  });
+}
+
+export async function createAudioDerivedDocumentForUser(
+  userId,
+  {
+    title,
+    subtitle = "",
+    projectKey = DEFAULT_PROJECT_KEY,
+    originalFilename = "",
+    mimeType = "",
+    blocks = [],
+    wordCount = 0,
+    sectionCount = 0,
+    intakeKind = "upload-audio-transcript",
+    intakeDiagnostics = [],
+    derivationKind = "audio-transcript",
+    derivationModel = "",
+    derivationStatus = "succeeded",
+    sourceAsset,
+  },
+) {
+  return createAssetDerivedDocumentForUser(userId, {
+    title,
+    subtitle,
+    projectKey,
+    originalFilename,
+    mimeType,
+    blocks,
+    wordCount,
+    sectionCount,
+    intakeKind,
+    intakeDiagnostics,
+    derivationKind,
+    derivationModel,
+    derivationStatus,
+    sourceAsset,
+    assetKind: "AUDIO",
+    defaultOperation: "extracted",
+    sourceAction: "UPLOADED_AUDIO",
+    sourceDetail: sourceAsset?.originalFilename
+      ? `Added voice memo "${sourceAsset.originalFilename}".`
+      : "Added voice memo.",
+    derivedAction: "DERIVED_AUDIO_SOURCE",
+    derivedDetail: `Created transcript source via ${derivationModel || "OpenAI"}.`,
+  });
+}
+
+async function createAssetDerivedDocumentForUser(
+  userId,
+  {
+    title,
+    subtitle = "",
+    projectKey = DEFAULT_PROJECT_KEY,
+    originalFilename = "",
+    mimeType = "",
+    blocks = [],
+    wordCount = 0,
+    sectionCount = 0,
+    intakeKind = "upload",
+    intakeDiagnostics = [],
+    derivationKind = "",
+    derivationModel = "",
+    derivationStatus = "succeeded",
+    sourceAsset,
+    assetKind = "IMAGE",
+    defaultOperation = "extracted",
+    sourceAction = "UPLOADED",
+    sourceDetail = "Added source asset.",
+    derivedAction = "AI_RESULT",
+    derivedDetail = "Created derived source.",
+  },
+) {
+  const assetId = sourceAsset?.id || randomUUID();
+  const persistedLogEntries = normalizeWorkspaceLogEntries(
+    [
+      createWorkspaceLogEntry({
+        action: sourceAction,
+        detail: sourceDetail,
+      }),
+      createWorkspaceLogEntry({
+        action: derivedAction,
+        detail: derivedDetail,
+      }),
+    ],
+    "",
+  );
+  const sourceFiles = originalFilename ? [originalFilename] : [];
+
+  let summary = null;
+
+  try {
+    summary = await createReaderDocumentForUser(userId, {
+      title,
+      subtitle,
+      projectKey,
+      format: "markdown",
+      originalFilename,
+      mimeType: mimeType || "text/markdown",
+      contentMarkdown: buildWorkspaceMarkdown({
+        title,
+        subtitle,
+        blocks,
+        sectionTitle: "Document",
+      }),
+      wordCount,
+      sectionCount,
+      blocks: normalizeWorkspaceBlocks(
+        blocks.map((block) => ({
+          ...block,
+          documentKey: "",
+          sourceDocumentKey: "",
+        })),
+        {
+          documentKey: "",
+          defaultSourceDocumentKey: "",
+          defaultIsEditable: true,
+          defaultAuthor: "ai",
+          defaultOperation,
+        },
+      ),
+      logEntries: persistedLogEntries,
+      sourceFiles,
+      sourceAssetIds: [assetId],
+      intakeKind,
+      intakeDiagnostics,
+      derivationKind,
+      derivationModel,
+      derivationStatus,
+    });
+
+    const assetRecord = await createReaderSourceAssetForUser(userId, {
+      id: assetId,
+      documentKey: summary.documentKey,
+      projectKey,
+      kind: assetKind,
+      blobUrl: sourceAsset.blobUrl,
+      blobPath: sourceAsset.blobPath,
+      sourceUrl: sourceAsset.sourceUrl,
+      canonicalUrl: sourceAsset.canonicalUrl,
+      label: sourceAsset.label,
+      mimeType: sourceAsset.mimeType,
+      originalFilename: sourceAsset.originalFilename,
+      width: sourceAsset.width,
+      height: sourceAsset.height,
+      durationMs: sourceAsset.durationMs,
+      byteSize: sourceAsset.byteSize,
+      sha256: sourceAsset.sha256,
+      metadataJson: sourceAsset.metadataJson,
+    });
+
+    const document = await getReaderDocumentDataForUser(userId, summary.documentKey);
+
+    return {
+      summary: serializeDocumentSummary(document, null, 0, [assetRecord]),
+      document,
+      sourceAsset: assetRecord,
+    };
+  } catch (error) {
+    if (summary?.documentKey) {
+      await prisma.readerProjectDocument.deleteMany({
+        where: {
+          documentKey: summary.documentKey,
+        },
+      });
+      await prisma.readerDocument.deleteMany({
+        where: {
+          userId,
+          documentKey: summary.documentKey,
+        },
+      });
+    }
+
+    throw error;
+  }
 }
 
 export async function getReaderDocumentDataForUser(userId, documentKey = PRIMARY_DOCUMENT_KEY) {
@@ -253,5 +588,10 @@ export async function getReaderDocumentSummaryForUser(userId, documentKey = PRIM
     return null;
   }
 
-  return serializeUploadedDocument(record);
+  const sourceAssetsByDocumentKey = await listReaderSourceAssetsByDocumentKeysForUser(
+    userId,
+    [documentKey],
+  );
+
+  return serializeUploadedDocument(record, 0, sourceAssetsByDocumentKey.get(documentKey) || []);
 }

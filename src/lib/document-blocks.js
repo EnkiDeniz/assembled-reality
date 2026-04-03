@@ -12,10 +12,17 @@ const BLOCK_KIND_MAP = {
 
 const LOG_ACTION_COLORS = {
   UPLOADED: "#888888",
+  UPLOADED_IMAGE: "#f59e0b",
+  LINK_ADDED: "#38bdf8",
+  UPLOADED_AUDIO: "#fb7185",
   PASTED: "#2dd4bf",
+  PASTED_IMAGE: "#2dd4bf",
   LISTENED: "#60a5fa",
   AI_QUERY: "#a78bfa",
   AI_RESULT: "#22c55e",
+  DERIVED_IMAGE_SOURCE: "#f59e0b",
+  DERIVED_LINK_SOURCE: "#38bdf8",
+  DERIVED_AUDIO_SOURCE: "#fb7185",
   SELECTED: "#06b6d4",
   EDITED: "#f472b6",
   CLEANED: "#f59e0b",

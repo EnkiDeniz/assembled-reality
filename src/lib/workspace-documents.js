@@ -13,6 +13,7 @@ import {
   normalizeWorkspaceBlocks,
   normalizeWorkspaceLogEntries,
 } from "@/lib/document-blocks";
+import { listReaderSourceAssetsForDocumentForUser } from "@/lib/source-assets";
 
 const META_RE = /^\s*<!--\s*assembler-meta:([A-Za-z0-9+/=_-]+)\s*-->\s*/;
 const BUILTIN_OVERRIDE_PREFIX = `${PRIMARY_DOCUMENT_KEY}--user-`;
@@ -110,19 +111,27 @@ function normalizeIntakeDiagnostics(diagnostics = []) {
 function buildStoredWorkspaceMeta({
   documentType = "source",
   sourceFiles = [],
+  sourceAssetIds = [],
   blocks = [],
   logEntries = [],
   intakeKind = "upload",
   intakeDiagnostics = [],
   hiddenFromProjectHome = false,
+  derivationKind = "",
+  derivationModel = "",
+  derivationStatus = "",
 }) {
   return {
     version: 2,
     documentType,
     sourceFiles: Array.isArray(sourceFiles) ? sourceFiles.filter(Boolean) : [],
+    sourceAssetIds: Array.isArray(sourceAssetIds) ? sourceAssetIds.filter(Boolean) : [],
     intakeKind: String(intakeKind || "upload").trim() || "upload",
     intakeDiagnostics: normalizeIntakeDiagnostics(intakeDiagnostics),
     hiddenFromProjectHome: Boolean(hiddenFromProjectHome),
+    derivationKind: String(derivationKind || "").trim().toLowerCase(),
+    derivationModel: String(derivationModel || "").trim(),
+    derivationStatus: String(derivationStatus || "").trim().toLowerCase(),
     blocks: normalizeWorkspaceBlocks(blocks).map((block) => ({
       id: block.id,
       documentKey: block.documentKey,
@@ -152,11 +161,15 @@ export function buildStoredWorkspaceContent({
   subtitle = "",
   documentType = "source",
   sourceFiles = [],
+  sourceAssetIds = [],
   blocks = [],
   logEntries = [],
   intakeKind = "upload",
   intakeDiagnostics = [],
   hiddenFromProjectHome = false,
+  derivationKind = "",
+  derivationModel = "",
+  derivationStatus = "",
 }) {
   const markdown = buildWorkspaceMarkdown({
     title,
@@ -167,11 +180,15 @@ export function buildStoredWorkspaceContent({
   const meta = buildStoredWorkspaceMeta({
     documentType,
     sourceFiles,
+    sourceAssetIds,
     blocks,
     logEntries,
     intakeKind,
     intakeDiagnostics,
     hiddenFromProjectHome,
+    derivationKind,
+    derivationModel,
+    derivationStatus,
   });
 
   return `<!-- assembler-meta:${encodeWorkspaceMeta(meta)} -->\n\n${markdown}`.trim();
@@ -218,6 +235,11 @@ export function parseStoredWorkspaceDocument({
     intakeDiagnostics: normalizeIntakeDiagnostics(meta?.intakeDiagnostics),
     hiddenFromProjectHome: Boolean(meta?.hiddenFromProjectHome),
     sourceFiles: buildSourceFiles(meta, originalFilename),
+    sourceAssetIds: Array.isArray(meta?.sourceAssetIds) ? meta.sourceAssetIds.filter(Boolean) : [],
+    sourceAssets: [],
+    derivationKind: String(meta?.derivationKind || "").trim().toLowerCase(),
+    derivationModel: String(meta?.derivationModel || "").trim(),
+    derivationStatus: String(meta?.derivationStatus || "").trim().toLowerCase(),
     originalFilename: originalFilename || null,
     format: String(format || "MARKDOWN").toLowerCase(),
     excerpt: buildWorkspaceExcerptFromBlocks(blocks),
@@ -264,13 +286,41 @@ export function getBuiltinWorkspaceDocument() {
     documentType: "builtin",
     sourceType: "builtin",
     sourceFiles: ["Assembled Reality"],
+    sourceAssetIds: [],
+    sourceAssets: [],
     originalFilename: null,
     format: "markdown",
     excerpt: buildWorkspaceExcerptFromBlocks(blocks),
     isAssembly: false,
     isEditable: true,
+    derivationKind: "",
+    derivationModel: "",
+    derivationStatus: "",
     createdAt: null,
     updatedAt: null,
+  };
+}
+
+async function hydrateWorkspaceDocumentSourceAssets(userId, document) {
+  if (!document?.documentKey || document.documentType === "builtin") {
+    return {
+      ...document,
+      sourceAssets: Array.isArray(document?.sourceAssets) ? document.sourceAssets : [],
+    };
+  }
+
+  const sourceAssets = await listReaderSourceAssetsForDocumentForUser(
+    userId,
+    document.documentKey,
+  );
+
+  return {
+    ...document,
+    sourceAssets,
+    sourceAssetIds:
+      Array.isArray(document.sourceAssetIds) && document.sourceAssetIds.length
+        ? document.sourceAssetIds
+        : sourceAssets.map((asset) => asset.id),
   };
 }
 
@@ -309,6 +359,8 @@ export async function getWorkspaceDocumentForUser(userId, documentKey = PRIMARY_
       documentType: "builtin",
       sourceType: "builtin",
       sourceFiles: ["Assembled Reality"],
+      sourceAssetIds: [],
+      sourceAssets: [],
       excerpt: buildWorkspaceExcerptFromBlocks(blocks),
       isAssembly: false,
       isEditable: true,
@@ -330,7 +382,10 @@ export async function getWorkspaceDocumentForUser(userId, documentKey = PRIMARY_
     return null;
   }
 
-  return getWorkspaceDocumentFromRecord(record, "upload");
+  return hydrateWorkspaceDocumentSourceAssets(
+    userId,
+    getWorkspaceDocumentFromRecord(record, "upload"),
+  );
 }
 
 async function ensureUniqueDocumentKey(baseKey) {
@@ -386,11 +441,15 @@ export async function saveWorkspaceDocumentForUser(
       subtitle: nextSubtitle,
       documentType: "builtin",
       sourceFiles: ["Assembled Reality"],
+      sourceAssetIds: current?.sourceAssetIds || [],
       blocks: normalizedBlocks,
       logEntries,
       intakeKind: current?.intakeKind || "builtin",
       intakeDiagnostics: current?.intakeDiagnostics || [],
       hiddenFromProjectHome: current?.hiddenFromProjectHome || false,
+      derivationKind: current?.derivationKind || "",
+      derivationModel: current?.derivationModel || "",
+      derivationStatus: current?.derivationStatus || "",
     });
     const existing = await prisma.readerDocument.findFirst({
       where: {
@@ -473,11 +532,15 @@ export async function saveWorkspaceDocumentForUser(
     subtitle: String(subtitle || current.subtitle || "").trim(),
     documentType: current.documentType === "assembly" ? "assembly" : "source",
     sourceFiles: current.sourceFiles,
+    sourceAssetIds: current.sourceAssetIds,
     blocks: normalizedBlocks,
     logEntries,
     intakeKind: current.intakeKind,
     intakeDiagnostics: current.intakeDiagnostics,
     hiddenFromProjectHome: current.hiddenFromProjectHome,
+    derivationKind: current.derivationKind,
+    derivationModel: current.derivationModel,
+    derivationStatus: current.derivationStatus,
   });
 
   const updated = await prisma.readerDocument.update({
@@ -581,6 +644,56 @@ export async function createAssemblyDocumentForUser(
     documentKey,
     role: "ASSEMBLY",
     setAsCurrentAssembly: true,
+  });
+
+  return getWorkspaceDocumentForUser(userId, documentKey);
+}
+
+export async function updateWorkspaceDocumentMetadataForUser(
+  userId,
+  documentKey,
+  updates = {},
+) {
+  const current = await getWorkspaceDocumentForUser(userId, documentKey);
+  if (!current) {
+    throw new Error("Document not found.");
+  }
+
+  if (current.documentType === "builtin") {
+    throw new Error("Built-in document metadata cannot be updated this way.");
+  }
+
+  const contentMarkdown = buildStoredWorkspaceContent({
+    title: current.title,
+    subtitle: current.subtitle || "",
+    documentType: current.documentType === "assembly" ? "assembly" : "source",
+    sourceFiles: current.sourceFiles,
+    sourceAssetIds:
+      Array.isArray(updates.sourceAssetIds) && updates.sourceAssetIds.length
+        ? updates.sourceAssetIds
+        : current.sourceAssetIds,
+    blocks: current.blocks,
+    logEntries: current.logEntries,
+    intakeKind: current.intakeKind,
+    intakeDiagnostics: current.intakeDiagnostics,
+    hiddenFromProjectHome: current.hiddenFromProjectHome,
+    derivationKind:
+      updates.derivationKind === undefined ? current.derivationKind : updates.derivationKind,
+    derivationModel:
+      updates.derivationModel === undefined ? current.derivationModel : updates.derivationModel,
+    derivationStatus:
+      updates.derivationStatus === undefined ? current.derivationStatus : updates.derivationStatus,
+  });
+
+  await prisma.readerDocument.update({
+    where: {
+      documentKey,
+    },
+    data: {
+      contentMarkdown,
+      wordCount: countWords(contentMarkdown),
+      sectionCount: current.sectionCount || current.blocks.length || 1,
+    },
   });
 
   return getWorkspaceDocumentForUser(userId, documentKey);

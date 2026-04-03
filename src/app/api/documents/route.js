@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  ingestUploadedDocument,
-  MAX_DOCUMENT_UPLOAD_BYTES,
-} from "@/lib/document-import";
-import {
-  createReaderDocumentForUser,
-  getReaderDocumentDataForUser,
   listReaderDocumentsForUser,
 } from "@/lib/reader-documents";
+import { MAX_DOCUMENT_UPLOAD_BYTES } from "@/lib/document-import";
+import { normalizeImageDerivationMode } from "@/lib/image-intake";
 import { getRequiredSession } from "@/lib/server-session";
+import { ingestUploadedSourceForUser } from "@/lib/source-intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +29,9 @@ export async function POST(request) {
   const formData = await request.formData();
   const file = formData.get("file");
   const projectKey = String(formData.get("projectKey") || "").trim();
+  const derivationMode = normalizeImageDerivationMode(
+    String(formData.get("derivationMode") || "").trim(),
+  );
 
   if (!file || typeof file.arrayBuffer !== "function") {
     return NextResponse.json({ error: "Choose a file to upload." }, { status: 400 });
@@ -52,35 +52,14 @@ export async function POST(request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const imported = await ingestUploadedDocument({
+    const result = await ingestUploadedSourceForUser(session.user.id, {
+      buffer,
       filename: file.name,
       mimeType: file.type || "",
-      buffer,
-    });
-
-    const documentSummary = await createReaderDocumentForUser(session.user.id, {
-      title: imported.title,
-      subtitle: imported.subtitle,
       projectKey,
-      format: imported.format,
-      originalFilename: file.name,
-      mimeType: file.type || "",
-      contentMarkdown: imported.contentMarkdown,
-      wordCount: imported.wordCount,
-      sectionCount: imported.sectionCount,
-      intakeKind: "upload",
-      intakeDiagnostics: imported.diagnostics || [],
+      derivationMode,
     });
-    const document = await getReaderDocumentDataForUser(session.user.id, documentSummary.documentKey);
-
-    return NextResponse.json({
-      ok: true,
-      document,
-      intake: {
-        format: imported.format,
-        diagnostics: imported.diagnostics || [],
-      },
-    });
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       {

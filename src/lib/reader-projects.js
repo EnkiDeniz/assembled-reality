@@ -307,6 +307,7 @@ export async function createReaderProjectForUser(
     title,
     subtitle = "",
     sourceDocumentKeys = [PRIMARY_WORKSPACE_DOCUMENT_KEY],
+    includeDefaultSource = true,
   } = {},
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -328,7 +329,9 @@ export async function createReaderProjectForUser(
   ];
   const initialSourceKeys = normalizedSourceKeys.length
     ? normalizedSourceKeys
-    : [PRIMARY_WORKSPACE_DOCUMENT_KEY];
+    : includeDefaultSource
+      ? [PRIMARY_WORKSPACE_DOCUMENT_KEY]
+      : [];
 
   try {
     const project = await readerProjectModel.create({
@@ -338,13 +341,17 @@ export async function createReaderProjectForUser(
         title: normalizedTitle,
         subtitle: normalizedSubtitle,
         currentAssemblyDocumentKey: null,
-        documents: {
-          create: initialSourceKeys.map((documentKey, index) => ({
-            documentKey,
-            role: "SOURCE",
-            position: index,
-          })),
-        },
+        ...(initialSourceKeys.length
+          ? {
+              documents: {
+                create: initialSourceKeys.map((documentKey, index) => ({
+                  documentKey,
+                  role: "SOURCE",
+                  position: index,
+                })),
+              },
+            }
+          : {}),
       },
       include: {
         documents: {

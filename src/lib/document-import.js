@@ -623,6 +623,53 @@ async function convertHtmlToMarkdown(html) {
   return service.turndown(String(html || ""));
 }
 
+export async function ingestHtmlSource({
+  html = "",
+  titleHint = "",
+  fallbackTitle = "Pasted source",
+} = {}) {
+  const normalizedHtml = String(html || "").trim();
+
+  if (!normalizedHtml) {
+    throw createImportError("clipboard_empty", "No readable HTML was provided.");
+  }
+
+  const markdown = normalizeMarkdownSource(await convertHtmlToMarkdown(normalizedHtml));
+  if (!markdown) {
+    throw createImportError(
+      "html_no_text",
+      "The provided page did not contain readable content.",
+    );
+  }
+
+  const resolvedTitleHint =
+    String(titleHint || "").trim() || guessTitleFromText(markdown, fallbackTitle);
+
+  return finalizeImportedDocument(
+    "markdown",
+    structureMarkdownImport(markdown, resolvedTitleHint),
+  );
+}
+
+export function ingestPlainTextSource({
+  text = "",
+  titleHint = "",
+  fallbackTitle = "Pasted source",
+} = {}) {
+  const normalizedText = String(text || "").trim();
+  if (!normalizedText) {
+    throw createImportError("clipboard_empty", "No readable text was provided.");
+  }
+
+  const resolvedTitleHint =
+    String(titleHint || "").trim() || guessTitleFromText(normalizedText, fallbackTitle);
+
+  return finalizeImportedDocument(
+    "markdown",
+    structurePlainTextImport(normalizedText, resolvedTitleHint),
+  );
+}
+
 function finalizeImportedDocument(format, structured, diagnostics = []) {
   const contentMarkdown = buildCanonicalMarkdown(structured);
   const visibleText = extractVisibleText(contentMarkdown);
@@ -798,22 +845,18 @@ export async function ingestPastedDocument({ html = "", text = "", mode = "sourc
   }
 
   if (normalizedHtml) {
-    const markdown = normalizeMarkdownSource(await convertHtmlToMarkdown(normalizedHtml));
-    if (markdown) {
-      const titleHint = guessTitleFromText(
-        markdown,
-        mode === "clipboard" ? "Clipboard source" : "Pasted source",
-      );
-      return finalizeImportedDocument("markdown", structureMarkdownImport(markdown, titleHint));
-    }
+    return ingestHtmlSource({
+      html: normalizedHtml,
+      fallbackTitle: mode === "clipboard" ? "Clipboard source" : "Pasted source",
+    });
   }
 
-  const titleHint = guessTitleFromText(
-    normalizedText,
-    mode === "clipboard" ? "Clipboard source" : "Pasted source",
-  );
   if (!normalizedText) {
     throw createImportError("clipboard_empty", "Clipboard did not contain readable text.");
   }
-  return finalizeImportedDocument("markdown", structurePlainTextImport(normalizedText, titleHint));
+
+  return ingestPlainTextSource({
+    text: normalizedText,
+    fallbackTitle: mode === "clipboard" ? "Clipboard source" : "Pasted source",
+  });
 }
