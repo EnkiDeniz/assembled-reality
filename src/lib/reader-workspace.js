@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getReaderProfileByUserId } from "@/lib/reader-db";
 import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import { getWorkspaceDocumentForUser } from "@/lib/workspace-documents";
 import {
   clampListeningRate,
   fromPrismaListeningStatus,
@@ -232,6 +233,62 @@ export async function loadListeningSessionForUser(
   return {
     listeningSession: serializeListeningSession(session),
     voicePreferences: serializeVoicePreferences(owner.profile),
+  };
+}
+
+export async function buildResumeSessionSummaryForUser(
+  userId,
+  documentKeys = [],
+) {
+  const owner = await resolveWorkspaceOwner(userId);
+  if (!owner) return null;
+
+  const normalizedDocumentKeys = Array.isArray(documentKeys)
+    ? [...new Set(documentKeys.filter(Boolean))]
+    : [];
+  const activeStatuses = [
+    toPrismaListeningStatus("active"),
+    toPrismaListeningStatus("paused"),
+  ];
+  const session = await prisma.readerListeningSession.findFirst({
+    where: {
+      readerProfileId: owner.profileId,
+      status: {
+        in: activeStatuses,
+      },
+      ...(normalizedDocumentKeys.length
+        ? {
+            documentKey: {
+              in: normalizedDocumentKeys,
+            },
+          }
+        : {}),
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+  });
+
+  if (!session) return null;
+
+  const document = await getWorkspaceDocumentForUser(userId, session.documentKey);
+  const blocks = Array.isArray(document?.blocks) ? document.blocks : [];
+  const matchedBlockIndex = blocks.findIndex((block) => block.id === session.activeNodeId);
+  const resolvedIndex = matchedBlockIndex >= 0 ? matchedBlockIndex : 0;
+  const activeBlock = blocks[resolvedIndex] || null;
+
+  return {
+    documentKey: session.documentKey,
+    title: document?.title || "Untitled document",
+    subtitle: document?.subtitle || "",
+    status: fromPrismaListeningStatus(session.status),
+    blockId: activeBlock?.id || session.activeNodeId || null,
+    blockPosition:
+      typeof activeBlock?.sourcePosition === "number"
+        ? activeBlock.sourcePosition + 1
+        : resolvedIndex + 1,
+    totalBlocks: blocks.length,
+    updatedAt: session.updatedAt.toISOString(),
   };
 }
 

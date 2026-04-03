@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import {
   buildWorkspaceMarkdown,
   createWorkspaceLogEntry,
@@ -30,9 +30,10 @@ import {
 } from "@/lib/project-model";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
 const STATUS_TIMEOUT_MS = 5000;
+const EMPTY_BLOCKS = [];
 const WORKSPACE_MODES = {
   listen: "listen",
   assemble: "assemble",
@@ -42,6 +43,22 @@ const AI_SCOPE_OPTIONS = [
   { value: "block", label: "BLOCK" },
   { value: "clipboard", label: "CLIP" },
 ];
+const IMAGE_DERIVATION_OPTIONS = [
+  { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
+  { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
+];
+const IMAGE_ACCEPT_VALUE = ".txt,.md,.markdown,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.gif";
+const SUPPORTED_IMAGE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
+
+function normalizePreferredImageDerivationMode(value = "") {
+  return normalizeImageDerivationMode(value) || IMAGE_DERIVATION_OPTIONS[0].value;
+}
 
 function isWorkspaceMode(value) {
   return value === WORKSPACE_MODES.listen || value === WORKSPACE_MODES.assemble;
@@ -131,6 +148,57 @@ function getAiPlaceholder(scope) {
   if (scope === "block") return "ask about this block...";
   if (scope === "clipboard") return "ask about the clipboard...";
   return "ask about this document...";
+}
+
+function getImageDerivationLabel(value = "") {
+  return (
+    IMAGE_DERIVATION_OPTIONS.find((option) => option.value === value)?.label ||
+    IMAGE_DERIVATION_OPTIONS[0].label
+  );
+}
+
+function getImageDerivationShortLabel(value = "") {
+  return (
+    IMAGE_DERIVATION_OPTIONS.find((option) => option.value === value)?.shortLabel ||
+    IMAGE_DERIVATION_OPTIONS[0].shortLabel
+  );
+}
+
+function getImageDerivationDetail(value = "") {
+  if (value === "notes") {
+    return "Best for spaces, objects, site visits, and visual observations.";
+  }
+
+  return "Best for screenshots, photographed pages, whiteboards, and scanned notes.";
+}
+
+function isSupportedImageMimeType(value = "") {
+  return SUPPORTED_IMAGE_MIME_TYPES.has(String(value || "").trim().toLowerCase());
+}
+
+function isImageFilename(value = "") {
+  return /\.(png|jpe?g|webp|gif)$/i.test(String(value || "").trim());
+}
+
+function isImageFileLike(file) {
+  if (!file) return false;
+  return isSupportedImageMimeType(file.type || "") || isImageFilename(file.name || "");
+}
+
+function dataUrlMimeType(dataUrl = "") {
+  const match = String(dataUrl || "")
+    .trim()
+    .match(/^data:([^;,]+);base64,/i);
+  return match?.[1]?.trim()?.toLowerCase() || "";
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read the pasted image."));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function isSourceDocument(document) {
@@ -291,6 +359,15 @@ function SourceActionIcon({ kind }) {
 }
 
 function WorkspaceActionIcon({ kind }) {
+  if (kind === "back") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M19 12H5" />
+        <path d="m11 6-6 6 6 6" />
+      </svg>
+    );
+  }
+
   if (kind === "listen") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
@@ -361,6 +438,36 @@ function WorkspaceActionIcon({ kind }) {
     );
   }
 
+  if (kind === "account") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <circle cx="12" cy="8.5" r="3.2" />
+        <path d="M5 19c1.8-3 4.1-4.5 7-4.5S17.2 16 19 19" />
+      </svg>
+    );
+  }
+
+  if (kind === "menu") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M5 7h14" />
+        <path d="M5 12h14" />
+        <path d="M5 17h14" />
+      </svg>
+    );
+  }
+
+  if (kind === "log") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M7 6.5h10" />
+        <path d="M7 11.5h10" />
+        <path d="M7 16.5h6" />
+        <rect x="4.5" y="4.5" width="15" height="15" rx="2" />
+      </svg>
+    );
+  }
+
   return null;
 }
 
@@ -376,8 +483,19 @@ async function readClipboardPayloadFromNavigator() {
       const items = await navigator.clipboard.read();
       let html = "";
       let text = "";
+      let imageDataUrl = "";
+      let imageMimeType = "";
+      let imageFilename = "";
 
       for (const item of items) {
+        const imageType = item.types.find((type) => isSupportedImageMimeType(type));
+        if (!imageDataUrl && imageType) {
+          const blob = await item.getType(imageType);
+          imageDataUrl = await blobToDataUrl(blob);
+          imageMimeType = blob.type || imageType;
+          imageFilename = imageType.replace("image/", "clipboard-image.") || "clipboard-image.png";
+          break;
+        }
         if (!html && item.types.includes("text/html")) {
           const blob = await item.getType("text/html");
           html = await blob.text();
@@ -391,8 +509,8 @@ async function readClipboardPayloadFromNavigator() {
         }
       }
 
-      if (html || text) {
-        return { html, text };
+      if (imageDataUrl || html || text) {
+        return { html, text, imageDataUrl, imageMimeType, imageFilename };
       }
     } catch (error) {
       lastError = error;
@@ -403,7 +521,7 @@ async function readClipboardPayloadFromNavigator() {
     try {
       const text = await navigator.clipboard.readText();
       if (text.trim()) {
-        return { html: "", text };
+        return { html: "", text, imageDataUrl: "", imageMimeType: "", imageFilename: "" };
       }
     } catch (error) {
       lastError = error;
@@ -417,7 +535,27 @@ async function readClipboardPayloadFromNavigator() {
   throw new Error("Clipboard is empty.");
 }
 
-function getClipboardPayloadFromPasteEvent(event) {
+async function getClipboardPayloadFromPasteEvent(event) {
+  const items = Array.from(event?.clipboardData?.items || []);
+  const imageItem = items.find(
+    (item) =>
+      item?.kind === "file" &&
+      isSupportedImageMimeType(item?.type || ""),
+  );
+
+  if (imageItem?.getAsFile) {
+    const file = imageItem.getAsFile();
+    if (file) {
+      return {
+        html: "",
+        text: "",
+        imageDataUrl: await blobToDataUrl(file),
+        imageMimeType: file.type || "",
+        imageFilename: file.name || "clipboard-image.png",
+      };
+    }
+  }
+
   const html = event?.clipboardData?.getData("text/html") || "";
   const text = event?.clipboardData?.getData("text/plain") || "";
 
@@ -425,7 +563,7 @@ function getClipboardPayloadFromPasteEvent(event) {
     return null;
   }
 
-  return { html, text };
+  return { html, text, imageDataUrl: "", imageMimeType: "", imageFilename: "" };
 }
 
 function toDocumentSummary(document, previous = null) {
@@ -463,6 +601,15 @@ function toDocumentSummary(document, previous = null) {
       document.hiddenFromProjectHome ?? previous?.hiddenFromProjectHome,
     ),
     sourceFiles: Array.isArray(document.sourceFiles) ? document.sourceFiles : [],
+    sourceAssetIds: Array.isArray(document.sourceAssetIds)
+      ? document.sourceAssetIds
+      : previous?.sourceAssetIds || [],
+    sourceAssets: Array.isArray(document.sourceAssets)
+      ? document.sourceAssets
+      : previous?.sourceAssets || [],
+    derivationKind: document.derivationKind || previous?.derivationKind || "",
+    derivationModel: document.derivationModel || previous?.derivationModel || "",
+    derivationStatus: document.derivationStatus || previous?.derivationStatus || "",
   };
 }
 
@@ -624,6 +771,48 @@ function buildWorkspaceUrl(
   return query ? `/workspace?${query}` : "/workspace";
 }
 
+function getDocumentKindLabel(document) {
+  if (!document) return "Document";
+  if (document.documentType === "builtin" || document.sourceType === "builtin") {
+    return "Sample";
+  }
+  if (document.isAssembly || document.documentType === "assembly") {
+    return "Assembly";
+  }
+  if (document.derivationKind === "ocr-document") {
+    return "Image → Doc";
+  }
+  if (document.derivationKind === "image-notes") {
+    return "Image → Notes";
+  }
+  return document.formatLabel || "Document";
+}
+
+function getPrimaryImageSourceAsset(document) {
+  const assets = Array.isArray(document?.sourceAssets) ? document.sourceAssets : [];
+  return (
+    assets.find((asset) => String(asset?.mimeType || "").startsWith("image/")) ||
+    assets[0] ||
+    null
+  );
+}
+
+function getDocumentBlockCount(document) {
+  return Number(document?.sectionCount) || 0;
+}
+
+function getDocumentBlockCountLabel(document) {
+  const blockCount = getDocumentBlockCount(document);
+  return `${blockCount} block${blockCount === 1 ? "" : "s"}`;
+}
+
+function getResumeSessionLabel(summary) {
+  if (!summary?.documentKey) return "";
+  const current = summary.blockPosition || 1;
+  const total = summary.totalBlocks || 0;
+  return total ? `Block ${current} of ${total}` : `Block ${current}`;
+}
+
 function ShelfGroup({
   label,
   documents,
@@ -733,7 +922,7 @@ function WorkspaceShelf({
         onClick={onUpload}
         disabled={uploading}
       >
-        {uploading ? "Importing..." : "+ Upload"}
+        {uploading ? "Importing..." : "+ Upload source"}
       </button>
     </div>
   );
@@ -743,7 +932,6 @@ function WorkspaceLaunchpad({
   activeProject,
   activeProjectKey,
   projects,
-  activeDocument,
   documents,
   projectDrafts = [],
   projectActionPending = "",
@@ -758,6 +946,8 @@ function WorkspaceLaunchpad({
   uploading = false,
   pastePendingMode = "",
   clipboardCount = 0,
+  lastUsedMode = WORKSPACE_MODES.assemble,
+  resumeSessionSummary = null,
 }) {
   const grouped = groupedDocuments(documents);
   const listenDocument =
@@ -765,14 +955,14 @@ function WorkspaceLaunchpad({
       activeProject,
       documents,
       WORKSPACE_MODES.listen,
-      activeDocument || null,
+      null,
     );
   const assembleDocument =
     resolveProjectModeDocument(
       activeProject,
       documents,
       WORKSPACE_MODES.assemble,
-      activeDocument || null,
+      null,
     );
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
@@ -780,299 +970,288 @@ function WorkspaceLaunchpad({
     grouped.assemblies[0] ||
     null;
   const sourceDocuments = grouped.sources;
-  const sourceCount = activeProject?.sourceCount ?? sourceDocuments.length;
-  const assemblyCount = activeProject?.assemblyCount ?? grouped.assemblies.length;
+  const assemblyDocuments = grouped.assemblies;
+  const sourceCount = sourceDocuments.length;
+  const assemblyCount = assemblyDocuments.length;
   const busy = uploading || Boolean(pastePendingMode);
+  const openMode = normalizeWorkspaceMode(lastUsedMode, WORKSPACE_MODES.assemble);
+
+  function renderDocumentRow(document, { active = false } = {}) {
+    return (
+      <div
+        key={document.documentKey}
+        className={`assembler-document-row ${active ? "is-active" : ""}`}
+      >
+        <button
+          type="button"
+          className="assembler-document-row__quick"
+          onClick={() => onOpenDocument(document.documentKey, WORKSPACE_MODES.listen)}
+          aria-label={`Listen to ${document.title}`}
+        >
+          <WorkspaceActionIcon kind="listen" />
+        </button>
+
+        <button
+          type="button"
+          className="assembler-document-row__body"
+          onClick={() => onOpenDocument(document.documentKey, openMode)}
+        >
+          <span className="assembler-document-row__title">{document.title}</span>
+          <span className="assembler-document-row__meta">
+            {getDocumentBlockCountLabel(document)}
+          </span>
+        </button>
+
+        <span className="assembler-document-row__badge">
+          {loadingDocumentKey === document.documentKey
+            ? "Loading…"
+            : getDocumentKindLabel(document)}
+        </span>
+      </div>
+    );
+  }
 
   return (
-    <div className="assembler-launchpad">
-      <div className="assembler-launchpad__panel">
-        <div className="assembler-launchpad__copy">
-          <div className="assembler-launchpad__brand">
-            <span className="assembler-launchpad__mark" aria-hidden="true">
-              <span />
-              <span />
-              <span />
+    <div className="assembler-home">
+      <div className="assembler-home__copy">
+        <span className="assembler-home__eyebrow">Project</span>
+        <h1 className="assembler-home__title">{activeProject?.title || "Main Project"}</h1>
+        <p className="assembler-home__body">
+          {activeProject?.subtitle || "Continue where you left off or start from fresh source material."}
+        </p>
+      </div>
+
+      {resumeSessionSummary?.documentKey ? (
+        <button
+          type="button"
+          className="assembler-home__resume"
+          onClick={() =>
+            onOpenDocument(
+              resumeSessionSummary.documentKey,
+              WORKSPACE_MODES.listen,
+              { focusBlockId: resumeSessionSummary.blockId || null },
+            )}
+        >
+          <div className="assembler-home__resume-copy">
+            <span className="assembler-home__resume-label">Continue Listening</span>
+            <span className="assembler-home__resume-title">{resumeSessionSummary.title}</span>
+            <span className="assembler-home__resume-detail">
+              {getResumeSessionLabel(resumeSessionSummary)}
             </span>
-            <div className="assembler-launchpad__brand-copy">
-              <h1 className="assembler-launchpad__name">{activeProject?.title || "Main Project"}</h1>
-              <div className="assembler-launchpad__meta-line">
-                <span>{sourceCount} src</span>
-                <span>{assemblyCount} asm</span>
-                <span>{projectDrafts.length} rcpt</span>
-                <Link href="/account">Settings</Link>
-              </div>
-            </div>
           </div>
-        </div>
+          <span className="assembler-home__resume-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="listen" />
+          </span>
+        </button>
+      ) : null}
 
-        <div className="assembler-launchpad__actions">
-          <button
-            type="button"
-            className="assembler-launchpad__action is-primary"
-            onClick={() => onEnterMode(WORKSPACE_MODES.listen, listenDocument?.documentKey || "")}
-            disabled={!listenDocument || busy}
-          >
-            <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="listen" />
-            </span>
-            <span className="assembler-launchpad__action-label">Mode</span>
-            <span className="assembler-launchpad__action-value">Listen</span>
-          </button>
+      <div className="assembler-home__actions">
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={() => onEnterMode(WORKSPACE_MODES.listen, listenDocument?.documentKey || "")}
+          disabled={!listenDocument || busy}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="listen" />
+          </span>
+          <span className="assembler-home__action-label">Listen</span>
+        </button>
 
-          <button
-            type="button"
-            className="assembler-launchpad__action is-primary"
-            onClick={() => onEnterMode(WORKSPACE_MODES.assemble, assembleDocument?.documentKey || "")}
-            disabled={!assembleDocument || busy}
-          >
-            <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="assemble" />
-            </span>
-            <span className="assembler-launchpad__action-label">Mode</span>
-            <span className="assembler-launchpad__action-value">Assemble</span>
-          </button>
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={() => onEnterMode(WORKSPACE_MODES.assemble, assembleDocument?.documentKey || "")}
+          disabled={!assembleDocument || busy}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="assemble" />
+          </span>
+          <span className="assembler-home__action-label">Assemble</span>
+        </button>
 
-          <button
-            type="button"
-            className="assembler-launchpad__action"
-            onClick={onUpload}
-            disabled={busy}
-          >
-            <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="upload" />
-            </span>
-            <span className="assembler-launchpad__action-label">File</span>
-            <span className="assembler-launchpad__action-value">
-              {uploading ? "Importing..." : "Upload"}
-            </span>
-            <span className="assembler-launchpad__action-detail">PDF DOCX MD TXT</span>
-          </button>
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={onUpload}
+          disabled={busy}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="upload" />
+          </span>
+          <span className="assembler-home__action-label">
+            {uploading ? "Importing…" : "Upload source"}
+          </span>
+        </button>
 
-          <button
-            type="button"
-            className="assembler-launchpad__action"
-            onClick={onPasteSource}
-            disabled={busy}
-          >
-            <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="paste-source" />
-            </span>
-            <span className="assembler-launchpad__action-label">Clipboard</span>
-            <span className="assembler-launchpad__action-value">
-              {pastePendingMode === "source" ? "Pasting..." : "Paste source"}
-            </span>
-            <span className="assembler-launchpad__action-detail">Create source</span>
-          </button>
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={onPasteSource}
+          disabled={busy}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="paste-source" />
+          </span>
+          <span className="assembler-home__action-label">
+            {pastePendingMode === "source" ? "Pasting…" : "Paste source"}
+          </span>
+        </button>
+      </div>
 
-          <button
-            type="button"
-            className="assembler-launchpad__action"
-            onClick={onPasteClipboard}
-            disabled={busy}
-          >
-            <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="clipboard" />
-            </span>
-            <span className="assembler-launchpad__action-label">Stage</span>
-            <span className="assembler-launchpad__action-value">
-              {pastePendingMode === "clipboard" ? "Pasting..." : "Clipboard"}
-            </span>
-            <span className="assembler-launchpad__action-detail">
-              {clipboardCount ? `${clipboardCount} staged` : "Paste blocks"}
-            </span>
-          </button>
-        </div>
+      {projects.length > 1 ? (
+        <div className="assembler-home__section">
+          <div className="assembler-home__section-head">
+            <span>Projects</span>
+            <button
+              type="button"
+              className="assembler-home__section-action"
+              onClick={onCreateProject}
+              disabled={projectActionPending === "__create__"}
+            >
+              {projectActionPending === "__create__" ? "Creating…" : "New"}
+            </button>
+          </div>
 
-        <div className="assembler-launchpad__sections">
-          <div className="assembler-launchpad__section">
-            <div className="assembler-launchpad__section-head">
-              <span>Projects</span>
+          <div className="assembler-home__section-list">
+            {projects.map((project) => (
               <button
+                key={project.projectKey}
                 type="button"
-                className="assembler-launchpad__section-action"
-                onClick={onCreateProject}
-                disabled={projectActionPending === "__create__"}
+                className={`assembler-home__project-row ${
+                  project.projectKey === activeProjectKey ? "is-active" : ""
+                }`}
+                onClick={() => onOpenProject(project.projectKey)}
+                disabled={projectActionPending === project.projectKey}
               >
-                {projectActionPending === "__create__" ? "Creating..." : "New"}
-              </button>
-            </div>
-
-            <div className="assembler-launchpad__section-list">
-              {projects.slice(0, 6).map((project) => (
-                <button
-                  key={project.projectKey}
-                  type="button"
-                  className={`assembler-launchpad__recent-row ${
-                    project.projectKey === activeProjectKey ? "is-active" : ""
-                  }`}
-                  onClick={() => onOpenProject(project.projectKey)}
-                  disabled={projectActionPending === project.projectKey}
-                >
-                  <div className="assembler-launchpad__recent-main">
-                    <span className="assembler-launchpad__recent-title">{project.title}</span>
-                  </div>
-                  <span className="assembler-launchpad__recent-meta">
-                    {projectActionPending === project.projectKey
-                      ? "opening"
-                      : `${project.sourceCount} src · ${project.assemblyCount} asm`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="assembler-launchpad__section">
-            <div className="assembler-launchpad__section-head">
-              <span>Sources</span>
-              <span>{sourceCount}</span>
-            </div>
-
-            <div className="assembler-launchpad__section-list">
-              {sourceDocuments.length ? (
-                sourceDocuments.slice(0, 6).map((document) => (
-                  <button
-                    key={document.documentKey}
-                    type="button"
-                    className="assembler-launchpad__recent-row"
-                    onClick={() => onOpenDocument(document.documentKey)}
-                  >
-                    <div className="assembler-launchpad__recent-main">
-                      <span className="assembler-launchpad__recent-title">{document.title}</span>
-                    </div>
-                    <span className="assembler-launchpad__recent-meta">
-                      {loadingDocumentKey === document.documentKey
-                        ? "loading"
-                        : document.documentType === "builtin"
-                          ? "builtin"
-                          : document.formatLabel || "source"}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <p className="assembler-launchpad__empty">
-                  No visible sources yet.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="assembler-launchpad__section">
-            <div className="assembler-launchpad__section-head">
-              <span>Current assembly</span>
-              <span>{currentAssemblyDocument ? "live" : "idle"}</span>
-            </div>
-
-            {currentAssemblyDocument ? (
-              <button
-                type="button"
-                className="assembler-launchpad__recent-row"
-                onClick={() => onOpenDocument(currentAssemblyDocument.documentKey)}
-              >
-                <div className="assembler-launchpad__recent-main">
-                  <span className="assembler-launchpad__recent-title">{currentAssemblyDocument.title}</span>
-                </div>
-                <span className="assembler-launchpad__recent-meta">
-                  {loadingDocumentKey === currentAssemblyDocument.documentKey ? "loading" : "assembly"}
+                <span className="assembler-home__project-title">{project.title}</span>
+                <span className="assembler-home__project-meta">
+                  {projectActionPending === project.projectKey
+                    ? "Opening…"
+                    : `${project.sourceCount} sources`}
                 </span>
               </button>
-            ) : (
-              <p className="assembler-launchpad__empty">Nothing assembled yet.</p>
-            )}
-
-            <div className="assembler-launchpad__section-head assembler-launchpad__section-head--inline">
-              <span>Receipts</span>
-              <Link href="/account" className="assembler-launchpad__recent-link">
-                Account
-              </Link>
-            </div>
-            <p className="assembler-launchpad__empty">
-              {projectDrafts.length ? `${projectDrafts.length} receipts` : "No receipts"}
-            </p>
+            ))}
           </div>
         </div>
+      ) : null}
+
+      <div className="assembler-home__section">
+        <div className="assembler-home__section-head">
+          <span>Sources</span>
+          <span>{sourceCount}</span>
+        </div>
+
+        <div className="assembler-home__section-list">
+          {sourceDocuments.length ? (
+            sourceDocuments.slice(0, 6).map((document) => renderDocumentRow(document))
+          ) : (
+            <p className="assembler-home__empty">No sources yet.</p>
+          )}
+        </div>
       </div>
+
+      <div className="assembler-home__section">
+        <div className="assembler-home__section-head">
+          <span>Assemblies</span>
+          <span>{assemblyCount}</span>
+        </div>
+
+        <div className="assembler-home__section-list">
+          {assemblyDocuments.length ? (
+            assemblyDocuments.slice(0, 6).map((document) =>
+              renderDocumentRow(document, {
+                active: document.documentKey === currentAssemblyDocument?.documentKey,
+              }))
+          ) : (
+            <p className="assembler-home__empty">Nothing assembled yet.</p>
+          )}
+        </div>
+      </div>
+
+      {clipboardCount || projectDrafts.length ? (
+        <div className="assembler-home__footer">
+          {clipboardCount ? <span>{clipboardCount} staged for assembly</span> : null}
+          {projectDrafts.length ? (
+            <Link href="/account" className="assembler-home__footer-link">
+              {projectDrafts.length} receipt{projectDrafts.length === 1 ? "" : "s"}
+            </Link>
+          ) : null}
+          {!projectDrafts.length && clipboardCount ? (
+            <button
+              type="button"
+              className="assembler-home__footer-link"
+              onClick={onPasteClipboard}
+              disabled={pastePendingMode === "clipboard" || busy}
+            >
+              {pastePendingMode === "clipboard" ? "Pasting…" : "Add from Clipboard"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function ListenPicker({
-  activeProject,
   documents,
   activeDocumentKey,
   loadingDocumentKey,
-  onOpenProjectHome,
-  onSelectDocument,
+  lastUsedMode = WORKSPACE_MODES.listen,
+  onOpenDocument,
 }) {
   const grouped = groupedDocuments(documents);
-  const currentAssembly =
-    (activeProject?.currentAssemblyDocumentKey &&
-      grouped.assemblies.find(
-        (document) => document.documentKey === activeProject.currentAssemblyDocumentKey,
-      )) ||
-    grouped.assemblies[0] ||
-    null;
-  const priorAssemblies = grouped.assemblies.filter(
-    (document) => document.documentKey !== currentAssembly?.documentKey,
-  );
+  const openMode = normalizeWorkspaceMode(lastUsedMode, WORKSPACE_MODES.listen);
 
-  function renderDocumentRow(document, meta) {
+  function renderDocumentRow(document) {
     return (
-      <button
+      <div
         key={document.documentKey}
-        type="button"
-        className={`assembler-listen-picker__item ${
+        className={`assembler-document-row assembler-document-row--picker ${
           document.documentKey === activeDocumentKey ? "is-active" : ""
         }`}
-        onClick={() => onSelectDocument(document.documentKey)}
       >
-        <span className="assembler-listen-picker__item-title">{document.title}</span>
-        <span className="assembler-listen-picker__item-meta">
-          {loadingDocumentKey === document.documentKey ? "loading" : meta}
+        <button
+          type="button"
+          className="assembler-document-row__quick"
+          onClick={() => onOpenDocument(document.documentKey, WORKSPACE_MODES.listen)}
+          aria-label={`Listen to ${document.title}`}
+        >
+          <WorkspaceActionIcon kind="listen" />
+        </button>
+        <button
+          type="button"
+          className="assembler-document-row__body"
+          onClick={() => onOpenDocument(document.documentKey, openMode)}
+        >
+          <span className="assembler-document-row__title">{document.title}</span>
+          <span className="assembler-document-row__meta">
+            {getDocumentBlockCountLabel(document)}
+          </span>
+        </button>
+        <span className="assembler-document-row__badge">
+          {loadingDocumentKey === document.documentKey
+            ? "Loading…"
+            : getDocumentKindLabel(document)}
         </span>
-      </button>
+      </div>
     );
   }
 
   return (
     <div className="assembler-listen-picker">
       <div className="assembler-listen-picker__section">
-        <span className="assembler-listen-picker__label">Project</span>
-        <button type="button" className="assembler-listen-picker__item" onClick={onOpenProjectHome}>
-          <span className="assembler-listen-picker__item-title">
-            {activeProject?.title || "Project home"}
-          </span>
-          <span className="assembler-listen-picker__item-meta">home</span>
-        </button>
-      </div>
-
-      <div className="assembler-listen-picker__section">
         <span className="assembler-listen-picker__label">Sources</span>
         {grouped.sources.length
-          ? grouped.sources.map((document) =>
-              renderDocumentRow(
-                document,
-                document.documentType === "builtin"
-                  ? "builtin"
-                  : document.formatLabel || "source",
-              ))
+          ? grouped.sources.map((document) => renderDocumentRow(document))
           : <span className="assembler-listen-picker__empty">No visible sources.</span>}
       </div>
 
       <div className="assembler-listen-picker__section">
-        <span className="assembler-listen-picker__label">Current assembly</span>
-        {currentAssembly
-          ? renderDocumentRow(currentAssembly, "assembly")
-          : (
-            <span className="assembler-listen-picker__empty">No assembly yet.</span>
-          )}
-      </div>
-
-      <div className="assembler-listen-picker__section">
-        <span className="assembler-listen-picker__label">Earlier assemblies</span>
-        {priorAssemblies.length
-          ? priorAssemblies.map((document) => renderDocumentRow(document, "assembly"))
-          : <span className="assembler-listen-picker__empty">No earlier assemblies.</span>}
+        <span className="assembler-listen-picker__label">Assemblies</span>
+        {grouped.assemblies.length
+          ? grouped.assemblies.map((document) => renderDocumentRow(document))
+          : <span className="assembler-listen-picker__empty">Nothing assembled yet.</span>}
       </div>
     </div>
   );
@@ -1081,7 +1260,6 @@ function ListenPicker({
 function ListenSurface({
   activeDocument,
   activeDocumentWarning,
-  activeDocumentState,
   blocks,
   currentBlockId,
   focusedBlockId,
@@ -1091,79 +1269,128 @@ function ListenSurface({
   pickerOpen,
   onTogglePicker,
   onOpenProjectHome,
-  onSelectDocument,
-  activeProject,
+  onOpenDocument,
   projectDocuments,
   loadingDocumentKey,
-  status,
-  statusTone,
+  onOpenLog,
+  onExportDocument,
+  lastUsedMode = WORKSPACE_MODES.listen,
+  isMobileLayout = false,
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <>
       <div className="assembler-listen__chrome">
-        <div className="assembler-listen__bar">
+        <div className="assembler-listen__topbar">
           <button
             type="button"
-            className={`assembler-listen__chrome-button ${pickerOpen ? "is-active" : ""}`}
-            onClick={onTogglePicker}
+            className="assembler-listen__topbar-icon"
+            onClick={onOpenProjectHome}
+            aria-label="Back to home"
           >
-            <WorkspaceActionIcon kind="browse" />
-            <span>Browse</span>
+            <WorkspaceActionIcon kind="back" />
           </button>
 
-          <div className="assembler-listen__active">
-            <span className="assembler-listen__active-label">Listening</span>
-            <span className="assembler-listen__active-title">{activeDocument.title}</span>
+          <span className="assembler-listen__topbar-title">{activeDocument.title}</span>
+
+          <div className="assembler-listen__topbar-actions">
+            <button
+              type="button"
+              className={`assembler-listen__topbar-button ${pickerOpen ? "is-active" : ""}`}
+              onClick={onTogglePicker}
+            >
+              Browse
+            </button>
+
+            <div className="assembler-listen__menu">
+              <button
+                type="button"
+                className="assembler-listen__topbar-icon"
+                onClick={() => setMenuOpen((value) => !value)}
+                aria-label="More listening actions"
+              >
+                <WorkspaceActionIcon kind="menu" />
+              </button>
+
+              {menuOpen ? (
+                <div className="assembler-listen__menu-panel">
+                  <button
+                    type="button"
+                    className="assembler-listen__menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onTogglePicker();
+                    }}
+                  >
+                    Browse
+                  </button>
+                  <button
+                    type="button"
+                    className="assembler-listen__menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onSwitchToAssemble();
+                    }}
+                  >
+                    Assemble
+                  </button>
+                  <button
+                    type="button"
+                    className="assembler-listen__menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onOpenLog();
+                    }}
+                  >
+                    View Log
+                  </button>
+                  <button
+                    type="button"
+                    className="assembler-listen__menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onExportDocument();
+                    }}
+                  >
+                    Export Document
+                  </button>
+                  <Link
+                    href="/account"
+                    className="assembler-listen__menu-item"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Account
+                  </Link>
+                </div>
+              ) : null}
+            </div>
           </div>
-
-          <button
-            type="button"
-            className="assembler-listen__chrome-button"
-            onClick={onSwitchToAssemble}
-          >
-            <WorkspaceActionIcon kind="assemble" />
-            <span>Assemble</span>
-          </button>
         </div>
 
-        {pickerOpen ? (
+        {pickerOpen && !isMobileLayout ? (
           <ListenPicker
-            activeProject={activeProject}
             documents={projectDocuments}
             activeDocumentKey={activeDocument.documentKey}
             loadingDocumentKey={loadingDocumentKey}
-            onOpenProjectHome={onOpenProjectHome}
-            onSelectDocument={onSelectDocument}
+            lastUsedMode={lastUsedMode}
+            onOpenDocument={onOpenDocument}
           />
-        ) : null}
-
-        {activeDocumentState ? (
-          <div className={`assembler-listen__status is-${activeDocumentState.status}`}>
-            {activeDocumentState.message}
-          </div>
-        ) : status ? (
-          <div className={`assembler-listen__status ${statusTone ? `is-${statusTone}` : ""}`}>
-            {status}
-          </div>
         ) : null}
       </div>
 
       <section className="assembler-surface assembler-surface--listen">
         <div className="assembler-listen">
-          <div className="assembler-listen__header">
-            <span className="assembler-listen__eyebrow">
-              {activeDocument.documentType === "assembly" || activeDocument.isAssembly
-                ? "Current assembly"
-                : "Source"}
-            </span>
-            <h1 className="assembler-listen__title">{activeDocument.title}</h1>
-            {activeDocument.subtitle ? (
-              <p className="assembler-listen__subtitle">{activeDocument.subtitle}</p>
-            ) : null}
-            {activeDocumentWarning ? (
-              <p className="assembler-listen__warning">{activeDocumentWarning}</p>
-            ) : null}
-          </div>
+          {activeDocument.subtitle || activeDocumentWarning ? (
+            <div className="assembler-listen__lead">
+              {activeDocument.subtitle ? (
+                <p className="assembler-listen__subtitle">{activeDocument.subtitle}</p>
+              ) : null}
+              {activeDocumentWarning ? (
+                <p className="assembler-listen__warning">{activeDocumentWarning}</p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="assembler-listen__blocks">
             {blocks.map((block) => {
@@ -1208,7 +1435,116 @@ function ListenSurface({
           </div>
         </div>
       </section>
+
+      {isMobileLayout ? (
+        <div className={`assembler-sheet assembler-sheet--browse ${pickerOpen ? "is-open" : ""}`}>
+          <div className="assembler-sheet__backdrop" onClick={onTogglePicker} aria-hidden="true" />
+          <div className="assembler-sheet__panel">
+            <div className="assembler-sheet__header">
+              <span className="assembler-sheet__title">Browse</span>
+              <button
+                type="button"
+                className="assembler-sheet__close"
+                onClick={onTogglePicker}
+              >
+                Done
+              </button>
+            </div>
+
+            <ListenPicker
+              documents={projectDocuments}
+              activeDocumentKey={activeDocument.documentKey}
+              loadingDocumentKey={loadingDocumentKey}
+              lastUsedMode={lastUsedMode}
+              onOpenDocument={(documentKey, mode) => {
+                onTogglePicker();
+                onOpenDocument(documentKey, mode);
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
     </>
+  );
+}
+
+function ImageIntakeChooser({
+  open = false,
+  draft = null,
+  pending = false,
+  preferredMode = IMAGE_DERIVATION_OPTIONS[0].value,
+  onChoose,
+  onClose,
+}) {
+  if (!open || !draft) return null;
+
+  const resolvedFilename = draft.filename || "Clipboard image";
+  const resolvedMimeType =
+    draft.mimeType || dataUrlMimeType(draft?.payload?.imageDataUrl || "") || "image";
+  const sourceLabel = draft.source === "paste" ? "Pasted image" : "Uploaded image";
+
+  return (
+    <div className="assembler-image-chooser">
+      <button
+        type="button"
+        className="assembler-image-chooser__backdrop"
+        aria-label="Close image import chooser"
+        onClick={pending ? undefined : onClose}
+      />
+
+      <div
+        className="assembler-image-chooser__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="image-intake-title"
+      >
+        <div className="assembler-image-chooser__header">
+          <div className="assembler-image-chooser__copy">
+            <span className="assembler-sheet__eyebrow">{sourceLabel}</span>
+            <h2 id="image-intake-title" className="assembler-image-chooser__title">
+              Choose how to turn this image into a source
+            </h2>
+            <p className="assembler-image-chooser__body">
+              One image becomes one source document. The original image stays attached as provenance.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={pending ? undefined : onClose}
+            disabled={pending}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="assembler-image-chooser__meta">
+          <span>{resolvedFilename}</span>
+          <span>{resolvedMimeType.replace("image/", "").toUpperCase()}</span>
+        </div>
+
+        <div className="assembler-image-chooser__actions">
+          {IMAGE_DERIVATION_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`assembler-image-chooser__action ${
+                preferredMode === option.value ? "is-primary" : ""
+              }`}
+              onClick={() => onChoose(option.value)}
+              disabled={pending}
+            >
+              <span className="assembler-image-chooser__action-label">{option.shortLabel}</span>
+              <span className="assembler-image-chooser__action-title">{option.label}</span>
+              <span className="assembler-image-chooser__action-detail">
+                {getImageDerivationDetail(option.value)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1301,33 +1637,49 @@ function WorkspaceToolbar({
   onSetViewMode,
   onToggleEditMode,
   onToggleAi,
+  clipboardCount = 0,
+  stagedCount = 0,
+  isMobileLayout = false,
+  onOpenClipboard,
+  isClipboardOpen = false,
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const totalClipboardCount = clipboardCount + stagedCount;
+
   return (
-    <div className="assembler-toolbar">
+    <div className={`assembler-toolbar ${isMobileLayout ? "is-mobile" : ""}`}>
       <div className="assembler-toolbar__left">
         <button
           type="button"
           className={`assembler-tab ${viewMode === "doc" ? "is-active" : ""}`}
           onClick={() => onSetViewMode("doc")}
         >
-          DOC
+          Document
         </button>
         <button
           type="button"
           className={`assembler-tab ${viewMode === "log" ? "is-active is-log" : ""}`}
           onClick={() => onSetViewMode("log")}
         >
-          LOG
+          Log
         </button>
 
-        {viewMode === "doc" ? (
+        {isMobileLayout ? (
+          <button
+            type="button"
+            className={`assembler-tab ${isClipboardOpen ? "is-active" : ""}`}
+            onClick={onOpenClipboard}
+          >
+            {totalClipboardCount ? `Clipboard ${totalClipboardCount}` : "Clipboard"}
+          </button>
+        ) : viewMode === "doc" ? (
           <button
             type="button"
             className={`assembler-tab ${editMode ? "is-active is-edit" : ""}`}
             onClick={onToggleEditMode}
             disabled={!activeDocument?.isEditable}
           >
-            {editMode ? "EDITING" : "EDIT"}
+            {editMode ? "Editing" : "Edit"}
           </button>
         ) : null}
       </div>
@@ -1343,14 +1695,56 @@ function WorkspaceToolbar({
             ) : null}
           </div>
         ) : null}
-        <button
-          type="button"
-          className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
-          onClick={onToggleAi}
-          aria-label={aiOpen ? "Close AI prompt" : "Open AI prompt"}
-        >
-          {aiOpen ? "CLOSE" : "AI"}
-        </button>
+
+        {isMobileLayout ? (
+          <div className="assembler-toolbar__menu">
+            <button
+              type="button"
+              className="assembler-toolbar__menu-button"
+              onClick={() => setMenuOpen((value) => !value)}
+              aria-label="More document actions"
+            >
+              <WorkspaceActionIcon kind="menu" />
+            </button>
+
+            {menuOpen ? (
+              <div className="assembler-toolbar__menu-panel">
+                {viewMode === "doc" ? (
+                  <button
+                    type="button"
+                    className="assembler-toolbar__menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onToggleEditMode();
+                    }}
+                    disabled={!activeDocument?.isEditable}
+                  >
+                    {editMode ? "Stop Editing" : "Edit"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="assembler-toolbar__menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onToggleAi();
+                  }}
+                >
+                  {aiOpen ? "Close AI" : "Open AI"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
+            onClick={onToggleAi}
+            aria-label={aiOpen ? "Close AI prompt" : "Open AI prompt"}
+          >
+            {aiOpen ? "Close" : "AI"}
+          </button>
+        )}
       </div>
 
       {status ? (
@@ -1696,7 +2090,7 @@ function ClipboardTray({
     <div className="assembler-clipboard">
       <div className="assembler-clipboard__header" onClick={onToggleExpanded}>
         <span>
-          CLIPBOARD
+          Clipboard
           {stagedBlocks.length
             ? ` · ${stagedBlocks.length} AI`
             : ""}
@@ -1795,6 +2189,149 @@ function ClipboardTray({
   );
 }
 
+function MobileComposeSheet({
+  open = false,
+  clipboard,
+  stagedBlocks,
+  documents,
+  onClose,
+  onAcceptStagedBlock,
+  onAcceptAllStagedBlocks,
+  onClearStagedBlocks,
+  onRemoveClipboardIndex,
+  onReorderClipboard,
+  onClearClipboard,
+  onAssemble,
+}) {
+  const sourceCount = new Set(
+    clipboard.map((block) => block.sourceDocumentKey || block.documentKey).filter(Boolean),
+  ).size;
+
+  function getDocumentTitle(documentKey) {
+    return (
+      documents.find((document) => document.documentKey === documentKey)?.title ||
+      documentKey ||
+      "document"
+    );
+  }
+
+  return (
+    <div className={`assembler-sheet assembler-sheet--compose ${open ? "is-open" : ""}`}>
+      <div className="assembler-sheet__backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="assembler-sheet__panel">
+        <div className="assembler-sheet__header">
+          <div>
+            <span className="assembler-sheet__eyebrow">Clipboard</span>
+            <span className="assembler-sheet__title">
+              {clipboard.length} block{clipboard.length === 1 ? "" : "s"} from {sourceCount} source{sourceCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={onClose}
+          >
+            Done
+          </button>
+        </div>
+
+        <div className="assembler-sheet__content">
+          {stagedBlocks.length ? (
+            <div className="assembler-sheet__section">
+              <div className="assembler-sheet__section-head">
+                <span>AI Staging</span>
+                <div className="assembler-sheet__section-actions">
+                  <button type="button" className="assembler-tiny-button" onClick={onAcceptAllStagedBlocks}>
+                    Add all
+                  </button>
+                  <button type="button" className="assembler-tiny-button" onClick={onClearStagedBlocks}>
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              {stagedBlocks.map((block, index) => (
+                <div key={block.id} className="assembler-mobile-clipboard__row is-staged">
+                  <span className="assembler-mobile-clipboard__source">AI</span>
+                  <span className="assembler-mobile-clipboard__text">{block.plainText || block.text}</span>
+                  <button
+                    type="button"
+                    className="assembler-tiny-button"
+                    onClick={() => onAcceptStagedBlock(index)}
+                  >
+                    +
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="assembler-sheet__section">
+            <div className="assembler-sheet__section-head">
+              <span>Selected Blocks</span>
+              <button type="button" className="assembler-tiny-button" onClick={onClearClipboard}>
+                Clear
+              </button>
+            </div>
+
+            {clipboard.length ? (
+              clipboard.map((block, index) => (
+                <div key={`${block.id}-${index}`} className="assembler-mobile-clipboard__row">
+                  <div className="assembler-mobile-clipboard__main">
+                    <span className="assembler-mobile-clipboard__index">{index + 1}</span>
+                    <span className="assembler-mobile-clipboard__source">
+                      {getDocumentTitle(block.sourceDocumentKey || block.documentKey)}
+                    </span>
+                    <span className="assembler-mobile-clipboard__text">{block.plainText || block.text}</span>
+                  </div>
+                  <div className="assembler-mobile-clipboard__actions">
+                    <button
+                      type="button"
+                      className="assembler-tiny-button"
+                      disabled={index === 0}
+                      onClick={() => onReorderClipboard(index, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="assembler-tiny-button"
+                      disabled={index === clipboard.length - 1}
+                      onClick={() => onReorderClipboard(index, 1)}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="assembler-tiny-button is-danger"
+                      onClick={() => onRemoveClipboardIndex(index)}
+                    >
+                      −
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="assembler-sheet__empty">Add blocks here to build a new document.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="assembler-sheet__footer">
+          <button
+            type="button"
+            className="assembler-sheet__primary"
+            disabled={!clipboard.length}
+            onClick={onAssemble}
+          >
+            Assemble
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerBar({
   workspaceMode = WORKSPACE_MODES.assemble,
   currentBlock,
@@ -1808,7 +2345,6 @@ function PlayerBar({
   voiceChoice,
   providerLabel,
   progress,
-  aiOpen,
   deviceVoiceSupported,
   onTogglePlayback,
   onSeekBack,
@@ -1817,7 +2353,6 @@ function PlayerBar({
   onNextBlock,
   onCycleRate,
   onVoiceChange,
-  onToggleAi,
 }) {
   const immersive = workspaceMode === WORKSPACE_MODES.listen;
   const selectedVoiceValue = voiceChoice
@@ -1895,13 +2430,6 @@ function PlayerBar({
               disabled={!playbackAvailable}
             >
               NEXT
-            </button>
-            <button
-              type="button"
-              className={`assembler-player__button ${aiOpen ? "is-ai-active" : ""}`}
-              onClick={onToggleAi}
-            >
-              {aiOpen ? "CLOSE AI" : "AI"}
             </button>
           </>
         )}
@@ -1993,6 +2521,7 @@ export default function WorkspaceShell({
   voiceCatalog,
   defaultVoiceChoice,
   showLaunchpadInitially = false,
+  resumeSessionSummary = null,
 }) {
   const fileInputRef = useRef(null);
   const aiInputRef = useRef(null);
@@ -2004,6 +2533,7 @@ export default function WorkspaceShell({
   const playbackStateRef = useRef({ active: false, kind: null, paused: false });
   const storageHydratedRef = useRef(false);
   const pasteIntoWorkspaceRef = useRef(null);
+  const pendingFocusBlockIdRef = useRef(null);
   const activeDocumentRef = useRef(initialDocument);
   const blocksRef = useRef(initialDocument.blocks || []);
   const rateRef = useRef(1);
@@ -2051,6 +2581,10 @@ export default function WorkspaceShell({
   const [loadingDocumentKey, setLoadingDocumentKey] = useState("");
   const [uploading, setUploading] = useState(false);
   const [pastePendingMode, setPastePendingMode] = useState("");
+  const [preferredImageDerivationMode, setPreferredImageDerivationMode] = useState(
+    IMAGE_DERIVATION_OPTIONS[0].value,
+  );
+  const [pendingImageIntake, setPendingImageIntake] = useState(null);
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
@@ -2067,6 +2601,13 @@ export default function WorkspaceShell({
   const [projectActionPending, setProjectActionPending] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
+  const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
+  const [mobileSourceToolsOpen, setMobileSourceToolsOpen] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [playbackStatus, setPlaybackStatus] = useState("idle");
+  const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
+    resumeSessionSummary,
+  );
 
   const hydratedProjects = hydrateProjectsWithDocuments(projectsState, documentsState);
   const activeProject =
@@ -2094,7 +2635,7 @@ export default function WorkspaceShell({
   const playbackAvailable = availableVoiceCatalog.length > 0;
   const activeDocumentBase = documentCache[activeDocumentKey] || initialDocument;
   const activeDocument = applyDocumentLogState(activeDocumentBase, documentLogs);
-  const blocks = activeDocument?.blocks || [];
+  const blocks = activeDocument?.blocks ?? EMPTY_BLOCKS;
   const activeDocumentState = documentStates[activeDocumentKey] || null;
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
     diagnostics: activeDocument?.intakeDiagnostics,
@@ -2120,6 +2661,9 @@ export default function WorkspaceShell({
   const nextBlock = blocks[currentIndex + 1] || null;
   const progress = blocks.length ? ((currentIndex + 1) / blocks.length) * 100 : 0;
   const isListenMode = workspaceMode === WORKSPACE_MODES.listen;
+  const lastUsedMode =
+    normalizeWorkspaceMode(lastModeByProjectKey[activeProjectKey], workspaceMode) ||
+    workspaceMode;
 
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
@@ -2149,6 +2693,9 @@ export default function WorkspaceShell({
       );
     }
     setRate(clampListeningRate(stored.rate, 1));
+    setPreferredImageDerivationMode(
+      normalizePreferredImageDerivationMode(stored.preferredImageDerivationMode),
+    );
     if (stored.lastModeByProjectKey && typeof stored.lastModeByProjectKey === "object") {
       setLastModeByProjectKey(stored.lastModeByProjectKey);
     }
@@ -2163,6 +2710,22 @@ export default function WorkspaceShell({
   useEffect(() => {
     setDeviceVoiceSupported(browserSupportsDeviceVoice());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 820px)");
+    const updateLayout = () => setIsMobileLayout(mediaQuery.matches);
+    updateLayout();
+    mediaQuery.addEventListener("change", updateLayout);
+    return () => mediaQuery.removeEventListener("change", updateLayout);
+  }, []);
+
+  useEffect(() => {
+    setResumeSessionSummaryState(resumeSessionSummary);
+  }, [resumeSessionSummary]);
 
   useEffect(() => {
     if (!resolvedVoiceChoice && voiceChoice) {
@@ -2253,13 +2816,19 @@ export default function WorkspaceShell({
       clipboard,
       documentLogs,
       rate,
+      preferredImageDerivationMode,
       lastModeByProjectKey,
     });
-  }, [clipboard, documentLogs, rate, storageKey, lastModeByProjectKey]);
+  }, [clipboard, documentLogs, rate, storageKey, preferredImageDerivationMode, lastModeByProjectKey]);
 
   useEffect(() => {
-    setFocusBlockId(firstBlockId);
-    setPlayheadBlockId(firstBlockId);
+    const pendingFocusBlockId = pendingFocusBlockIdRef.current;
+    const availableBlocks = blocksRef.current;
+    const resolvedFocusBlockId =
+      availableBlocks.find((block) => block.id === pendingFocusBlockId)?.id || firstBlockId;
+
+    setFocusBlockId(resolvedFocusBlockId);
+    setPlayheadBlockId(resolvedFocusBlockId);
     setEditMode(false);
     setBlockSaveStates({});
     setCleanupOpen(false);
@@ -2267,6 +2836,9 @@ export default function WorkspaceShell({
     setCleanupReplace("");
     setCleanupPendingAction("");
     setListenPickerOpen(false);
+    setMobileComposeOpen(false);
+    setMobileSourceToolsOpen(false);
+    pendingFocusBlockIdRef.current = null;
   }, [activeDocumentKey, firstBlockId]);
 
   useEffect(() => {
@@ -2318,6 +2890,31 @@ export default function WorkspaceShell({
   }, [status]);
 
   useEffect(() => {
+    if (workspaceMode !== WORKSPACE_MODES.listen) return undefined;
+    if (playbackStatus !== "active" && playbackStatus !== "paused") return undefined;
+
+    const block = currentBlock || focusedBlock || blocks[0] || null;
+    const timeoutId = window.setTimeout(() => {
+      void persistListeningSession(playbackStatus, {
+        documentKey: activeDocument.documentKey,
+        block,
+      });
+    }, 180);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    activeDocument.documentKey,
+    blocks,
+    currentBlock,
+    focusedBlock,
+    playbackStatus,
+    persistListeningSession,
+    rate,
+    resolvedVoiceChoice,
+    workspaceMode,
+  ]);
+
+  useEffect(() => {
     function handleKeyDown(event) {
       if (
         event.key === "/" &&
@@ -2338,21 +2935,30 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && mobileComposeOpen) {
+        setMobileComposeOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && aiOpen) {
         setAiOpen(false);
+      }
+
+      if (event.key === "Escape" && pendingImageIntake && !uploading && !pastePendingMode) {
+        setPendingImageIntake(null);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, mobileComposeOpen, pendingImageIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
-    function handlePaste(event) {
+    async function handlePaste(event) {
       if (pastePendingMode) return;
       if (isTypingTarget(event.target)) return;
 
-      const payload = getClipboardPayloadFromPasteEvent(event);
+      const payload = await getClipboardPayloadFromPasteEvent(event);
       if (!payload) return;
 
       event.preventDefault();
@@ -2505,11 +3111,18 @@ export default function WorkspaceShell({
   }
 
   function openLaunchpad() {
+    if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
+      void persistListeningSession("paused", {
+        documentKey: activeDocument.documentKey,
+        block: currentBlock,
+      });
+    }
     stopPlayback();
     setAiOpen(false);
     setEditMode(false);
     setViewMode("doc");
     setListenPickerOpen(false);
+    setMobileComposeOpen(false);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
       window.history.replaceState(
@@ -2521,6 +3134,75 @@ export default function WorkspaceShell({
       );
     }
   }
+
+  const persistListeningSession = useCallback(async (
+    status = "paused",
+    {
+      documentKey = activeDocument.documentKey,
+      block = currentBlock || focusedBlock || blocks[0] || null,
+    } = {},
+  ) => {
+    if (!documentKey) return;
+
+    try {
+      await fetch("/api/reader/listening-session", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentKey,
+          mode: "flow",
+          activeNodeId: block?.id || null,
+          activeSectionSlug: block?.sectionSlug || null,
+          rate,
+          provider: resolvedVoiceChoice?.provider || null,
+          voiceId: resolvedVoiceChoice?.voiceId || null,
+          status,
+          preferredVoiceProvider: resolvedVoiceChoice?.provider || undefined,
+          preferredVoiceId: resolvedVoiceChoice?.voiceId || undefined,
+          preferredListeningRate: rate,
+        }),
+      });
+
+      if (status === "active" || status === "paused") {
+        setResumeSessionSummaryState({
+          documentKey,
+          title:
+            documentsState.find((document) => document.documentKey === documentKey)?.title ||
+            activeDocument.title,
+          subtitle:
+            documentsState.find((document) => document.documentKey === documentKey)?.subtitle ||
+            activeDocument.subtitle ||
+            "",
+          status,
+          blockId: block?.id || null,
+          blockPosition:
+            typeof block?.sourcePosition === "number" ? block.sourcePosition + 1 : 1,
+          totalBlocks:
+            documentsState.find((document) => document.documentKey === documentKey)?.sectionCount ||
+            blocks.length,
+          updatedAt: new Date().toISOString(),
+        });
+      } else if (resumeSessionSummaryState?.documentKey === documentKey) {
+        setResumeSessionSummaryState(null);
+      }
+    } catch {
+      // Session persistence is additive; do not interrupt the core workspace flow.
+    }
+  }, [
+    activeDocument.documentKey,
+    activeDocument.subtitle,
+    activeDocument.title,
+    blocks,
+    currentBlock,
+    documentsState,
+    focusedBlock,
+    rate,
+    resolvedVoiceChoice?.provider,
+    resolvedVoiceChoice?.voiceId,
+    resumeSessionSummaryState?.documentKey,
+  ]);
 
   function cancelDeviceSpeech({ incrementRunId = true } = {}) {
     if (incrementRunId) {
@@ -2543,6 +3225,7 @@ export default function WorkspaceShell({
     };
     setIsPlaying(false);
     setLoadingAudio(false);
+    setPlaybackStatus("idle");
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -2569,6 +3252,7 @@ export default function WorkspaceShell({
     };
     setIsPlaying(false);
     setLoadingAudio(false);
+    setPlaybackStatus("paused");
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -2670,29 +3354,57 @@ export default function WorkspaceShell({
     return normalizedMode;
   }
 
-  function openMode(mode, documentKey = activeDocumentKey) {
+  function openMode(mode, documentKey = activeDocumentKey, options = {}) {
+    if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
+      void persistListeningSession("paused", {
+        documentKey: activeDocument.documentKey,
+        block: currentBlock,
+      });
+    }
     const normalizedMode = applyWorkspaceMode(mode);
     setLaunchpadOpen(false);
+    setMobileComposeOpen(false);
+    pendingFocusBlockIdRef.current = options.focusBlockId || null;
 
     if (!documentKey || documentKey === activeDocumentKey) {
+      if (options.focusBlockId) {
+        setFocusBlockId(options.focusBlockId);
+        setPlayheadBlockId(options.focusBlockId);
+      }
       updateUrl(activeDocumentKey, activeProjectKey, { mode: normalizedMode });
       return;
     }
 
-    void loadDocument(documentKey, { mode: normalizedMode });
+    void loadDocument(documentKey, {
+      mode: normalizedMode,
+      focusBlockId: options.focusBlockId || null,
+    });
   }
 
   async function loadDocument(documentKey, options = {}) {
     if (!documentKey) return;
     const nextMode = normalizeWorkspaceMode(options.mode || workspaceMode, workspaceMode);
+    const nextFocusBlockId = options.focusBlockId || null;
 
     if (documentKey === activeDocumentKey) {
+      if (nextFocusBlockId) {
+        setFocusBlockId(nextFocusBlockId);
+        setPlayheadBlockId(nextFocusBlockId);
+      }
       updateUrl(documentKey, activeProjectKey, { mode: nextMode });
       return;
     }
 
+    if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
+      void persistListeningSession("paused", {
+        documentKey: activeDocument.documentKey,
+        block: currentBlock,
+      });
+    }
+
     stopPlayback({ keepPlayhead: false });
     setLoadingDocumentKey(documentKey);
+    pendingFocusBlockIdRef.current = nextFocusBlockId;
 
     try {
       if (!documentCache[documentKey]) {
@@ -2711,8 +3423,8 @@ export default function WorkspaceShell({
     }
   }
 
-  async function enterWorkspace(documentKey = activeDocumentKey, mode = workspaceMode) {
-    openMode(mode, documentKey);
+  async function enterWorkspace(documentKey = activeDocumentKey, mode = workspaceMode, options = {}) {
+    openMode(mode, documentKey, options);
   }
 
   async function saveDocument(nextDocument) {
@@ -2753,16 +3465,38 @@ export default function WorkspaceShell({
     return payload.document;
   }
 
-  async function handleUpload(file) {
+  async function handleUpload(file, options = {}) {
     if (!file) return;
 
+    const imageLike = isImageFileLike(file);
+    const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
+
+    if (imageLike && !normalizedImageMode) {
+      setPendingImageIntake({
+        source: "upload",
+        file,
+        filename: file.name || "image-source",
+        mimeType: file.type || "",
+        selectedMode: preferredImageDerivationMode,
+      });
+      setFeedback("Choose how to turn this image into a source.");
+      return;
+    }
+
     setUploading(true);
-    setFeedback(`Importing ${file.name}...`);
+    setFeedback(
+      imageLike
+        ? `Importing ${file.name} as ${getImageDerivationLabel(normalizedImageMode).toLowerCase()}...`
+        : `Importing ${file.name}...`,
+    );
 
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("projectKey", activeProjectKey);
+      if (normalizedImageMode) {
+        formData.append("derivationMode", normalizedImageMode);
+      }
 
       const response = await fetch("/api/documents", {
         method: "POST",
@@ -2776,23 +3510,30 @@ export default function WorkspaceShell({
 
       upsertDocument(payload.document, { replaceLogs: true });
       attachDocumentToActiveProject(payload.document, { role: "SOURCE" });
-      appendLog(
-        "UPLOADED",
-        `${payload.document.title} (${formatDocumentFormat(
-          payload.document.format,
-          payload.document.originalFilename,
-        )})`,
-        {
-          documentKey: payload.document.documentKey,
-        },
-      );
+      if (!payload?.sourceAsset && !payload?.derivation?.kind) {
+        appendLog(
+          "UPLOADED",
+          `${payload.document.title} (${formatDocumentFormat(
+            payload.document.format,
+            payload.document.originalFilename,
+          )})`,
+          {
+            documentKey: payload.document.documentKey,
+          },
+        );
+      }
       setLaunchpadOpen(false);
+      setPendingImageIntake(null);
       await loadDocument(payload.document.documentKey);
       const intakeWarning = getPrimaryDiagnosticMessage(payload.intake);
       setFeedback(
         intakeWarning
-          ? `Imported ${payload.document.title}. ${intakeWarning}`
-          : `Imported ${payload.document.title}.`,
+          ? payload?.sourceAsset || payload?.derivation?.kind
+            ? `Created ${payload.document.title} from image. ${intakeWarning}`
+            : `Imported ${payload.document.title}. ${intakeWarning}`
+          : payload?.sourceAsset || payload?.derivation?.kind
+            ? `Created ${payload.document.title} from image.`
+            : `Imported ${payload.document.title}.`,
         intakeWarning ? "" : "success",
       );
     } catch (error) {
@@ -3099,14 +3840,43 @@ export default function WorkspaceShell({
     }
   }
 
-  async function pasteIntoWorkspace(mode, payload = null) {
+  async function pasteIntoWorkspace(mode, payload = null, options = {}) {
     if (pastePendingMode) return;
-
-    setPastePendingMode(mode);
-    setFeedback(mode === "source" ? "Pasting source..." : "Pasting to clipboard...");
 
     try {
       const clipboardPayload = payload || (await readClipboardPayloadFromNavigator());
+      const resolvedImageMimeType =
+        clipboardPayload?.imageMimeType ||
+        dataUrlMimeType(clipboardPayload?.imageDataUrl || "");
+      const hasImagePayload = Boolean(clipboardPayload?.imageDataUrl);
+      const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
+
+      if (hasImagePayload && !normalizedImageMode) {
+        setPendingImageIntake({
+          source: "paste",
+          payload: clipboardPayload,
+          filename: clipboardPayload?.imageFilename || "clipboard-image.png",
+          mimeType: resolvedImageMimeType,
+          selectedMode: preferredImageDerivationMode,
+        });
+        setFeedback("Choose how to turn this image into a source.");
+        return;
+      }
+
+      const requestMode =
+        hasImagePayload && normalizedImageMode
+          ? `source-image-${normalizedImageMode}`
+          : mode;
+
+      setPastePendingMode(mode);
+      setFeedback(
+        hasImagePayload
+          ? `Creating ${getImageDerivationLabel(normalizedImageMode).toLowerCase()} from image...`
+          : mode === "source"
+            ? "Pasting source..."
+            : "Pasting to clipboard...",
+      );
+
       const response = await fetch("/api/workspace/paste", {
         method: "POST",
         headers: {
@@ -3114,9 +3884,13 @@ export default function WorkspaceShell({
         },
         body: JSON.stringify({
           projectKey: activeProjectKey,
-          mode,
+          mode: requestMode,
           html: clipboardPayload?.html || "",
           text: clipboardPayload?.text || "",
+          imageDataUrl: clipboardPayload?.imageDataUrl || "",
+          imageMimeType: resolvedImageMimeType,
+          imageFilename: clipboardPayload?.imageFilename || "",
+          derivationMode: normalizedImageMode,
         }),
       });
       const result = await response.json().catch(() => null);
@@ -3125,26 +3899,33 @@ export default function WorkspaceShell({
         throw new Error(result?.error || "Could not paste into the workspace.");
       }
 
-      if (mode === "source") {
+      if (mode === "source" || result?.sourceAsset || result?.derivation?.kind) {
         if (!result?.document?.documentKey) {
           throw new Error("The pasted source could not be created.");
         }
 
         upsertDocument(result.document, { replaceLogs: true });
         attachDocumentToActiveProject(result.document, { role: "SOURCE" });
-        appendLog("PASTED", `${result.document.title} created from clipboard`, {
-          documentKey: result.document.documentKey,
-        });
+        if (!result?.sourceAsset && !result?.derivation?.kind) {
+          appendLog("PASTED", `${result.document.title} created from clipboard`, {
+            documentKey: result.document.documentKey,
+          });
+        }
         setLaunchpadOpen(false);
         setAiOpen(false);
         setViewMode("doc");
+        setPendingImageIntake(null);
         await loadDocument(result.document.documentKey);
 
         const intakeWarning = getPrimaryDiagnosticMessage(result.intake);
         setFeedback(
           intakeWarning
-            ? `Pasted ${result.document.title}. ${intakeWarning}`
-            : `Pasted ${result.document.title}.`,
+            ? result?.sourceAsset || result?.derivation?.kind
+              ? `Created ${result.document.title} from image. ${intakeWarning}`
+              : `Pasted ${result.document.title}. ${intakeWarning}`
+            : result?.sourceAsset || result?.derivation?.kind
+              ? `Created ${result.document.title} from image.`
+              : `Pasted ${result.document.title}.`,
           intakeWarning ? "" : "success",
         );
         return;
@@ -3314,6 +4095,16 @@ export default function WorkspaceShell({
 
       setPlayheadBlockId(blockId);
     }
+
+    if (workspaceMode === WORKSPACE_MODES.listen) {
+      const block = blocks.find((entry) => entry.id === blockId) || null;
+      if (block && playbackStatus !== "active") {
+        void persistListeningSession("paused", {
+          documentKey: activeDocument.documentKey,
+          block,
+        });
+      }
+    }
   }
 
   async function requestAudioForBlock(block) {
@@ -3408,6 +4199,10 @@ export default function WorkspaceShell({
 
         const nextIndex = index + 1;
         if (nextIndex >= blocksRef.current.length) {
+          void persistListeningSession("idle", {
+            documentKey: documentAtStart.documentKey,
+            block,
+          });
           stopPlayback();
           setFeedback(`Finished ${documentAtStart.title}.`, "success");
           return;
@@ -3417,9 +4212,11 @@ export default function WorkspaceShell({
       });
       audio.addEventListener("pause", () => {
         setIsPlaying(false);
+        setPlaybackStatus(playbackStateRef.current.paused ? "paused" : "idle");
       });
       audio.addEventListener("play", () => {
         setIsPlaying(true);
+        setPlaybackStatus("active");
       });
 
       setProviderLabel(
@@ -3495,6 +4292,7 @@ export default function WorkspaceShell({
 
         setIsPlaying(true);
         setLoadingAudio(false);
+        setPlaybackStatus("active");
         setProviderLabel(formatActualProviderLabel(VOICE_PROVIDERS.device));
         appendLog(
           "LISTENED",
@@ -3516,6 +4314,7 @@ export default function WorkspaceShell({
           paused: true,
         };
         setIsPlaying(false);
+        setPlaybackStatus("paused");
       };
 
       utterance.onresume = () => {
@@ -3527,6 +4326,7 @@ export default function WorkspaceShell({
           paused: false,
         };
         setIsPlaying(true);
+        setPlaybackStatus("active");
       };
 
       utterance.onerror = () => {
@@ -3552,6 +4352,10 @@ export default function WorkspaceShell({
 
         const nextIndex = index + 1;
         if (nextIndex >= blocksRef.current.length) {
+          void persistListeningSession("idle", {
+            documentKey: documentAtStart.documentKey,
+            block,
+          });
           stopPlayback();
           setFeedback(`Finished ${documentAtStart.title}.`, "success");
           return;
@@ -3691,6 +4495,13 @@ export default function WorkspaceShell({
       };
       await playSequenceFromIndex(clampedIndex);
       return;
+    }
+
+    if (workspaceMode === WORKSPACE_MODES.listen) {
+      void persistListeningSession("paused", {
+        documentKey: activeDocument.documentKey,
+        block,
+      });
     }
 
     setFeedback(`Moved to block ${block.sourcePosition + 1}.`);
@@ -3858,6 +4669,7 @@ export default function WorkspaceShell({
       );
       setClipboard([]);
       setStagedAiBlocks([]);
+      setMobileComposeOpen(false);
       if (payload?.draft?.id) {
         upsertProjectDraft(payload.draft);
         appendLog(
@@ -3988,12 +4800,12 @@ export default function WorkspaceShell({
           <div className="assembler-header__actions">
             {!launchpadOpen ? (
               <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                Start
+                Home
               </button>
             ) : null}
 
             <Link href="/account" className="assembler-header__account" aria-label="Account">
-              [@]
+              <WorkspaceActionIcon kind="account" />
             </Link>
           </div>
         </header>
@@ -4004,7 +4816,6 @@ export default function WorkspaceShell({
               activeProject={activeProject}
               activeProjectKey={activeProjectKey}
               projects={hydratedProjects}
-              activeDocument={activeDocument}
               documents={projectDocuments}
               projectDrafts={projectDraftsState}
               projectActionPending={projectActionPending}
@@ -4019,6 +4830,8 @@ export default function WorkspaceShell({
               onPasteSource={() => void pasteIntoWorkspace("source")}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onUpload={() => fileInputRef.current?.click()}
+              lastUsedMode={lastUsedMode}
+              resumeSessionSummary={resumeSessionSummaryState}
             />
           </section>
         ) : isListenMode ? (
@@ -4026,7 +4839,6 @@ export default function WorkspaceShell({
             <ListenSurface
               activeDocument={activeDocument}
               activeDocumentWarning={activeDocumentWarning}
-              activeDocumentState={activeDocumentState}
               blocks={blocks}
               currentBlockId={currentBlock?.id || null}
               focusedBlockId={focusBlockId}
@@ -4036,15 +4848,19 @@ export default function WorkspaceShell({
               pickerOpen={listenPickerOpen}
               onTogglePicker={() => setListenPickerOpen((value) => !value)}
               onOpenProjectHome={openLaunchpad}
-              onSelectDocument={(documentKey) => {
+              onOpenDocument={(documentKey, mode, options = {}) => {
                 setListenPickerOpen(false);
-                void loadDocument(documentKey, { mode: WORKSPACE_MODES.listen });
+                void enterWorkspace(documentKey, mode, options);
               }}
-              activeProject={activeProject}
               projectDocuments={projectDocuments}
               loadingDocumentKey={loadingDocumentKey}
-              status={status}
-              statusTone={statusTone}
+              onOpenLog={() => {
+                setViewMode("log");
+                openMode(WORKSPACE_MODES.assemble, activeDocument.documentKey);
+              }}
+              onExportDocument={exportDocument}
+              lastUsedMode={lastUsedMode}
+              isMobileLayout={isMobileLayout}
             />
 
             <PlayerBar
@@ -4060,7 +4876,6 @@ export default function WorkspaceShell({
               voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
               providerLabel={providerLabel}
               progress={progress}
-              aiOpen={aiOpen}
               deviceVoiceSupported={deviceVoiceSupported}
               onTogglePlayback={togglePlayback}
               onSeekBack={() => seekAudio(-10)}
@@ -4085,7 +4900,6 @@ export default function WorkspaceShell({
                 setVoiceChoice(choice);
                 setProviderLabel(choice?.label || "Voice");
               }}
-              onToggleAi={() => setAiOpen((value) => !value)}
             />
           </>
         ) : (
@@ -4114,6 +4928,11 @@ export default function WorkspaceShell({
               onSetViewMode={setViewMode}
               onToggleEditMode={() => setEditMode((value) => !value)}
               onToggleAi={() => setAiOpen((value) => !value)}
+              clipboardCount={clipboard.length}
+              stagedCount={stagedAiBlocks.length}
+              isMobileLayout={isMobileLayout}
+              onOpenClipboard={() => setMobileComposeOpen(true)}
+              isClipboardOpen={mobileComposeOpen}
             />
 
             <section className="assembler-surface">
@@ -4137,14 +4956,27 @@ export default function WorkspaceShell({
 
                     <div className="assembler-document__side">
                       <div className="assembler-document__meta">
-                        <span>{activeDocument.documentType}</span>
-                        <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
+                        <span>{getDocumentKindLabel(activeDocument)}</span>
+                        <span>{getDocumentBlockCountLabel(activeDocument)}</span>
                         {activeDocument.sourceFiles?.length ? (
-                          <span>source: {activeDocument.sourceFiles.join(", ")}</span>
+                          <span>{activeDocument.sourceFiles.join(", ")}</span>
                         ) : null}
                       </div>
+                      {isMobileLayout && canManageActiveSource ? (
+                        <button
+                          type="button"
+                          className="assembler-document__tools-toggle"
+                          onClick={() => setMobileSourceToolsOpen((value) => !value)}
+                        >
+                          {mobileSourceToolsOpen || cleanupOpen ? "Hide Tools" : "Tools"}
+                        </button>
+                      ) : null}
                       {canManageActiveSource ? (
-                        <div className="assembler-document__actions">
+                        <div
+                          className={`assembler-document__actions ${
+                            !isMobileLayout || mobileSourceToolsOpen || cleanupOpen ? "is-visible" : ""
+                          }`}
+                        >
                           <SourceActionButton
                             kind="replace"
                             label={cleanupOpen ? "Hide find and replace" : "Show find and replace"}
@@ -4212,13 +5044,32 @@ export default function WorkspaceShell({
               )}
             </section>
 
-            {clipboard.length || stagedAiBlocks.length ? (
+            {(clipboard.length || stagedAiBlocks.length) && !isMobileLayout ? (
               <ClipboardTray
                 expanded={clipboardExpanded}
                 stagedBlocks={stagedAiBlocks}
                 clipboard={clipboard}
                 documents={projectDocuments}
                 onToggleExpanded={() => setClipboardExpanded((value) => !value)}
+                onAcceptStagedBlock={acceptStagedBlock}
+                onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+                onClearStagedBlocks={() => setStagedAiBlocks([])}
+                onRemoveClipboardIndex={removeClipboardIndex}
+                onReorderClipboard={(index, delta) =>
+                  setClipboard((previous) => moveListItem(previous, index, delta))
+                }
+                onClearClipboard={() => setClipboard([])}
+                onAssemble={assembleClipboard}
+              />
+            ) : null}
+
+            {isMobileLayout ? (
+              <MobileComposeSheet
+                open={mobileComposeOpen}
+                clipboard={clipboard}
+                stagedBlocks={stagedAiBlocks}
+                documents={projectDocuments}
+                onClose={() => setMobileComposeOpen(false)}
                 onAcceptStagedBlock={acceptStagedBlock}
                 onAcceptAllStagedBlocks={acceptAllStagedBlocks}
                 onClearStagedBlocks={() => setStagedAiBlocks([])}
@@ -4262,7 +5113,6 @@ export default function WorkspaceShell({
               voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
               providerLabel={providerLabel}
               progress={progress}
-              aiOpen={aiOpen}
               deviceVoiceSupported={deviceVoiceSupported}
               onTogglePlayback={togglePlayback}
               onSeekBack={() => seekAudio(-10)}
@@ -4287,7 +5137,6 @@ export default function WorkspaceShell({
                 setVoiceChoice(choice);
                 setProviderLabel(choice?.label || "Voice");
               }}
-              onToggleAi={() => setAiOpen((value) => !value)}
             />
           </>
         )}

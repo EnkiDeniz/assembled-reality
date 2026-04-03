@@ -19,6 +19,7 @@ import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import {
   listReadingReceiptDraftsForProjectForUser,
 } from "@/lib/reader-db";
+import { buildResumeSessionSummaryForUser } from "@/lib/reader-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function WorkspacePage({ searchParams }) {
         : getProjectEntryDocumentKey(initialProject) ||
           documents[0]?.documentKey ||
           "");
-  const [initialDocument, projectDrafts] = await Promise.all([
+  const [initialDocument, projectDrafts, resumeSessionSummary] = await Promise.all([
     getReaderDocumentDataForUser(
       session.user.id,
       fallbackDocumentKey,
@@ -68,6 +69,10 @@ export default async function WorkspacePage({ searchParams }) {
       documentKeys: initialProject?.documentKeys || [],
       take: 6,
     }),
+    buildResumeSessionSummaryForUser(
+      session.user.id,
+      initialProject?.documentKeys || documents.map((document) => document.documentKey),
+    ),
   ]);
 
   if (!initialDocument) {
@@ -93,6 +98,7 @@ export default async function WorkspacePage({ searchParams }) {
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={voiceCatalog[0] || null}
       showLaunchpadInitially={requestedLaunchpad || (!requestedDocumentKey && !requestedProjectKey)}
+      resumeSessionSummary={resumeSessionSummary}
     />
   );
 }

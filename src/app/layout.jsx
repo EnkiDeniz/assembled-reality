@@ -1,4 +1,4 @@
-import { IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/Providers";
 import "@/app/globals.css";
@@ -8,6 +8,14 @@ const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   display: "swap",
   weight: ["400", "500", "600"],
+});
+
+const editorial = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-editorial",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
 });
 
 export const metadata = {
@@ -33,7 +41,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={mono.variable}>
+    <html lang="en" className={`${mono.variable} ${editorial.variable}`}>
       <body>
         <Providers>{children}</Providers>
         <Analytics />
