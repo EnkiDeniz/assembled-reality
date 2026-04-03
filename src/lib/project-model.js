@@ -32,6 +32,7 @@ export function buildDefaultProjectFromDocuments(documents = []) {
   const latestTouchedDocument = getMostRecentDocument(normalizedDocuments);
 
   return {
+    id: null,
     projectKey: DEFAULT_PROJECT_KEY,
     title: "Main Project",
     subtitle: currentAssembly

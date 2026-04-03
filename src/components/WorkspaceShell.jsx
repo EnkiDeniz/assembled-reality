@@ -76,6 +76,12 @@ function formatActualProviderLabel(provider, voiceId = null) {
   return formatVoiceLabel(provider, voiceId);
 }
 
+function formatReceiptDraftStatus(status) {
+  return String(status || "LOCAL_DRAFT")
+    .toLowerCase()
+    .replace(/_/g, " ");
+}
+
 function formatDocumentFormat(value, originalFilename = "") {
   const normalized = String(value || "markdown").toLowerCase();
   if (normalized === "docx") return "DOCX";
@@ -258,29 +264,40 @@ function buildWorkspaceUrl(documentKey, projectKey = DEFAULT_PROJECT_KEY) {
   return query ? `/workspace?${query}` : "/workspace";
 }
 
-function ShelfGroup({ label, documents, activeDocumentKey, onSelect, loadingDocumentKey }) {
+function ShelfGroup({
+  label,
+  documents,
+  activeDocumentKey,
+  onSelect,
+  loadingDocumentKey,
+  emptyMessage = "",
+}) {
   return (
     <div className="assembler-shelf__group">
       <span className="assembler-shelf__label">{label}</span>
       <div className="assembler-shelf__items">
-        {documents.map((document) => (
-          <button
-            key={document.documentKey}
-            type="button"
-            className={`assembler-shelf__item ${
-              document.documentKey === activeDocumentKey ? "is-active" : ""
-            }`}
-            onClick={() => onSelect(document.documentKey)}
-          >
-            {document.isAssembly ? (
-              <span className="assembler-shelf__dot" aria-hidden="true" />
-            ) : null}
-            <span>{document.title}</span>
-            {loadingDocumentKey === document.documentKey ? (
-              <span className="assembler-shelf__loading">loading</span>
-            ) : null}
-          </button>
-        ))}
+        {documents.length ? (
+          documents.map((document) => (
+            <button
+              key={document.documentKey}
+              type="button"
+              className={`assembler-shelf__item ${
+                document.documentKey === activeDocumentKey ? "is-active" : ""
+              }`}
+              onClick={() => onSelect(document.documentKey)}
+            >
+              {document.isAssembly ? (
+                <span className="assembler-shelf__dot" aria-hidden="true" />
+              ) : null}
+              <span>{document.title}</span>
+              {loadingDocumentKey === document.documentKey ? (
+                <span className="assembler-shelf__loading">loading</span>
+              ) : null}
+            </button>
+          ))
+        ) : (
+          <span className="assembler-shelf__empty">{emptyMessage}</span>
+        )}
       </div>
     </div>
   );
@@ -290,21 +307,47 @@ function WorkspaceShelf({
   activeProject,
   documents,
   activeDocumentKey,
+  projectHomeActive = false,
   loadingDocumentKey,
+  onOpenProjectHome,
   onSelect,
   onUpload,
   uploading = false,
 }) {
   const grouped = groupedDocuments(documents);
+  const currentAssembly =
+    (activeProject?.currentAssemblyDocumentKey &&
+      grouped.assemblies.find(
+        (document) => document.documentKey === activeProject.currentAssemblyDocumentKey,
+      )) ||
+    grouped.assemblies[0] ||
+    null;
+  const priorAssemblies = grouped.assemblies.filter(
+    (document) => document.documentKey !== currentAssembly?.documentKey,
+  );
 
   return (
     <div className="assembler-shelf">
-      {activeProject ? (
-        <div className="assembler-shelf__project">
-          <span className="assembler-shelf__label">Project</span>
-          <span className="assembler-shelf__project-name">{activeProject.title}</span>
-        </div>
-      ) : null}
+      <button
+        type="button"
+        className={`assembler-shelf__home ${projectHomeActive ? "is-active" : ""}`}
+        onClick={onOpenProjectHome}
+      >
+        <span className="assembler-shelf__label">Project home</span>
+        <span className="assembler-shelf__project-name">{activeProject?.title || "Main Project"}</span>
+        <span className="assembler-shelf__home-detail">
+          {currentAssembly ? `Current assembly: ${currentAssembly.title}` : "No assembly yet"}
+        </span>
+      </button>
+
+      <ShelfGroup
+        label="Current assembly"
+        documents={currentAssembly ? [currentAssembly] : []}
+        activeDocumentKey={activeDocumentKey}
+        loadingDocumentKey={loadingDocumentKey}
+        onSelect={onSelect}
+        emptyMessage="Assemble from the clipboard to create one."
+      />
 
       <ShelfGroup
         label="Sources"
@@ -312,27 +355,16 @@ function WorkspaceShelf({
         activeDocumentKey={activeDocumentKey}
         loadingDocumentKey={loadingDocumentKey}
         onSelect={onSelect}
+        emptyMessage="Import or keep a source here."
       />
 
       <ShelfGroup
-        label="Assemblies"
-        documents={
-          grouped.assemblies.length
-            ? grouped.assemblies
-            : [
-                {
-                  documentKey: "__assemblies-placeholder__",
-                  title: "No assemblies yet",
-                  isAssembly: true,
-                },
-              ]
-        }
+        label="Earlier assemblies"
+        documents={priorAssemblies}
         activeDocumentKey={activeDocumentKey}
         loadingDocumentKey={loadingDocumentKey}
-        onSelect={(documentKey) => {
-          if (documentKey.startsWith("__")) return;
-          onSelect(documentKey);
-        }}
+        onSelect={onSelect}
+        emptyMessage="No earlier assemblies yet."
       />
 
       <button
@@ -352,29 +384,26 @@ function WorkspaceLaunchpad({
   projects,
   activeDocument,
   documents,
+  projectDrafts = [],
   loadingDocumentKey,
   onContinue,
   onOpenDocument,
   onUpload,
   uploading = false,
 }) {
-  const latestAssembly =
-    documents.find((document) => document.isAssembly || document.documentType === "assembly") || null;
+  const grouped = groupedDocuments(documents);
   const projectEntryDocumentKey = getProjectEntryDocumentKey(activeProject);
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
-    latestAssembly ||
+    grouped.assemblies[0] ||
     null;
-  const recentDocuments = documents.slice(0, 6);
-  const sourceCount = documents.filter(
-    (document) =>
-      document.documentType === "builtin" ||
-      (!document.isAssembly && document.documentType !== "assembly"),
-  ).length;
-  const assemblyCount = documents.filter(
-    (document) => document.isAssembly || document.documentType === "assembly",
-  ).length;
+  const sourceDocuments = grouped.sources;
+  const priorAssemblies = grouped.assemblies.filter(
+    (document) => document.documentKey !== currentAssemblyDocument?.documentKey,
+  );
+  const sourceCount = sourceDocuments.length;
+  const assemblyCount = grouped.assemblies.length;
 
   return (
     <div className="assembler-launchpad">
@@ -489,43 +518,134 @@ function WorkspaceLaunchpad({
           </button>
         </div>
 
-        <div className="assembler-launchpad__recent">
-          <div className="assembler-launchpad__recent-head">
-            <span>Project contents</span>
-            <Link href="/account" className="assembler-launchpad__recent-link">
-              Account
-            </Link>
-          </div>
+        <div className="assembler-launchpad__sections">
+          <div className="assembler-launchpad__section">
+            <div className="assembler-launchpad__section-head">
+              <span>Current assembly</span>
+              <span>{currentAssemblyDocument ? "Open now" : "Not started"}</span>
+            </div>
 
-          <div className="assembler-launchpad__recent-list">
-            {recentDocuments.map((document) => (
+            {currentAssemblyDocument ? (
               <button
-                key={document.documentKey}
                 type="button"
                 className="assembler-launchpad__recent-row"
-                onClick={() => onOpenDocument(document.documentKey)}
+                onClick={() => onOpenDocument(currentAssemblyDocument.documentKey)}
               >
                 <div className="assembler-launchpad__recent-main">
-                  <span className="assembler-launchpad__recent-title">{document.title}</span>
+                  <span className="assembler-launchpad__recent-title">{currentAssemblyDocument.title}</span>
                   <span className="assembler-launchpad__recent-subtitle">
-                    {document.isAssembly
-                      ? "assembled document"
-                      : document.documentType === "builtin"
-                        ? "built-in source text"
-                        : `source · ${document.formatLabel || "markdown"}`}
+                    {currentAssemblyDocument.subtitle || "Active working assembly for this project"}
                   </span>
                 </div>
                 <span className="assembler-launchpad__recent-meta">
-                  {loadingDocumentKey === document.documentKey
-                    ? "loading"
-                    : document.isAssembly
-                      ? "assembly"
-                      : document.documentType === "builtin"
-                        ? "builtin"
-                        : "source"}
+                  {loadingDocumentKey === currentAssemblyDocument.documentKey ? "loading" : "assembly"}
                 </span>
               </button>
-            ))}
+            ) : (
+              <p className="assembler-launchpad__empty">
+                No assembly yet. Pull source blocks into the clipboard and assemble your first working draft.
+              </p>
+            )}
+
+            {priorAssemblies.length ? (
+              <div className="assembler-launchpad__section-list">
+                {priorAssemblies.slice(0, 3).map((document) => (
+                  <button
+                    key={document.documentKey}
+                    type="button"
+                    className="assembler-launchpad__recent-row"
+                    onClick={() => onOpenDocument(document.documentKey)}
+                  >
+                    <div className="assembler-launchpad__recent-main">
+                      <span className="assembler-launchpad__recent-title">{document.title}</span>
+                      <span className="assembler-launchpad__recent-subtitle">
+                        Earlier assembly
+                      </span>
+                    </div>
+                    <span className="assembler-launchpad__recent-meta">
+                      {loadingDocumentKey === document.documentKey ? "loading" : "assembly"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="assembler-launchpad__section">
+            <div className="assembler-launchpad__section-head">
+              <span>Sources</span>
+              <span>{sourceCount}</span>
+            </div>
+
+            <div className="assembler-launchpad__section-list">
+              {sourceDocuments.length ? (
+                sourceDocuments.slice(0, 6).map((document) => (
+                  <button
+                    key={document.documentKey}
+                    type="button"
+                    className="assembler-launchpad__recent-row"
+                    onClick={() => onOpenDocument(document.documentKey)}
+                  >
+                    <div className="assembler-launchpad__recent-main">
+                      <span className="assembler-launchpad__recent-title">{document.title}</span>
+                      <span className="assembler-launchpad__recent-subtitle">
+                        {document.documentType === "builtin"
+                          ? "Built-in source text"
+                          : `Source · ${document.formatLabel || "markdown"}`}
+                      </span>
+                    </div>
+                    <span className="assembler-launchpad__recent-meta">
+                      {loadingDocumentKey === document.documentKey
+                        ? "loading"
+                        : document.documentType === "builtin"
+                          ? "builtin"
+                          : "source"}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="assembler-launchpad__empty">
+                  No sources yet. Import one to start shaping this project.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="assembler-launchpad__section">
+            <div className="assembler-launchpad__section-head">
+              <span>Recent receipts</span>
+              <Link href="/account" className="assembler-launchpad__recent-link">
+                Account
+              </Link>
+            </div>
+
+            <div className="assembler-launchpad__section-list">
+              {projectDrafts.length ? (
+                projectDrafts.map((draft) => {
+                  const documentTitle =
+                    documents.find((document) => document.documentKey === draft.documentKey)?.title ||
+                    draft.title ||
+                    "Receipt";
+                  return (
+                    <div key={draft.id} className="assembler-launchpad__recent-row is-static">
+                      <div className="assembler-launchpad__recent-main">
+                        <span className="assembler-launchpad__recent-title">{documentTitle}</span>
+                        <span className="assembler-launchpad__recent-subtitle">
+                          {draft.interpretation || "Project receipt draft"}
+                        </span>
+                      </div>
+                      <span className="assembler-launchpad__recent-meta">
+                        {formatReceiptDraftStatus(draft.status)}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="assembler-launchpad__empty">
+                  No project receipts yet. Draft one from the log once the work is visible.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1125,6 +1245,7 @@ export default function WorkspaceShell({
   userId,
   documents,
   projects,
+  projectDrafts = [],
   initialDocument,
   initialProjectKey = DEFAULT_PROJECT_KEY,
   voiceCatalog,
@@ -1183,6 +1304,7 @@ export default function WorkspaceShell({
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState("");
   const [blockSaveStates, setBlockSaveStates] = useState({});
+  const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
 
   const projectsState = buildProjectsFromDocuments(documentsState);
@@ -1445,6 +1567,15 @@ export default function WorkspaceShell({
     window.history.replaceState({}, "", nextUrl);
   }
 
+  function upsertProjectDraft(draft) {
+    if (!draft?.id) return;
+
+    setProjectDraftsState((previous) => {
+      const remaining = previous.filter((entry) => entry.id !== draft.id);
+      return [draft, ...remaining].slice(0, 6);
+    });
+  }
+
   function openLaunchpad() {
     stopPlayback();
     setAiOpen(false);
@@ -1670,6 +1801,7 @@ export default function WorkspaceShell({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("projectKey", activeProjectKey);
 
       const response = await fetch("/api/documents", {
         method: "POST",
@@ -2318,6 +2450,7 @@ export default function WorkspaceShell({
           title,
           blocks: clipboard,
           createReceipt: true,
+          projectKey: activeProjectKey,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -2333,6 +2466,7 @@ export default function WorkspaceShell({
       setClipboard([]);
       setStagedAiBlocks([]);
       if (payload?.draft?.id) {
+        upsertProjectDraft(payload.draft);
         appendLog(
           "RECEIPT",
           payload.remoteReceipt
@@ -2371,6 +2505,7 @@ export default function WorkspaceShell({
           document: activeDocument,
           blocks: activeDocument.blocks,
           logEntries: receiptLogEntries,
+          projectKey: activeProjectKey,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -2379,6 +2514,7 @@ export default function WorkspaceShell({
         throw new Error(payload?.error || "Could not draft the receipt.");
       }
 
+      upsertProjectDraft(payload.draft);
       appendLog(
         "RECEIPT",
         payload.remoteReceipt
@@ -2476,6 +2612,7 @@ export default function WorkspaceShell({
               projects={projectsState}
               activeDocument={activeDocument}
               documents={projectDocuments}
+              projectDrafts={projectDraftsState}
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
               onContinue={() => enterWorkspace(getProjectEntryDocumentKey(activeProject))}
@@ -2489,7 +2626,9 @@ export default function WorkspaceShell({
               activeProject={activeProject}
               documents={projectDocuments}
               activeDocumentKey={activeDocumentKey}
+              projectHomeActive={launchpadOpen}
               loadingDocumentKey={loadingDocumentKey}
+              onOpenProjectHome={openLaunchpad}
               uploading={uploading}
               onSelect={loadDocument}
               onUpload={() => fileInputRef.current?.click()}

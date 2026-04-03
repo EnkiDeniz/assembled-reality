@@ -1,7 +1,8 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { attachDocumentToDefaultProjectForUser } from "@/lib/reader-projects";
+import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
+import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
 import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { slugify } from "@/lib/text";
 import {
@@ -467,6 +468,7 @@ export async function createAssemblyDocumentForUser(
   {
     title,
     subtitle = "",
+    projectKey = DEFAULT_PROJECT_KEY,
     blocks = [],
   },
 ) {
@@ -539,7 +541,8 @@ export async function createAssemblyDocumentForUser(
     },
   });
 
-  await attachDocumentToDefaultProjectForUser(userId, {
+  await attachDocumentToProjectForUser(userId, {
+    projectKey,
     documentKey,
     role: "ASSEMBLY",
     setAsCurrentAssembly: true,

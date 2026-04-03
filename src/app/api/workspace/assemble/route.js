@@ -8,6 +8,7 @@ import {
 } from "@/lib/getreceipts";
 import { createReadingReceiptDraftForUser, getReaderProfileByUserId } from "@/lib/reader-db";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
+import { getReaderProjectForUser } from "@/lib/reader-projects";
 import { getRequiredSession } from "@/lib/server-session";
 import {
   buildWorkspaceReceiptDraftInput,
@@ -26,6 +27,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   const title = String(body?.title || "").trim() || "Assembly";
   const subtitle = String(body?.subtitle || "").trim();
+  const projectKey = String(body?.projectKey || "").trim();
   const blocks = normalizeWorkspaceBlocks(body?.blocks, {
     documentKey: "",
     defaultSourceDocumentKey: "assembly",
@@ -46,6 +48,7 @@ export async function POST(request) {
     const document = await createAssemblyDocumentForUser(session.user.id, {
       title,
       subtitle,
+      projectKey,
       blocks,
     });
 
@@ -54,14 +57,16 @@ export async function POST(request) {
     let remoteError = null;
 
     if (createReceipt) {
-      const [readerData, connection] = await Promise.all([
+      const [readerData, connection, project] = await Promise.all([
         getReaderProfileByUserId(session.user.id),
         getGetReceiptsConnectionForUser(session.user.id),
+        projectKey ? getReaderProjectForUser(session.user.id, projectKey) : null,
       ]);
 
       if (readerData?.profile) {
         const payload = buildWorkspaceReceiptPayload({
           profile: readerData.profile,
+          project,
           document,
           blocks: document.blocks,
           logEntries: document.logEntries,
@@ -88,6 +93,8 @@ export async function POST(request) {
             status,
             mode: "assembly",
           }),
+          projectId: project?.id || null,
+          projectKey,
           payload: {
             ...payload,
             remoteReceipt,

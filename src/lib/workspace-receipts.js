@@ -25,6 +25,7 @@ export function buildWorkspaceReceiptPayload({
   blocks = [],
   logEntries = [],
   mode = "assembly",
+  project = null,
 }) {
   const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
   const normalizedLogEntries = Array.isArray(logEntries) ? logEntries : [];
@@ -71,6 +72,7 @@ export function buildWorkspaceReceiptPayload({
     tags: unique([
       "document-assembler",
       mode,
+      project?.projectKey ? "project-scoped" : null,
       normalizedBlocks.length > 0 ? "lineage" : null,
     ]),
     metadata: {
@@ -78,6 +80,9 @@ export function buildWorkspaceReceiptPayload({
       source_flow: "document_assembler_workspace_v1",
       document_assembler: {
         mode,
+        project_id: project?.id || null,
+        project_key: project?.projectKey || null,
+        project_title: project?.title || null,
         document_key: document?.documentKey || "",
         document_title: document?.title || "Untitled document",
         document_type: document?.documentType || "source",

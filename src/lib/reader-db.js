@@ -7,6 +7,8 @@ import {
   getReaderDocumentHref,
   getReaderDocumentSummaryForUser,
 } from "@/lib/reader-documents";
+import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
+import { getReaderProjectForUser } from "@/lib/reader-projects";
 import { buildExcerpt, slugify } from "@/lib/text";
 import { prisma } from "@/lib/prisma";
 
@@ -292,11 +294,21 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
   if (!resolved) return null;
 
   const { profile } = resolved;
+  let projectId = draftInput.projectId || null;
+  const projectKey = String(draftInput.projectKey || "").trim();
+
+  if (!projectId && projectKey) {
+    const project = await getReaderProjectForUser(userId, projectKey, {
+      createIfMissing: projectKey === DEFAULT_PROJECT_KEY,
+    });
+    projectId = project?.id || null;
+  }
 
   return prisma.readingReceiptDraft.create({
     data: {
       userId,
       readerProfileId: profile.id,
+      projectId,
       documentKey: draftInput.documentKey || PRIMARY_DOCUMENT_KEY,
       conversationThreadId: draftInput.conversationThreadId || null,
       getReceiptsReceiptId: draftInput.getReceiptsReceiptId || null,
@@ -325,6 +337,54 @@ export async function listReadingReceiptDraftsForUser(userId) {
     },
     orderBy: { createdAt: "desc" },
     take: 12,
+  });
+}
+
+export async function listReadingReceiptDraftsForProjectForUser(
+  userId,
+  {
+    projectId = null,
+    documentKeys = [],
+    take = 6,
+  } = {},
+) {
+  const normalizedDocumentKeys = Array.isArray(documentKeys)
+    ? [...new Set(documentKeys.filter(Boolean))]
+    : [];
+  const orFilters = [];
+
+  if (projectId) {
+    orFilters.push({ projectId });
+  }
+
+  if (normalizedDocumentKeys.length > 0) {
+    orFilters.push(
+      projectId
+        ? {
+            AND: [
+              { projectId: null },
+              {
+                documentKey: {
+                  in: normalizedDocumentKeys,
+                },
+              },
+            ],
+          }
+        : {
+            documentKey: {
+              in: normalizedDocumentKeys,
+            },
+          },
+    );
+  }
+
+  return prisma.readingReceiptDraft.findMany({
+    where: {
+      userId,
+      ...(orFilters.length > 0 ? { OR: orFilters } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take,
   });
 }
 

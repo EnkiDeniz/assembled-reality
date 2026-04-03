@@ -3,7 +3,8 @@ import "server-only";
 import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { buildWorkspaceBlocksFromDocument } from "@/lib/document-blocks";
 import { prisma } from "@/lib/prisma";
-import { attachDocumentToDefaultProjectForUser } from "@/lib/reader-projects";
+import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
+import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
 import { slugify } from "@/lib/text";
 import {
   buildStoredWorkspaceContent,
@@ -158,6 +159,7 @@ export async function createReaderDocumentForUser(
   {
     title,
     subtitle = "",
+    projectKey = DEFAULT_PROJECT_KEY,
     format = "markdown",
     originalFilename = "",
     mimeType = "",
@@ -205,7 +207,8 @@ export async function createReaderDocumentForUser(
     },
   });
 
-  await attachDocumentToDefaultProjectForUser(userId, {
+  await attachDocumentToProjectForUser(userId, {
+    projectKey,
     documentKey,
     role: "SOURCE",
   });

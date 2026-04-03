@@ -16,7 +16,10 @@ import {
   getProjectEntryDocumentKey,
 } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
-import { getReaderProfileByUserId } from "@/lib/reader-db";
+import {
+  getReaderProfileByUserId,
+  listReadingReceiptDraftsForProjectForUser,
+} from "@/lib/reader-db";
 
 export const dynamic = "force-dynamic";
 
@@ -43,10 +46,17 @@ export default async function WorkspacePage({ searchParams }) {
     getProjectEntryDocumentKey(initialProject) ||
     documents[0]?.documentKey ||
     "";
-  const initialDocument = await getReaderDocumentDataForUser(
-    session.user.id,
-    fallbackDocumentKey,
-  );
+  const [initialDocument, projectDrafts] = await Promise.all([
+    getReaderDocumentDataForUser(
+      session.user.id,
+      fallbackDocumentKey,
+    ),
+    listReadingReceiptDraftsForProjectForUser(session.user.id, {
+      projectId: initialProject?.id || null,
+      documentKeys: initialProject?.documentKeys || [],
+      take: 6,
+    }),
+  ]);
 
   if (!initialDocument) {
     redirect("/");
@@ -70,6 +80,7 @@ export default async function WorkspacePage({ searchParams }) {
       userId={session.user.id}
       documents={documents}
       projects={projects}
+      projectDrafts={projectDrafts}
       initialDocument={initialDocument}
       initialProjectKey={initialProject?.projectKey || null}
       voiceCatalog={voiceCatalog}

@@ -8,6 +8,9 @@ import {
   buildProjectsFromDocuments,
 } from "@/lib/project-model";
 
+const DEFAULT_PROJECT_TITLE = "Main Project";
+const DEFAULT_PROJECT_SUBTITLE = "Start from a source and build toward a working assembly.";
+
 function getReaderProjectModel() {
   return prisma.readerProject || null;
 }
@@ -31,6 +34,14 @@ function toProjectDocumentRole(document) {
 function getDocumentTimestamp(document) {
   const parsed = Date.parse(document?.updatedAt || document?.createdAt || "");
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getDefaultProjectSeed(currentAssemblyDocumentKey = null) {
+  return {
+    title: DEFAULT_PROJECT_TITLE,
+    subtitle: DEFAULT_PROJECT_SUBTITLE,
+    currentAssemblyDocumentKey: currentAssemblyDocumentKey || null,
+  };
 }
 
 function sortProjectDocumentsForPersistence(documents = []) {
@@ -65,6 +76,7 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
 
   return {
     ...fallbackProject,
+    id: projectRecord.id,
     projectKey: projectRecord.projectKey,
     title: projectRecord.title,
     subtitle: projectRecord.subtitle || fallbackProject.subtitle,
@@ -142,19 +154,22 @@ async function ensureDefaultProjectRecord(userId, documents = []) {
       );
     }
 
-    const currentAssemblyDocumentKey =
-      project.currentAssemblyDocumentKey ||
-      fallbackProject.currentAssemblyDocumentKey ||
-      null;
+    const nextProjectData = {
+      title: fallbackProject.title,
+      subtitle: fallbackProject.subtitle,
+      currentAssemblyDocumentKey: fallbackProject.currentAssemblyDocumentKey || null,
+    };
 
-    if (currentAssemblyDocumentKey !== project.currentAssemblyDocumentKey) {
+    if (
+      nextProjectData.title !== project.title ||
+      nextProjectData.subtitle !== project.subtitle ||
+      nextProjectData.currentAssemblyDocumentKey !== project.currentAssemblyDocumentKey
+    ) {
       await readerProjectModel.update({
         where: {
           id: project.id,
         },
-        data: {
-          currentAssemblyDocumentKey,
-        },
+        data: nextProjectData,
       });
     }
 
@@ -166,6 +181,43 @@ async function ensureDefaultProjectRecord(userId, documents = []) {
         documents: {
           orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
         },
+      },
+    });
+  } catch (error) {
+    if (isMissingProjectTableError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function findOrCreateProjectRecordForUser(
+  userId,
+  projectKey = DEFAULT_PROJECT_KEY,
+  { createIfMissing = false, currentAssemblyDocumentKey = null } = {},
+) {
+  const readerProjectModel = getReaderProjectModel();
+  if (!readerProjectModel) {
+    return null;
+  }
+
+  try {
+    const existingProject = await readerProjectModel.findFirst({
+      where: {
+        userId,
+        projectKey,
+      },
+    });
+    if (existingProject || !createIfMissing || projectKey !== DEFAULT_PROJECT_KEY) {
+      return existingProject;
+    }
+
+    return readerProjectModel.create({
+      data: {
+        userId,
+        projectKey,
+        ...getDefaultProjectSeed(currentAssemblyDocumentKey),
       },
     });
   } catch (error) {
@@ -211,9 +263,18 @@ export async function listReaderProjectsForUser(userId, documents = []) {
   }
 }
 
-export async function attachDocumentToDefaultProjectForUser(
+export async function getReaderProjectForUser(
+  userId,
+  projectKey = DEFAULT_PROJECT_KEY,
+  options = {},
+) {
+  return findOrCreateProjectRecordForUser(userId, projectKey, options);
+}
+
+export async function attachDocumentToProjectForUser(
   userId,
   {
+    projectKey = DEFAULT_PROJECT_KEY,
     documentKey,
     role = "SOURCE",
     setAsCurrentAssembly = false,
@@ -227,22 +288,13 @@ export async function attachDocumentToDefaultProjectForUser(
   }
 
   try {
-    const project =
-      (await readerProjectModel.findFirst({
-        where: {
-          userId,
-          projectKey: DEFAULT_PROJECT_KEY,
-        },
-      })) ||
-      (await readerProjectModel.create({
-        data: {
-          userId,
-          projectKey: DEFAULT_PROJECT_KEY,
-          title: "Main Project",
-          subtitle: "Start from a source and build toward a working assembly.",
-          currentAssemblyDocumentKey: setAsCurrentAssembly ? documentKey : null,
-        },
-      }));
+    const project = await findOrCreateProjectRecordForUser(userId, projectKey, {
+      createIfMissing: true,
+      currentAssemblyDocumentKey: setAsCurrentAssembly ? documentKey : null,
+    });
+    if (!project) {
+      return;
+    }
 
     const existingMembership = await readerProjectDocumentModel.findFirst({
       where: {
@@ -285,4 +337,11 @@ export async function attachDocumentToDefaultProjectForUser(
 
     throw error;
   }
+}
+
+export async function attachDocumentToDefaultProjectForUser(userId, options = {}) {
+  return attachDocumentToProjectForUser(userId, {
+    projectKey: DEFAULT_PROJECT_KEY,
+    ...options,
+  });
 }

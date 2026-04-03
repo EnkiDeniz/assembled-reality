@@ -30,6 +30,7 @@ export async function POST(request) {
 
   const formData = await request.formData();
   const file = formData.get("file");
+  const projectKey = String(formData.get("projectKey") || "").trim();
 
   if (!file || typeof file.arrayBuffer !== "function") {
     return NextResponse.json({ error: "Choose a file to upload." }, { status: 400 });
@@ -59,6 +60,7 @@ export async function POST(request) {
     const document = await createReaderDocumentForUser(session.user.id, {
       title: imported.title,
       subtitle: imported.subtitle,
+      projectKey,
       format: imported.format,
       originalFilename: file.name,
       mimeType: file.type || "",

@@ -8,6 +8,7 @@ import {
   getGetReceiptsConnectionForUser,
 } from "@/lib/getreceipts";
 import { createReadingReceiptDraftForUser, getReaderProfileByUserId } from "@/lib/reader-db";
+import { getReaderProjectForUser } from "@/lib/reader-projects";
 import { getRequiredSession } from "@/lib/server-session";
 import {
   buildWorkspaceReceiptDraftInput,
@@ -24,6 +25,7 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => null);
   const document = body?.document || null;
+  const projectKey = String(body?.projectKey || "").trim();
   const blocks = normalizeWorkspaceBlocks(body?.blocks, {
     documentKey: document?.documentKey || "",
     defaultSourceDocumentKey: document?.documentKey || "",
@@ -39,9 +41,10 @@ export async function POST(request) {
     return NextResponse.json({ error: "Document is required." }, { status: 400 });
   }
 
-  const [readerData, connection] = await Promise.all([
+  const [readerData, connection, project] = await Promise.all([
     getReaderProfileByUserId(session.user.id),
     getGetReceiptsConnectionForUser(session.user.id),
+    projectKey ? getReaderProjectForUser(session.user.id, projectKey) : null,
   ]);
 
   if (!readerData?.profile) {
@@ -51,6 +54,7 @@ export async function POST(request) {
   const mode = document?.isAssembly ? "assembly" : "workspace";
   const payload = buildWorkspaceReceiptPayload({
     profile: readerData.profile,
+    project,
     document,
     blocks,
     logEntries,
@@ -79,6 +83,8 @@ export async function POST(request) {
       status,
       mode,
     }),
+    projectId: project?.id || null,
+    projectKey,
     payload: {
       ...payload,
       remoteReceipt,
