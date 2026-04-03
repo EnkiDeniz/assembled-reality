@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { startTransition, useEffect, useRef, useState } from "react";
-import SignOutButton from "@/components/SignOutButton";
 import {
   buildWorkspaceMarkdown,
   createWorkspaceLogEntry,
@@ -17,10 +16,7 @@ import { parseSevenAudioHeaders } from "@/lib/seven";
 
 const STORAGE_VERSION = 1;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
-
-function formatConnectionStatus(value) {
-  return String(value || "disconnected").toLowerCase().replace(/_/g, " ");
-}
+const STATUS_TIMEOUT_MS = 5000;
 
 function formatDocumentFormat(value, originalFilename = "") {
   const normalized = String(value || "markdown").toLowerCase();
@@ -268,15 +264,12 @@ function WorkspaceToolbar({
   activeDocument,
   viewMode,
   editMode,
+  aiOpen,
   status,
   statusTone,
-  connectionStatus,
   onSetViewMode,
   onToggleEditMode,
-  onExportDocument,
-  onExportReceipt,
-  onCreateReceipt,
-  onOpenAccount,
+  onToggleAi,
 }) {
   return (
     <div className="assembler-toolbar">
@@ -308,34 +301,22 @@ function WorkspaceToolbar({
         ) : null}
       </div>
 
-      <div className="assembler-toolbar__meta">
-        <span className={`assembler-pill ${connectionStatus === "CONNECTED" ? "is-green" : ""}`}>
-          getreceipts · {formatConnectionStatus(connectionStatus)}
-        </span>
-        <span className="assembler-toolbar__counts">
-          {activeDocument?.blocks?.length || 0} blocks
-          {activeDocument?.isAssembly ? " · assembled" : ""}
-        </span>
-      </div>
-
-      <div className="assembler-toolbar__actions">
-        <button type="button" className="assembler-mini-button" onClick={onCreateReceipt}>
-          Draft receipt
-        </button>
-        <button type="button" className="assembler-mini-button" onClick={onExportDocument}>
-          Export doc
-        </button>
-        <button type="button" className="assembler-mini-button" onClick={onExportReceipt}>
-          Export log
-        </button>
-        <button type="button" className="assembler-mini-button" onClick={onOpenAccount}>
-          Account
+      <div className="assembler-toolbar__right">
+        <button
+          type="button"
+          className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
+          onClick={onToggleAi}
+          aria-label={aiOpen ? "Close AI prompt" : "Open AI prompt"}
+        >
+          {aiOpen ? "x" : ">"}
         </button>
       </div>
 
-      <div className={`assembler-toolbar__status ${statusTone ? `is-${statusTone}` : ""}`}>
-        {status}
-      </div>
+      {status ? (
+        <div className={`assembler-toolbar__status ${statusTone ? `is-${statusTone}` : ""}`}>
+          {status}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -439,11 +420,30 @@ function BlockRow({
   );
 }
 
-function LogView({ logEntries }) {
+function LogView({
+  logEntries,
+  receiptPending,
+  onCreateReceipt,
+  onExportReceipt,
+  onExportDocument,
+}) {
   return (
     <div className="assembler-log">
-      <div className="assembler-log__header">
-        RECEIPT LOG · {logEntries.length} entr{logEntries.length === 1 ? "y" : "ies"}
+      <div className="assembler-log__top">
+        <div className="assembler-log__header">
+          RECEIPT LOG · {logEntries.length} entr{logEntries.length === 1 ? "y" : "ies"}
+        </div>
+        <div className="assembler-log__actions">
+          <button type="button" className="assembler-tiny-button" onClick={onCreateReceipt}>
+            {receiptPending ? "Drafting..." : "Draft receipt"}
+          </button>
+          <button type="button" className="assembler-tiny-button" onClick={onExportReceipt}>
+            Export log
+          </button>
+          <button type="button" className="assembler-tiny-button" onClick={onExportDocument}>
+            Export doc
+          </button>
+        </div>
       </div>
 
       {logEntries.length ? (
@@ -467,11 +467,13 @@ function LogView({ logEntries }) {
 }
 
 function AiBar({
+  inputRef,
   value,
   pending,
   onChange,
   onSubmit,
   onPreset,
+  onClose,
 }) {
   return (
     <div className="assembler-ai">
@@ -491,6 +493,7 @@ function AiBar({
       <div className="assembler-ai__field">
         <span className="assembler-ai__prompt">&gt;</span>
         <input
+          ref={inputRef}
           className="assembler-ai__input"
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -510,6 +513,9 @@ function AiBar({
           onClick={onSubmit}
         >
           {pending ? "..." : "RUN"}
+        </button>
+        <button type="button" className="assembler-ai__close" onClick={onClose}>
+          CLOSE
         </button>
       </div>
     </div>
@@ -736,17 +742,38 @@ function PlayerBar({
   );
 }
 
+function formatAudioErrorMessage(message) {
+  const normalized = String(message || "").trim().toLowerCase();
+
+  if (!normalized) {
+    return "Couldn't play this section. Try again.";
+  }
+
+  if (normalized.includes("disturbed or locked")) {
+    return "Couldn't play this section. Try again.";
+  }
+
+  if (normalized.includes("quota")) {
+    return "Voice is unavailable right now. Try again in a moment.";
+  }
+
+  if (normalized.includes("rate limit")) {
+    return "Voice is busy right now. Try again in a moment.";
+  }
+
+  return "Couldn't play this section. Try again.";
+}
+
 export default function WorkspaceShell({
   userId,
-  profile,
   documents,
   initialDocument,
-  connectionStatus,
   voiceCatalog,
   defaultVoiceChoice,
   voiceEnabled,
 }) {
   const fileInputRef = useRef(null);
+  const aiInputRef = useRef(null);
   const blockRefs = useRef({});
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
@@ -766,6 +793,7 @@ export default function WorkspaceShell({
   const [activeDocumentKey, setActiveDocumentKey] = useState(initialDocument.documentKey);
   const [viewMode, setViewMode] = useState("doc");
   const [editMode, setEditMode] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
   const [stagedAiBlocks, setStagedAiBlocks] = useState([]);
   const [sessionLog, setSessionLog] = useState(
@@ -785,7 +813,7 @@ export default function WorkspaceShell({
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
-  const [status, setStatus] = useState("Workspace ready.");
+  const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState("");
 
   const activeDocument = documentCache[activeDocumentKey] || initialDocument;
@@ -857,6 +885,11 @@ export default function WorkspaceShell({
   }, [activeDocumentKey, blocks]);
 
   useEffect(() => {
+    if (!aiOpen) return;
+    aiInputRef.current?.focus();
+  }, [aiOpen]);
+
+  useEffect(() => {
     if (!currentBlock?.id) return;
     const element = blockRefs.current[currentBlock.id];
     if (!element) return;
@@ -883,6 +916,48 @@ export default function WorkspaceShell({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!status) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setStatus("");
+      setStatusTone("");
+    }, STATUS_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [status]);
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const target = event.target;
+      const tagName = target?.tagName?.toLowerCase?.() || "";
+      const isTypingTarget =
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select" ||
+        target?.isContentEditable;
+
+      if (
+        event.key === "/" &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !isTypingTarget
+      ) {
+        event.preventDefault();
+        setAiOpen(true);
+        return;
+      }
+
+      if (event.key === "Escape" && aiOpen) {
+        setAiOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [aiOpen]);
 
   function setFeedback(message, tone = "") {
     setStatus(message);
@@ -1124,7 +1199,7 @@ export default function WorkspaceShell({
 
   async function requestAudioForBlock(block) {
     if (!voiceEnabled) {
-      throw new Error("Voice providers are unavailable in this environment.");
+      throw new Error("Voice is unavailable right now.");
     }
 
     const response = await fetch("/api/seven/audio", {
@@ -1142,10 +1217,18 @@ export default function WorkspaceShell({
         rate: rateRef.current,
       }),
     });
-    const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(payload?.error || "Could not load audio.");
+      let message = "";
+
+      try {
+        const payload = await response.clone().json();
+        message = payload?.error || payload?.message || "";
+      } catch {
+        message = await response.text().catch(() => "");
+      }
+
+      throw new Error(formatAudioErrorMessage(message));
     }
 
     return {
@@ -1348,6 +1431,7 @@ export default function WorkspaceShell({
         },
       );
       setAiInput("");
+      setAiOpen(true);
       setFeedback(
         payload.fallback
           ? "AI staging ready using the workspace fallback."
@@ -1510,24 +1594,11 @@ export default function WorkspaceShell({
 
       <div className="assembler-shell">
         <header className="assembler-header">
-          <div className="assembler-header__brand">
-            <span className="terminal-kicker">Document Assembler</span>
-            <h1 className="assembler-header__title">Monospace workbench for reading, listening, assembling, and receipting.</h1>
-          </div>
+          <span className="assembler-header__name">Document Assembler</span>
 
-          <div className="assembler-header__actions">
-            <span className="assembler-pill is-green">auth · active</span>
-            <span className={`assembler-pill ${voiceEnabled ? "is-cyan" : ""}`}>
-              voice · {voiceChoice?.label || "offline"}
-            </span>
-            <span className={`assembler-pill ${uploading || receiptPending ? "is-amber" : ""}`}>
-              {uploading ? "uploading" : receiptPending ? "drafting receipt" : profile?.displayName || "Reader"}
-            </span>
-            <Link href="/account" className="assembler-mini-button">
-              account
-            </Link>
-            <SignOutButton className="assembler-mini-button" />
-          </div>
+          <Link href="/account" className="assembler-header__account" aria-label="Account">
+            [@]
+          </Link>
         </header>
 
         <WorkspaceShelf
@@ -1542,22 +1613,23 @@ export default function WorkspaceShell({
           activeDocument={activeDocument}
           viewMode={viewMode}
           editMode={editMode}
+          aiOpen={aiOpen}
           status={status}
           statusTone={statusTone}
-          connectionStatus={connectionStatus}
           onSetViewMode={setViewMode}
           onToggleEditMode={() => setEditMode((value) => !value)}
-          onExportDocument={exportDocument}
-          onExportReceipt={exportReceipt}
-          onCreateReceipt={createReceiptDraft}
-          onOpenAccount={() => {
-            window.location.href = "/account";
-          }}
+          onToggleAi={() => setAiOpen((value) => !value)}
         />
 
         <section className="assembler-surface">
           {viewMode === "log" ? (
-            <LogView logEntries={sessionLog} />
+            <LogView
+              logEntries={sessionLog}
+              receiptPending={receiptPending}
+              onCreateReceipt={createReceiptDraft}
+              onExportReceipt={exportReceipt}
+              onExportDocument={exportDocument}
+            />
           ) : (
             <div className="assembler-document">
               <div className="assembler-document__header">
@@ -1601,28 +1673,34 @@ export default function WorkspaceShell({
           )}
         </section>
 
-        <AiBar
-          value={aiInput}
-          pending={aiPending}
-          onChange={setAiInput}
-          onSubmit={runAiOperation}
-          onPreset={(preset) => setAiInput(`${preset} `)}
-        />
+        {aiOpen ? (
+          <AiBar
+            inputRef={aiInputRef}
+            value={aiInput}
+            pending={aiPending}
+            onChange={setAiInput}
+            onSubmit={runAiOperation}
+            onPreset={(preset) => setAiInput(`${preset} `)}
+            onClose={() => setAiOpen(false)}
+          />
+        ) : null}
 
-        <ClipboardTray
-          stagedBlocks={stagedAiBlocks}
-          clipboard={clipboard}
-          documents={documentsState}
-          onAcceptStagedBlock={acceptStagedBlock}
-          onAcceptAllStagedBlocks={acceptAllStagedBlocks}
-          onClearStagedBlocks={() => setStagedAiBlocks([])}
-          onRemoveClipboardIndex={removeClipboardIndex}
-          onReorderClipboard={(index, delta) =>
-            setClipboard((previous) => moveListItem(previous, index, delta))
-          }
-          onClearClipboard={() => setClipboard([])}
-          onAssemble={assembleClipboard}
-        />
+        {clipboard.length || stagedAiBlocks.length ? (
+          <ClipboardTray
+            stagedBlocks={stagedAiBlocks}
+            clipboard={clipboard}
+            documents={documentsState}
+            onAcceptStagedBlock={acceptStagedBlock}
+            onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+            onClearStagedBlocks={() => setStagedAiBlocks([])}
+            onRemoveClipboardIndex={removeClipboardIndex}
+            onReorderClipboard={(index, delta) =>
+              setClipboard((previous) => moveListItem(previous, index, delta))
+            }
+            onClearClipboard={() => setClipboard([])}
+            onAssemble={assembleClipboard}
+          />
+        ) : null}
 
         <PlayerBar
           currentBlock={currentBlock}

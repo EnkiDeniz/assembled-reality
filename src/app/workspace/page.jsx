@@ -55,10 +55,8 @@ export default async function WorkspacePage({ searchParams }) {
   return (
     <WorkspaceShell
       userId={session.user.id}
-      profile={readerData?.profile || null}
       documents={documents}
       initialDocument={initialDocument}
-      connectionStatus={readerData?.getReceiptsConnection?.status || "DISCONNECTED"}
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={preferredVoiceChoice}
       voiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
