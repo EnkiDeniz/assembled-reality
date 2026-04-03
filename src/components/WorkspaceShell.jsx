@@ -284,12 +284,27 @@ function WorkspaceLaunchpad({
     <div className="assembler-launchpad">
       <div className="assembler-launchpad__panel">
         <div className="assembler-launchpad__copy">
-          <span className="terminal-kicker">Document Assembler</span>
-          <h1 className="assembler-launchpad__title">Choose a starting surface.</h1>
+          <div className="assembler-launchpad__brand">
+            <span className="assembler-launchpad__mark" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <div className="assembler-launchpad__brand-copy">
+              <h1 className="assembler-launchpad__name">Document Assembler</h1>
+              <div className="assembler-launchpad__meta-line">
+                <span>Workspace</span>
+                <span>Receipts</span>
+                <Link href="/account">Settings</Link>
+              </div>
+            </div>
+          </div>
+
           <p className="assembler-launchpad__body">
-            Open the working document, bring in a new source, or jump back into a recent assembly.
+            Compile source material into something you can actually use in life.
           </p>
-          <div className="terminal-pill-row">
+
+          <div className="assembler-launchpad__stats">
             <span className="assembler-pill is-green">{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
             <span className="assembler-pill is-cyan">{assemblyCount} assembl{assemblyCount === 1 ? "y" : "ies"}</span>
             <span className="assembler-pill">{documents.length} total docs</span>
@@ -298,13 +313,21 @@ function WorkspaceLaunchpad({
 
         <div className="assembler-launchpad__actions">
           <button type="button" className="assembler-launchpad__action is-primary" onClick={onContinue}>
+            <span className="assembler-launchpad__action-icon" aria-hidden="true">
+              ▣
+            </span>
             <span className="assembler-launchpad__action-label">Continue</span>
             <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open workspace"}</span>
+            <span className="assembler-launchpad__action-detail">Resume the current working document</span>
           </button>
 
           <button type="button" className="assembler-launchpad__action" onClick={onUpload}>
+            <span className="assembler-launchpad__action-icon" aria-hidden="true">
+              ↥
+            </span>
             <span className="assembler-launchpad__action-label">Upload</span>
             <span className="assembler-launchpad__action-value">Import a new source document</span>
+            <span className="assembler-launchpad__action-detail">PDF, Word, markdown, or plain text</span>
           </button>
 
           {latestAssembly ? (
@@ -313,13 +336,21 @@ function WorkspaceLaunchpad({
               className="assembler-launchpad__action"
               onClick={() => onOpenDocument(latestAssembly.documentKey)}
             >
+              <span className="assembler-launchpad__action-icon" aria-hidden="true">
+                ≣
+              </span>
               <span className="assembler-launchpad__action-label">Latest assembly</span>
               <span className="assembler-launchpad__action-value">{latestAssembly.title}</span>
+              <span className="assembler-launchpad__action-detail">Open the newest assembled document</span>
             </button>
           ) : (
             <Link href="/account" className="assembler-launchpad__action">
+              <span className="assembler-launchpad__action-icon" aria-hidden="true">
+                ⌘
+              </span>
               <span className="assembler-launchpad__action-label">Account</span>
               <span className="assembler-launchpad__action-value">Receipts, connection, profile</span>
+              <span className="assembler-launchpad__action-detail">Manage your settings and integrations</span>
             </Link>
           )}
         </div>
@@ -340,10 +371,24 @@ function WorkspaceLaunchpad({
                 className="assembler-launchpad__recent-row"
                 onClick={() => onOpenDocument(document.documentKey)}
               >
-                <span className="assembler-launchpad__recent-title">{document.title}</span>
+                <div className="assembler-launchpad__recent-main">
+                  <span className="assembler-launchpad__recent-title">{document.title}</span>
+                  <span className="assembler-launchpad__recent-subtitle">
+                    {document.isAssembly
+                      ? "assembled document"
+                      : document.documentType === "builtin"
+                        ? "built-in source text"
+                        : `source · ${document.formatLabel || "markdown"}`}
+                  </span>
+                </div>
                 <span className="assembler-launchpad__recent-meta">
-                  {document.isAssembly ? "assembly" : document.documentType === "builtin" ? "builtin" : "source"}
-                  {loadingDocumentKey === document.documentKey ? " · loading" : ""}
+                  {loadingDocumentKey === document.documentKey
+                    ? "loading"
+                    : document.isAssembly
+                      ? "assembly"
+                      : document.documentType === "builtin"
+                        ? "builtin"
+                        : "source"}
                 </span>
               </button>
             ))}

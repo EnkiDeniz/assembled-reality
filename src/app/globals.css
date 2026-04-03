@@ -939,6 +939,9 @@ main {
   place-items: center;
   padding: 28px;
   overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.015), transparent 34%),
+    rgba(7, 8, 8, 0.98);
 }
 
 .assembler-launchpad {
@@ -949,66 +952,155 @@ main {
 }
 
 .assembler-launchpad__panel {
-  width: min(820px, 100%);
+  width: min(720px, 100%);
   display: grid;
-  gap: 28px;
-  padding: clamp(28px, 4vw, 40px);
+  gap: 26px;
+  padding: clamp(28px, 4vw, 40px) clamp(18px, 3vw, 28px);
 }
 
 .assembler-launchpad__copy {
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: 14px;
   text-align: center;
 }
 
-.assembler-launchpad__title {
+.assembler-launchpad__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.assembler-launchpad__mark {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assembler-launchpad__mark span {
+  position: absolute;
+  inset: auto;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.assembler-launchpad__mark span:nth-child(1) {
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg) translateY(-6px);
+}
+
+.assembler-launchpad__mark span:nth-child(2) {
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg) translateX(-7px) translateY(5px);
+}
+
+.assembler-launchpad__mark span:nth-child(3) {
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg) translateX(7px) translateY(5px);
+}
+
+.assembler-launchpad__brand-copy {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  text-align: left;
+}
+
+.assembler-launchpad__name {
   margin: 0;
   color: var(--white);
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  line-height: 1.02;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  line-height: 1;
   font-weight: 600;
   letter-spacing: -0.03em;
 }
 
+.assembler-launchpad__meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.assembler-launchpad__meta-line a {
+  color: var(--blue);
+}
+
 .assembler-launchpad__body {
-  width: min(540px, 100%);
+  width: min(460px, 100%);
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.assembler-launchpad__stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 
 .assembler-launchpad__actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 16px;
 }
 
 .assembler-launchpad__action {
   display: grid;
-  gap: 8px;
-  min-height: 112px;
-  padding: 16px;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon label"
+    "icon value"
+    "icon detail";
+  column-gap: 12px;
+  row-gap: 6px;
+  min-height: 106px;
+  padding: 16px 18px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: rgba(18, 20, 20, 0.86);
+  border-radius: 14px;
+  background: rgba(18, 20, 20, 0.68);
   color: var(--text);
   text-align: left;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .assembler-launchpad__action:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: var(--line-strong);
-  background: rgba(22, 24, 24, 0.94);
+  background: rgba(24, 27, 27, 0.92);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.24);
 }
 
 .assembler-launchpad__action.is-primary {
   border-color: rgba(34, 197, 94, 0.24);
 }
 
+.assembler-launchpad__action-icon {
+  grid-area: icon;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--soft);
+  font-size: 13px;
+  align-self: start;
+}
+
 .assembler-launchpad__action-label {
+  grid-area: label;
   color: var(--soft);
   font-size: 10px;
   letter-spacing: 0.16em;
@@ -1016,16 +1108,24 @@ main {
 }
 
 .assembler-launchpad__action-value {
+  grid-area: value;
   color: var(--white);
   font-size: 16px;
-  line-height: 1.35;
+  line-height: 1.3;
+}
+
+.assembler-launchpad__action-detail {
+  grid-area: detail;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .assembler-launchpad__recent {
-  width: min(700px, 100%);
+  width: min(560px, 100%);
   justify-self: center;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .assembler-launchpad__recent-head {
@@ -1045,7 +1145,7 @@ main {
 
 .assembler-launchpad__recent-list {
   display: grid;
-  gap: 2px;
+  gap: 0;
 }
 
 .assembler-launchpad__recent-row {
@@ -1058,12 +1158,32 @@ main {
   background: transparent;
   color: inherit;
   text-align: left;
+  transition: background 140ms ease;
+}
+
+.assembler-launchpad__recent-row:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.assembler-launchpad__recent-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .assembler-launchpad__recent-title {
   min-width: 0;
   color: var(--white);
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assembler-launchpad__recent-subtitle {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1643,6 +1763,14 @@ main {
     padding: 12px 0 24px;
   }
 
+  .assembler-launchpad__brand {
+    align-items: flex-start;
+  }
+
+  .assembler-launchpad__brand-copy {
+    justify-items: start;
+  }
+
   .assembler-launchpad__actions {
     grid-template-columns: 1fr;
   }
@@ -1650,6 +1778,10 @@ main {
   .assembler-launchpad__recent-row {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .assembler-launchpad__recent-main {
+    gap: 2px;
   }
 
   .account-grid {
