@@ -23,6 +23,7 @@ import {
   getProjectDocuments,
   getProjectEntryDocumentKey,
   hydrateProjectsWithDocuments,
+  isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
 import { parseSevenAudioHeaders } from "@/lib/seven";
@@ -77,12 +78,6 @@ function formatActualProviderLabel(provider, voiceId = null) {
   return formatVoiceLabel(provider, voiceId);
 }
 
-function formatReceiptDraftStatus(status) {
-  return String(status || "LOCAL_DRAFT")
-    .toLowerCase()
-    .replace(/_/g, " ");
-}
-
 function formatDocumentFormat(value, originalFilename = "") {
   const normalized = String(value || "markdown").toLowerCase();
   if (normalized === "docx") return "DOCX";
@@ -92,6 +87,144 @@ function formatDocumentFormat(value, originalFilename = "") {
     return "TXT";
   }
   return "Markdown";
+}
+
+function getPrimaryDiagnosticMessage(intake = null) {
+  return (
+    intake?.diagnostics?.find(
+      (diagnostic) =>
+        diagnostic?.severity === "warning" || diagnostic?.severity === "error",
+    )?.message || ""
+  );
+}
+
+function isTypingTarget(target) {
+  const tagName = target?.tagName?.toLowerCase?.() || "";
+  return (
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select" ||
+    target?.isContentEditable
+  );
+}
+
+function summarizeClipboardTarget(count = 0) {
+  const normalizedCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+
+  if (normalizedCount <= 0) {
+    return "Stage blocks";
+  }
+
+  return `${normalizedCount} staged`;
+}
+
+function WorkspaceActionIcon({ kind }) {
+  if (kind === "continue") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M5 7.5h8.5L17 11l-3.5 3.5H5z" />
+        <path d="M17 11h2" />
+      </svg>
+    );
+  }
+
+  if (kind === "upload") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M12 16V5" />
+        <path d="m7.5 9.5 4.5-4.5 4.5 4.5" />
+        <path d="M5 18.5h14" />
+      </svg>
+    );
+  }
+
+  if (kind === "paste-source") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <rect x="7" y="4.5" width="10" height="15" rx="1.8" />
+        <path d="M9.5 3.5h5" />
+        <path d="M9.5 9.5h5" />
+        <path d="M9.5 13h5" />
+      </svg>
+    );
+  }
+
+  if (kind === "clipboard") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M9 5.5h6" />
+        <rect x="6.5" y="4" width="11" height="15.5" rx="2" />
+        <path d="M10 8.5h4" />
+        <path d="M9.5 12h5" />
+      </svg>
+    );
+  }
+
+  return null;
+}
+
+async function readClipboardPayloadFromNavigator() {
+  if (typeof navigator === "undefined" || !navigator.clipboard) {
+    throw new Error("Clipboard access is unavailable here. Press Cmd/Ctrl+V in the workspace instead.");
+  }
+
+  let lastError = null;
+
+  if (typeof navigator.clipboard.read === "function") {
+    try {
+      const items = await navigator.clipboard.read();
+      let html = "";
+      let text = "";
+
+      for (const item of items) {
+        if (!html && item.types.includes("text/html")) {
+          const blob = await item.getType("text/html");
+          html = await blob.text();
+        }
+        if (!text && item.types.includes("text/plain")) {
+          const blob = await item.getType("text/plain");
+          text = await blob.text();
+        }
+        if (html || text) {
+          break;
+        }
+      }
+
+      if (html || text) {
+        return { html, text };
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (typeof navigator.clipboard.readText === "function") {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text.trim()) {
+        return { html: "", text };
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    throw new Error("Clipboard access was blocked. Press Cmd/Ctrl+V in the workspace instead.");
+  }
+
+  throw new Error("Clipboard is empty.");
+}
+
+function getClipboardPayloadFromPasteEvent(event) {
+  const html = event?.clipboardData?.getData("text/html") || "";
+  const text = event?.clipboardData?.getData("text/plain") || "";
+
+  if (!html.trim() && !text.trim()) {
+    return null;
+  }
+
+  return { html, text };
 }
 
 function toDocumentSummary(document, previous = null) {
@@ -121,6 +254,13 @@ function toDocumentSummary(document, previous = null) {
     updatedAt: document.updatedAt || previous?.updatedAt || null,
     isAssembly: Boolean(document.isAssembly),
     isEditable: Boolean(document.isEditable),
+    intakeKind: document.intakeKind || previous?.intakeKind || "upload",
+    intakeDiagnostics: Array.isArray(document.intakeDiagnostics)
+      ? document.intakeDiagnostics
+      : previous?.intakeDiagnostics || [],
+    hiddenFromProjectHome: Boolean(
+      document.hiddenFromProjectHome ?? previous?.hiddenFromProjectHome,
+    ),
     sourceFiles: Array.isArray(document.sourceFiles) ? document.sourceFiles : [],
   };
 }
@@ -238,13 +378,16 @@ function writeWorkspaceState(storageKey, payload) {
 }
 
 function groupedDocuments(documents) {
+  const visibleDocuments = (Array.isArray(documents) ? documents : []).filter((document) =>
+    isProjectDocumentVisible(document),
+  );
   return {
-    sources: documents.filter(
+    sources: visibleDocuments.filter(
       (document) =>
         document.documentType === "builtin" ||
         (!document.isAssembly && document.documentType !== "assembly"),
     ),
-    assemblies: documents.filter(
+    assemblies: visibleDocuments.filter(
       (document) => document.isAssembly || document.documentType === "assembly",
     ),
   };
@@ -397,22 +540,27 @@ function WorkspaceLaunchpad({
   onCreateProject,
   onOpenDocument,
   onOpenProject,
+  onPasteClipboard,
+  onPasteSource,
   onUpload,
   uploading = false,
+  pastePendingMode = "",
+  clipboardCount = 0,
 }) {
   const grouped = groupedDocuments(documents);
   const projectEntryDocumentKey = getProjectEntryDocumentKey(activeProject);
+  const entryDocument =
+    documents.find((document) => document.documentKey === projectEntryDocumentKey) || null;
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
     grouped.assemblies[0] ||
     null;
   const sourceDocuments = grouped.sources;
-  const priorAssemblies = grouped.assemblies.filter(
-    (document) => document.documentKey !== currentAssemblyDocument?.documentKey,
-  );
-  const sourceCount = sourceDocuments.length;
-  const assemblyCount = grouped.assemblies.length;
+  const sourceCount = activeProject?.sourceCount ?? sourceDocuments.length;
+  const assemblyCount = activeProject?.assemblyCount ?? grouped.assemblies.length;
+  const continueDocument = currentAssemblyDocument || entryDocument || activeDocument || sourceDocuments[0] || null;
+  const busy = uploading || Boolean(pastePendingMode);
 
   return (
     <div className="assembler-launchpad">
@@ -425,105 +573,88 @@ function WorkspaceLaunchpad({
               <span />
             </span>
             <div className="assembler-launchpad__brand-copy">
-              <h1 className="assembler-launchpad__name">Document Assembler</h1>
+              <h1 className="assembler-launchpad__name">{activeProject?.title || "Main Project"}</h1>
               <div className="assembler-launchpad__meta-line">
-                <span>Workspace</span>
-                <span>Receipts</span>
+                <span>{sourceCount} src</span>
+                <span>{assemblyCount} asm</span>
+                <span>{projectDrafts.length} receipts</span>
                 <Link href="/account">Settings</Link>
               </div>
             </div>
           </div>
 
           <p className="assembler-launchpad__body">
-            Open a project, inspect its sources, shape the current assembly, and keep proof of how it came together.
+            {activeProject?.subtitle || "Open a source, shape the assembly, keep the receipt."}
           </p>
-
-          <div className="assembler-launchpad__stats">
-            <span className="assembler-pill">{projects.length} project{projects.length === 1 ? "" : "s"}</span>
-            <span className="assembler-pill is-green">{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
-            <span className="assembler-pill is-cyan">{assemblyCount} assembl{assemblyCount === 1 ? "y" : "ies"}</span>
-            <span className="assembler-pill">{documents.length} total docs</span>
-          </div>
         </div>
 
-        {activeProject ? (
-          <div className="assembler-launchpad__project-card">
-            <div className="assembler-launchpad__project-head">
-              <span className="assembler-launchpad__project-label">Open project</span>
-              <span className="assembler-launchpad__project-key">{activeProject.projectKey}</span>
-            </div>
-            <div className="assembler-launchpad__project-main">
-              <h2 className="assembler-launchpad__project-title">{activeProject.title}</h2>
-              <p className="assembler-launchpad__project-body">{activeProject.subtitle}</p>
-            </div>
-            <div className="assembler-launchpad__project-meta">
-              <span>{sourceCount} sources</span>
-              <span>{assemblyCount} assemblies</span>
-              <span>
-                {currentAssemblyDocument ? `Current assembly: ${currentAssemblyDocument.title}` : "No assembly yet"}
-              </span>
-            </div>
-          </div>
-        ) : null}
-
         <div className="assembler-launchpad__actions">
-          <button type="button" className="assembler-launchpad__action is-primary" onClick={onContinue}>
+          <button
+            type="button"
+            className="assembler-launchpad__action is-primary"
+            onClick={() => onContinue(continueDocument?.documentKey || projectEntryDocumentKey)}
+            disabled={!continueDocument || busy}
+          >
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              ▣
+              <WorkspaceActionIcon kind="continue" />
             </span>
-            <span className="assembler-launchpad__action-label">Open project</span>
-            <span className="assembler-launchpad__action-value">{activeProject?.title || "Main Project"}</span>
+            <span className="assembler-launchpad__action-label">Continue</span>
+            <span className="assembler-launchpad__action-value">
+              {continueDocument?.title || "Open project"}
+            </span>
             <span className="assembler-launchpad__action-detail">
-              Jump into the current project entry point and keep working
+              {currentAssemblyDocument ? "Current assembly" : "Entry source"}
             </span>
           </button>
-
-          {currentAssemblyDocument ? (
-            <button
-              type="button"
-              className="assembler-launchpad__action"
-              onClick={() => onOpenDocument(currentAssemblyDocument.documentKey)}
-            >
-              <span className="assembler-launchpad__action-icon" aria-hidden="true">
-                ≣
-              </span>
-              <span className="assembler-launchpad__action-label">Current assembly</span>
-              <span className="assembler-launchpad__action-value">{currentAssemblyDocument.title}</span>
-              <span className="assembler-launchpad__action-detail">
-                Open the current working assembly inside this project
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="assembler-launchpad__action"
-              onClick={() => onOpenDocument(projectEntryDocumentKey)}
-            >
-              <span className="assembler-launchpad__action-icon" aria-hidden="true">
-                ∎
-              </span>
-              <span className="assembler-launchpad__action-label">Primary source</span>
-              <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open source"}</span>
-              <span className="assembler-launchpad__action-detail">
-                Start from the built-in source while the project has no assembly yet
-              </span>
-            </button>
-          )}
 
           <button
             type="button"
             className="assembler-launchpad__action"
             onClick={onUpload}
-            disabled={uploading}
+            disabled={busy}
           >
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              ↥
+              <WorkspaceActionIcon kind="upload" />
             </span>
-            <span className="assembler-launchpad__action-label">Add source</span>
+            <span className="assembler-launchpad__action-label">Upload</span>
             <span className="assembler-launchpad__action-value">
-              {uploading ? "Importing your source..." : "Import a new source document"}
+              {uploading ? "Importing..." : "PDF · DOCX · MD · TXT"}
             </span>
-            <span className="assembler-launchpad__action-detail">Bring in PDF, Word, markdown, or plain text</span>
+            <span className="assembler-launchpad__action-detail">New source</span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-launchpad__action"
+            onClick={onPasteSource}
+            disabled={busy}
+          >
+            <span className="assembler-launchpad__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="paste-source" />
+            </span>
+            <span className="assembler-launchpad__action-label">Paste source</span>
+            <span className="assembler-launchpad__action-value">
+              {pastePendingMode === "source" ? "Reading clipboard..." : "New source from clipboard"}
+            </span>
+            <span className="assembler-launchpad__action-detail">Open after paste</span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-launchpad__action"
+            onClick={onPasteClipboard}
+            disabled={busy}
+          >
+            <span className="assembler-launchpad__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="clipboard" />
+            </span>
+            <span className="assembler-launchpad__action-label">Clipboard</span>
+            <span className="assembler-launchpad__action-value">
+              {pastePendingMode === "clipboard"
+                ? "Staging..."
+                : summarizeClipboardTarget(clipboardCount)}
+            </span>
+            <span className="assembler-launchpad__action-detail">Paste to stage</span>
           </button>
         </div>
 
@@ -537,12 +668,12 @@ function WorkspaceLaunchpad({
                 onClick={onCreateProject}
                 disabled={projectActionPending === "__create__"}
               >
-                {projectActionPending === "__create__" ? "Creating..." : "New project"}
+                {projectActionPending === "__create__" ? "Creating..." : "New"}
               </button>
             </div>
 
             <div className="assembler-launchpad__section-list">
-              {projects.map((project) => (
+              {projects.slice(0, 6).map((project) => (
                 <button
                   key={project.projectKey}
                   type="button"
@@ -554,9 +685,6 @@ function WorkspaceLaunchpad({
                 >
                   <div className="assembler-launchpad__recent-main">
                     <span className="assembler-launchpad__recent-title">{project.title}</span>
-                    <span className="assembler-launchpad__recent-subtitle">
-                      {project.subtitle || "Project workspace"}
-                    </span>
                   </div>
                   <span className="assembler-launchpad__recent-meta">
                     {projectActionPending === project.projectKey
@@ -568,58 +696,6 @@ function WorkspaceLaunchpad({
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="assembler-launchpad__section">
-            <div className="assembler-launchpad__section-head">
-              <span>Current assembly</span>
-              <span>{currentAssemblyDocument ? "Open now" : "Not started"}</span>
-            </div>
-
-            {currentAssemblyDocument ? (
-              <button
-                type="button"
-                className="assembler-launchpad__recent-row"
-                onClick={() => onOpenDocument(currentAssemblyDocument.documentKey)}
-              >
-                <div className="assembler-launchpad__recent-main">
-                  <span className="assembler-launchpad__recent-title">{currentAssemblyDocument.title}</span>
-                  <span className="assembler-launchpad__recent-subtitle">
-                    {currentAssemblyDocument.subtitle || "Active working assembly for this project"}
-                  </span>
-                </div>
-                <span className="assembler-launchpad__recent-meta">
-                  {loadingDocumentKey === currentAssemblyDocument.documentKey ? "loading" : "assembly"}
-                </span>
-              </button>
-            ) : (
-              <p className="assembler-launchpad__empty">
-                No assembly yet. Pull source blocks into the clipboard and assemble your first working draft.
-              </p>
-            )}
-
-            {priorAssemblies.length ? (
-              <div className="assembler-launchpad__section-list">
-                {priorAssemblies.slice(0, 3).map((document) => (
-                  <button
-                    key={document.documentKey}
-                    type="button"
-                    className="assembler-launchpad__recent-row"
-                    onClick={() => onOpenDocument(document.documentKey)}
-                  >
-                    <div className="assembler-launchpad__recent-main">
-                      <span className="assembler-launchpad__recent-title">{document.title}</span>
-                      <span className="assembler-launchpad__recent-subtitle">
-                        Earlier assembly
-                      </span>
-                    </div>
-                    <span className="assembler-launchpad__recent-meta">
-                      {loadingDocumentKey === document.documentKey ? "loading" : "assembly"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="assembler-launchpad__section">
@@ -639,24 +715,19 @@ function WorkspaceLaunchpad({
                   >
                     <div className="assembler-launchpad__recent-main">
                       <span className="assembler-launchpad__recent-title">{document.title}</span>
-                      <span className="assembler-launchpad__recent-subtitle">
-                        {document.documentType === "builtin"
-                          ? "Built-in source text"
-                          : `Source · ${document.formatLabel || "markdown"}`}
-                      </span>
                     </div>
                     <span className="assembler-launchpad__recent-meta">
                       {loadingDocumentKey === document.documentKey
                         ? "loading"
                         : document.documentType === "builtin"
                           ? "builtin"
-                          : "source"}
+                          : document.formatLabel || "source"}
                     </span>
                   </button>
                 ))
               ) : (
                 <p className="assembler-launchpad__empty">
-                  No sources yet. Import one to start shaping this project.
+                  No visible sources yet.
                 </p>
               )}
             </div>
@@ -664,39 +735,41 @@ function WorkspaceLaunchpad({
 
           <div className="assembler-launchpad__section">
             <div className="assembler-launchpad__section-head">
-              <span>Recent receipts</span>
+              <span>Current assembly</span>
+              <span>{currentAssemblyDocument ? "live" : "idle"}</span>
+            </div>
+
+            {currentAssemblyDocument ? (
+              <button
+                type="button"
+                className="assembler-launchpad__recent-row"
+                onClick={() => onOpenDocument(currentAssemblyDocument.documentKey)}
+              >
+                <div className="assembler-launchpad__recent-main">
+                  <span className="assembler-launchpad__recent-title">{currentAssemblyDocument.title}</span>
+                  <span className="assembler-launchpad__recent-subtitle">
+                    {currentAssemblyDocument.subtitle || "Open working assembly"}
+                  </span>
+                </div>
+                <span className="assembler-launchpad__recent-meta">
+                  {loadingDocumentKey === currentAssemblyDocument.documentKey ? "loading" : "assembly"}
+                </span>
+              </button>
+            ) : (
+              <p className="assembler-launchpad__empty">Nothing assembled yet.</p>
+            )}
+
+            <div className="assembler-launchpad__section-head assembler-launchpad__section-head--inline">
+              <span>Receipts</span>
               <Link href="/account" className="assembler-launchpad__recent-link">
                 Account
               </Link>
             </div>
-
-            <div className="assembler-launchpad__section-list">
-              {projectDrafts.length ? (
-                projectDrafts.map((draft) => {
-                  const documentTitle =
-                    documents.find((document) => document.documentKey === draft.documentKey)?.title ||
-                    draft.title ||
-                    "Receipt";
-                  return (
-                    <div key={draft.id} className="assembler-launchpad__recent-row is-static">
-                      <div className="assembler-launchpad__recent-main">
-                        <span className="assembler-launchpad__recent-title">{documentTitle}</span>
-                        <span className="assembler-launchpad__recent-subtitle">
-                          {draft.interpretation || "Project receipt draft"}
-                        </span>
-                      </div>
-                      <span className="assembler-launchpad__recent-meta">
-                        {formatReceiptDraftStatus(draft.status)}
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="assembler-launchpad__empty">
-                  No project receipts yet. Draft one from the log once the work is visible.
-                </p>
-              )}
-            </div>
+            <p className="assembler-launchpad__empty">
+              {projectDrafts.length
+                ? `${projectDrafts.length} recent receipt${projectDrafts.length === 1 ? "" : "s"}`
+                : "No recent receipts"}
+            </p>
           </div>
         </div>
       </div>
@@ -1312,6 +1385,7 @@ export default function WorkspaceShell({
   const speechRunIdRef = useRef(0);
   const playbackStateRef = useRef({ active: false, kind: null, paused: false });
   const storageHydratedRef = useRef(false);
+  const pasteIntoWorkspaceRef = useRef(null);
   const activeDocumentRef = useRef(initialDocument);
   const blocksRef = useRef(initialDocument.blocks || []);
   const rateRef = useRef(1);
@@ -1352,6 +1426,7 @@ export default function WorkspaceShell({
   );
   const [loadingDocumentKey, setLoadingDocumentKey] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [pastePendingMode, setPastePendingMode] = useState("");
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
@@ -1563,20 +1638,12 @@ export default function WorkspaceShell({
 
   useEffect(() => {
     function handleKeyDown(event) {
-      const target = event.target;
-      const tagName = target?.tagName?.toLowerCase?.() || "";
-      const isTypingTarget =
-        tagName === "input" ||
-        tagName === "textarea" ||
-        tagName === "select" ||
-        target?.isContentEditable;
-
       if (
         event.key === "/" &&
         !event.metaKey &&
         !event.ctrlKey &&
         !event.altKey &&
-        !isTypingTarget
+        !isTypingTarget(event.target)
       ) {
         event.preventDefault();
         setAiOpen(true);
@@ -1591,6 +1658,22 @@ export default function WorkspaceShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [aiOpen]);
+
+  useEffect(() => {
+    function handlePaste(event) {
+      if (pastePendingMode) return;
+      if (isTypingTarget(event.target)) return;
+
+      const payload = getClipboardPayloadFromPasteEvent(event);
+      if (!payload) return;
+
+      event.preventDefault();
+      void pasteIntoWorkspaceRef.current?.("clipboard", payload);
+    }
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [pastePendingMode]);
 
   function setFeedback(message, tone = "") {
     setStatus(message);
@@ -1967,12 +2050,25 @@ export default function WorkspaceShell({
 
       upsertDocument(payload.document, { replaceLogs: true });
       attachDocumentToActiveProject(payload.document, { role: "SOURCE" });
-      appendLog("UPLOADED", `${payload.document.title} (${payload.document.formatLabel || "imported"})`, {
-        documentKey: payload.document.documentKey,
-      });
+      appendLog(
+        "UPLOADED",
+        `${payload.document.title} (${formatDocumentFormat(
+          payload.document.format,
+          payload.document.originalFilename,
+        )})`,
+        {
+          documentKey: payload.document.documentKey,
+        },
+      );
       setLaunchpadOpen(false);
       await loadDocument(payload.document.documentKey);
-      setFeedback(`Imported ${payload.document.title}.`, "success");
+      const intakeWarning = getPrimaryDiagnosticMessage(payload.intake);
+      setFeedback(
+        intakeWarning
+          ? `Imported ${payload.document.title}. ${intakeWarning}`
+          : `Imported ${payload.document.title}.`,
+        intakeWarning ? "" : "success",
+      );
     } catch (error) {
       setFeedback(
         error instanceof Error ? error.message : "The document could not be imported.",
@@ -1982,6 +2078,96 @@ export default function WorkspaceShell({
       setUploading(false);
     }
   }
+
+  async function pasteIntoWorkspace(mode, payload = null) {
+    if (pastePendingMode) return;
+
+    setPastePendingMode(mode);
+    setFeedback(mode === "source" ? "Pasting source..." : "Pasting to clipboard...");
+
+    try {
+      const clipboardPayload = payload || (await readClipboardPayloadFromNavigator());
+      const response = await fetch("/api/workspace/paste", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: activeProjectKey,
+          mode,
+          html: clipboardPayload?.html || "",
+          text: clipboardPayload?.text || "",
+        }),
+      });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Could not paste into the workspace.");
+      }
+
+      if (mode === "source") {
+        if (!result?.document?.documentKey) {
+          throw new Error("The pasted source could not be created.");
+        }
+
+        upsertDocument(result.document, { replaceLogs: true });
+        attachDocumentToActiveProject(result.document, { role: "SOURCE" });
+        appendLog("PASTED", `${result.document.title} created from clipboard`, {
+          documentKey: result.document.documentKey,
+        });
+        setLaunchpadOpen(false);
+        setAiOpen(false);
+        setViewMode("doc");
+        await loadDocument(result.document.documentKey);
+
+        const intakeWarning = getPrimaryDiagnosticMessage(result.intake);
+        setFeedback(
+          intakeWarning
+            ? `Pasted ${result.document.title}. ${intakeWarning}`
+            : `Pasted ${result.document.title}.`,
+          intakeWarning ? "" : "success",
+        );
+        return;
+      }
+
+      if (!result?.sourceDocument?.documentKey || !Array.isArray(result?.blocks)) {
+        throw new Error("The clipboard paste did not return readable blocks.");
+      }
+
+      const pastedBlocks = normalizeWorkspaceBlocks(result.blocks, {
+        documentKey: result.sourceDocument.documentKey,
+        defaultSourceDocumentKey: result.sourceDocument.documentKey,
+        defaultIsEditable: true,
+      });
+      upsertDocument(result.sourceDocument, { replaceLogs: true });
+      attachDocumentToActiveProject(result.sourceDocument, { role: "SOURCE" });
+      appendLog("PASTED", `${result.sourceDocument.title} staged from clipboard`, {
+        documentKey: result.sourceDocument.documentKey,
+      });
+      setClipboard((previous) => mergeClipboard(previous, pastedBlocks));
+      setLaunchpadOpen(false);
+      setAiOpen(false);
+      setViewMode("doc");
+
+      const intakeWarning = getPrimaryDiagnosticMessage(result.intake);
+      const blockLabel = `${pastedBlocks.length} block${pastedBlocks.length === 1 ? "" : "s"}`;
+      setFeedback(
+        intakeWarning
+          ? `Pasted ${blockLabel} to clipboard. ${intakeWarning}`
+          : `Pasted ${blockLabel} to clipboard.`,
+        intakeWarning ? "" : "success",
+      );
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not paste into the workspace.",
+        "error",
+      );
+    } finally {
+      setPastePendingMode("");
+    }
+  }
+
+  pasteIntoWorkspaceRef.current = pasteIntoWorkspace;
 
   function addBlockToClipboard(block) {
     const alreadySelected = clipboard.some((item) => item.id === block.id);
@@ -2774,10 +2960,14 @@ export default function WorkspaceShell({
               projectActionPending={projectActionPending}
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
-              onContinue={() => enterWorkspace(getProjectEntryDocumentKey(activeProject))}
+              pastePendingMode={pastePendingMode}
+              clipboardCount={clipboard.length}
+              onContinue={enterWorkspace}
               onCreateProject={() => void createProject()}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
+              onPasteSource={() => void pasteIntoWorkspace("source")}
+              onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onUpload={() => fileInputRef.current?.click()}
             />
           </section>

@@ -3,6 +3,9 @@ import "server-only";
 import { buildExcerpt } from "@/lib/text";
 
 export const MAX_DOCUMENT_UPLOAD_BYTES = 15 * 1024 * 1024;
+export const MAX_CLIPBOARD_PASTE_BYTES = 1024 * 1024;
+
+const PDF_LOW_TEXT_WORD_THRESHOLD = 40;
 
 const SUPPORTED_FORMATS = new Map([
   [".md", "markdown"],
@@ -14,6 +17,21 @@ const SUPPORTED_FORMATS = new Map([
 ]);
 
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
+
+function createImportError(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+function createIntakeDiagnostic(code, severity, message) {
+  return {
+    code: String(code || "info").trim() || "info",
+    severity:
+      severity === "warning" || severity === "error" ? severity : "info",
+    message: String(message || "").trim(),
+  };
+}
 
 function getFilenameExtension(filename) {
   const match = String(filename || "")
@@ -34,6 +52,28 @@ function guessTitleFromFilename(filename) {
     .trim();
 
   return cleaned || "Uploaded document";
+}
+
+function trimTitleCandidate(text, fallback = "Pasted source") {
+  const normalized = String(text || "")
+    .replace(/^[#>*_\-`[\]()\s]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return fallback;
+  if (normalized.length <= 80) return normalized;
+  return `${normalized.slice(0, 77).trimEnd()}...`;
+}
+
+function guessTitleFromText(text, fallback = "Pasted source") {
+  const lines = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => cleanHeadingText(line).replace(/^[-*+]\s+/, "").trim())
+    .filter(Boolean);
+
+  return trimTitleCandidate(lines[0], fallback);
 }
 
 function isPlainTextImport(filename, mimeType = "") {
@@ -344,6 +384,35 @@ async function extractTextFromPdf(buffer) {
   }
 }
 
+async function convertHtmlToMarkdown(html) {
+  const turndownModule = await import("turndown");
+  const TurndownService = turndownModule.default || turndownModule;
+  const service = new TurndownService({
+    bulletListMarker: "-",
+    codeBlockStyle: "fenced",
+    emDelimiter: "_",
+    headingStyle: "atx",
+  });
+
+  return service.turndown(String(html || ""));
+}
+
+function finalizeImportedDocument(format, structured, diagnostics = []) {
+  const contentMarkdown = buildCanonicalMarkdown(structured);
+  const visibleText = extractVisibleText(contentMarkdown);
+
+  return {
+    format,
+    title: structured.title || "Untitled document",
+    subtitle: "",
+    contentMarkdown,
+    wordCount: countWords(visibleText),
+    sectionCount: structured.sections.length,
+    preview: buildExcerpt(visibleText, 180),
+    diagnostics: Array.isArray(diagnostics) ? diagnostics : [],
+  };
+}
+
 export function getImportedDocumentFormat(filename, mimeType = "") {
   const normalizedMime = String(mimeType || "").toLowerCase();
   const extension = getFilenameExtension(filename);
@@ -377,6 +446,7 @@ export async function ingestUploadedDocument({ filename, mimeType = "", buffer }
   }
 
   const titleHint = guessTitleFromFilename(filename);
+  const diagnostics = [];
 
   let structured;
   if (format === "markdown") {
@@ -389,19 +459,74 @@ export async function ingestUploadedDocument({ filename, mimeType = "", buffer }
   } else if (format === "doc") {
     structured = structurePlainTextImport(await extractTextFromDoc(buffer), titleHint);
   } else {
-    structured = structurePlainTextImport(await extractTextFromPdf(buffer), titleHint);
+    let extractedText = "";
+    try {
+      extractedText = await extractTextFromPdf(buffer);
+    } catch {
+      throw createImportError(
+        "pdf_extract_failed",
+        "Could not extract text from this PDF. Text PDFs are supported right now.",
+      );
+    }
+
+    const normalizedPdfText = normalizePlainTextSource(extractedText);
+    if (!normalizedPdfText) {
+      throw createImportError(
+        "pdf_no_text",
+        "This PDF did not yield readable text. Scanned, image-based, or protected PDFs are not supported yet.",
+      );
+    }
+
+    if (countWords(normalizedPdfText) < PDF_LOW_TEXT_WORD_THRESHOLD) {
+      diagnostics.push(
+        createIntakeDiagnostic(
+          "pdf_low_text",
+          "warning",
+          "Text extraction was sparse. PDF import is text-only for now, so layout may be rough.",
+        ),
+      );
+    }
+
+    structured = structurePlainTextImport(normalizedPdfText, titleHint);
   }
 
-  const contentMarkdown = buildCanonicalMarkdown(structured);
-  const visibleText = extractVisibleText(contentMarkdown);
+  return finalizeImportedDocument(format, structured, diagnostics);
+}
 
-  return {
-    format,
-    title: structured.title || titleHint,
-    subtitle: "",
-    contentMarkdown,
-    wordCount: countWords(visibleText),
-    sectionCount: structured.sections.length,
-    preview: buildExcerpt(visibleText, 180),
-  };
+export async function ingestPastedDocument({ html = "", text = "", mode = "source" }) {
+  const normalizedHtml = String(html || "").trim();
+  const normalizedText = String(text || "").trim();
+  const payloadBytes =
+    Buffer.byteLength(normalizedHtml, "utf8") + Buffer.byteLength(normalizedText, "utf8");
+
+  if (!normalizedHtml && !normalizedText) {
+    throw createImportError("clipboard_empty", "Clipboard is empty.");
+  }
+
+  if (payloadBytes > MAX_CLIPBOARD_PASTE_BYTES) {
+    throw createImportError(
+      "clipboard_too_large",
+      "Clipboard payload too large. Keep pasted content under 1 MB for now.",
+    );
+  }
+
+  if (normalizedHtml) {
+    const markdown = normalizeMarkdownSource(await convertHtmlToMarkdown(normalizedHtml));
+    if (markdown) {
+      const titleHint = guessTitleFromText(
+        markdown,
+        mode === "clipboard" ? "Clipboard source" : "Pasted source",
+      );
+      return finalizeImportedDocument("markdown", structureMarkdownImport(markdown, titleHint));
+    }
+  }
+
+  const titleHint = guessTitleFromText(
+    normalizedText,
+    mode === "clipboard" ? "Clipboard source" : "Pasted source",
+  );
+  if (!normalizedText) {
+    throw createImportError("clipboard_empty", "Clipboard did not contain readable text.");
+  }
+  return finalizeImportedDocument("markdown", structurePlainTextImport(normalizedText, titleHint));
 }

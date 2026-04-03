@@ -93,16 +93,36 @@ function buildSourceFiles(meta = {}, originalFilename = "") {
   return filename ? [filename] : [];
 }
 
+function normalizeIntakeDiagnostics(diagnostics = []) {
+  return (Array.isArray(diagnostics) ? diagnostics : [])
+    .filter(Boolean)
+    .map((diagnostic) => ({
+      code: String(diagnostic?.code || "info").trim() || "info",
+      severity:
+        diagnostic?.severity === "warning" || diagnostic?.severity === "error"
+          ? diagnostic.severity
+          : "info",
+      message: String(diagnostic?.message || "").trim(),
+    }))
+    .filter((diagnostic) => diagnostic.message);
+}
+
 function buildStoredWorkspaceMeta({
   documentType = "source",
   sourceFiles = [],
   blocks = [],
   logEntries = [],
+  intakeKind = "upload",
+  intakeDiagnostics = [],
+  hiddenFromProjectHome = false,
 }) {
   return {
-    version: 1,
+    version: 2,
     documentType,
     sourceFiles: Array.isArray(sourceFiles) ? sourceFiles.filter(Boolean) : [],
+    intakeKind: String(intakeKind || "upload").trim() || "upload",
+    intakeDiagnostics: normalizeIntakeDiagnostics(intakeDiagnostics),
+    hiddenFromProjectHome: Boolean(hiddenFromProjectHome),
     blocks: normalizeWorkspaceBlocks(blocks).map((block) => ({
       id: block.id,
       documentKey: block.documentKey,
@@ -134,6 +154,9 @@ export function buildStoredWorkspaceContent({
   sourceFiles = [],
   blocks = [],
   logEntries = [],
+  intakeKind = "upload",
+  intakeDiagnostics = [],
+  hiddenFromProjectHome = false,
 }) {
   const markdown = buildWorkspaceMarkdown({
     title,
@@ -146,6 +169,9 @@ export function buildStoredWorkspaceContent({
     sourceFiles,
     blocks,
     logEntries,
+    intakeKind,
+    intakeDiagnostics,
+    hiddenFromProjectHome,
   });
 
   return `<!-- assembler-meta:${encodeWorkspaceMeta(meta)} -->\n\n${markdown}`.trim();
@@ -188,6 +214,9 @@ export function parseStoredWorkspaceDocument({
     logEntries,
     documentType,
     sourceType,
+    intakeKind: String(meta?.intakeKind || fallbackSourceType || "upload").trim().toLowerCase(),
+    intakeDiagnostics: normalizeIntakeDiagnostics(meta?.intakeDiagnostics),
+    hiddenFromProjectHome: Boolean(meta?.hiddenFromProjectHome),
     sourceFiles: buildSourceFiles(meta, originalFilename),
     originalFilename: originalFilename || null,
     format: String(format || "MARKDOWN").toLowerCase(),

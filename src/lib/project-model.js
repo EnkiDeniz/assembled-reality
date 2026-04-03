@@ -9,6 +9,10 @@ function buildProjectHref(projectKey = DEFAULT_PROJECT_KEY) {
   return `/workspace?project=${encodeURIComponent(projectKey)}`;
 }
 
+export function isProjectDocumentVisible(document = null) {
+  return !document?.hiddenFromProjectHome;
+}
+
 function getDocumentTimestamp(document) {
   const parsed = Date.parse(document?.updatedAt || document?.createdAt || "");
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -33,11 +37,12 @@ function getMostRecentDocument(documents = []) {
 
 export function buildDefaultProjectFromDocuments(documents = []) {
   const normalizedDocuments = Array.isArray(documents) ? documents.filter(Boolean) : [];
-  const { sources, assemblies } = groupDocuments(normalizedDocuments);
+  const visibleDocuments = normalizedDocuments.filter((document) => isProjectDocumentVisible(document));
+  const { sources, assemblies } = groupDocuments(visibleDocuments);
   const builtinSource =
     sources.find((document) => document.documentType === "builtin") || sources[0] || null;
   const currentAssembly = getMostRecentDocument(assemblies);
-  const latestTouchedDocument = getMostRecentDocument(normalizedDocuments);
+  const latestTouchedDocument = getMostRecentDocument(visibleDocuments);
 
   return {
     id: null,
@@ -50,7 +55,7 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     isDefault: true,
     sourceCount: sources.length,
     assemblyCount: assemblies.length,
-    documentCount: normalizedDocuments.length,
+    documentCount: visibleDocuments.length,
     documentKeys: normalizedDocuments.map((document) => document.documentKey).filter(Boolean),
     sourceDocumentKeys: sources.map((document) => document.documentKey).filter(Boolean),
     assemblyDocumentKeys: assemblies.map((document) => document.documentKey).filter(Boolean),
@@ -59,9 +64,9 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     defaultDocumentKey:
       currentAssembly?.documentKey ||
       builtinSource?.documentKey ||
-      normalizedDocuments[0]?.documentKey ||
+      visibleDocuments[0]?.documentKey ||
       PRIMARY_WORKSPACE_DOCUMENT_KEY,
-    createdAt: builtinSource?.createdAt || normalizedDocuments[0]?.createdAt || null,
+    createdAt: builtinSource?.createdAt || visibleDocuments[0]?.createdAt || null,
     updatedAt: latestTouchedDocument?.updatedAt || latestTouchedDocument?.createdAt || null,
   };
 }
@@ -117,9 +122,9 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
     documentKeys,
     sourceDocumentKeys,
     assemblyDocumentKeys,
-    sourceCount: sourceDocumentKeys.length,
-    assemblyCount: assemblyDocumentKeys.length,
-    documentCount: documentKeys.length,
+    sourceCount: fallbackProject.sourceCount,
+    assemblyCount: fallbackProject.assemblyCount,
+    documentCount: fallbackProject.documentCount,
     builtInSourceDocumentKey:
       project.builtInSourceDocumentKey || fallbackProject.builtInSourceDocumentKey,
     currentAssemblyDocumentKey:

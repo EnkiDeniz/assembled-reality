@@ -60,6 +60,11 @@ function serializeDocumentSummary(documentData, record = null, progressPercent =
     updatedAt: documentData?.updatedAt || record?.updatedAt?.toISOString?.() || null,
     isAssembly: Boolean(documentData?.isAssembly),
     isEditable: Boolean(documentData?.isEditable),
+    intakeKind: documentData?.intakeKind || (isBuiltin ? "builtin" : "upload"),
+    intakeDiagnostics: Array.isArray(documentData?.intakeDiagnostics)
+      ? documentData.intakeDiagnostics
+      : [],
+    hiddenFromProjectHome: Boolean(documentData?.hiddenFromProjectHome),
     sourceFiles: Array.isArray(documentData?.sourceFiles) ? documentData.sourceFiles : [],
   };
 }
@@ -166,6 +171,10 @@ export async function createReaderDocumentForUser(
     contentMarkdown,
     wordCount = 0,
     sectionCount = 0,
+    sourceFiles = [],
+    intakeKind = "upload",
+    intakeDiagnostics = [],
+    hiddenFromProjectHome = false,
   },
 ) {
   const readerDocumentModel = getReaderDocumentModel();
@@ -187,9 +196,12 @@ export async function createReaderDocumentForUser(
     title: normalizedTitle,
     subtitle: normalizedSubtitle,
     documentType: "source",
-    sourceFiles: originalFilename ? [originalFilename] : [],
+    sourceFiles: sourceFiles.length ? sourceFiles : originalFilename ? [originalFilename] : [],
     blocks,
     logEntries: [],
+    intakeKind,
+    intakeDiagnostics,
+    hiddenFromProjectHome,
   });
 
   const record = await readerDocumentModel.create({
