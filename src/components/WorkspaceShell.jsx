@@ -23,6 +23,7 @@ import {
   getProjectByKey,
   getProjectDocuments,
   getProjectEntryDocumentKey,
+  getProjectListenDocumentKey,
   hydrateProjectsWithDocuments,
   isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
@@ -132,9 +133,32 @@ function getAiPlaceholder(scope) {
   return "ask about this document...";
 }
 
-function resolveProjectEntryDocument(project, documents, fallbackDocument = null) {
+function isSourceDocument(document) {
+  return Boolean(document) && !document.isAssembly && document.documentType !== "assembly";
+}
+
+function resolveProjectModeDocument(project, documents, mode, fallbackDocument = null) {
   const projectDocuments = Array.isArray(documents) ? documents : [];
-  const currentAssembly =
+  const normalizedMode = normalizeWorkspaceMode(mode, WORKSPACE_MODES.assemble);
+  if (normalizedMode === WORKSPACE_MODES.listen) {
+    const sourceFallback =
+      isSourceDocument(fallbackDocument) && isProjectDocumentVisible(fallbackDocument)
+        ? fallbackDocument
+        : null;
+    const listenDocumentKey = getProjectListenDocumentKey(project, projectDocuments);
+    return (
+      projectDocuments.find((document) => document.documentKey === listenDocumentKey) ||
+      sourceFallback ||
+      projectDocuments.find(
+        (document) => isSourceDocument(document) && isProjectDocumentVisible(document),
+      ) ||
+      fallbackDocument ||
+      projectDocuments[0] ||
+      null
+    );
+  }
+
+  return (
     (project?.currentAssemblyDocumentKey &&
       projectDocuments.find(
         (document) => document.documentKey === project.currentAssemblyDocumentKey,
@@ -142,9 +166,8 @@ function resolveProjectEntryDocument(project, documents, fallbackDocument = null
     projectDocuments.find((document) => document.documentKey === getProjectEntryDocumentKey(project)) ||
     fallbackDocument ||
     projectDocuments[0] ||
-    null;
-
-  return currentAssembly;
+    null
+  );
 }
 
 function summarizePolishChanges(changes = null) {
@@ -737,8 +760,20 @@ function WorkspaceLaunchpad({
   clipboardCount = 0,
 }) {
   const grouped = groupedDocuments(documents);
-  const continueDocument =
-    resolveProjectEntryDocument(activeProject, documents, activeDocument || null);
+  const listenDocument =
+    resolveProjectModeDocument(
+      activeProject,
+      documents,
+      WORKSPACE_MODES.listen,
+      activeDocument || null,
+    );
+  const assembleDocument =
+    resolveProjectModeDocument(
+      activeProject,
+      documents,
+      WORKSPACE_MODES.assemble,
+      activeDocument || null,
+    );
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
@@ -775,32 +810,32 @@ function WorkspaceLaunchpad({
           <button
             type="button"
             className="assembler-launchpad__action is-primary"
-            onClick={() => onEnterMode(WORKSPACE_MODES.listen, continueDocument?.documentKey || "")}
-            disabled={!continueDocument || busy}
+            onClick={() => onEnterMode(WORKSPACE_MODES.listen, listenDocument?.documentKey || "")}
+            disabled={!listenDocument || busy}
           >
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               <WorkspaceActionIcon kind="listen" />
             </span>
             <span className="assembler-launchpad__action-label">Mode</span>
             <span className="assembler-launchpad__action-value">Listen</span>
-            {continueDocument?.title ? (
-              <span className="assembler-launchpad__action-detail">{continueDocument.title}</span>
+            {listenDocument?.title ? (
+              <span className="assembler-launchpad__action-detail">{listenDocument.title}</span>
             ) : null}
           </button>
 
           <button
             type="button"
             className="assembler-launchpad__action is-primary"
-            onClick={() => onEnterMode(WORKSPACE_MODES.assemble, continueDocument?.documentKey || "")}
-            disabled={!continueDocument || busy}
+            onClick={() => onEnterMode(WORKSPACE_MODES.assemble, assembleDocument?.documentKey || "")}
+            disabled={!assembleDocument || busy}
           >
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               <WorkspaceActionIcon kind="assemble" />
             </span>
             <span className="assembler-launchpad__action-label">Mode</span>
             <span className="assembler-launchpad__action-value">Assemble</span>
-            {continueDocument?.title ? (
-              <span className="assembler-launchpad__action-detail">{continueDocument.title}</span>
+            {assembleDocument?.title ? (
+              <span className="assembler-launchpad__action-detail">{assembleDocument.title}</span>
             ) : null}
           </button>
 
@@ -1018,15 +1053,6 @@ function ListenPicker({
       </div>
 
       <div className="assembler-listen-picker__section">
-        <span className="assembler-listen-picker__label">Current assembly</span>
-        {currentAssembly
-          ? renderDocumentRow(currentAssembly, "assembly")
-          : (
-            <span className="assembler-listen-picker__empty">No assembly yet.</span>
-          )}
-      </div>
-
-      <div className="assembler-listen-picker__section">
         <span className="assembler-listen-picker__label">Sources</span>
         {grouped.sources.length
           ? grouped.sources.map((document) =>
@@ -1037,6 +1063,15 @@ function ListenPicker({
                   : document.formatLabel || "source",
               ))
           : <span className="assembler-listen-picker__empty">No visible sources.</span>}
+      </div>
+
+      <div className="assembler-listen-picker__section">
+        <span className="assembler-listen-picker__label">Current assembly</span>
+        {currentAssembly
+          ? renderDocumentRow(currentAssembly, "assembly")
+          : (
+            <span className="assembler-listen-picker__empty">No assembly yet.</span>
+          )}
       </div>
 
       <div className="assembler-listen-picker__section">
@@ -2165,7 +2200,10 @@ export default function WorkspaceShell({
     if (!projectDocumentKeys.size) return;
 
     if (!projectDocumentKeys.has(activeDocumentKey)) {
-      const fallbackDocumentKey = getProjectEntryDocumentKey(activeProject);
+      const fallbackDocumentKey =
+        workspaceMode === WORKSPACE_MODES.listen
+          ? getProjectListenDocumentKey(activeProject, projectDocuments)
+          : getProjectEntryDocumentKey(activeProject);
       if (fallbackDocumentKey && fallbackDocumentKey !== activeDocumentKey) {
         startTransition(() => {
           setActiveDocumentKey(fallbackDocumentKey);
@@ -2182,7 +2220,7 @@ export default function WorkspaceShell({
         }
       }
     }
-  }, [activeProject, activeDocumentKey, workspaceMode]);
+  }, [activeProject, activeDocumentKey, projectDocuments, workspaceMode]);
 
   useEffect(() => {
     setLastModeByProjectKey((previous) => {

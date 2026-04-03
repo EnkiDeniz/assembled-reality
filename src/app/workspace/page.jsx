@@ -13,6 +13,7 @@ import {
 import {
   getProjectByKey,
   getProjectEntryDocumentKey,
+  getProjectListenDocumentKey,
 } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import {
@@ -37,7 +38,12 @@ export default async function WorkspacePage({ searchParams }) {
 
   const projects = await listReaderProjectsForUser(session.user.id, documents);
   const initialProject = getProjectByKey(projects, requestedProjectKey);
-  const initialProjectDocumentKey =
+  const initialListenDocumentKey =
+    getProjectListenDocumentKey(initialProject, documents) ||
+    getProjectEntryDocumentKey(initialProject) ||
+    documents[0]?.documentKey ||
+    "";
+  const initialAssembleDocumentKey =
     initialProject?.currentAssemblyDocumentKey ||
     getProjectEntryDocumentKey(initialProject) ||
     documents[0]?.documentKey ||
@@ -45,11 +51,13 @@ export default async function WorkspacePage({ searchParams }) {
 
   const fallbackDocumentKey =
     requestedDocumentKey ||
-    ((requestedMode === "listen" || requestedMode === "assemble")
-      ? initialProjectDocumentKey
-      : getProjectEntryDocumentKey(initialProject) ||
-        documents[0]?.documentKey ||
-        "");
+    (requestedMode === "listen"
+      ? initialListenDocumentKey
+      : requestedMode === "assemble"
+        ? initialAssembleDocumentKey
+        : getProjectEntryDocumentKey(initialProject) ||
+          documents[0]?.documentKey ||
+          "");
   const [initialDocument, projectDrafts] = await Promise.all([
     getReaderDocumentDataForUser(
       session.user.id,

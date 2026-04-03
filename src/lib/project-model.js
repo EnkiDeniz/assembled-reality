@@ -155,3 +155,24 @@ export function getProjectEntryDocumentKey(project = null) {
     PRIMARY_WORKSPACE_DOCUMENT_KEY
   );
 }
+
+export function getProjectListenDocumentKey(project = null, documents = []) {
+  const projectDocuments = getProjectDocuments(documents, project);
+  const visibleDocuments = projectDocuments.filter((document) => isProjectDocumentVisible(document));
+  const { sources } = groupDocuments(visibleDocuments);
+  const userSources = sources.filter(
+    (document) =>
+      document?.documentType !== "builtin" && document?.sourceType !== "builtin",
+  );
+  const recentUserSource = getMostRecentDocument(userSources);
+  const recentSource = getMostRecentDocument(sources);
+  const recentVisibleDocument = getMostRecentDocument(visibleDocuments);
+
+  return (
+    recentUserSource?.documentKey ||
+    recentSource?.documentKey ||
+    recentVisibleDocument?.documentKey ||
+    project?.builtInSourceDocumentKey ||
+    getProjectEntryDocumentKey(project)
+  );
+}
