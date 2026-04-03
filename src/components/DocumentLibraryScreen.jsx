@@ -26,9 +26,10 @@ function formatActivityLabel(document) {
   }
 
   try {
-    return `Updated ${new Intl.DateTimeFormat(undefined, {
+    return `Updated ${new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
+      timeZone: "UTC",
     }).format(new Date(timestamp))}`;
   } catch {
     return "Imported document";
