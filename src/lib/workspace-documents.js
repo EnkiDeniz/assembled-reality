@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { attachDocumentToDefaultProjectForUser } from "@/lib/reader-projects";
 import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { slugify } from "@/lib/text";
 import {
@@ -536,6 +537,12 @@ export async function createAssemblyDocumentForUser(
       wordCount: countWords(contentMarkdown),
       sectionCount: 1,
     },
+  });
+
+  await attachDocumentToDefaultProjectForUser(userId, {
+    documentKey,
+    role: "ASSEMBLY",
+    setAsCurrentAssembly: true,
   });
 
   return getWorkspaceDocumentForUser(userId, documentKey);

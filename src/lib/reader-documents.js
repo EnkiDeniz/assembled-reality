@@ -3,6 +3,7 @@ import "server-only";
 import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { buildWorkspaceBlocksFromDocument } from "@/lib/document-blocks";
 import { prisma } from "@/lib/prisma";
+import { attachDocumentToDefaultProjectForUser } from "@/lib/reader-projects";
 import { slugify } from "@/lib/text";
 import {
   buildStoredWorkspaceContent,
@@ -197,6 +198,11 @@ export async function createReaderDocumentForUser(
       wordCount,
       sectionCount,
     },
+  });
+
+  await attachDocumentToDefaultProjectForUser(userId, {
+    documentKey,
+    role: "SOURCE",
   });
 
   return serializeUploadedDocument(record, 0);

@@ -12,10 +12,10 @@ import {
   listReaderDocumentsForUser,
 } from "@/lib/reader-documents";
 import {
-  buildProjectsFromDocuments,
   getProjectByKey,
   getProjectEntryDocumentKey,
 } from "@/lib/project-model";
+import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import { getReaderProfileByUserId } from "@/lib/reader-db";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export default async function WorkspacePage({ searchParams }) {
     getReaderProfileByUserId(session.user.id),
   ]);
 
-  const projects = buildProjectsFromDocuments(documents);
+  const projects = await listReaderProjectsForUser(session.user.id, documents);
   const initialProject = getProjectByKey(projects, requestedProjectKey);
 
   const fallbackDocumentKey =

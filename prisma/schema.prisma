@@ -76,6 +76,11 @@ enum ListeningSessionStatus {
   PAUSED
 }
 
+enum ReaderProjectDocumentRole {
+  SOURCE
+  ASSEMBLY
+}
+
 model User {
   id                  String                 @id @default(cuid())
   name                String?
@@ -90,6 +95,7 @@ model User {
   readerConversationThreads ReaderConversationThread[]
   readerEvidenceSets   ReaderEvidenceSet[]
   readerDocuments      ReaderDocument[]
+  readerProjects       ReaderProject[]
   readerListeningSessions ReaderListeningSession[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
@@ -205,6 +211,37 @@ model ReaderDocument {
   user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, updatedAt])
+}
+
+model ReaderProject {
+  id                        String                  @id @default(cuid())
+  userId                    String
+  projectKey                String
+  title                     String
+  subtitle                  String?
+  currentAssemblyDocumentKey String?
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  user                      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents                 ReaderProjectDocument[]
+
+  @@unique([userId, projectKey])
+  @@index([userId, updatedAt])
+}
+
+model ReaderProjectDocument {
+  id         String                    @id @default(cuid())
+  projectId  String
+  documentKey String
+  role       ReaderProjectDocumentRole @default(SOURCE)
+  position   Int                       @default(0)
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+  project    ReaderProject             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, documentKey])
+  @@index([projectId, role, position])
+  @@index([documentKey])
 }
 
 model GetReceiptsConnection {
