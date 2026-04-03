@@ -56,6 +56,13 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/gif",
 ]);
 
+function normalizeImageDerivationMode(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "notes") return "notes";
+  if (normalized === "document") return "document";
+  return "";
+}
+
 function normalizePreferredImageDerivationMode(value = "") {
   return normalizeImageDerivationMode(value) || IMAGE_DERIVATION_OPTIONS[0].value;
 }
@@ -177,12 +184,12 @@ function isSupportedImageMimeType(value = "") {
 }
 
 function isImageFilename(value = "") {
-  return /\.(png|jpe?g|webp|gif)$/i.test(String(value || "").trim());
+  return /\.(png|jpe?g|webp|gif|heic|heif|bmp|tiff?)$/i.test(String(value || "").trim());
 }
 
 function isImageFileLike(file) {
   if (!file) return false;
-  return isSupportedImageMimeType(file.type || "") || isImageFilename(file.name || "");
+  return String(file.type || "").trim().toLowerCase().startsWith("image/") || isImageFilename(file.name || "");
 }
 
 function dataUrlMimeType(dataUrl = "") {
@@ -2640,6 +2647,7 @@ export default function WorkspaceShell({
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
     diagnostics: activeDocument?.intakeDiagnostics,
   });
+  const activeDocumentImageAsset = getPrimaryImageSourceAsset(activeDocument);
   const canPolishActiveDocument =
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
@@ -2670,6 +2678,75 @@ export default function WorkspaceShell({
   rateRef.current = rate;
   voiceChoiceRef.current = resolvedVoiceChoice;
   documentLogsRef.current = documentLogs;
+
+  const persistListeningSession = useCallback(async (
+    status = "paused",
+    {
+      documentKey = activeDocument.documentKey,
+      block = currentBlock || focusedBlock || blocks[0] || null,
+    } = {},
+  ) => {
+    if (!documentKey) return;
+
+    try {
+      await fetch("/api/reader/listening-session", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentKey,
+          mode: "flow",
+          activeNodeId: block?.id || null,
+          activeSectionSlug: block?.sectionSlug || null,
+          rate,
+          provider: resolvedVoiceChoice?.provider || null,
+          voiceId: resolvedVoiceChoice?.voiceId || null,
+          status,
+          preferredVoiceProvider: resolvedVoiceChoice?.provider || undefined,
+          preferredVoiceId: resolvedVoiceChoice?.voiceId || undefined,
+          preferredListeningRate: rate,
+        }),
+      });
+
+      if (status === "active" || status === "paused") {
+        setResumeSessionSummaryState({
+          documentKey,
+          title:
+            documentsState.find((document) => document.documentKey === documentKey)?.title ||
+            activeDocument.title,
+          subtitle:
+            documentsState.find((document) => document.documentKey === documentKey)?.subtitle ||
+            activeDocument.subtitle ||
+            "",
+          status,
+          blockId: block?.id || null,
+          blockPosition:
+            typeof block?.sourcePosition === "number" ? block.sourcePosition + 1 : 1,
+          totalBlocks:
+            documentsState.find((document) => document.documentKey === documentKey)?.sectionCount ||
+            blocks.length,
+          updatedAt: new Date().toISOString(),
+        });
+      } else if (resumeSessionSummaryState?.documentKey === documentKey) {
+        setResumeSessionSummaryState(null);
+      }
+    } catch {
+      // Session persistence is additive; do not interrupt the core workspace flow.
+    }
+  }, [
+    activeDocument.documentKey,
+    activeDocument.subtitle,
+    activeDocument.title,
+    blocks,
+    currentBlock,
+    documentsState,
+    focusedBlock,
+    rate,
+    resolvedVoiceChoice?.provider,
+    resolvedVoiceChoice?.voiceId,
+    resumeSessionSummaryState?.documentKey,
+  ]);
 
   useEffect(() => {
     if (storageHydratedRef.current) return;
@@ -2958,11 +3035,15 @@ export default function WorkspaceShell({
       if (pastePendingMode) return;
       if (isTypingTarget(event.target)) return;
 
-      const payload = await getClipboardPayloadFromPasteEvent(event);
-      if (!payload) return;
+      try {
+        const payload = await getClipboardPayloadFromPasteEvent(event);
+        if (!payload) return;
 
-      event.preventDefault();
-      void pasteIntoWorkspaceRef.current?.("clipboard", payload);
+        event.preventDefault();
+        void pasteIntoWorkspaceRef.current?.("clipboard", payload);
+      } catch {
+        // Ignore malformed clipboard payloads here and let explicit paste actions handle errors.
+      }
     }
 
     window.addEventListener("paste", handlePaste);
@@ -3134,75 +3215,6 @@ export default function WorkspaceShell({
       );
     }
   }
-
-  const persistListeningSession = useCallback(async (
-    status = "paused",
-    {
-      documentKey = activeDocument.documentKey,
-      block = currentBlock || focusedBlock || blocks[0] || null,
-    } = {},
-  ) => {
-    if (!documentKey) return;
-
-    try {
-      await fetch("/api/reader/listening-session", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          documentKey,
-          mode: "flow",
-          activeNodeId: block?.id || null,
-          activeSectionSlug: block?.sectionSlug || null,
-          rate,
-          provider: resolvedVoiceChoice?.provider || null,
-          voiceId: resolvedVoiceChoice?.voiceId || null,
-          status,
-          preferredVoiceProvider: resolvedVoiceChoice?.provider || undefined,
-          preferredVoiceId: resolvedVoiceChoice?.voiceId || undefined,
-          preferredListeningRate: rate,
-        }),
-      });
-
-      if (status === "active" || status === "paused") {
-        setResumeSessionSummaryState({
-          documentKey,
-          title:
-            documentsState.find((document) => document.documentKey === documentKey)?.title ||
-            activeDocument.title,
-          subtitle:
-            documentsState.find((document) => document.documentKey === documentKey)?.subtitle ||
-            activeDocument.subtitle ||
-            "",
-          status,
-          blockId: block?.id || null,
-          blockPosition:
-            typeof block?.sourcePosition === "number" ? block.sourcePosition + 1 : 1,
-          totalBlocks:
-            documentsState.find((document) => document.documentKey === documentKey)?.sectionCount ||
-            blocks.length,
-          updatedAt: new Date().toISOString(),
-        });
-      } else if (resumeSessionSummaryState?.documentKey === documentKey) {
-        setResumeSessionSummaryState(null);
-      }
-    } catch {
-      // Session persistence is additive; do not interrupt the core workspace flow.
-    }
-  }, [
-    activeDocument.documentKey,
-    activeDocument.subtitle,
-    activeDocument.title,
-    blocks,
-    currentBlock,
-    documentsState,
-    focusedBlock,
-    rate,
-    resolvedVoiceChoice?.provider,
-    resolvedVoiceChoice?.voiceId,
-    resumeSessionSummaryState?.documentKey,
-  ]);
 
   function cancelDeviceSpeech({ incrementRunId = true } = {}) {
     if (incrementRunId) {
@@ -4777,7 +4789,7 @@ export default function WorkspaceShell({
         ref={fileInputRef}
         className="terminal-file-input"
         type="file"
-        accept=".txt,.md,.markdown,.doc,.docx,.pdf"
+        accept={IMAGE_ACCEPT_VALUE}
         onChange={(event) => {
           const [file] = event.target.files || [];
           if (!file) return;
@@ -4961,7 +4973,37 @@ export default function WorkspaceShell({
                         {activeDocument.sourceFiles?.length ? (
                           <span>{activeDocument.sourceFiles.join(", ")}</span>
                         ) : null}
+                        {activeDocument.derivationModel ? (
+                          <span>{activeDocument.derivationModel}</span>
+                        ) : null}
                       </div>
+                      {activeDocumentImageAsset ? (
+                        <div className="assembler-document__asset">
+                          <img
+                            className="assembler-document__asset-thumb"
+                            src={activeDocumentImageAsset.url}
+                            alt={`Original image for ${activeDocument.title}`}
+                          />
+                          <div className="assembler-document__asset-copy">
+                            <span className="assembler-document__asset-badge">
+                              {getImageDerivationShortLabel(
+                                activeDocument.derivationKind === "image-notes" ? "notes" : "document",
+                              )}
+                            </span>
+                            <span className="assembler-document__asset-label">
+                              {activeDocumentImageAsset.originalFilename || "Original image"}
+                            </span>
+                            <a
+                              className="assembler-document__asset-link"
+                              href={activeDocumentImageAsset.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open original image
+                            </a>
+                          </div>
+                        </div>
+                      ) : null}
                       {isMobileLayout && canManageActiveSource ? (
                         <button
                           type="button"
@@ -5140,6 +5182,29 @@ export default function WorkspaceShell({
             />
           </>
         )}
+
+        <ImageIntakeChooser
+          open={Boolean(pendingImageIntake)}
+          draft={pendingImageIntake}
+          pending={uploading || Boolean(pastePendingMode)}
+          preferredMode={preferredImageDerivationMode}
+          onClose={() => setPendingImageIntake(null)}
+          onChoose={(nextMode) => {
+            const normalizedMode = normalizePreferredImageDerivationMode(nextMode);
+            setPreferredImageDerivationMode(normalizedMode);
+
+            if (pendingImageIntake?.source === "upload" && pendingImageIntake.file) {
+              void handleUpload(pendingImageIntake.file, { derivationMode: normalizedMode });
+              return;
+            }
+
+            if (pendingImageIntake?.source === "paste" && pendingImageIntake.payload) {
+              void pasteIntoWorkspace("source", pendingImageIntake.payload, {
+                derivationMode: normalizedMode,
+              });
+            }
+          }}
+        />
       </div>
     </main>
   );
