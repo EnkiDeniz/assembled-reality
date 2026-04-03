@@ -1,475 +1,307 @@
-# Assembled Reality
+# Document Assembler
 
-Assembled Reality is a Next.js App Router application for a private, multi-user reading instrument. The current product is not a generic content site and not yet the full receipt-reading system described in the manuscript. What exists today is a reader-first application that lets a signed-in reader unlock the text, move through the manuscript, save personal marks, preserve progress, generate reading-receipt drafts, and use an embedded assistant called Seven for section-based explanation and read-aloud support.
+Document Assembler is a tool for reading, listening to, editing, and assembling documents from multiple sources, with receipts that show what was read, how it was transformed, and what was produced.
 
-This README is meant to be the working foundation for the next phase of the project. It documents what is already built, how the app is structured, where the current boundaries are, and which next steps appear highest leverage.
+This repository is in the middle of a product pivot. The old reader-first specs have been removed. This `README.md` is now the product source of truth.
 
-## Product Thesis
+## One-Line Summary
 
-The repo centers on a strong product idea that already shows up clearly in the manuscript and internal docs:
+Read it, think about it, build something new from it, and prove that you did.
 
-- the front door is a reading instrument, not a chatbot lobby
-- reading should preserve place, marks, and continuity
-- receipts matter more than story
-- Seven should eventually become a reader of receipts and operator structure, not only a manuscript explainer
+## Product
 
-Right now, the codebase implements the reading instrument more fully than it implements the deeper diagnostic system.
+The product centers on five ideas:
 
-## What Is Built Today
+1. Every imported document becomes canonical Markdown.
+2. Every document is made of addressable blocks.
+3. Users can assemble new documents from blocks across many source documents.
+4. AI can propose blocks and operations, but the human composes the final document.
+5. Every important action can become part of a receipt.
 
-### Core user flow
+## Core Objects
 
-The current product loop is:
+### Canonical markdown
 
-1. Reader lands on `/`
-2. Reader passes an unlock gate through a code or cuneiform puzzle
-3. Reader signs in with Apple or email magic link if auth is configured
-4. Reader enters `/read`
-5. Reader reads the manuscript, creates bookmarks/highlights/notes, and preserves progress
-6. Reader can open Seven for section help and audio
-7. Reader can visit `/account` to manage identity, preferences, diagnostics, and receipt drafts
+All uploaded files are normalized into Markdown, regardless of whether they began as PDF, DOC, DOCX, text, or Markdown.
 
-### Current shipped capabilities
+### Blocks
 
-- landing-page unlock gate with session-scoped unlock state
-- alternate puzzle-based entry path
-- NextAuth-based authentication
-- Apple sign-in support when Apple credentials are present
-- email magic-link auth when Resend and sender env vars are present
-- authenticated reader experience on `/read`
-- manuscript parsing from markdown in `content/assembled_reality_v07_final.md`
-- appendix replacement from repo docs so authoritative appendix files can override embedded manuscript sections
-- per-user bookmarks
-- per-user highlights
-- per-user notes
-- per-user reading progress persistence
-- in-reader account/navigation surface
-- account page with reading stats and saved receipt drafts
-- GetReceipts connection flow and callback handling
-- reading-receipt draft generation from selected marks and sections
-- optional remote draft creation in GetReceipts when a valid connection exists
-- Seven text responses via OpenAI Responses API
-- Seven voice responses via ElevenLabs first, with OpenAI speech fallback
-- Seven diagnostics on the account page to validate chat and voice provider health
+Blocks are the atomic unit of the system. A block can be:
 
-### What the current product is not yet
+- a paragraph
+- a heading
+- a list item
+- a quote
+- a generated synthesis block
 
-- not yet a collaborative reader
-- not yet a shared-annotation system
-- not yet a persistent multi-session Seven conversation product
-- not yet a receipt-derived diagnostic engine
-- not yet a full operator-library or process-graph implementation
-- not yet instrumented with formal analytics, monitoring, or automated tests
+Each block should eventually carry durable identity and lineage.
 
-## Current Product Surface
+### Documents
 
-### Routes
+A document is an ordered assembly of blocks.
 
-- `/`: unlock and auth entry flow
-- `/read`: authenticated reading application
-- `/account`: reader profile, preferences, diagnostics, reading snapshot, receipt drafts
-- `/connect/getreceipts`: starts GetReceipts connect flow
+Documents can be:
 
-### API routes
+- imported source documents
+- edited working documents
+- newly assembled documents derived from many sources
 
-- `/api/unlock`: validates the bootstrap code
-- `/api/auth/[...nextauth]`: NextAuth entry point
-- `/api/reader/profile`: fetch/update reader profile
-- `/api/reader/marks`: load and save bookmarks, highlights, notes
-- `/api/reader/progress`: save reading progress
-- `/api/reader/receipts/from-reading`: generate a reading receipt draft from marks/sections
-- `/api/seven`: Seven text explanation/question/summary
-- `/api/seven/audio`: Seven text-to-speech
-- `/api/integrations/getreceipts/callback`: OAuth-style integration callback
+### Receipts
 
-## Architecture Overview
+Receipts are the proof layer.
 
-### Frontend
+The system will support three receipt types:
 
-The UI is built in Next.js App Router with React 19.
+- consumption receipts
+- assembly receipts
+- synthesis receipts
 
-Key page entry points:
+Receipts should be exportable and handoff-ready for GetReceipts.
 
-- `src/app/page.jsx`: session-aware landing page
-- `src/app/read/page.jsx`: authenticated reader page
-- `src/app/account/page.jsx`: authenticated account page
+## MVP
 
-Key UI components:
+The MVP should do the following:
 
-- `src/components/EntryGate.jsx`: bridges unlock state and auth state
-- `src/components/UnlockScreen.jsx`: access-code and puzzle front door
-- `src/components/AuthScreen.jsx`: Apple and magic-link auth UI
-- `src/components/ReadGate.jsx`: client handoff into the reader shell
-- `src/components/ReaderShell.jsx`: main reading application shell
-- `src/components/ReaderMarksPanel.jsx`: notebook/marks interface
-- `src/components/SelectionMenu.jsx`: inline selection actions
-- `src/components/SevenPanel.jsx`: embedded assistant UI
-- `src/components/AccountScreen.jsx`: profile, settings, diagnostics, receipts
+1. Authenticate users.
+2. Upload PDF, DOCX, DOC, text, and Markdown files.
+3. Convert every uploaded file into canonical Markdown.
+4. Open documents in a minimal terminal-like workspace.
+5. Let users inspect and select document blocks.
+6. Let users listen to a full document or a scoped selection.
+7. Let users run AI operations on one or more documents:
+   - extract
+   - summarize
+   - synthesize
+   - search for evidence
+8. Save AI output as explicit, labeled blocks.
+9. Let users assemble a new document from source blocks and generated blocks.
+10. Let users edit assembled documents in place.
+11. Log the important steps that led to the final output.
+12. Create receipt drafts locally and optionally in GetReceipts.
 
-### Content layer
+## Product Direction
 
-The manuscript is file-backed, not CMS-backed.
+The next frontend should be rebuilt from scratch as a minimal workspace, likely terminal-like in feel:
 
-- canonical manuscript source: `content/assembled_reality_v07_final.md`
-- authoritative appendix sources:
-  - `docs/operator-sentences.md`
-  - `docs/convergence-foundations.md`
+- text-first
+- low ornament
+- block-first
+- command/action oriented
+- optimized for fast MVP iteration
 
-`src/lib/document.js` parses the markdown into:
+The current frontend should not define the new experience.
 
-- document title
-- subtitle
-- introduction markdown
-- numbered sections
-- a generated table of contents
+## Frontend V1
 
-It also replaces appendix sections with authoritative versions from `docs/` when present.
+The frontend should be one authenticated workspace, not a maze of pages.
 
-### Persistence layer
+### Primary routes
 
-The app now uses server-backed persistence for reader state.
+- `/`
+- `/workspace`
+- `/account`
 
-Database access flows through Prisma:
+Legacy routes can redirect into the workspace while the product is in transition.
 
-- `src/lib/prisma.js`
+### Workspace information architecture
+
+The workspace should have four persistent areas:
+
+- sources
+- buffer
+- context
+- transport + command line
+
+### Sources
+
+The left pane is the document tree:
+
+- source documents
+- assembled documents
+- receipts
+
+In MVP, this can begin with source documents first and placeholders for assemblies and receipts.
+
+### Buffer
+
+The center pane is the active working surface.
+
+It can show:
+
+- an imported source document
+- an assembly draft
+- a receipt preview
+
+This pane should be block-oriented and easy to scan.
+
+### Context
+
+The right pane changes with the user’s mode and selection.
+
+It should show:
+
+- selected block metadata
+- lineage
+- evidence
+- AI outputs
+- receipt draft context
+
+### Transport
+
+Playback is a first-class feature and should always be visible.
+
+The transport should stay pinned and include:
+
+- play / pause
+- rewind
+- forward
+- previous block
+- next block
+- rate
+- voice / scope
+
+### Command line
+
+The workspace should always include a command bar for direct operations.
+
+Early commands can include:
+
+- open
+- next
+- prev
+- play
+- pause
+- connect
+- account
+
+### Visual language
+
+The UI should feel like a calm editorial terminal:
+
+- dark background
+- restrained text colors
+- monospace typography
+- semantic accents for state
+- almost no decorative chrome
+
+### Color semantics
+
+- default text for source material
+- cyan for current or selected block
+- amber for AI-generated or pending material
+- green for accepted / connected / ready states
+- red for errors
+
+### Frontend principle
+
+Do not design for delight first.
+
+Design for:
+
+1. import
+2. inspect
+3. select
+4. transform
+5. assemble
+6. receipt
+
+## What We Already Have
+
+The existing backend already gives us a strong starting point.
+
+### Reusable now
+
+- authentication with NextAuth
+- Apple sign-in and email magic links
+- per-user profiles
+- document upload and storage
+- file normalization into canonical Markdown
+- private per-user document library
+- document-scoped progress and annotation persistence
+- stable runtime block IDs in the renderer
+- per-document AI thread persistence
+- evidence set persistence
+- text-to-speech with ElevenLabs and OpenAI fallback
+- listening session persistence
+- local receipt draft persistence
+- GetReceipts connection flow
+- optional remote receipt draft creation in GetReceipts
+
+### Existing code likely to survive the pivot
+
+- `src/lib/auth.js`
+- `src/lib/document-import.js`
+- `src/lib/reader-documents.js`
+- `src/lib/reader-db.js`
+- `src/lib/reader-workspace.js`
+- `src/lib/getreceipts.js`
+- `src/app/api/*`
 - `prisma/schema.prisma`
 
-Current persisted entities:
+## What Still Needs To Be Built
 
-- `User`
-- `ReaderProfile`
-- `Bookmark`
-- `Highlight`
-- `Note`
-- `ReadingProgress`
-- `GetReceiptsConnection`
-- `ReadingReceiptDraft`
-- NextAuth tables: `Account`, `Session`, `VerificationToken`
+The pivot does not require a backend rewrite, but it does require new domain models and new flows.
 
-### Auth layer
+### Needed for MVP
 
-Auth is implemented with NextAuth and Prisma.
+- persistent block records, not only runtime block IDs
+- durable block lineage across edits and assemblies
+- document editing and save/update flows
+- versioning for edited and assembled documents
+- a first-class assembly model
+- AI operations that return structured block outputs
+- explicit labeling of AI-authored blocks
+- operation logging for receipt generation
+- receipt builders for:
+  - consumption
+  - assembly
+  - synthesis
+- a new terminal-like frontend
 
-- adapter: Prisma adapter
-- session strategy: JWT
-- supported providers:
-  - Apple
-  - email magic links
+### Probably not needed in MVP
 
-Reader profile creation is automatically bootstrapped on sign-in if no profile exists yet.
+- polished visual design
+- collaborative editing
+- complex permissions
+- analytics-heavy product instrumentation
+- advanced workflow orchestration
 
-### Seven layer
+## GetReceipts
 
-Seven is implemented as an in-reader assistant, not yet as the full receipt-reading intelligence layer.
+GetReceipts should remain the external receipt destination, not the place where our internal document lineage lives.
 
-Current Seven modes:
+Our app should own:
 
-- explain the current section
-- answer a question about the current section
-- summarize the current section
-- read content aloud
+- document ingestion
+- block identity
+- assembly state
+- operation logs
+- receipt preparation
 
-Current Seven context:
+GetReceipts should own:
 
-- document title
-- document subtitle
-- intro markdown
-- section outline
-- current section label/title
-- current section markdown
-- optionally relevant nearby sections for question mode
+- receipt destination
+- receipt review/sharing flow
+- external verification surface
 
-Current Seven limitations:
+## Principles
 
-- no bookmarks in prompt context
-- no highlights in prompt context
-- no notes in prompt context
-- no reading receipts in prompt context
-- no operator inference
-- no persistent conversation memory
+- blocks before pages
+- lineage before polish
+- receipts before rhetoric
+- human composition over autonomous generation
+- one canonical representation per document
+- simple UI, serious provenance
 
-## Data Model Summary
+## Working Rule
 
-The main product-specific model is `ReaderProfile`, which anchors identity inside the reading instrument. All personal reader state is attached to that profile.
+When product or implementation questions come up, optimize for the smallest path that gets us to:
 
-### Reader profile
+1. import
+2. inspect
+3. select
+4. transform
+5. assemble
+6. receipt
 
-- `displayName`
-- `readerSlug`
-- `role`
-- `lastReadSlug`
-- `lastReadAt`
-
-### Marks
-
-Bookmarks are section-level.
-
-Highlights and notes are range-based within a block:
-
-- `sectionSlug`
-- `sectionTitle`
-- `blockId`
-- `startOffset`
-- `endOffset`
-- `quote`
-- `excerpt`
-
-Notes also store:
-
-- `noteText`
-
-### Reading progress
-
-Stored as one record per reader profile:
-
-- `sectionSlug`
-- `progressPercent`
-
-### Reading receipt drafts
-
-Drafts persist both the local receipt payload and any optional remote GetReceipts result:
-
-- title
-- status
-- source sections
-- source mark ids
-- payload JSON
-- optional remote receipt id
-
-## Integrations
-
-### GetReceipts
-
-The app already contains meaningful GetReceipts scaffolding.
-
-What is implemented:
-
-- signed state generation
-- connect URL builder
-- callback handling
-- token exchange
-- encrypted token storage
-- local receipt draft persistence
-- optional remote draft creation
-
-What is not yet clear from the current code:
-
-- how far the remote draft shape has been validated in live production use
-- whether refresh-token rotation is needed
-- whether expired tokens are actively repaired or only fail passively
-
-### OpenAI
-
-Used for:
-
-- Seven text generation
-- optional speech generation fallback
-
-### ElevenLabs
-
-Used for:
-
-- primary speech provider for Seven audio
-
-## Environment
-
-There is no committed `.env.example` yet, so setup currently depends on README guidance and local knowledge.
-
-### Minimum required for useful local development
-
-- `NEXTAUTH_SECRET`
-- `DATABASE_URL`
-- `DIRECT_DATABASE_URL`
-
-### Reader gate / site config
-
-- `READER_BOOTSTRAP_CODE`
-- `NEXTAUTH_URL`
-- `NEXT_PUBLIC_SITE_URL`
-
-### Email auth
-
-- `NEXTAUTH_EMAIL_FROM` or `EMAIL_FROM`
-- `RESEND_API_KEY`
-
-### Apple auth
-
-- `APPLE_WEB_CLIENT_ID` or `APPLE_ID` or `APPLE_CLIENT_ID`
-- `APPLE_KEY_ID`
-- `APPLE_TEAM_ID`
-- `APPLE_PRIVATE_KEY`
-
-### GetReceipts
-
-- `GETRECEIPTS_BASE_URL`
-- `GETRECEIPTS_APP_SLUG`
-- `GETRECEIPTS_CLIENT_SECRET`
-- `GETRECEIPTS_REDIRECT_URI`
-- `INTEGRATIONS_STATE_SECRET`
-- `INTEGRATIONS_TOKEN_KEY`
-
-### Seven / AI providers
-
-- `OPENAI_API_KEY`
-- `OPENAI_API_KEY_PROD`
-- `OPENAI_API_KEY_PREVIEW`
-- `OPENAI_SEVEN_MODEL`
-- `OPENAI_SEVEN_SPEECH_MODEL`
-- `OPENAI_SEVEN_VOICE`
-- `ELEVENLABS_API_KEY`
-- `ELEVENLABS_VOICE_ID`
-- `ELEVENLABS_MODEL_ID`
-- `ELEVENLABS_OUTPUT_FORMAT`
-
-## Local Development
-
-### Install
-
-```bash
-npm install
-```
-
-### Run the app
-
-```bash
-npm run dev
-```
-
-### Lint
-
-```bash
-npm run lint
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-### Prisma
-
-Generate the Prisma client:
-
-```bash
-npx prisma generate
-```
-
-Apply the existing migration set when your database is configured:
-
-```bash
-npx prisma migrate deploy
-```
-
-For local-only development against a disposable database, a schema push may be acceptable:
-
-```bash
-npx prisma db push
-```
-
-## Current State of the Codebase
-
-### What feels solid
-
-- the product has a coherent reader-first shape
-- core auth and reader persistence are in place
-- the document parsing approach is simple and understandable
-- the data model supports the current single-user reading workflow well
-- account diagnostics make Seven operationally more transparent than before
-- the repo already contains product-thinking docs that can guide the next phase
-
-### What feels partial or risky
-
-- Seven provider health is still operationally fragile and depends on live quota/credentials
-- there is no automated test suite in the repo today
-- there is no `.env.example`, which raises onboarding cost
-- there is no formal observability stack beyond logs and UI diagnostics
-- the README before this rewrite did not capture enough architecture or roadmap context
-- some docs describe older local-first behavior, so documentation needs consolidation over time
-
-### Important conceptual gap
-
-The strongest gap is not UI polish. It is product-depth mismatch:
-
-- the manuscript and appendices describe a richer receipt-reading system
-- the shipped app is currently strongest as a private annotated manuscript reader
-- Seven explains text but does not yet reason from reader evidence
-
-That mismatch is not a failure. It is the clearest guide for the next phase.
-
-## Repo Guide
-
-### Product and planning docs
-
-- `docs/seven-current-state.md`: current assessment of Seven
-- `docs/reader-v2-plan.md`: older local-first reader plan; useful as history, not current architecture
-- `docs/convergence-foundations.md`: product theory / source material
-- `docs/operator-sentences.md`: appendix content used by the reader
-
-### Content and lock materials
-
-- `content/assembled_reality_v07_final.md`: primary manuscript
-- `lockscreen/cuneiform-matrix-lock-spec.md`
-- `lock screen/cuneiform-matrix-lock-spec.md`
-
-### App and domain code
-
-- `src/app/**`: routes and API endpoints
-- `src/components/**`: UI surfaces
-- `src/lib/**`: domain logic, env parsing, auth, document parsing, integrations
-- `prisma/**`: schema and migrations
-
-## Recommended Next Steps
-
-The most useful next work is to make the repo easier to operate, then deepen the product in the direction the manuscript already points toward.
-
-### 1. Stabilize the foundation
-
-- add a committed `.env.example`
-- document the expected local database workflow more explicitly
-- add at least smoke-level tests for auth gating, reader APIs, and receipt creation
-- add minimal observability around Seven failures and GetReceipts draft creation
-
-### 2. Consolidate the source of truth
-
-- decide which docs are historical vs active
-- align README, `docs/seven-current-state.md`, and product language
-- remove or label stale planning documents so new contributors do not follow the wrong architecture
-
-### 3. Deepen Seven from “section explainer” to “reading instrument”
-
-- pass reader marks into prompt context
-- let Seven reason over notes/highlights across multiple sections
-- define what a receipt-aware Seven response should look like
-- choose whether Seven should remain ephemeral or gain persistent thread history
-
-### 4. Clarify the receipt pipeline
-
-- define the canonical shape of a reading receipt
-- decide which local fields must exist before remote draft creation
-- make token expiry and remote failure handling more explicit
-- identify whether GetReceipts is optional infrastructure or a core product dependency
-
-### 5. Decide the next product horizon
-
-There are at least three plausible next directions:
-
-- make the private reader excellent as a premium reading instrument
-- evolve Seven into a receipt-aware assistant for a single reader
-- expand into collaborative or organizational reading/diagnostic workflows
-
-The codebase currently supports the first direction best, while the product theory points strongly toward the second.
-
-## Suggested Near-Term Execution Plan
-
-If the goal is to move this project forward without diffusing effort, the next sequence should likely be:
-
-1. operational cleanup: `.env.example`, setup docs, smoke tests, basic monitoring
-2. product spec: define “receipt-aware Seven” in concrete input/output terms
-3. data extension: decide how marks, receipts, and operator signals should be represented for prompting
-4. implementation pass: upgrade Seven to read from stored reader evidence
-5. validation pass: test real reading sessions and refine based on actual use
-
-## Notes From This Review
-
-This assessment is based on the current code and docs in the repository as of 2026-04-01. The repo already has a meaningful product skeleton and a strong point of view. The main challenge now is not inventing direction from zero; it is tightening the bridge between the current reader app and the deeper receipt-centered system the project already describes.
+If something does not help that chain, it is probably not MVP.

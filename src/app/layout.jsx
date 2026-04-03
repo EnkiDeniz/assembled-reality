@@ -1,32 +1,17 @@
-import { Inter, Source_Serif_4 } from "next/font/google";
-import localFont from "next/font/local";
+import { IBM_Plex_Mono } from "next/font/google";
 import Providers from "@/components/Providers";
 import "@/app/globals.css";
 
-const uiFont = Inter({
+const mono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-ui",
+  variable: "--font-mono",
   display: "swap",
   weight: ["400", "500", "600"],
 });
 
-const displayFont = Source_Serif_4({
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
-});
-
-const cuneiformFont = localFont({
-  src: "../../public/fonts/NotoSansCuneiform-Regular.woff2",
-  variable: "--font-cuneiform",
-  display: "block",
-});
-
 export const metadata = {
-  title: "Assembled Reality",
-  description: "Reading instrument for Assembled Reality.",
+  title: "Document Assembler",
+  description: "Terminal-like workspace for reading, assembling, and receipting documents.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -41,7 +26,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${uiFont.variable} ${displayFont.variable} ${cuneiformFont.variable}`}>
+    <html lang="en" className={mono.variable}>
       <body>
         <Providers>{children}</Providers>
       </body>
