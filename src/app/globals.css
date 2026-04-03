@@ -311,11 +311,15 @@ main {
 
 .assembler-page {
   padding: 18px;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .assembler-shell {
   display: flex;
   flex-direction: column;
+  height: calc(100dvh - 36px);
+  max-height: calc(100dvh - 36px);
   min-height: calc(100vh - 36px);
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -1001,6 +1005,8 @@ main {
   }
 
   .assembler-shell {
+    height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
     min-height: calc(100vh - 20px);
     border-radius: 20px;
   }
