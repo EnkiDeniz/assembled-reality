@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
+import AuthenticatedAppFallback from "@/components/AuthenticatedAppFallback";
+import HydrationBoundary from "@/components/HydrationBoundary";
 import DocumentLibraryScreen from "@/components/DocumentLibraryScreen";
 import { authOptions } from "@/lib/auth";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
@@ -19,9 +21,11 @@ export default async function LibraryPage() {
   ]);
 
   return (
-    <DocumentLibraryScreen
-      documents={documents}
-      profile={readerData?.profile || null}
-    />
+    <HydrationBoundary fallback={<AuthenticatedAppFallback variant="library" />}>
+      <DocumentLibraryScreen
+        documents={documents}
+        profile={readerData?.profile || null}
+      />
+    </HydrationBoundary>
   );
 }

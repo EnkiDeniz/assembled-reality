@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
+import AuthenticatedAppFallback from "@/components/AuthenticatedAppFallback";
+import HydrationBoundary from "@/components/HydrationBoundary";
 import ReadGate from "@/components/ReadGate";
 import { authOptions } from "@/lib/auth";
 import { getParsedDocument } from "@/lib/document";
@@ -23,29 +25,31 @@ export default async function ReadPage() {
   ]);
 
   return (
-    <ReadGate
-      session={session}
-      documentData={documentData}
-      initialAnnotations={readerData?.annotations}
-      initialProgress={readerData?.progress}
-      profile={readerData?.profile}
-      getReceiptsConnection={readerData?.getReceiptsConnection}
-      initialConversationThread={workspace?.thread || null}
-      initialEvidenceSet={workspace?.evidenceSet || null}
-      initialListeningSession={workspace?.listeningSession || null}
-      initialVoicePreferences={workspace?.voicePreferences || null}
-      voiceCatalog={getVoiceCatalog({
-        openAiEnabled: appEnv.openai.enabled,
-        openAiVoice: appEnv.openai.voice,
-        elevenLabsEnabled: appEnv.elevenlabs.enabled,
-        elevenLabsVoiceId: appEnv.elevenlabs.voiceId,
-      })}
-      sevenTextEnabled={appEnv.openai.enabled}
-      sevenVoiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
-      sevenTextProvider={appEnv.openai.enabled ? "openai" : null}
-      sevenVoiceProvider={
-        appEnv.elevenlabs.enabled ? "elevenlabs" : appEnv.openai.enabled ? "openai" : null
-      }
-    />
+    <HydrationBoundary fallback={<AuthenticatedAppFallback variant="reader" />}>
+      <ReadGate
+        session={session}
+        documentData={documentData}
+        initialAnnotations={readerData?.annotations}
+        initialProgress={readerData?.progress}
+        profile={readerData?.profile}
+        getReceiptsConnection={readerData?.getReceiptsConnection}
+        initialConversationThread={workspace?.thread || null}
+        initialEvidenceSet={workspace?.evidenceSet || null}
+        initialListeningSession={workspace?.listeningSession || null}
+        initialVoicePreferences={workspace?.voicePreferences || null}
+        voiceCatalog={getVoiceCatalog({
+          openAiEnabled: appEnv.openai.enabled,
+          openAiVoice: appEnv.openai.voice,
+          elevenLabsEnabled: appEnv.elevenlabs.enabled,
+          elevenLabsVoiceId: appEnv.elevenlabs.voiceId,
+        })}
+        sevenTextEnabled={appEnv.openai.enabled}
+        sevenVoiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
+        sevenTextProvider={appEnv.openai.enabled ? "openai" : null}
+        sevenVoiceProvider={
+          appEnv.elevenlabs.enabled ? "elevenlabs" : appEnv.openai.enabled ? "openai" : null
+        }
+      />
+    </HydrationBoundary>
   );
 }
