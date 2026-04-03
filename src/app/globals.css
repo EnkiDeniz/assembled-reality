@@ -3247,16 +3247,141 @@ main {
 }
 
 @media (max-width: 1100px) {
+  .assembler-header {
+    padding: 10px 14px;
+  }
+
+  .assembler-header__name {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+  }
+
+  .assembler-header__project {
+    min-height: 24px;
+    padding: 0 9px;
+  }
+
+  .assembler-header__start,
+  .assembler-header__account {
+    min-height: 30px;
+  }
+
+  .assembler-shelf {
+    gap: 12px;
+    padding: 8px 14px;
+  }
+
+  .assembler-shelf__home {
+    min-width: 180px;
+    padding: 9px 12px;
+    gap: 2px;
+  }
+
+  .assembler-shelf__label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
+  .assembler-shelf__home-detail {
+    display: none;
+  }
+
+  .assembler-shelf__group {
+    gap: 8px;
+  }
+
+  .assembler-shelf__item,
+  .assembler-shelf__upload {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
   .assembler-toolbar {
     grid-template-columns: 1fr auto;
+    padding: 4px 14px;
+  }
+
+  .assembler-surface {
+    padding: 14px 16px;
+  }
+
+  .assembler-document__header {
+    gap: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  .assembler-document__title {
+    font-size: clamp(0.96rem, 1.6vw, 1.05rem);
+    letter-spacing: 0.03em;
+  }
+
+  .assembler-document__subtitle {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .assembler-document__meta {
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .assembler-document__asset {
+    margin-top: 6px;
+  }
+
+  .assembler-document__blocks {
+    gap: 2px;
+  }
+
+  .assembler-cleanup {
+    margin-bottom: 10px;
   }
 
   .assembler-player {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "controls controls"
+      "progress meta";
+    gap: 10px 14px;
+    padding: 10px 14px 12px;
+  }
+
+  .assembler-player__controls {
+    grid-area: controls;
+    width: 100%;
   }
 
   .assembler-player__progress {
-    grid-template-columns: 48px minmax(0, 1fr);
+    grid-area: progress;
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .assembler-player__meta {
+    grid-area: meta;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+
+  .assembler-player__status {
+    display: none;
+  }
+
+  .assembler-player__button,
+  .assembler-player__select {
+    min-height: 32px;
+  }
+
+  .assembler-player__button {
+    padding: 0 10px;
+  }
+
+  .assembler-player__button.is-primary {
+    min-width: 64px;
   }
 }
 
