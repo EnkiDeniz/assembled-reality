@@ -2,11 +2,16 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import WorkspaceShell from "@/components/WorkspaceShell";
 import { authOptions } from "@/lib/auth";
-import { buildDocumentBlocks } from "@/lib/document-blocks";
 import { appEnv } from "@/lib/env";
-import { getReaderDocumentDataForUser, listReaderDocumentsForUser } from "@/lib/reader-documents";
+import {
+  getVoiceCatalog,
+  resolvePreferredVoiceChoice,
+} from "@/lib/listening";
+import {
+  getReaderDocumentDataForUser,
+  listReaderDocumentsForUser,
+} from "@/lib/reader-documents";
 import { getReaderProfileByUserId } from "@/lib/reader-db";
-import { loadReaderWorkspaceForUser } from "@/lib/reader-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -25,28 +30,38 @@ export default async function WorkspacePage({ searchParams }) {
   ]);
 
   const fallbackDocumentKey = requestedDocumentKey || documents[0]?.documentKey || "";
-  const documentData = await getReaderDocumentDataForUser(session.user.id, fallbackDocumentKey);
+  const initialDocument = await getReaderDocumentDataForUser(
+    session.user.id,
+    fallbackDocumentKey,
+  );
 
-  const selectedDocument =
-    documents.find((document) => document.documentKey === (documentData?.documentKey || fallbackDocumentKey)) ||
-    documents[0] ||
-    null;
+  if (!initialDocument) {
+    redirect("/");
+  }
 
-  const workspace = selectedDocument
-    ? await loadReaderWorkspaceForUser(session.user.id, selectedDocument.documentKey)
-    : null;
+  const voiceCatalog = getVoiceCatalog({
+    openAiEnabled: appEnv.openai.enabled,
+    openAiVoice: appEnv.openai.voice,
+    elevenLabsEnabled: appEnv.elevenlabs.enabled,
+    elevenLabsVoiceId: appEnv.elevenlabs.voiceId,
+    includeDevice: true,
+  });
+  const preferredVoiceChoice = resolvePreferredVoiceChoice(
+    voiceCatalog,
+    String(readerData?.profile?.preferredVoiceProvider || "").toLowerCase(),
+    readerData?.profile?.preferredVoiceId || null,
+  );
 
   return (
     <WorkspaceShell
+      userId={session.user.id}
       profile={readerData?.profile || null}
       documents={documents}
-      selectedDocument={selectedDocument}
-      blocks={buildDocumentBlocks(documentData)}
-      evidenceCount={workspace?.evidenceSet?.items?.length || 0}
-      messageCount={workspace?.thread?.messages?.length || 0}
+      initialDocument={initialDocument}
       connectionStatus={readerData?.getReceiptsConnection?.status || "DISCONNECTED"}
+      voiceCatalog={voiceCatalog}
+      defaultVoiceChoice={preferredVoiceChoice}
       voiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
-      defaultVoiceProvider={appEnv.elevenlabs.enabled ? "elevenlabs" : appEnv.openai.enabled ? "openai" : null}
     />
   );
 }

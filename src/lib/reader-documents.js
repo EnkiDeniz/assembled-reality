@@ -1,15 +1,25 @@
 import "server-only";
 
-import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import { buildWorkspaceBlocksFromDocument } from "@/lib/document-blocks";
 import { prisma } from "@/lib/prisma";
-import { buildExcerpt, slugify } from "@/lib/text";
+import { slugify } from "@/lib/text";
+import {
+  buildStoredWorkspaceContent,
+  getBuiltinWorkspaceDocument,
+  getWorkspaceDocumentForUser,
+  getWorkspaceDocumentFromRecord,
+} from "@/lib/workspace-documents";
+import { parseDocument } from "@/lib/document";
 
 function getReaderDocumentModel() {
   return prisma.readerDocument || null;
 }
 
 function buildDocumentHref(documentKey) {
-  return documentKey === PRIMARY_DOCUMENT_KEY ? "/read" : `/read/${encodeURIComponent(documentKey)}`;
+  return documentKey === PRIMARY_DOCUMENT_KEY
+    ? "/workspace"
+    : `/workspace?document=${encodeURIComponent(documentKey)}`;
 }
 
 function formatDocumentFormat(value, originalFilename = "") {
@@ -23,55 +33,42 @@ function formatDocumentFormat(value, originalFilename = "") {
   return "Markdown";
 }
 
-function getDocumentExcerpt(documentData) {
-  return buildExcerpt(
-    documentData.introMarkdown || documentData.sections[0]?.markdown || "",
-    180,
-  );
+function serializeDocumentSummary(documentData, record = null, progressPercent = 0) {
+  const isBuiltin = documentData?.documentType === "builtin";
+
+  return {
+    documentKey: documentData?.documentKey || record?.documentKey || PRIMARY_DOCUMENT_KEY,
+    title: documentData?.title || record?.title || "Untitled document",
+    subtitle: documentData?.subtitle || record?.subtitle || "",
+    excerpt: documentData?.excerpt || "",
+    sourceType: documentData?.sourceType || (isBuiltin ? "builtin" : "upload"),
+    documentType: documentData?.documentType || (isBuiltin ? "builtin" : "source"),
+    format: String(documentData?.format || record?.format || "markdown").toLowerCase(),
+    formatLabel: formatDocumentFormat(record?.format || documentData?.format, record?.originalFilename),
+    originalFilename: record?.originalFilename || documentData?.originalFilename || null,
+    href: buildDocumentHref(documentData?.documentKey || record?.documentKey || PRIMARY_DOCUMENT_KEY),
+    wordCount: record?.wordCount || 0,
+    sectionCount: Array.isArray(documentData?.blocks)
+      ? documentData.blocks.length
+      : Array.isArray(documentData?.sections)
+        ? documentData.sections.length
+        : 0,
+    progressPercent,
+    createdAt: documentData?.createdAt || record?.createdAt?.toISOString?.() || null,
+    updatedAt: documentData?.updatedAt || record?.updatedAt?.toISOString?.() || null,
+    isAssembly: Boolean(documentData?.isAssembly),
+    isEditable: Boolean(documentData?.isEditable),
+    sourceFiles: Array.isArray(documentData?.sourceFiles) ? documentData.sourceFiles : [],
+  };
 }
 
 function serializeBuiltinDocument(progressPercent = 0) {
-  const documentData = getParsedDocument();
-
-  return {
-    documentKey: documentData.documentKey,
-    title: documentData.title,
-    subtitle: documentData.subtitle,
-    excerpt: getDocumentExcerpt(documentData),
-    sourceType: "builtin",
-    format: "markdown",
-    formatLabel: formatDocumentFormat("markdown"),
-    originalFilename: null,
-    href: buildDocumentHref(documentData.documentKey),
-    wordCount: 0,
-    sectionCount: documentData.sections.length,
-    progressPercent,
-    createdAt: null,
-    updatedAt: null,
-  };
+  return serializeDocumentSummary(getBuiltinWorkspaceDocument(), null, progressPercent);
 }
 
 function serializeUploadedDocument(record, progressPercent = 0) {
-  const documentData = parseDocument(record.contentMarkdown, {
-    documentKey: record.documentKey,
-  });
-
-  return {
-    documentKey: record.documentKey,
-    title: record.title,
-    subtitle: record.subtitle || "",
-    excerpt: getDocumentExcerpt(documentData),
-    sourceType: "upload",
-    format: String(record.format || "markdown").toLowerCase(),
-    formatLabel: formatDocumentFormat(record.format, record.originalFilename),
-    originalFilename: record.originalFilename || null,
-    href: buildDocumentHref(record.documentKey),
-    wordCount: record.wordCount || 0,
-    sectionCount: record.sectionCount || documentData.sections.length,
-    progressPercent,
-    createdAt: record.createdAt?.toISOString?.() || null,
-    updatedAt: record.updatedAt?.toISOString?.() || null,
-  };
+  const documentData = getWorkspaceDocumentFromRecord(record, "upload");
+  return serializeDocumentSummary(documentData, record, progressPercent);
 }
 
 async function buildProgressMapForUser(userId) {
@@ -161,19 +158,35 @@ export async function createReaderDocumentForUser(
     throw new Error("Document uploads are temporarily unavailable.");
   }
 
-  const baseKey = slugify(title) || slugify(originalFilename) || "uploaded-document";
+  const normalizedTitle = String(title || "").trim() || "Untitled document";
+  const normalizedSubtitle = String(subtitle || "").trim();
+  const baseKey = slugify(normalizedTitle) || slugify(originalFilename) || "uploaded-document";
   const documentKey = await ensureUniqueDocumentKey(baseKey);
+  const parsedDocument = parseDocument(contentMarkdown, { documentKey });
+  const blocks = buildWorkspaceBlocksFromDocument(parsedDocument, {
+    documentKey,
+    defaultSourceDocumentKey: documentKey,
+    defaultIsEditable: true,
+  });
+  const storedContentMarkdown = buildStoredWorkspaceContent({
+    title: normalizedTitle,
+    subtitle: normalizedSubtitle,
+    documentType: "source",
+    sourceFiles: originalFilename ? [originalFilename] : [],
+    blocks,
+    logEntries: [],
+  });
 
   const record = await readerDocumentModel.create({
     data: {
       userId,
       documentKey,
-      title,
-      subtitle,
+      title: normalizedTitle,
+      subtitle: normalizedSubtitle || null,
       format: String(format || "markdown").toUpperCase(),
       mimeType: mimeType || null,
       originalFilename: originalFilename || null,
-      contentMarkdown,
+      contentMarkdown: storedContentMarkdown,
       wordCount,
       sectionCount,
     },
@@ -183,36 +196,7 @@ export async function createReaderDocumentForUser(
 }
 
 export async function getReaderDocumentDataForUser(userId, documentKey = PRIMARY_DOCUMENT_KEY) {
-  if (!documentKey || documentKey === PRIMARY_DOCUMENT_KEY) {
-    return getParsedDocument();
-  }
-
-  const readerDocumentModel = getReaderDocumentModel();
-  if (!readerDocumentModel) {
-    return null;
-  }
-
-  const record = await readerDocumentModel.findFirst({
-    where: {
-      userId,
-      documentKey,
-    },
-  });
-
-  if (!record) {
-    return null;
-  }
-
-  return {
-    ...parseDocument(record.contentMarkdown, {
-      documentKey: record.documentKey,
-    }),
-    sourceType: "upload",
-    format: String(record.format || "MARKDOWN").toLowerCase(),
-    originalFilename: record.originalFilename || null,
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
-  };
+  return getWorkspaceDocumentForUser(userId, documentKey);
 }
 
 export async function getReaderDocumentSummaryForUser(userId, documentKey = PRIMARY_DOCUMENT_KEY) {
