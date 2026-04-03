@@ -222,10 +222,20 @@ export function createEphemeralPlaybackNode({
 
 export function buildPlaybackNodes({ documentData, entries, blocks }) {
   const sortedBlocks = sortReaderBlocks(blocks);
+  const hideDuplicateUploadSectionHeading =
+    documentData?.sourceType === "upload" &&
+    (documentData?.sections?.length || 0) === 1 &&
+    !String(documentData?.introMarkdown || "").trim();
 
   return entries.flatMap((entry) => {
     const sectionBlocks = sortedBlocks.filter((block) => block.sectionSlug === entry.slug);
-    const headingText = getHeadingText(documentData, entry);
+    const headingText =
+      hideDuplicateUploadSectionHeading &&
+      entry.slug !== "beginning" &&
+      String(entry.title || "").trim().toLowerCase() ===
+        String(documentData?.title || "").trim().toLowerCase()
+        ? ""
+        : getHeadingText(documentData, entry);
     const headingNode = headingText
       ? {
           nodeId: `heading:${entry.slug}`,

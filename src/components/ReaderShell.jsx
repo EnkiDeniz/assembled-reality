@@ -420,12 +420,15 @@ export default function ReaderShell({
       { slug: "beginning", label: "Beginning", title: "Beginning", number: null },
       ...documentData.sections.map((section) => ({
         slug: section.slug,
-        label: `${section.number} · ${section.title}`,
+        label:
+          documentData.sourceType === "upload" || !section.number
+            ? section.title
+            : `${section.number} · ${section.title}`,
         title: section.title,
-        number: section.number,
+        number: documentData.sourceType === "upload" ? null : section.number,
       })),
     ],
-    [documentData.sections],
+    [documentData.sections, documentData.sourceType],
   );
 
   const blocks = useMemo(() => sortReaderBlocks(registeredBlocks), [registeredBlocks]);
@@ -3215,7 +3218,9 @@ export default function ReaderShell({
               onClick={() => jumpTo(entry.slug)}
             >
               <span className="reader-toc__item-label">{entry.title}</span>
-              <span className="reader-toc__item-meta">{entry.number ?? "0"}</span>
+              {entry.number ? (
+                <span className="reader-toc__item-meta">{entry.number}</span>
+              ) : null}
             </button>
           ))}
         </nav>
@@ -3348,12 +3353,23 @@ export default function ReaderShell({
                   focusedSectionSlug === section.slug ? "is-focused-source" : ""
                 } ${lyricSectionSlug === section.slug ? "is-lyric-section" : ""}`}
               >
-                <div className="reader-section__divider" />
-                <div className="reader-section__meta">
-                  <span className="reader-section__number">{section.number}</span>
-                  <span className="reader-section__label">{section.title}</span>
-                </div>
-                <h2 className="reader-section__title">{section.title}</h2>
+                {!(
+                  documentData.sourceType === "upload" &&
+                  documentData.sections.length === 1 &&
+                  String(section.title || "").trim().toLowerCase() ===
+                    String(documentData.title || "").trim().toLowerCase()
+                ) ? (
+                  <>
+                    <div className="reader-section__divider" />
+                    <div className="reader-section__meta">
+                      {documentData.sourceType !== "upload" && section.number ? (
+                        <span className="reader-section__number">{section.number}</span>
+                      ) : null}
+                      <span className="reader-section__label">{section.title}</span>
+                    </div>
+                    <h2 className="reader-section__title">{section.title}</h2>
+                  </>
+                ) : null}
                 <MarkdownRenderer
                   markdown={section.markdown}
                   sectionSlug={section.slug}

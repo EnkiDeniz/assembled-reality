@@ -324,11 +324,13 @@ export function getReaderSection(documentData, activeSlug) {
     };
   }
 
+  const showNumber = documentData?.sourceType !== "upload" && Boolean(section.number);
+
   return {
     slug: section.slug,
-    number: section.number,
+    number: showNumber ? section.number : null,
     title: section.title,
-    label: `${section.number} · ${section.title}`,
+    label: showNumber ? `${section.number} · ${section.title}` : section.title,
     markdown: section.markdown,
   };
 }
@@ -375,7 +377,11 @@ export function getSectionPreview(documentData, activeSlug) {
 
 export function getSectionOutline(documentData) {
   return (documentData?.sections || [])
-    .map((section) => `${section.number}. ${section.title}`)
+    .map((section) =>
+      documentData?.sourceType !== "upload" && section.number
+        ? `${section.number}. ${section.title}`
+        : section.title,
+    )
     .join("\n");
 }
 

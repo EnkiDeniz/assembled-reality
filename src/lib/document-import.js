@@ -68,6 +68,19 @@ function stripFrontmatter(markdown) {
   return markdown.slice(endIndex + 5).trim();
 }
 
+function stripLeadingTitleHeading(markdown, title) {
+  const normalized = String(markdown || "").trim();
+  const match = normalized.match(/^#\s+(.+?)\s*(?:\n+|$)/);
+  if (!match) return normalized;
+
+  const headingText = cleanHeadingText(match[1]);
+  if (headingText !== cleanHeadingText(title)) {
+    return normalized;
+  }
+
+  return normalized.slice(match[0].length).trim();
+}
+
 function cleanHeadingText(text) {
   return String(text || "")
     .replace(/[*_`~]/g, "")
@@ -151,10 +164,18 @@ function structureMarkdownImport(markdown, titleHint) {
   const sectionLevel = chooseSectionHeadingLevel(normalized, title);
 
   if (!sectionLevel) {
+    const singleSectionMarkdown =
+      stripLeadingTitleHeading(normalized, title) || normalized || "_No extracted text yet._";
+
     return {
       title,
       introMarkdown: "",
-      sections: chunkParagraphsIntoSections(splitIntoParagraphs(normalized)),
+      sections: [
+        {
+          title,
+          markdown: singleSectionMarkdown,
+        },
+      ],
     };
   }
 
