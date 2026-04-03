@@ -108,16 +108,6 @@ function isTypingTarget(target) {
   );
 }
 
-function summarizeClipboardTarget(count = 0) {
-  const normalizedCount = Number.isFinite(Number(count)) ? Number(count) : 0;
-
-  if (normalizedCount <= 0) {
-    return "Stage blocks";
-  }
-
-  return `${normalizedCount} staged`;
-}
-
 function WorkspaceActionIcon({ kind }) {
   if (kind === "continue") {
     return (
@@ -577,15 +567,11 @@ function WorkspaceLaunchpad({
               <div className="assembler-launchpad__meta-line">
                 <span>{sourceCount} src</span>
                 <span>{assemblyCount} asm</span>
-                <span>{projectDrafts.length} receipts</span>
+                <span>{projectDrafts.length} rcpt</span>
                 <Link href="/account">Settings</Link>
               </div>
             </div>
           </div>
-
-          <p className="assembler-launchpad__body">
-            {activeProject?.subtitle || "Open a source, shape the assembly, keep the receipt."}
-          </p>
         </div>
 
         <div className="assembler-launchpad__actions">
@@ -598,13 +584,13 @@ function WorkspaceLaunchpad({
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               <WorkspaceActionIcon kind="continue" />
             </span>
-            <span className="assembler-launchpad__action-label">Continue</span>
+            <span className="assembler-launchpad__action-label">Open</span>
             <span className="assembler-launchpad__action-value">
-              {continueDocument?.title || "Open project"}
+              Continue
             </span>
-            <span className="assembler-launchpad__action-detail">
-              {currentAssemblyDocument ? "Current assembly" : "Entry source"}
-            </span>
+            {continueDocument?.title ? (
+              <span className="assembler-launchpad__action-detail">{continueDocument.title}</span>
+            ) : null}
           </button>
 
           <button
@@ -616,11 +602,11 @@ function WorkspaceLaunchpad({
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               <WorkspaceActionIcon kind="upload" />
             </span>
-            <span className="assembler-launchpad__action-label">Upload</span>
+            <span className="assembler-launchpad__action-label">File</span>
             <span className="assembler-launchpad__action-value">
-              {uploading ? "Importing..." : "PDF · DOCX · MD · TXT"}
+              {uploading ? "Importing..." : "Upload"}
             </span>
-            <span className="assembler-launchpad__action-detail">New source</span>
+            <span className="assembler-launchpad__action-detail">PDF DOCX MD TXT</span>
           </button>
 
           <button
@@ -632,11 +618,11 @@ function WorkspaceLaunchpad({
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               <WorkspaceActionIcon kind="paste-source" />
             </span>
-            <span className="assembler-launchpad__action-label">Paste source</span>
+            <span className="assembler-launchpad__action-label">Clipboard</span>
             <span className="assembler-launchpad__action-value">
-              {pastePendingMode === "source" ? "Reading clipboard..." : "New source from clipboard"}
+              {pastePendingMode === "source" ? "Pasting..." : "Paste source"}
             </span>
-            <span className="assembler-launchpad__action-detail">Open after paste</span>
+            <span className="assembler-launchpad__action-detail">Create source</span>
           </button>
 
           <button
@@ -648,13 +634,13 @@ function WorkspaceLaunchpad({
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               <WorkspaceActionIcon kind="clipboard" />
             </span>
-            <span className="assembler-launchpad__action-label">Clipboard</span>
+            <span className="assembler-launchpad__action-label">Stage</span>
             <span className="assembler-launchpad__action-value">
-              {pastePendingMode === "clipboard"
-                ? "Staging..."
-                : summarizeClipboardTarget(clipboardCount)}
+              {pastePendingMode === "clipboard" ? "Pasting..." : "Clipboard"}
             </span>
-            <span className="assembler-launchpad__action-detail">Paste to stage</span>
+            <span className="assembler-launchpad__action-detail">
+              {clipboardCount ? `${clipboardCount} staged` : "Paste blocks"}
+            </span>
           </button>
         </div>
 
@@ -689,9 +675,7 @@ function WorkspaceLaunchpad({
                   <span className="assembler-launchpad__recent-meta">
                     {projectActionPending === project.projectKey
                       ? "opening"
-                      : project.projectKey === activeProjectKey
-                        ? "active"
-                        : `${project.sourceCount} src · ${project.assemblyCount} asm`}
+                      : `${project.sourceCount} src · ${project.assemblyCount} asm`}
                   </span>
                 </button>
               ))}
@@ -747,9 +731,6 @@ function WorkspaceLaunchpad({
               >
                 <div className="assembler-launchpad__recent-main">
                   <span className="assembler-launchpad__recent-title">{currentAssemblyDocument.title}</span>
-                  <span className="assembler-launchpad__recent-subtitle">
-                    {currentAssemblyDocument.subtitle || "Open working assembly"}
-                  </span>
                 </div>
                 <span className="assembler-launchpad__recent-meta">
                   {loadingDocumentKey === currentAssemblyDocument.documentKey ? "loading" : "assembly"}
@@ -766,9 +747,7 @@ function WorkspaceLaunchpad({
               </Link>
             </div>
             <p className="assembler-launchpad__empty">
-              {projectDrafts.length
-                ? `${projectDrafts.length} recent receipt${projectDrafts.length === 1 ? "" : "s"}`
-                : "No recent receipts"}
+              {projectDrafts.length ? `${projectDrafts.length} receipts` : "No receipts"}
             </p>
           </div>
         </div>
@@ -1506,19 +1485,6 @@ export default function WorkspaceShell({
     }
     setRate(clampListeningRate(stored.rate, 1));
 
-    if (stored.voiceChoice?.provider) {
-      const matched =
-        voiceCatalog.find(
-          (entry) =>
-            entry.provider === stored.voiceChoice.provider &&
-            String(entry.voiceId || "") === String(stored.voiceChoice.voiceId || ""),
-        ) || defaultVoiceChoice;
-
-      if (matched) {
-        setVoiceChoice(matched);
-        setProviderLabel(matched.label);
-      }
-    }
   }, [storageKey, voiceCatalog, defaultVoiceChoice, activeDocument.documentKey]);
 
   useEffect(() => {
@@ -1577,9 +1543,8 @@ export default function WorkspaceShell({
       clipboard,
       documentLogs,
       rate,
-      voiceChoice: resolvedVoiceChoice,
     });
-  }, [clipboard, documentLogs, rate, resolvedVoiceChoice, storageKey]);
+  }, [clipboard, documentLogs, rate, storageKey]);
 
   useEffect(() => {
     setFocusBlockId(firstBlockId);

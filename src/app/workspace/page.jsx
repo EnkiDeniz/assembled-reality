@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth";
 import { appEnv } from "@/lib/env";
 import {
   getVoiceCatalog,
-  resolvePreferredVoiceChoice,
 } from "@/lib/listening";
 import {
   getReaderDocumentDataForUser,
@@ -17,7 +16,6 @@ import {
 } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import {
-  getReaderProfileByUserId,
   listReadingReceiptDraftsForProjectForUser,
 } from "@/lib/reader-db";
 
@@ -34,10 +32,7 @@ export default async function WorkspacePage({ searchParams }) {
   const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
   const requestedLaunchpad = String(resolvedSearchParams?.launchpad || "").trim() === "1";
 
-  const [documents, readerData] = await Promise.all([
-    listReaderDocumentsForUser(session.user.id),
-    getReaderProfileByUserId(session.user.id),
-  ]);
+  const documents = await listReaderDocumentsForUser(session.user.id);
 
   const projects = await listReaderProjectsForUser(session.user.id, documents);
   const initialProject = getProjectByKey(projects, requestedProjectKey);
@@ -70,12 +65,6 @@ export default async function WorkspacePage({ searchParams }) {
     elevenLabsVoiceId: appEnv.elevenlabs.voiceId,
     includeDevice: true,
   });
-  const preferredVoiceChoice = resolvePreferredVoiceChoice(
-    voiceCatalog,
-    String(readerData?.profile?.preferredVoiceProvider || "").toLowerCase(),
-    readerData?.profile?.preferredVoiceId || null,
-  );
-
   return (
     <WorkspaceShell
       userId={session.user.id}
@@ -85,7 +74,7 @@ export default async function WorkspacePage({ searchParams }) {
       initialDocument={initialDocument}
       initialProjectKey={initialProject?.projectKey || null}
       voiceCatalog={voiceCatalog}
-      defaultVoiceChoice={preferredVoiceChoice}
+      defaultVoiceChoice={voiceCatalog[0] || null}
       showLaunchpadInitially={requestedLaunchpad || (!requestedDocumentKey && !requestedProjectKey)}
     />
   );
