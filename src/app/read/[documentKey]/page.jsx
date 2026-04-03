@@ -52,6 +52,8 @@ export default async function ReaderDocumentPage({ params }) {
       sevenVoiceProvider={
         appEnv.elevenlabs.enabled ? "elevenlabs" : appEnv.openai.enabled ? "openai" : null
       }
+      homeHref="/library"
+      homeLabel="Library"
     />
   );
 }

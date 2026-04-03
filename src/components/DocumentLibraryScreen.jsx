@@ -17,7 +17,7 @@ function ProgressBar({ value = 0 }) {
 
 function formatActivityLabel(document) {
   if (document.sourceType === "builtin") {
-    return "Core text";
+    return "Sample document";
   }
 
   const timestamp = document.updatedAt || document.createdAt;
@@ -37,7 +37,7 @@ function formatActivityLabel(document) {
 
 function DocumentCard({ document, featured = false }) {
   const activityLabel = formatActivityLabel(document);
-  const kindLabel = document.sourceType === "builtin" ? "Core text" : "Imported";
+  const kindLabel = document.sourceType === "builtin" ? "Sample" : "Saved";
 
   return (
     <Link href={document.href} className={`library-card ${featured ? "is-featured" : ""}`}>
@@ -157,7 +157,7 @@ export default function DocumentLibraryScreen({
     <main className="library-shell library-shell--authenticated-reset">
       <div className="library-shell__inner">
         <header className="library-topbar">
-          <h1 className="library-topbar__title">Library</h1>
+          <h1 className="library-topbar__title">Saved Library</h1>
 
           <div className="library-topbar__actions">
             <input
@@ -165,7 +165,7 @@ export default function DocumentLibraryScreen({
               ref={fileInputRef}
               className="library-upload__native-input"
               type="file"
-              accept=".md,.markdown,.doc,.docx,.pdf"
+              accept=".txt,.md,.markdown,.doc,.docx,.pdf"
               disabled={uploading}
               onChange={handleFileChange}
             />
@@ -175,7 +175,7 @@ export default function DocumentLibraryScreen({
               onClick={handleOpenFilePicker}
               disabled={uploading}
             >
-              {uploading ? "Importing..." : "Import"}
+              {uploading ? "Importing..." : "Import to Account"}
             </button>
             <Link href="/account" className="library-topbar__action">Account</Link>
           </div>
@@ -192,7 +192,7 @@ export default function DocumentLibraryScreen({
 
         <section id="documents" className="library-panel">
           <LibrarySectionHeader
-            title="Your documents"
+            title="Saved documents"
             meta={`${uploadedDocuments.length} document${uploadedDocuments.length === 1 ? "" : "s"}`}
           />
 
@@ -212,7 +212,7 @@ export default function DocumentLibraryScreen({
 
         <section id="canonical" className="library-panel">
           <LibrarySectionHeader
-            title="Core text"
+            title="Sample document"
             meta={`${canonicalDocuments.length} document${canonicalDocuments.length === 1 ? "" : "s"}`}
           />
 
@@ -224,8 +224,8 @@ export default function DocumentLibraryScreen({
             </div>
           ) : (
             <div className="library-empty">
-              <p className="library-empty__title">No canonical document available.</p>
-              <p className="library-empty__copy">The core text will appear here when it is ready.</p>
+              <p className="library-empty__title">No sample document available.</p>
+              <p className="library-empty__copy">A built-in sample will appear here when it is ready.</p>
             </div>
           )}
         </section>

@@ -25,6 +25,14 @@ export default function ReadGate({
   sevenVoiceEnabled = false,
   sevenTextProvider = null,
   sevenVoiceProvider = null,
+  persistenceMode = "remote",
+  localReaderStorageKey = null,
+  localDocumentId = null,
+  allowAdvancedFeatures = true,
+  allowAnnotations = true,
+  homeHref = "/",
+  homeLabel = "Home",
+  canSaveToAccount = false,
 }) {
   const preferencesSnapshot = useSyncExternalStore(
     subscribeReaderPreferences,
@@ -57,6 +65,14 @@ export default function ReadGate({
       sevenVoiceEnabled={sevenVoiceEnabled}
       sevenTextProvider={sevenTextProvider}
       sevenVoiceProvider={sevenVoiceProvider}
+      persistenceMode={persistenceMode}
+      localReaderStorageKey={localReaderStorageKey}
+      localDocumentId={localDocumentId}
+      allowAdvancedFeatures={allowAdvancedFeatures}
+      allowAnnotations={allowAnnotations}
+      homeHref={homeHref}
+      homeLabel={homeLabel}
+      canSaveToAccount={canSaveToAccount}
     />
   );
 }

@@ -250,6 +250,7 @@ export default function ReaderListenTray({
   onSelectQueueItem,
   onSelectVoice,
   onToggleGuide,
+  showGuideShortcut = true,
 }) {
   if (scene === "hidden") {
     return null;
@@ -429,14 +430,16 @@ export default function ReaderListenTray({
               <QueueIcon />
               <span>{queueLength > 0 ? `${queuePosition}/${queueLength}` : "Queue"}</span>
             </button>
-            <button
-              type="button"
-              className="reader-listen-v2__chip reader-listen-v2__chip--spark"
-              onClick={onToggleGuide}
-              aria-label="Open Seven"
-            >
-              <SparkIcon />
-            </button>
+            {showGuideShortcut ? (
+              <button
+                type="button"
+                className="reader-listen-v2__chip reader-listen-v2__chip--spark"
+                onClick={onToggleGuide}
+                aria-label="Open Seven"
+              >
+                <SparkIcon />
+              </button>
+            ) : null}
             <button
               type="button"
               className="reader-listen-v2__speed"

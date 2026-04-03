@@ -26,7 +26,7 @@ const cuneiformFont = localFont({
 
 export const metadata = {
   title: "Assembled Reality",
-  description: "Reading instrument for Assembled Reality.",
+  description: "Import text files and listen to them immediately.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

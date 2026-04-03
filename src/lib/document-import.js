@@ -7,6 +7,7 @@ export const MAX_DOCUMENT_UPLOAD_BYTES = 15 * 1024 * 1024;
 const SUPPORTED_FORMATS = new Map([
   [".md", "markdown"],
   [".markdown", "markdown"],
+  [".txt", "markdown"],
   [".doc", "doc"],
   [".docx", "docx"],
   [".pdf", "pdf"],
@@ -357,7 +358,7 @@ export function getImportedDocumentFormat(filename, mimeType = "") {
 export async function ingestUploadedDocument({ filename, mimeType = "", buffer }) {
   const format = getImportedDocumentFormat(filename, mimeType);
   if (!format) {
-    throw new Error("Please upload a Markdown, Word, or PDF file.");
+    throw new Error("Please upload a text, Markdown, Word, or PDF file.");
   }
 
   if (!buffer || buffer.length === 0) {
