@@ -6739,6 +6739,12 @@ a {
   padding-inline: 0.1rem;
 }
 
+.library-topbar__copy {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 42rem;
+}
+
 .library-topbar__title {
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
@@ -6746,6 +6752,17 @@ a {
   line-height: 0.95;
   letter-spacing: -0.04em;
   color: var(--auth-text);
+}
+
+.library-topbar__supporting,
+.library-topbar__reader {
+  margin: 0;
+  color: var(--auth-text-muted);
+  line-height: 1.55;
+}
+
+.library-topbar__reader {
+  color: var(--auth-text-faint);
 }
 
 .library-panel,

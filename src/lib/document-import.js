@@ -7,6 +7,7 @@ export const MAX_DOCUMENT_UPLOAD_BYTES = 15 * 1024 * 1024;
 const SUPPORTED_FORMATS = new Map([
   [".md", "markdown"],
   [".markdown", "markdown"],
+  [".txt", "markdown"],
   [".doc", "doc"],
   [".docx", "docx"],
   [".pdf", "pdf"],
@@ -33,6 +34,13 @@ function guessTitleFromFilename(filename) {
     .trim();
 
   return cleaned || "Uploaded document";
+}
+
+function isPlainTextImport(filename, mimeType = "") {
+  const extension = getFilenameExtension(filename);
+  const normalizedMime = String(mimeType || "").toLowerCase();
+
+  return extension === ".txt" || (normalizedMime.startsWith("text/") && !normalizedMime.includes("markdown"));
 }
 
 function normalizeMarkdownSource(markdown) {
@@ -357,7 +365,7 @@ export function getImportedDocumentFormat(filename, mimeType = "") {
 export async function ingestUploadedDocument({ filename, mimeType = "", buffer }) {
   const format = getImportedDocumentFormat(filename, mimeType);
   if (!format) {
-    throw new Error("Please upload a Markdown, Word, or PDF file.");
+    throw new Error("Please upload a text, Markdown, Word, or PDF file.");
   }
 
   if (!buffer || buffer.length === 0) {
@@ -372,7 +380,10 @@ export async function ingestUploadedDocument({ filename, mimeType = "", buffer }
 
   let structured;
   if (format === "markdown") {
-    structured = structureMarkdownImport(buffer.toString("utf8"), titleHint);
+    const source = buffer.toString("utf8");
+    structured = isPlainTextImport(filename, mimeType)
+      ? structurePlainTextImport(source, titleHint)
+      : structureMarkdownImport(source, titleHint);
   } else if (format === "docx") {
     structured = structureMarkdownImport(await extractMarkdownFromDocx(buffer), titleHint);
   } else if (format === "doc") {

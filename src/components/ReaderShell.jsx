@@ -3066,6 +3066,16 @@ export default function ReaderShell({
         <div className="reader-player-topbar__actions">
           <button
             type="button"
+            className={`reader-player-topbar__utility ${contentsOpen ? "is-active" : ""}`}
+            onClick={(event) => openOverlay("contents", event)}
+            aria-pressed={contentsOpen}
+            aria-label="Open contents"
+          >
+            <ContentsIcon />
+            <span>Contents</span>
+          </button>
+          <button
+            type="button"
             className={`reader-player-topbar__listen ${listenScene !== "hidden" ? "is-active" : ""}`}
             onClick={(event) => openListenTray(event)}
             aria-pressed={listenScene !== "hidden"}

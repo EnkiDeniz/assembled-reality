@@ -35,7 +35,7 @@ export default function AuthScreen({
     const result = await onMagicLinkSignIn(emailOnly.trim());
 
     if (!result?.ok) {
-      setError("We could not send the entry link.");
+      setError("We could not send the sign-in link.");
       setEmailSubmitting(false);
       return;
     }
@@ -48,13 +48,15 @@ export default function AuthScreen({
     <main className="lock-screen auth-screen">
       <div className="lock-screen__frame auth-screen__frame">
         <div className="lock-screen__header">
-          <p className="lock-screen__eyebrow">Reading instrument</p>
+          <p className="lock-screen__eyebrow">Private reading library</p>
           <h1 className="lock-screen__title">{documentTitle}</h1>
           <p className="lock-screen__lede">
-            Enter the manuscript with your place, notebook, and receipts intact.
+            Enter the library, continue the core text, and bring personal documents into the same
+            reading instrument.
           </p>
           <p className="auth-screen__supporting">
-            The reading surface stays primary. Sign in once, then return exactly where you left off.
+            Sign in once to reach your player, notebook, Seven, evidence, receipts, and saved
+            reading progress in one place.
           </p>
         </div>
 

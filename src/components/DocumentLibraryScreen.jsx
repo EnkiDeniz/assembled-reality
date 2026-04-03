@@ -17,7 +17,7 @@ function ProgressBar({ value = 0 }) {
 
 function formatActivityLabel(document) {
   if (document.sourceType === "builtin") {
-    return "Core text";
+    return "Primary text";
   }
 
   const timestamp = document.updatedAt || document.createdAt;
@@ -37,7 +37,7 @@ function formatActivityLabel(document) {
 
 function DocumentCard({ document, featured = false }) {
   const activityLabel = formatActivityLabel(document);
-  const kindLabel = document.sourceType === "builtin" ? "Core text" : "Imported";
+  const kindLabel = document.sourceType === "builtin" ? "Core text" : "Personal document";
 
   return (
     <Link href={document.href} className={`library-card ${featured ? "is-featured" : ""}`}>
@@ -79,6 +79,7 @@ function LibrarySectionHeader({ title, meta = "" }) {
 
 export default function DocumentLibraryScreen({
   documents = [],
+  profile = null,
 }) {
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -93,6 +94,7 @@ export default function DocumentLibraryScreen({
     () => documents.filter((document) => document.sourceType !== "builtin"),
     [documents],
   );
+  const coreDocument = canonicalDocuments[0] || null;
   const continueDocument = useMemo(() => {
     const ranked = [...documents].sort((left, right) => {
       const progressDelta = (right.progressPercent || 0) - (left.progressPercent || 0);
@@ -157,7 +159,17 @@ export default function DocumentLibraryScreen({
     <main className="library-shell library-shell--authenticated-reset">
       <div className="library-shell__inner">
         <header className="library-topbar">
-          <h1 className="library-topbar__title">Library</h1>
+          <div className="library-topbar__copy">
+            <p className="library-section-eyebrow">Private library</p>
+            <h1 className="library-topbar__title">Library</h1>
+            <p className="library-topbar__supporting">
+              Continue the work, return to the core text, or bring a personal document into the
+              same reader and player.
+            </p>
+            {profile?.displayName ? (
+              <p className="library-topbar__reader">Reader: {profile.displayName}</p>
+            ) : null}
+          </div>
 
           <div className="library-topbar__actions">
             <input
@@ -165,7 +177,7 @@ export default function DocumentLibraryScreen({
               ref={fileInputRef}
               className="library-upload__native-input"
               type="file"
-              accept=".md,.markdown,.doc,.docx,.pdf"
+              accept=".txt,.md,.markdown,.doc,.docx,.pdf"
               disabled={uploading}
               onChange={handleFileChange}
             />
@@ -185,14 +197,30 @@ export default function DocumentLibraryScreen({
 
         {resumeDocument ? (
           <section id="continue" className="library-panel">
-            <LibrarySectionHeader title="Continue" />
+            <LibrarySectionHeader title="Continue" meta="Pick up where you left off" />
             <DocumentCard document={resumeDocument} featured />
           </section>
         ) : null}
 
+        <section id="canonical" className="library-panel">
+          <LibrarySectionHeader
+            title="Assembled Reality"
+            meta="Primary text"
+          />
+
+          {coreDocument ? (
+            <DocumentCard document={coreDocument} featured />
+          ) : (
+            <div className="library-empty">
+              <p className="library-empty__title">No core text available.</p>
+              <p className="library-empty__copy">The primary work will appear here when it is ready.</p>
+            </div>
+          )}
+        </section>
+
         <section id="documents" className="library-panel">
           <LibrarySectionHeader
-            title="Your documents"
+            title="Personal documents"
             meta={`${uploadedDocuments.length} document${uploadedDocuments.length === 1 ? "" : "s"}`}
           />
 
@@ -204,28 +232,10 @@ export default function DocumentLibraryScreen({
             </div>
           ) : (
             <div className="library-empty">
-              <p className="library-empty__title">No imported documents yet.</p>
-              <p className="library-empty__copy">Use `Import` to add one.</p>
-            </div>
-          )}
-        </section>
-
-        <section id="canonical" className="library-panel">
-          <LibrarySectionHeader
-            title="Core text"
-            meta={`${canonicalDocuments.length} document${canonicalDocuments.length === 1 ? "" : "s"}`}
-          />
-
-          {canonicalDocuments.length ? (
-            <div className="library-grid">
-              {canonicalDocuments.map((document) => (
-                <DocumentCard key={document.documentKey} document={document} />
-              ))}
-            </div>
-          ) : (
-            <div className="library-empty">
-              <p className="library-empty__title">No canonical document available.</p>
-              <p className="library-empty__copy">The core text will appear here when it is ready.</p>
+              <p className="library-empty__title">No personal documents yet.</p>
+              <p className="library-empty__copy">
+                Use `Import` to bring a document into your private library.
+              </p>
             </div>
           )}
         </section>

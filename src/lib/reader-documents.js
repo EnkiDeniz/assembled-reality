@@ -8,11 +8,14 @@ function buildDocumentHref(documentKey) {
   return documentKey === PRIMARY_DOCUMENT_KEY ? "/read" : `/read/${encodeURIComponent(documentKey)}`;
 }
 
-function formatDocumentFormat(value) {
+function formatDocumentFormat(value, originalFilename = "") {
   const normalized = String(value || "markdown").toLowerCase();
   if (normalized === "docx") return "DOCX";
   if (normalized === "doc") return "DOC";
   if (normalized === "pdf") return "PDF";
+  if (String(originalFilename || "").trim().toLowerCase().endsWith(".txt")) {
+    return "TXT";
+  }
   return "Markdown";
 }
 
@@ -56,7 +59,7 @@ function serializeUploadedDocument(record, progressPercent = 0) {
     excerpt: getDocumentExcerpt(documentData),
     sourceType: "upload",
     format: String(record.format || "markdown").toLowerCase(),
-    formatLabel: formatDocumentFormat(record.format),
+    formatLabel: formatDocumentFormat(record.format, record.originalFilename),
     originalFilename: record.originalFilename || null,
     href: buildDocumentHref(record.documentKey),
     wordCount: record.wordCount || 0,
