@@ -12,11 +12,13 @@ const BLOCK_KIND_MAP = {
 
 const LOG_ACTION_COLORS = {
   UPLOADED: "#888888",
+  PASTED: "#2dd4bf",
   LISTENED: "#60a5fa",
   AI_QUERY: "#a78bfa",
   AI_RESULT: "#22c55e",
   SELECTED: "#06b6d4",
   EDITED: "#f472b6",
+  POLISHED: "#f59e0b",
   ASSEMBLED: "#f59e0b",
   RECEIPT: "#22c55e",
 };
@@ -309,4 +311,3 @@ export function formatWorkspaceLogTime(value) {
     hour12: false,
   }).format(new Date(parsed));
 }
-

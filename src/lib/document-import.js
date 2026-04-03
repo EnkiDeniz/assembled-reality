@@ -1,11 +1,20 @@
 import "server-only";
 
+import {
+  buildWorkspaceMarkdown,
+  normalizeWorkspaceBlockKind,
+  normalizeWorkspaceBlocks,
+  stripMarkdownSyntax,
+} from "@/lib/document-blocks";
 import { buildExcerpt } from "@/lib/text";
 
 export const MAX_DOCUMENT_UPLOAD_BYTES = 15 * 1024 * 1024;
 export const MAX_CLIPBOARD_PASTE_BYTES = 1024 * 1024;
 
 const PDF_LOW_TEXT_WORD_THRESHOLD = 40;
+const REPEATED_ARTIFACT_MIN_OCCURRENCES = 3;
+const REPEATED_ARTIFACT_MAX_WORDS = 10;
+const REPEATED_ARTIFACT_MAX_LENGTH = 80;
 
 const SUPPORTED_FORMATS = new Map([
   [".md", "markdown"],
@@ -17,6 +26,70 @@ const SUPPORTED_FORMATS = new Map([
 ]);
 
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
+const ZERO_WIDTH_RE = /[\u00ad\u200b-\u200d\u2060\ufeff]/gi;
+const NON_BREAKING_SPACE_RE = /\u00a0/g;
+const SYMBOL_BULLET_RE = /^([>\s]*)[•◦▪▫▸▹►▻◉○●◆◇■□✦✧✱➜➤→]\s+/;
+const DASH_BULLET_RE = /^([>\s]*)[–—]\s+/;
+const PAGE_NUMBER_LINE_RE = /^(?:page\s+)?\d+(?:\s*(?:\/|of)\s*\d+)?$/i;
+
+function createPolishStats() {
+  return {
+    decorativeLinesRemoved: 0,
+    pageLinesRemoved: 0,
+    bulletLinesNormalized: 0,
+    repeatedParagraphsRemoved: 0,
+    blocksRemoved: 0,
+  };
+}
+
+function hasPolishChanges(stats = {}) {
+  return Object.values(stats).some((value) => Number(value) > 0);
+}
+
+function summarizePolishStats(stats = {}, label = "Basic polish") {
+  const parts = [];
+
+  if (stats.decorativeLinesRemoved) {
+    parts.push(
+      `${stats.decorativeLinesRemoved} decorative line${stats.decorativeLinesRemoved === 1 ? "" : "s"}`,
+    );
+  }
+
+  if (stats.pageLinesRemoved) {
+    parts.push(
+      `${stats.pageLinesRemoved} page marker${stats.pageLinesRemoved === 1 ? "" : "s"}`,
+    );
+  }
+
+  if (stats.bulletLinesNormalized) {
+    parts.push(
+      `${stats.bulletLinesNormalized} list marker${stats.bulletLinesNormalized === 1 ? "" : "s"}`,
+    );
+  }
+
+  if (stats.repeatedParagraphsRemoved) {
+    parts.push(
+      `${stats.repeatedParagraphsRemoved} repeated artifact paragraph${
+        stats.repeatedParagraphsRemoved === 1 ? "" : "s"
+      }`,
+    );
+  }
+
+  if (stats.blocksRemoved) {
+    parts.push(`${stats.blocksRemoved} empty block${stats.blocksRemoved === 1 ? "" : "s"}`);
+  }
+
+  if (!parts.length) return "";
+  return `${label} removed or normalized ${parts.join(", ")}.`;
+}
+
+function pushPolishDiagnostic(diagnostics, stats, { code = "intake_polish", label = "Basic polish" } = {}) {
+  if (!hasPolishChanges(stats)) return;
+
+  diagnostics.push(
+    createIntakeDiagnostic(code, "info", summarizePolishStats(stats, label)),
+  );
+}
 
 function createImportError(code, message) {
   const error = new Error(message);
@@ -83,9 +156,15 @@ function isPlainTextImport(filename, mimeType = "") {
   return extension === ".txt" || (normalizedMime.startsWith("text/") && !normalizedMime.includes("markdown"));
 }
 
+function normalizeArtifactTextValue(text) {
+  return String(text || "")
+    .replaceAll("\u0000", "")
+    .replace(ZERO_WIDTH_RE, "")
+    .replace(NON_BREAKING_SPACE_RE, " ");
+}
+
 function normalizeMarkdownSource(markdown) {
-  return String(markdown || "")
-    .replace(/\uFEFF/g, "")
+  return normalizeArtifactTextValue(markdown)
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
@@ -94,9 +173,7 @@ function normalizeMarkdownSource(markdown) {
 }
 
 function normalizePlainTextSource(text) {
-  return String(text || "")
-    .replaceAll("\u0000", "")
-    .replace(/\uFEFF/g, "")
+  return normalizeArtifactTextValue(text)
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/\f/g, "\n\n")
@@ -105,6 +182,113 @@ function normalizePlainTextSource(text) {
     .replace(/(?<=\S)\n(?=\S)/g, " ")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+}
+
+function normalizeComparableLine(line) {
+  return String(line || "")
+    .replace(/^>\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isLikelyPageNumberLine(line) {
+  return PAGE_NUMBER_LINE_RE.test(normalizeComparableLine(line));
+}
+
+function isDecorativeOnlyLine(line, { aggressive = false } = {}) {
+  const normalized = normalizeComparableLine(line);
+  if (!normalized) return false;
+  if (/[A-Za-z0-9]/.test(normalized)) return false;
+
+  const symbolCount = (normalized.match(/[^\s]/g) || []).length;
+  if (symbolCount < (aggressive ? 2 : 3)) return false;
+
+  return /^[*_~=\-|.·•◦▪▫▸▹►▻◉○●◆◇■□✦✧✱+\s]+$/u.test(normalized);
+}
+
+function polishLineArtifacts(line, stats, { aggressive = false } = {}) {
+  let next = normalizeArtifactTextValue(line).replace(/[ \t]+$/g, "");
+  if (!next.trim()) return "";
+
+  if (isLikelyPageNumberLine(next)) {
+    stats.pageLinesRemoved += 1;
+    return "";
+  }
+
+  if (isDecorativeOnlyLine(next, { aggressive })) {
+    stats.decorativeLinesRemoved += 1;
+    return "";
+  }
+
+  let bulletMatch = next.match(SYMBOL_BULLET_RE);
+  if (!bulletMatch) {
+    bulletMatch = next.match(DASH_BULLET_RE);
+  }
+
+  if (bulletMatch) {
+    next = `${bulletMatch[1]}- ${next.slice(bulletMatch[0].length).trim()}`;
+    stats.bulletLinesNormalized += 1;
+  }
+
+  return next;
+}
+
+function polishMarkdownArtifacts(markdown, stats, { aggressive = false } = {}) {
+  const polishedLines = [];
+  let previousBlank = true;
+
+  String(markdown || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .forEach((line) => {
+      const polishedLine = polishLineArtifacts(line, stats, { aggressive });
+      const isBlank = !polishedLine.trim();
+
+      if (isBlank) {
+        if (!previousBlank) {
+          polishedLines.push("");
+        }
+        previousBlank = true;
+        return;
+      }
+
+      polishedLines.push(polishedLine);
+      previousBlank = false;
+    });
+
+  return polishedLines.join("\n").trim();
+}
+
+function isShortRepeatedArtifactParagraph(paragraph) {
+  const normalized = String(paragraph || "").trim();
+  if (!normalized) return false;
+
+  const wordCount = countWords(stripMarkdownSyntax(normalized) || normalized);
+  return wordCount > 0 && wordCount <= REPEATED_ARTIFACT_MAX_WORDS && normalized.length <= REPEATED_ARTIFACT_MAX_LENGTH;
+}
+
+function removeRepeatedArtifactParagraphs(paragraphs, stats) {
+  const normalizedParagraphs = Array.isArray(paragraphs) ? paragraphs.filter(Boolean) : [];
+  const counts = normalizedParagraphs.reduce((map, paragraph) => {
+    const comparable = normalizeComparableLine(paragraph).toLowerCase();
+    if (!isShortRepeatedArtifactParagraph(comparable)) {
+      return map;
+    }
+
+    map.set(comparable, (map.get(comparable) || 0) + 1);
+    return map;
+  }, new Map());
+
+  return normalizedParagraphs.filter((paragraph) => {
+    const comparable = normalizeComparableLine(paragraph).toLowerCase();
+    if ((counts.get(comparable) || 0) < REPEATED_ARTIFACT_MIN_OCCURRENCES) {
+      return true;
+    }
+
+    stats.repeatedParagraphsRemoved += 1;
+    return false;
+  });
 }
 
 function stripFrontmatter(markdown) {
@@ -203,7 +387,11 @@ function chooseSectionHeadingLevel(markdown, title) {
 }
 
 function structureMarkdownImport(markdown, titleHint) {
-  const normalized = stripFrontmatter(normalizeMarkdownSource(markdown));
+  const polishStats = createPolishStats();
+  const normalized = polishMarkdownArtifacts(
+    stripFrontmatter(normalizeMarkdownSource(markdown)),
+    polishStats,
+  );
   const lines = normalized.split("\n");
   const detectedTitle = cleanHeadingText(
     lines.find((line) => /^#\s+/.test(line))?.replace(/^#\s+/, "") || "",
@@ -218,6 +406,7 @@ function structureMarkdownImport(markdown, titleHint) {
     return {
       title,
       introMarkdown: "",
+      polishStats,
       sections: [
         {
           title,
@@ -285,6 +474,7 @@ function structureMarkdownImport(markdown, titleHint) {
     return {
       title,
       introMarkdown: "",
+      polishStats,
       sections: chunkParagraphsIntoSections(splitIntoParagraphs(normalized)),
     };
   }
@@ -292,17 +482,25 @@ function structureMarkdownImport(markdown, titleHint) {
   return {
     title,
     introMarkdown: introLines.join("\n").trim(),
+    polishStats,
     sections: normalizedSections,
   };
 }
 
 function structurePlainTextImport(text, titleHint) {
+  const polishStats = createPolishStats();
   const normalized = normalizePlainTextSource(text);
-  const paragraphs = splitIntoParagraphs(normalized);
+  const paragraphs = removeRepeatedArtifactParagraphs(
+    splitIntoParagraphs(normalized)
+      .map((paragraph) => polishLineArtifacts(paragraph, polishStats))
+      .filter(Boolean),
+    polishStats,
+  );
 
   return {
     title: titleHint || "Uploaded document",
     introMarkdown: "",
+    polishStats,
     sections: chunkParagraphsIntoSections(paragraphs, {
       targetSize: 1900,
       maxParagraphs: 6,
@@ -400,6 +598,10 @@ async function convertHtmlToMarkdown(html) {
 function finalizeImportedDocument(format, structured, diagnostics = []) {
   const contentMarkdown = buildCanonicalMarkdown(structured);
   const visibleText = extractVisibleText(contentMarkdown);
+  pushPolishDiagnostic(diagnostics, structured?.polishStats, {
+    code: "intake_polish",
+    label: "Basic polish",
+  });
 
   return {
     format,
@@ -410,6 +612,63 @@ function finalizeImportedDocument(format, structured, diagnostics = []) {
     sectionCount: structured.sections.length,
     preview: buildExcerpt(visibleText, 180),
     diagnostics: Array.isArray(diagnostics) ? diagnostics : [],
+  };
+}
+
+export function polishWorkspaceSourceDocument({
+  title,
+  subtitle = "",
+  blocks = [],
+  sectionTitle = "Document",
+}) {
+  const stats = createPolishStats();
+  const normalizedBlocks = normalizeWorkspaceBlocks(blocks, {
+    documentKey: "polish-source",
+    defaultSourceDocumentKey: "polish-source",
+    defaultIsEditable: true,
+  });
+
+  const polishedBlocks = normalizedBlocks.reduce((nextBlocks, block) => {
+    const polishedText = polishMarkdownArtifacts(block.text, stats, { aggressive: true });
+    if (!polishedText) {
+      stats.blocksRemoved += 1;
+      return nextBlocks;
+    }
+
+    nextBlocks.push({
+      ...block,
+      text: polishedText,
+      plainText: stripMarkdownSyntax(polishedText),
+      kind: normalizeWorkspaceBlockKind(block.kind, polishedText),
+    });
+    return nextBlocks;
+  }, []);
+
+  const changed =
+    stats.blocksRemoved > 0 ||
+    normalizedBlocks.length !== polishedBlocks.length ||
+    normalizedBlocks.some((block, index) => polishedBlocks[index]?.text !== block.text);
+
+  const contentMarkdown = buildWorkspaceMarkdown({
+    title,
+    subtitle,
+    blocks: polishedBlocks,
+    sectionTitle,
+  });
+  const visibleText = extractVisibleText(contentMarkdown);
+  const diagnostics = [];
+  pushPolishDiagnostic(diagnostics, stats, {
+    code: "source_polished",
+    label: "Polish",
+  });
+
+  return {
+    changed,
+    contentMarkdown,
+    wordCount: countWords(visibleText),
+    sectionCount: polishedBlocks.length,
+    diagnostics,
+    stats,
   };
 }
 

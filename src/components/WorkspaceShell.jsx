@@ -108,6 +108,47 @@ function isTypingTarget(target) {
   );
 }
 
+function summarizePolishChanges(changes = null) {
+  const parts = [];
+  const normalized = changes || {};
+
+  if (normalized.decorativeLinesRemoved) {
+    parts.push(
+      `${normalized.decorativeLinesRemoved} decorative line${
+        normalized.decorativeLinesRemoved === 1 ? "" : "s"
+      }`,
+    );
+  }
+
+  if (normalized.pageLinesRemoved) {
+    parts.push(
+      `${normalized.pageLinesRemoved} page marker${normalized.pageLinesRemoved === 1 ? "" : "s"}`,
+    );
+  }
+
+  if (normalized.bulletLinesNormalized) {
+    parts.push(
+      `${normalized.bulletLinesNormalized} list marker${
+        normalized.bulletLinesNormalized === 1 ? "" : "s"
+      }`,
+    );
+  }
+
+  if (normalized.repeatedParagraphsRemoved) {
+    parts.push(
+      `${normalized.repeatedParagraphsRemoved} repeated artifact paragraph${
+        normalized.repeatedParagraphsRemoved === 1 ? "" : "s"
+      }`,
+    );
+  }
+
+  if (normalized.blocksRemoved) {
+    parts.push(`${normalized.blocksRemoved} empty block${normalized.blocksRemoved === 1 ? "" : "s"}`);
+  }
+
+  return parts.length ? parts.join(", ") : "";
+}
+
 function WorkspaceActionIcon({ kind }) {
   if (kind === "continue") {
     return (
@@ -1409,6 +1450,7 @@ export default function WorkspaceShell({
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
+  const [polishPending, setPolishPending] = useState(false);
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState("");
   const [blockSaveStates, setBlockSaveStates] = useState({});
@@ -1444,6 +1486,13 @@ export default function WorkspaceShell({
   const activeDocument = applyDocumentLogState(activeDocumentBase, documentLogs);
   const blocks = activeDocument?.blocks || [];
   const activeDocumentState = documentStates[activeDocumentKey] || null;
+  const activeDocumentWarning = getPrimaryDiagnosticMessage({
+    diagnostics: activeDocument?.intakeDiagnostics,
+  });
+  const canPolishActiveDocument =
+    Boolean(activeDocument?.documentKey) &&
+    !activeDocument?.isAssembly &&
+    activeDocument?.documentType !== "assembly";
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
@@ -2041,6 +2090,74 @@ export default function WorkspaceShell({
       );
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function polishActiveSource() {
+    if (!canPolishActiveDocument || polishPending) return;
+
+    const sourceTitle = activeDocument.title;
+    setPolishPending(true);
+    setFeedback(`Polishing ${sourceTitle}...`);
+
+    try {
+      const response = await fetch("/api/workspace/polish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentKey: activeDocument.documentKey,
+          projectKey: activeProjectKey,
+        }),
+      });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Could not polish this source.");
+      }
+
+      if (result?.unchanged) {
+        const polishSummary = summarizePolishChanges(result?.changes);
+        setFeedback(
+          polishSummary
+            ? `No polished copy needed. ${polishSummary}.`
+            : `${sourceTitle} already looks clean.`,
+          "success",
+        );
+        return;
+      }
+
+      if (!result?.document?.documentKey) {
+        throw new Error("The polished source could not be created.");
+      }
+
+      upsertDocument(result.document, { replaceLogs: true });
+      attachDocumentToActiveProject(result.document, { role: "SOURCE" });
+      appendLog("POLISHED", `${result.document.title} created from ${sourceTitle}`, {
+        documentKey: result.document.documentKey,
+      });
+      setLaunchpadOpen(false);
+      setAiOpen(false);
+      setViewMode("doc");
+      await loadDocument(result.document.documentKey);
+
+      const polishSummary = summarizePolishChanges(result?.changes);
+      const intakeWarning = getPrimaryDiagnosticMessage(result?.intake);
+      setFeedback(
+        [
+          `Created ${result.document.title}.`,
+          polishSummary ? `Polish cleaned ${polishSummary}.` : "",
+          intakeWarning || "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+        "success",
+      );
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not polish this source.", "error");
+    } finally {
+      setPolishPending(false);
     }
   }
 
@@ -2975,22 +3092,39 @@ export default function WorkspaceShell({
                 />
               ) : (
                 <div className="assembler-document">
-                  <div className="assembler-document__header">
-                    <div>
-                      <h2 className="assembler-document__title">{activeDocument.title}</h2>
-                      {activeDocument.subtitle ? (
-                        <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
-                      ) : null}
-                    </div>
+	                  <div className="assembler-document__header">
+	                    <div>
+	                      <h2 className="assembler-document__title">{activeDocument.title}</h2>
+	                      {activeDocument.subtitle ? (
+	                        <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
+	                      ) : null}
+	                    </div>
 
-                    <div className="assembler-document__meta">
-                      <span>{activeDocument.documentType}</span>
-                      <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
-                      {activeDocument.sourceFiles?.length ? (
-                        <span>source: {activeDocument.sourceFiles.join(", ")}</span>
-                      ) : null}
-                    </div>
-                  </div>
+	                    <div className="assembler-document__side">
+	                      <div className="assembler-document__meta">
+	                        <span>{activeDocument.documentType}</span>
+	                        <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
+	                        {activeDocument.sourceFiles?.length ? (
+	                          <span>source: {activeDocument.sourceFiles.join(", ")}</span>
+	                        ) : null}
+	                      </div>
+	                      <div className="assembler-document__actions">
+	                        {canPolishActiveDocument ? (
+	                          <button
+	                            type="button"
+	                            className="assembler-tiny-button"
+	                            onClick={() => void polishActiveSource()}
+	                            disabled={polishPending}
+	                          >
+	                            {polishPending ? "Polishing..." : "Polish source"}
+	                          </button>
+	                        ) : null}
+	                      </div>
+	                      {activeDocumentWarning ? (
+	                        <div className="assembler-document__note">{activeDocumentWarning}</div>
+	                      ) : null}
+	                    </div>
+	                  </div>
 
                   <div className="assembler-document__blocks">
                     {blocks.map((block) => (

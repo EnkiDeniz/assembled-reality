@@ -1375,6 +1375,13 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
+.assembler-document__side {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  max-width: 420px;
+}
+
 .assembler-document__title {
   margin: 0;
   color: var(--white);
@@ -1392,11 +1399,27 @@ main {
 .assembler-document__meta {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
   color: var(--soft);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+.assembler-document__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.assembler-document__note {
+  max-width: 420px;
+  color: var(--amber);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: right;
 }
 
 .assembler-document__blocks {

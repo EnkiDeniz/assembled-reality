@@ -388,6 +388,9 @@ export async function saveWorkspaceDocumentForUser(
       sourceFiles: ["Assembled Reality"],
       blocks: normalizedBlocks,
       logEntries,
+      intakeKind: current?.intakeKind || "builtin",
+      intakeDiagnostics: current?.intakeDiagnostics || [],
+      hiddenFromProjectHome: current?.hiddenFromProjectHome || false,
     });
     const existing = await prisma.readerDocument.findFirst({
       where: {
@@ -472,6 +475,9 @@ export async function saveWorkspaceDocumentForUser(
     sourceFiles: current.sourceFiles,
     blocks: normalizedBlocks,
     logEntries,
+    intakeKind: current.intakeKind,
+    intakeDiagnostics: current.intakeDiagnostics,
+    hiddenFromProjectHome: current.hiddenFromProjectHome,
   });
 
   const updated = await prisma.readerDocument.update({
