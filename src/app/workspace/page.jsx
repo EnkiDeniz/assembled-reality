@@ -31,17 +31,25 @@ export default async function WorkspacePage({ searchParams }) {
   const requestedDocumentKey = String(resolvedSearchParams?.document || "").trim();
   const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
   const requestedLaunchpad = String(resolvedSearchParams?.launchpad || "").trim() === "1";
+  const requestedMode = String(resolvedSearchParams?.mode || "").trim().toLowerCase();
 
   const documents = await listReaderDocumentsForUser(session.user.id);
 
   const projects = await listReaderProjectsForUser(session.user.id, documents);
   const initialProject = getProjectByKey(projects, requestedProjectKey);
-
-  const fallbackDocumentKey =
-    requestedDocumentKey ||
+  const initialProjectDocumentKey =
+    initialProject?.currentAssemblyDocumentKey ||
     getProjectEntryDocumentKey(initialProject) ||
     documents[0]?.documentKey ||
     "";
+
+  const fallbackDocumentKey =
+    requestedDocumentKey ||
+    ((requestedMode === "listen" || requestedMode === "assemble")
+      ? initialProjectDocumentKey
+      : getProjectEntryDocumentKey(initialProject) ||
+        documents[0]?.documentKey ||
+        "");
   const [initialDocument, projectDrafts] = await Promise.all([
     getReaderDocumentDataForUser(
       session.user.id,
@@ -73,6 +81,7 @@ export default async function WorkspacePage({ searchParams }) {
       projectDrafts={projectDrafts}
       initialDocument={initialDocument}
       initialProjectKey={initialProject?.projectKey || null}
+      initialMode={requestedMode === "listen" || requestedMode === "assemble" ? requestedMode : ""}
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={voiceCatalog[0] || null}
       showLaunchpadInitially={requestedLaunchpad || (!requestedDocumentKey && !requestedProjectKey)}

@@ -32,11 +32,23 @@ import { parseSevenAudioHeaders } from "@/lib/seven";
 const STORAGE_VERSION = 2;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
 const STATUS_TIMEOUT_MS = 5000;
+const WORKSPACE_MODES = {
+  listen: "listen",
+  assemble: "assemble",
+};
 const AI_SCOPE_OPTIONS = [
   { value: "document", label: "DOC" },
   { value: "block", label: "BLOCK" },
   { value: "clipboard", label: "CLIP" },
 ];
+
+function isWorkspaceMode(value) {
+  return value === WORKSPACE_MODES.listen || value === WORKSPACE_MODES.assemble;
+}
+
+function normalizeWorkspaceMode(value, fallback = WORKSPACE_MODES.assemble) {
+  return isWorkspaceMode(value) ? value : fallback;
+}
 
 function browserSupportsDeviceVoice() {
   return (
@@ -118,6 +130,21 @@ function getAiPlaceholder(scope) {
   if (scope === "block") return "ask about this block...";
   if (scope === "clipboard") return "ask about the clipboard...";
   return "ask about this document...";
+}
+
+function resolveProjectEntryDocument(project, documents, fallbackDocument = null) {
+  const projectDocuments = Array.isArray(documents) ? documents : [];
+  const currentAssembly =
+    (project?.currentAssemblyDocumentKey &&
+      projectDocuments.find(
+        (document) => document.documentKey === project.currentAssemblyDocumentKey,
+      )) ||
+    projectDocuments.find((document) => document.documentKey === getProjectEntryDocumentKey(project)) ||
+    fallbackDocument ||
+    projectDocuments[0] ||
+    null;
+
+  return currentAssembly;
 }
 
 function summarizePolishChanges(changes = null) {
@@ -241,6 +268,35 @@ function SourceActionIcon({ kind }) {
 }
 
 function WorkspaceActionIcon({ kind }) {
+  if (kind === "listen") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="m9 7 8 5-8 5z" />
+        <path d="M5 6.5v11" />
+      </svg>
+    );
+  }
+
+  if (kind === "assemble") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <rect x="4.5" y="5.5" width="6" height="6" rx="1.2" />
+        <rect x="13.5" y="5.5" width="6" height="6" rx="1.2" />
+        <rect x="9" y="14.5" width="6" height="6" rx="1.2" />
+      </svg>
+    );
+  }
+
+  if (kind === "browse") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M4.5 7h15" />
+        <path d="M4.5 12h15" />
+        <path d="M4.5 17h15" />
+      </svg>
+    );
+  }
+
   if (kind === "continue") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
@@ -515,11 +571,22 @@ function groupedDocuments(documents) {
   };
 }
 
-function buildWorkspaceUrl(documentKey, projectKey = DEFAULT_PROJECT_KEY, { launchpad = false } = {}) {
+function buildWorkspaceUrl(
+  documentKey,
+  projectKey = DEFAULT_PROJECT_KEY,
+  {
+    launchpad = false,
+    mode = "",
+  } = {},
+) {
   const params = new URLSearchParams();
 
   if (projectKey && projectKey !== DEFAULT_PROJECT_KEY) {
     params.set("project", projectKey);
+  }
+
+  if (isWorkspaceMode(mode)) {
+    params.set("mode", mode);
   }
 
   if (launchpad) {
@@ -658,7 +725,7 @@ function WorkspaceLaunchpad({
   projectDrafts = [],
   projectActionPending = "",
   loadingDocumentKey,
-  onContinue,
+  onEnterMode,
   onCreateProject,
   onOpenDocument,
   onOpenProject,
@@ -670,9 +737,8 @@ function WorkspaceLaunchpad({
   clipboardCount = 0,
 }) {
   const grouped = groupedDocuments(documents);
-  const projectEntryDocumentKey = getProjectEntryDocumentKey(activeProject);
-  const entryDocument =
-    documents.find((document) => document.documentKey === projectEntryDocumentKey) || null;
+  const continueDocument =
+    resolveProjectEntryDocument(activeProject, documents, activeDocument || null);
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
@@ -681,7 +747,6 @@ function WorkspaceLaunchpad({
   const sourceDocuments = grouped.sources;
   const sourceCount = activeProject?.sourceCount ?? sourceDocuments.length;
   const assemblyCount = activeProject?.assemblyCount ?? grouped.assemblies.length;
-  const continueDocument = currentAssemblyDocument || entryDocument || activeDocument || sourceDocuments[0] || null;
   const busy = uploading || Boolean(pastePendingMode);
 
   return (
@@ -710,16 +775,30 @@ function WorkspaceLaunchpad({
           <button
             type="button"
             className="assembler-launchpad__action is-primary"
-            onClick={() => onContinue(continueDocument?.documentKey || projectEntryDocumentKey)}
+            onClick={() => onEnterMode(WORKSPACE_MODES.listen, continueDocument?.documentKey || "")}
             disabled={!continueDocument || busy}
           >
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="continue" />
+              <WorkspaceActionIcon kind="listen" />
             </span>
-            <span className="assembler-launchpad__action-label">Open</span>
-            <span className="assembler-launchpad__action-value">
-              Continue
+            <span className="assembler-launchpad__action-label">Mode</span>
+            <span className="assembler-launchpad__action-value">Listen</span>
+            {continueDocument?.title ? (
+              <span className="assembler-launchpad__action-detail">{continueDocument.title}</span>
+            ) : null}
+          </button>
+
+          <button
+            type="button"
+            className="assembler-launchpad__action is-primary"
+            onClick={() => onEnterMode(WORKSPACE_MODES.assemble, continueDocument?.documentKey || "")}
+            disabled={!continueDocument || busy}
+          >
+            <span className="assembler-launchpad__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="assemble" />
             </span>
+            <span className="assembler-launchpad__action-label">Mode</span>
+            <span className="assembler-launchpad__action-value">Assemble</span>
             {continueDocument?.title ? (
               <span className="assembler-launchpad__action-detail">{continueDocument.title}</span>
             ) : null}
@@ -885,6 +964,222 @@ function WorkspaceLaunchpad({
         </div>
       </div>
     </div>
+  );
+}
+
+function ListenPicker({
+  activeProject,
+  documents,
+  activeDocumentKey,
+  loadingDocumentKey,
+  onOpenProjectHome,
+  onSelectDocument,
+}) {
+  const grouped = groupedDocuments(documents);
+  const currentAssembly =
+    (activeProject?.currentAssemblyDocumentKey &&
+      grouped.assemblies.find(
+        (document) => document.documentKey === activeProject.currentAssemblyDocumentKey,
+      )) ||
+    grouped.assemblies[0] ||
+    null;
+  const priorAssemblies = grouped.assemblies.filter(
+    (document) => document.documentKey !== currentAssembly?.documentKey,
+  );
+
+  function renderDocumentRow(document, meta) {
+    return (
+      <button
+        key={document.documentKey}
+        type="button"
+        className={`assembler-listen-picker__item ${
+          document.documentKey === activeDocumentKey ? "is-active" : ""
+        }`}
+        onClick={() => onSelectDocument(document.documentKey)}
+      >
+        <span className="assembler-listen-picker__item-title">{document.title}</span>
+        <span className="assembler-listen-picker__item-meta">
+          {loadingDocumentKey === document.documentKey ? "loading" : meta}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="assembler-listen-picker">
+      <div className="assembler-listen-picker__section">
+        <span className="assembler-listen-picker__label">Project</span>
+        <button type="button" className="assembler-listen-picker__item" onClick={onOpenProjectHome}>
+          <span className="assembler-listen-picker__item-title">
+            {activeProject?.title || "Project home"}
+          </span>
+          <span className="assembler-listen-picker__item-meta">home</span>
+        </button>
+      </div>
+
+      <div className="assembler-listen-picker__section">
+        <span className="assembler-listen-picker__label">Current assembly</span>
+        {currentAssembly
+          ? renderDocumentRow(currentAssembly, "assembly")
+          : (
+            <span className="assembler-listen-picker__empty">No assembly yet.</span>
+          )}
+      </div>
+
+      <div className="assembler-listen-picker__section">
+        <span className="assembler-listen-picker__label">Sources</span>
+        {grouped.sources.length
+          ? grouped.sources.map((document) =>
+              renderDocumentRow(
+                document,
+                document.documentType === "builtin"
+                  ? "builtin"
+                  : document.formatLabel || "source",
+              ))
+          : <span className="assembler-listen-picker__empty">No visible sources.</span>}
+      </div>
+
+      <div className="assembler-listen-picker__section">
+        <span className="assembler-listen-picker__label">Earlier assemblies</span>
+        {priorAssemblies.length
+          ? priorAssemblies.map((document) => renderDocumentRow(document, "assembly"))
+          : <span className="assembler-listen-picker__empty">No earlier assemblies.</span>}
+      </div>
+    </div>
+  );
+}
+
+function ListenSurface({
+  activeDocument,
+  activeDocumentWarning,
+  activeDocumentState,
+  blocks,
+  currentBlockId,
+  focusedBlockId,
+  nextBlockId,
+  onFocusBlock,
+  onSwitchToAssemble,
+  pickerOpen,
+  onTogglePicker,
+  onOpenProjectHome,
+  onSelectDocument,
+  activeProject,
+  projectDocuments,
+  loadingDocumentKey,
+  status,
+  statusTone,
+}) {
+  return (
+    <>
+      <div className="assembler-listen__chrome">
+        <div className="assembler-listen__bar">
+          <button
+            type="button"
+            className={`assembler-listen__chrome-button ${pickerOpen ? "is-active" : ""}`}
+            onClick={onTogglePicker}
+          >
+            <WorkspaceActionIcon kind="browse" />
+            <span>Browse</span>
+          </button>
+
+          <div className="assembler-listen__active">
+            <span className="assembler-listen__active-label">Listening</span>
+            <span className="assembler-listen__active-title">{activeDocument.title}</span>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-listen__chrome-button"
+            onClick={onSwitchToAssemble}
+          >
+            <WorkspaceActionIcon kind="assemble" />
+            <span>Assemble</span>
+          </button>
+        </div>
+
+        {pickerOpen ? (
+          <ListenPicker
+            activeProject={activeProject}
+            documents={projectDocuments}
+            activeDocumentKey={activeDocument.documentKey}
+            loadingDocumentKey={loadingDocumentKey}
+            onOpenProjectHome={onOpenProjectHome}
+            onSelectDocument={onSelectDocument}
+          />
+        ) : null}
+
+        {activeDocumentState ? (
+          <div className={`assembler-listen__status is-${activeDocumentState.status}`}>
+            {activeDocumentState.message}
+          </div>
+        ) : status ? (
+          <div className={`assembler-listen__status ${statusTone ? `is-${statusTone}` : ""}`}>
+            {status}
+          </div>
+        ) : null}
+      </div>
+
+      <section className="assembler-surface assembler-surface--listen">
+        <div className="assembler-listen">
+          <div className="assembler-listen__header">
+            <span className="assembler-listen__eyebrow">
+              {activeDocument.documentType === "assembly" || activeDocument.isAssembly
+                ? "Current assembly"
+                : "Source"}
+            </span>
+            <h1 className="assembler-listen__title">{activeDocument.title}</h1>
+            {activeDocument.subtitle ? (
+              <p className="assembler-listen__subtitle">{activeDocument.subtitle}</p>
+            ) : null}
+            {activeDocumentWarning ? (
+              <p className="assembler-listen__warning">{activeDocumentWarning}</p>
+            ) : null}
+          </div>
+
+          <div className="assembler-listen__blocks">
+            {blocks.map((block) => {
+              const headingText = block.text.replace(/^#{1,6}\s+/, "");
+
+              return (
+                <article
+                  key={block.id}
+                  className={`assembler-listen-block is-${block.kind} ${
+                    block.id === currentBlockId ? "is-playing" : ""
+                  } ${block.id === nextBlockId ? "is-next" : ""} ${
+                    block.id === focusedBlockId ? "is-focused" : ""
+                  }`}
+                  onClick={() => onFocusBlock(block.id)}
+                >
+                  <span className="assembler-listen-block__index">
+                    {String(block.sourcePosition + 1).padStart(3, "0")}
+                  </span>
+
+                  <div className="assembler-listen-block__body">
+                    {block.kind === "heading" ? (
+                      <h2 className="assembler-listen-block__heading">{headingText}</h2>
+                    ) : block.kind === "list" ? (
+                      <div className="assembler-listen-block__text">
+                        {String(block.text || "")
+                          .split("\n")
+                          .filter(Boolean)
+                          .map((line, index) => (
+                            <div key={`${block.id}-listen-line-${index}`} className="assembler-listen-block__list-line">
+                              <span className="assembler-listen-block__bullet">•</span>
+                              <span>{line.replace(/^[-+*]\s+/, "").trim()}</span>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="assembler-listen-block__text">{headingText}</div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -1472,6 +1767,7 @@ function ClipboardTray({
 }
 
 function PlayerBar({
+  workspaceMode = WORKSPACE_MODES.assemble,
   currentBlock,
   currentIndex,
   totalBlocks,
@@ -1494,60 +1790,92 @@ function PlayerBar({
   onVoiceChange,
   onToggleAi,
 }) {
+  const immersive = workspaceMode === WORKSPACE_MODES.listen;
   const selectedVoiceValue = voiceChoice
     ? `${voiceChoice.provider}:${voiceChoice.voiceId || "default"}`
     : "";
 
   return (
-    <div className="assembler-player">
+    <div className={`assembler-player ${immersive ? "is-listen" : ""}`}>
       <div className="assembler-player__controls">
-        <button
-          type="button"
-          className="assembler-player__button"
-          onClick={onSeekBack}
-          disabled={!playbackAvailable}
-        >
-          ◄10
-        </button>
-        <button
-          type="button"
-          className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`}
-          onClick={onTogglePlayback}
-          disabled={!playbackAvailable}
-        >
-          {loadingAudio ? "..." : isPlaying ? "PAUSE" : "PLAY"}
-        </button>
-        <button
-          type="button"
-          className="assembler-player__button"
-          onClick={onSeekForward}
-          disabled={!playbackAvailable}
-        >
-          10►
-        </button>
-        <button
-          type="button"
-          className="assembler-player__button"
-          onClick={onPreviousBlock}
-          disabled={!playbackAvailable}
-        >
-          PREV
-        </button>
-        <button
-          type="button"
-          className="assembler-player__button"
-          onClick={onNextBlock}
-          disabled={!playbackAvailable}
-        >
-          NEXT
-        </button>
-        <button
-          type="button"
-          className={`assembler-player__button ${aiOpen ? "is-ai-active" : ""}`}
-          onClick={onToggleAi}
-        >
-          {aiOpen ? "CLOSE AI" : "AI"}
-        </button>
+        {immersive ? (
+          <>
+            <button
+              type="button"
+              className="assembler-player__button"
+              onClick={onPreviousBlock}
+              disabled={!playbackAvailable}
+            >
+              PREV
+            </button>
+            <button
+              type="button"
+              className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`}
+              onClick={onTogglePlayback}
+              disabled={!playbackAvailable}
+            >
+              {loadingAudio ? "..." : isPlaying ? "PAUSE" : "PLAY"}
+            </button>
+            <button
+              type="button"
+              className="assembler-player__button"
+              onClick={onNextBlock}
+              disabled={!playbackAvailable}
+            >
+              NEXT
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="assembler-player__button"
+              onClick={onSeekBack}
+              disabled={!playbackAvailable}
+            >
+              ◄10
+            </button>
+            <button
+              type="button"
+              className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`}
+              onClick={onTogglePlayback}
+              disabled={!playbackAvailable}
+            >
+              {loadingAudio ? "..." : isPlaying ? "PAUSE" : "PLAY"}
+            </button>
+            <button
+              type="button"
+              className="assembler-player__button"
+              onClick={onSeekForward}
+              disabled={!playbackAvailable}
+            >
+              10►
+            </button>
+            <button
+              type="button"
+              className="assembler-player__button"
+              onClick={onPreviousBlock}
+              disabled={!playbackAvailable}
+            >
+              PREV
+            </button>
+            <button
+              type="button"
+              className="assembler-player__button"
+              onClick={onNextBlock}
+              disabled={!playbackAvailable}
+            >
+              NEXT
+            </button>
+            <button
+              type="button"
+              className={`assembler-player__button ${aiOpen ? "is-ai-active" : ""}`}
+              onClick={onToggleAi}
+            >
+              {aiOpen ? "CLOSE AI" : "AI"}
+            </button>
+          </>
+        )}
       </div>
 
       <div className="assembler-player__progress">
@@ -1632,6 +1960,7 @@ export default function WorkspaceShell({
   projectDrafts = [],
   initialDocument,
   initialProjectKey = DEFAULT_PROJECT_KEY,
+  initialMode = "",
   voiceCatalog,
   defaultVoiceChoice,
   showLaunchpadInitially = false,
@@ -1658,6 +1987,7 @@ export default function WorkspaceShell({
   const [projectsState, setProjectsState] = useState(() =>
     Array.isArray(projects) && projects.length ? projects : buildProjectsFromDocuments(documents),
   );
+  const requestedWorkspaceMode = normalizeWorkspaceMode(initialMode || "", "");
   const [activeProjectKey, setActiveProjectKey] = useState(
     initialProjectKey || projects?.[0]?.projectKey || DEFAULT_PROJECT_KEY,
   );
@@ -1670,6 +2000,9 @@ export default function WorkspaceShell({
   const [documentStates, setDocumentStates] = useState({});
   const [deviceVoiceSupported, setDeviceVoiceSupported] = useState(false);
   const [activeDocumentKey, setActiveDocumentKey] = useState(initialDocument.documentKey);
+  const [workspaceMode, setWorkspaceMode] = useState(
+    normalizeWorkspaceMode(requestedWorkspaceMode, WORKSPACE_MODES.assemble),
+  );
   const [viewMode, setViewMode] = useState("doc");
   const [editMode, setEditMode] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -1699,10 +2032,12 @@ export default function WorkspaceShell({
   const [cleanupReplace, setCleanupReplace] = useState("");
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState("");
+  const [lastModeByProjectKey, setLastModeByProjectKey] = useState({});
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
   const [projectActionPending, setProjectActionPending] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
+  const [listenPickerOpen, setListenPickerOpen] = useState(false);
 
   const hydratedProjects = hydrateProjectsWithDocuments(projectsState, documentsState);
   const activeProject =
@@ -1755,6 +2090,7 @@ export default function WorkspaceShell({
   const currentBlock = blocks[currentIndex] || null;
   const nextBlock = blocks[currentIndex + 1] || null;
   const progress = blocks.length ? ((currentIndex + 1) / blocks.length) * 100 : 0;
+  const isListenMode = workspaceMode === WORKSPACE_MODES.listen;
 
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
@@ -1784,8 +2120,16 @@ export default function WorkspaceShell({
       );
     }
     setRate(clampListeningRate(stored.rate, 1));
+    if (stored.lastModeByProjectKey && typeof stored.lastModeByProjectKey === "object") {
+      setLastModeByProjectKey(stored.lastModeByProjectKey);
+    }
+    if (!requestedWorkspaceMode && stored.lastModeByProjectKey?.[activeProjectKey]) {
+      setWorkspaceMode(
+        normalizeWorkspaceMode(stored.lastModeByProjectKey[activeProjectKey], WORKSPACE_MODES.assemble),
+      );
+    }
 
-  }, [storageKey, voiceCatalog, defaultVoiceChoice, activeDocument.documentKey]);
+  }, [storageKey, voiceCatalog, defaultVoiceChoice, activeDocument.documentKey, activeProjectKey, requestedWorkspaceMode]);
 
   useEffect(() => {
     setDeviceVoiceSupported(browserSupportsDeviceVoice());
@@ -1831,20 +2175,55 @@ export default function WorkspaceShell({
           window.history.replaceState(
             {},
             "",
-            buildWorkspaceUrl(fallbackDocumentKey, activeProject.projectKey),
+            buildWorkspaceUrl(fallbackDocumentKey, activeProject.projectKey, {
+              mode: workspaceMode,
+            }),
           );
         }
       }
     }
-  }, [activeProject, activeDocumentKey]);
+  }, [activeProject, activeDocumentKey, workspaceMode]);
+
+  useEffect(() => {
+    setLastModeByProjectKey((previous) => {
+      if (previous[activeProjectKey] === workspaceMode) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [activeProjectKey]: workspaceMode,
+      };
+    });
+  }, [activeProjectKey, workspaceMode]);
+
+  useEffect(() => {
+    if (
+      launchpadOpen ||
+      !storageHydratedRef.current ||
+      !activeDocumentKey ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    window.history.replaceState(
+      {},
+      "",
+      buildWorkspaceUrl(activeDocumentKey, activeProjectKey, {
+        mode: workspaceMode,
+      }),
+    );
+  }, [activeDocumentKey, activeProjectKey, launchpadOpen, workspaceMode]);
 
   useEffect(() => {
     writeWorkspaceState(storageKey, {
       clipboard,
       documentLogs,
       rate,
+      lastModeByProjectKey,
     });
-  }, [clipboard, documentLogs, rate, storageKey]);
+  }, [clipboard, documentLogs, rate, storageKey, lastModeByProjectKey]);
 
   useEffect(() => {
     setFocusBlockId(firstBlockId);
@@ -1855,6 +2234,7 @@ export default function WorkspaceShell({
     setCleanupFind("");
     setCleanupReplace("");
     setCleanupPendingAction("");
+    setListenPickerOpen(false);
   }, [activeDocumentKey, firstBlockId]);
 
   useEffect(() => {
@@ -1909,6 +2289,8 @@ export default function WorkspaceShell({
     function handleKeyDown(event) {
       if (
         event.key === "/" &&
+        workspaceMode === WORKSPACE_MODES.assemble &&
+        !launchpadOpen &&
         !event.metaKey &&
         !event.ctrlKey &&
         !event.altKey &&
@@ -1919,6 +2301,11 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && listenPickerOpen) {
+        setListenPickerOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && aiOpen) {
         setAiOpen(false);
       }
@@ -1926,7 +2313,7 @@ export default function WorkspaceShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, workspaceMode]);
 
   useEffect(() => {
     function handlePaste(event) {
@@ -1967,9 +2354,16 @@ export default function WorkspaceShell({
     });
   }
 
-  function updateUrl(documentKey, projectKey = activeProjectKey) {
+  function updateUrl(
+    documentKey,
+    projectKey = activeProjectKey,
+    options = {},
+  ) {
     if (typeof window === "undefined") return;
-    const nextUrl = buildWorkspaceUrl(documentKey, projectKey);
+    const nextUrl = buildWorkspaceUrl(documentKey, projectKey, {
+      mode: workspaceMode,
+      ...options,
+    });
     window.history.replaceState({}, "", nextUrl);
   }
 
@@ -2068,7 +2462,9 @@ export default function WorkspaceShell({
       }
 
       window.location.assign(
-        buildWorkspaceUrl("", payload.project.projectKey, { launchpad: true }),
+        buildWorkspaceUrl("", payload.project.projectKey, {
+          launchpad: true,
+        }),
       );
     } catch (error) {
       setProjectActionPending("");
@@ -2081,12 +2477,15 @@ export default function WorkspaceShell({
     setAiOpen(false);
     setEditMode(false);
     setViewMode("doc");
+    setListenPickerOpen(false);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
       window.history.replaceState(
         {},
         "",
-        buildWorkspaceUrl("", activeProjectKey, { launchpad: true }),
+        buildWorkspaceUrl("", activeProjectKey, {
+          launchpad: true,
+        }),
       );
     }
   }
@@ -2224,8 +2623,41 @@ export default function WorkspaceShell({
     }
   }
 
-  async function loadDocument(documentKey) {
-    if (!documentKey || documentKey === activeDocumentKey) return;
+  function applyWorkspaceMode(nextMode) {
+    const normalizedMode = normalizeWorkspaceMode(nextMode, WORKSPACE_MODES.assemble);
+    setWorkspaceMode(normalizedMode);
+
+    if (normalizedMode === WORKSPACE_MODES.listen) {
+      setAiOpen(false);
+      setEditMode(false);
+      setViewMode("doc");
+      return normalizedMode;
+    }
+
+    setListenPickerOpen(false);
+    return normalizedMode;
+  }
+
+  function openMode(mode, documentKey = activeDocumentKey) {
+    const normalizedMode = applyWorkspaceMode(mode);
+    setLaunchpadOpen(false);
+
+    if (!documentKey || documentKey === activeDocumentKey) {
+      updateUrl(activeDocumentKey, activeProjectKey, { mode: normalizedMode });
+      return;
+    }
+
+    void loadDocument(documentKey, { mode: normalizedMode });
+  }
+
+  async function loadDocument(documentKey, options = {}) {
+    if (!documentKey) return;
+    const nextMode = normalizeWorkspaceMode(options.mode || workspaceMode, workspaceMode);
+
+    if (documentKey === activeDocumentKey) {
+      updateUrl(documentKey, activeProjectKey, { mode: nextMode });
+      return;
+    }
 
     stopPlayback({ keepPlayhead: false });
     setLoadingDocumentKey(documentKey);
@@ -2238,7 +2670,7 @@ export default function WorkspaceShell({
       startTransition(() => {
         setActiveDocumentKey(documentKey);
       });
-      updateUrl(documentKey, activeProjectKey);
+      updateUrl(documentKey, activeProjectKey, { mode: nextMode });
       setFeedback(`Opened ${documentsState.find((document) => document.documentKey === documentKey)?.title || "document"}.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Could not load the document.", "error");
@@ -2247,15 +2679,8 @@ export default function WorkspaceShell({
     }
   }
 
-  async function enterWorkspace(documentKey = activeDocumentKey) {
-    setLaunchpadOpen(false);
-
-    if (!documentKey || documentKey === activeDocumentKey) {
-      updateUrl(activeDocumentKey, activeProjectKey);
-      return;
-    }
-
-    await loadDocument(documentKey);
+  async function enterWorkspace(documentKey = activeDocumentKey, mode = workspaceMode) {
+    openMode(mode, documentKey);
   }
 
   async function saveDocument(nextDocument) {
@@ -3555,7 +3980,7 @@ export default function WorkspaceShell({
               uploading={uploading}
               pastePendingMode={pastePendingMode}
               clipboardCount={clipboard.length}
-              onContinue={enterWorkspace}
+              onEnterMode={openMode}
               onCreateProject={() => void createProject()}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
@@ -3564,6 +3989,73 @@ export default function WorkspaceShell({
               onUpload={() => fileInputRef.current?.click()}
             />
           </section>
+        ) : isListenMode ? (
+          <>
+            <ListenSurface
+              activeDocument={activeDocument}
+              activeDocumentWarning={activeDocumentWarning}
+              activeDocumentState={activeDocumentState}
+              blocks={blocks}
+              currentBlockId={currentBlock?.id || null}
+              focusedBlockId={focusBlockId}
+              nextBlockId={nextBlock?.id || null}
+              onFocusBlock={focusBlock}
+              onSwitchToAssemble={() => openMode(WORKSPACE_MODES.assemble)}
+              pickerOpen={listenPickerOpen}
+              onTogglePicker={() => setListenPickerOpen((value) => !value)}
+              onOpenProjectHome={openLaunchpad}
+              onSelectDocument={(documentKey) => {
+                setListenPickerOpen(false);
+                void loadDocument(documentKey, { mode: WORKSPACE_MODES.listen });
+              }}
+              activeProject={activeProject}
+              projectDocuments={projectDocuments}
+              loadingDocumentKey={loadingDocumentKey}
+              status={status}
+              statusTone={statusTone}
+            />
+
+            <PlayerBar
+              workspaceMode={workspaceMode}
+              currentBlock={currentBlock}
+              currentIndex={currentIndex}
+              totalBlocks={blocks.length}
+              isPlaying={isPlaying}
+              loadingAudio={loadingAudio}
+              playbackAvailable={playbackAvailable}
+              rate={rate}
+              voiceCatalog={availableVoiceCatalog}
+              voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
+              providerLabel={providerLabel}
+              progress={progress}
+              aiOpen={aiOpen}
+              deviceVoiceSupported={deviceVoiceSupported}
+              onTogglePlayback={togglePlayback}
+              onSeekBack={() => seekAudio(-10)}
+              onSeekForward={() => seekAudio(10)}
+              onPreviousBlock={() => jumpToIndex(currentIndex - 1)}
+              onNextBlock={() => jumpToIndex(currentIndex + 1)}
+              onCycleRate={cycleRate}
+              onVoiceChange={(choice) => {
+                const changed =
+                  choice?.provider !== voiceChoiceRef.current?.provider ||
+                  String(choice?.voiceId || "") !== String(voiceChoiceRef.current?.voiceId || "");
+                if (
+                  changed &&
+                  (audioRef.current ||
+                    speechUtteranceRef.current ||
+                    playbackStateRef.current.active ||
+                    playbackStateRef.current.paused)
+                ) {
+                  stopPlayback();
+                  setFeedback("Playback stopped so the new voice can take over.");
+                }
+                setVoiceChoice(choice);
+                setProviderLabel(choice?.label || "Voice");
+              }}
+              onToggleAi={() => setAiOpen((value) => !value)}
+            />
+          </>
         ) : (
           <>
             <WorkspaceShelf
@@ -3726,6 +4218,7 @@ export default function WorkspaceShell({
             ) : null}
 
             <PlayerBar
+              workspaceMode={workspaceMode}
               currentBlock={currentBlock}
               currentIndex={currentIndex}
               totalBlocks={blocks.length}

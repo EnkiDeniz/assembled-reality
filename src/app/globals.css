@@ -1045,6 +1045,13 @@ main {
     rgba(7, 8, 8, 0.98);
 }
 
+.assembler-surface--listen {
+  padding: 0 0 24px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.03), transparent 28%),
+    rgba(7, 8, 8, 0.99);
+}
+
 .assembler-launchpad {
   display: grid;
   place-items: center;
@@ -1362,6 +1369,244 @@ main {
   color: var(--soft);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.assembler-listen__chrome {
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 11, 11, 0.92);
+}
+
+.assembler-listen__bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 18px;
+}
+
+.assembler-listen__chrome-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(18, 20, 20, 0.78);
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assembler-listen__chrome-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.assembler-listen__chrome-button.is-active {
+  color: var(--white);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+.assembler-listen__active {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+
+.assembler-listen__active-label {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-listen__active-title {
+  color: var(--white);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assembler-listen__status {
+  padding: 0 18px 12px;
+  color: var(--soft);
+  font-size: 11px;
+}
+
+.assembler-listen__status.is-success {
+  color: var(--green);
+}
+
+.assembler-listen__status.is-error,
+.assembler-listen__status.is-conflict {
+  color: var(--red);
+}
+
+.assembler-listen__status.is-saving {
+  color: var(--amber);
+}
+
+.assembler-listen-picker {
+  display: grid;
+  gap: 14px;
+  padding: 0 18px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.assembler-listen-picker__section {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-listen-picker__label {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-listen-picker__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(16, 18, 18, 0.82);
+  color: var(--text);
+  text-align: left;
+}
+
+.assembler-listen-picker__item.is-active {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.assembler-listen-picker__item-title {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assembler-listen-picker__item-meta,
+.assembler-listen-picker__empty {
+  color: var(--soft);
+  font-size: 11px;
+}
+
+.assembler-listen {
+  width: min(920px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 72px) 0 48px;
+}
+
+.assembler-listen__header {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.assembler-listen__eyebrow {
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.assembler-listen__title {
+  margin: 0;
+  color: var(--white);
+  font-size: clamp(30px, 4vw, 52px);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+
+.assembler-listen__subtitle,
+.assembler-listen__warning {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.assembler-listen__warning {
+  color: var(--amber);
+}
+
+.assembler-listen__blocks {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-listen-block {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  padding: 16px 0 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.assembler-listen-block:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.assembler-listen-block.is-playing {
+  background: rgba(34, 197, 94, 0.07);
+}
+
+.assembler-listen-block.is-next {
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.assembler-listen-block.is-focused {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.assembler-listen-block__index {
+  padding-top: 5px;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-listen-block__body {
+  min-width: 0;
+}
+
+.assembler-listen-block__heading {
+  margin: 0;
+  color: var(--white);
+  font-size: clamp(22px, 2.6vw, 34px);
+  line-height: 1.18;
+}
+
+.assembler-listen-block__text,
+.assembler-listen-block__list-line {
+  color: var(--text);
+  font-size: clamp(18px, 2.2vw, 25px);
+  line-height: 1.75;
+  letter-spacing: 0.005em;
+}
+
+.assembler-listen-block__list-line {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.assembler-listen-block__bullet {
+  color: var(--green);
 }
 
 .assembler-document {
@@ -1990,6 +2235,11 @@ main {
   z-index: 4;
 }
 
+.assembler-player.is-listen {
+  padding: 14px 22px 18px;
+  background: rgba(8, 9, 9, 0.99);
+}
+
 .assembler-player__controls,
 .assembler-player__meta {
   display: flex;
@@ -2161,6 +2411,29 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .assembler-listen__bar {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .assembler-listen__active {
+    text-align: left;
+  }
+
+  .assembler-listen {
+    width: min(100%, calc(100% - 24px));
+    padding: 26px 0 32px;
+  }
+
+  .assembler-listen-block {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .assembler-listen-block__index {
+    padding-top: 0;
+  }
+
   .assembler-launchpad__sections {
     grid-template-columns: 1fr;
   }
@@ -2222,6 +2495,14 @@ main {
 
   .assembler-ai__result-index {
     display: none;
+  }
+
+  .assembler-player.is-listen {
+    padding:
+      14px
+      max(14px, var(--safe-right))
+      max(18px, var(--safe-bottom))
+      max(14px, var(--safe-left));
   }
 }
 
