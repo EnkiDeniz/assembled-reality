@@ -3,6 +3,9 @@
 export default function SelectionMenu({
   selection,
   noteDraft,
+  onPlaySelection,
+  onStartFromSelection,
+  onQueueSelection,
   onHighlight,
   onAddToEvidence,
   onStartNote,
@@ -24,6 +27,30 @@ export default function SelectionMenu({
     <div className={`selection-menu ${selection.mode === "note" ? "is-note" : ""}`} style={menuStyle}>
       {selection.mode === "actions" ? (
         <div className="selection-menu__actions">
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onPlaySelection}
+          >
+            Listen
+          </button>
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onStartFromSelection}
+          >
+            From Here
+          </button>
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onQueueSelection}
+          >
+            Next
+          </button>
           <button
             type="button"
             className="selection-menu__button"

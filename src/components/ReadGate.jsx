@@ -16,6 +16,9 @@ export default function ReadGate({
   getReceiptsConnection,
   initialConversationThread,
   initialEvidenceSet,
+  initialListeningSession,
+  initialVoicePreferences,
+  voiceCatalog,
   sevenTextEnabled = false,
   sevenVoiceEnabled = false,
   sevenTextProvider = null,
@@ -41,6 +44,9 @@ export default function ReadGate({
       getReceiptsConnection={getReceiptsConnection}
       initialConversationThread={initialConversationThread}
       initialEvidenceSet={initialEvidenceSet}
+      initialListeningSession={initialListeningSession}
+      initialVoicePreferences={initialVoicePreferences}
+      voiceCatalog={voiceCatalog}
       sevenTextEnabled={sevenTextEnabled}
       sevenVoiceEnabled={sevenVoiceEnabled}
       sevenTextProvider={sevenTextProvider}

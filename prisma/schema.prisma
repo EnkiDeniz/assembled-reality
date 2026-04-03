@@ -57,6 +57,25 @@ enum ReaderDocumentFormat {
   PDF
 }
 
+enum ReaderVoiceProvider {
+  OPENAI
+  ELEVENLABS
+  DEVICE
+}
+
+enum ReaderPlaybackScope {
+  FLOW
+  SECTION
+  SELECTION
+  MESSAGE
+}
+
+enum ListeningSessionStatus {
+  IDLE
+  ACTIVE
+  PAUSED
+}
+
 model User {
   id                  String                 @id @default(cuid())
   name                String?
@@ -71,6 +90,7 @@ model User {
   readerConversationThreads ReaderConversationThread[]
   readerEvidenceSets   ReaderEvidenceSet[]
   readerDocuments      ReaderDocument[]
+  readerListeningSessions ReaderListeningSession[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 }
@@ -83,6 +103,9 @@ model ReaderProfile {
   role                ReaderRole            @default(READER)
   lastReadSlug        String?
   lastReadAt          DateTime?
+  preferredVoiceProvider ReaderVoiceProvider?
+  preferredVoiceId    String?
+  preferredListeningRate Float              @default(1)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -93,6 +116,7 @@ model ReaderProfile {
   readingReceiptDrafts ReadingReceiptDraft[]
   readerConversationThreads ReaderConversationThread[]
   readerEvidenceSets   ReaderEvidenceSet[]
+  readerListeningSessions ReaderListeningSession[]
 }
 
 model Bookmark {
@@ -296,6 +320,30 @@ model ReaderEvidenceItem {
   @@index([evidenceSetId, createdAt])
   @@index([sourceMarkId])
   @@index([sourceMessageId])
+}
+
+model ReaderListeningSession {
+  id              String                 @id @default(cuid())
+  userId          String
+  readerProfileId String
+  documentKey     String
+  mode            ReaderPlaybackScope    @default(FLOW)
+  scopeStartNodeId String?
+  scopeEndNodeId  String?
+  activeNodeId    String?
+  activeSectionSlug String?
+  nodeOffsetMs    Int                    @default(0)
+  rate            Float                  @default(1)
+  provider        ReaderVoiceProvider?
+  voiceId         String?
+  status          ListeningSessionStatus @default(IDLE)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readerProfile   ReaderProfile          @relation(fields: [readerProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([readerProfileId, documentKey])
+  @@index([userId, documentKey])
 }
 
 model Account {

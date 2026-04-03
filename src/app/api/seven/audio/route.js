@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { appEnv } from "@/lib/env";
 import {
+  clampListeningRate,
+  getProviderRequestOrder,
+  normalizeVoiceProvider,
+  trimOptionalValue,
+  VOICE_PROVIDERS,
+} from "@/lib/listening";
+import {
   buildSevenIssueMessage,
   getSevenReasonCode,
   getSevenRetryAfterSeconds,
@@ -16,6 +23,8 @@ function createAudioSuccessResponse(providerResponse, metadata = {}) {
   headers.set("Content-Type", "audio/mpeg");
   headers.set("Cache-Control", "no-store");
   headers.set("X-Seven-Provider", metadata.provider || "");
+  headers.set("X-Seven-Voice-Id", metadata.voiceId || "");
+  headers.set("X-Seven-Requested-Provider", metadata.requestedProvider || "");
 
   if (metadata.fallbackFrom) {
     headers.set("X-Seven-Fallback-From", metadata.fallbackFrom);
@@ -84,7 +93,7 @@ async function parseProviderFailure(response) {
   };
 }
 
-async function requestOpenAiSpeech(text) {
+async function requestOpenAiSpeech(text, { voiceId = null } = {}) {
   if (!appEnv.openai.enabled) {
     return {
       ok: false,
@@ -106,7 +115,7 @@ async function requestOpenAiSpeech(text) {
     },
     body: JSON.stringify({
       model: appEnv.openai.speechModel,
-      voice: appEnv.openai.voice,
+      voice: trimOptionalValue(voiceId) || appEnv.openai.voice,
       input: text,
       response_format: "mp3",
     }),
@@ -127,7 +136,7 @@ async function requestOpenAiSpeech(text) {
   };
 }
 
-async function requestElevenLabsSpeech(text) {
+async function requestElevenLabsSpeech(text, { voiceId = null } = {}) {
   if (!appEnv.elevenlabs.enabled) {
     return {
       ok: false,
@@ -142,7 +151,7 @@ async function requestElevenLabsSpeech(text) {
   }
 
   const url = new URL(
-    `https://api.elevenlabs.io/v1/text-to-speech/${appEnv.elevenlabs.voiceId}`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${trimOptionalValue(voiceId) || appEnv.elevenlabs.voiceId}`,
   );
   url.searchParams.set("output_format", appEnv.elevenlabs.outputFormat);
 
@@ -182,6 +191,9 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => null);
   const text = String(body?.text || "").trim();
+  const preferredProvider = normalizeVoiceProvider(body?.preferredProvider);
+  const requestedVoiceId = trimOptionalValue(body?.voiceId);
+  const requestedRate = clampListeningRate(body?.rate, 1);
 
   if (!text) {
     return NextResponse.json(
@@ -204,76 +216,61 @@ export async function POST(request) {
   }
 
   let initialFailure = null;
+  const providerOrder = getProviderRequestOrder(preferredProvider).filter(
+    (provider) => provider !== VOICE_PROVIDERS.device,
+  );
 
-  if (appEnv.openai.enabled) {
+  for (const provider of providerOrder) {
     try {
-      const openai = await requestOpenAiSpeech(text);
-      if (openai.ok) {
-        return createAudioSuccessResponse(openai.response, {
-          provider: "openai",
+      const result =
+        provider === VOICE_PROVIDERS.elevenlabs
+          ? await requestElevenLabsSpeech(text, { voiceId: requestedVoiceId })
+          : await requestOpenAiSpeech(text, {
+              voiceId: requestedVoiceId,
+              rate: requestedRate,
+            });
+
+      if (result.ok) {
+        return createAudioSuccessResponse(result.response, {
+          provider: provider,
+          voiceId: requestedVoiceId,
+          requestedProvider: preferredProvider,
+          fallbackFrom: initialFailure ? initialFailure.provider : null,
+          fallbackReasonCode: initialFailure?.reasonCode || "",
         });
       }
 
-      initialFailure = openai.error;
+      initialFailure = {
+        ...result.error,
+        provider,
+      };
       console.error("Seven voice request failed.", {
-        provider: "openai",
-        status: openai.error.status,
-        reasonCode: openai.error.reasonCode,
-        detail: openai.error.detail || undefined,
+        provider,
+        status: result.error.status,
+        reasonCode: result.error.reasonCode,
+        detail: result.error.detail || undefined,
       });
     } catch (error) {
       initialFailure = {
+        provider,
         status: 503,
         detail: error instanceof Error ? error.message : String(error),
         reasonCode: "provider_unavailable",
         retryAfterSeconds: null,
       };
       console.error("Seven voice request crashed.", {
-        provider: "openai",
+        provider,
         detail: initialFailure.detail,
       });
     }
   }
 
-  try {
-    const elevenlabs = await requestElevenLabsSpeech(text);
-    if (elevenlabs.ok) {
-      return createAudioSuccessResponse(elevenlabs.response, {
-        provider: "elevenlabs",
-        fallbackFrom: initialFailure ? "openai" : null,
-        fallbackReasonCode: initialFailure?.reasonCode || "",
-      });
-    }
-
-    console.error("Seven voice request failed.", {
-      provider: "elevenlabs",
-      status: elevenlabs.error.status,
-      reasonCode: elevenlabs.error.reasonCode,
-      detail: elevenlabs.error.detail || undefined,
-      fallbackFrom: initialFailure ? "openai" : undefined,
-    });
-
-    return buildVoiceErrorResponse({
-      provider: "elevenlabs",
-      status: elevenlabs.error.status,
-      reasonCode: elevenlabs.error.reasonCode,
-      retryAfterSeconds: elevenlabs.error.retryAfterSeconds,
-      fallbackFrom: initialFailure ? "openai" : null,
-      fallbackReasonCode: initialFailure?.reasonCode || "",
-    });
-  } catch (error) {
-    console.error("Seven voice request crashed.", {
-      provider: "elevenlabs",
-      detail: error instanceof Error ? error.message : String(error),
-      fallbackFrom: initialFailure ? "openai" : undefined,
-    });
-
-    return buildVoiceErrorResponse({
-      provider: "elevenlabs",
-      status: 503,
-      reasonCode: "provider_unavailable",
-      fallbackFrom: initialFailure ? "openai" : null,
-      fallbackReasonCode: initialFailure?.reasonCode || "",
-    });
-  }
+  return buildVoiceErrorResponse({
+    provider: initialFailure?.provider || preferredProvider || "openai",
+    status: initialFailure?.status || 503,
+    reasonCode: initialFailure?.reasonCode || "provider_unavailable",
+    retryAfterSeconds: initialFailure?.retryAfterSeconds || null,
+    fallbackFrom: preferredProvider && initialFailure?.provider !== preferredProvider ? preferredProvider : null,
+    fallbackReasonCode: initialFailure?.reasonCode || "",
+  });
 }

@@ -180,6 +180,8 @@ export function parseSevenAudioHeaders(headers) {
   if (!headers || typeof headers.get !== "function") {
     return {
       provider: null,
+      voiceId: null,
+      requestedProvider: null,
       fallbackFrom: null,
       fallbackReasonCode: "",
     };
@@ -187,6 +189,8 @@ export function parseSevenAudioHeaders(headers) {
 
   return {
     provider: headers.get("x-seven-provider") || null,
+    voiceId: headers.get("x-seven-voice-id") || null,
+    requestedProvider: headers.get("x-seven-requested-provider") || null,
     fallbackFrom: headers.get("x-seven-fallback-from") || null,
     fallbackReasonCode: headers.get("x-seven-fallback-reason-code") || "",
   };

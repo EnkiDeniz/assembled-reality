@@ -1,6 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { getReaderProfileByUserId } from "@/lib/reader-db";
 import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import {
+  clampListeningRate,
+  fromPrismaListeningStatus,
+  fromPrismaPlaybackScope,
+  fromPrismaVoiceProvider,
+  normalizeListeningStatus,
+  normalizeVoiceProvider,
+  toPrismaListeningStatus,
+  toPrismaPlaybackScope,
+  toPrismaVoiceProvider,
+  trimOptionalValue,
+} from "@/lib/listening";
 import { buildExcerpt } from "@/lib/text";
 
 function serializeConversationMessage(message) {
@@ -51,6 +63,38 @@ function serializeEvidenceSet(evidenceSet) {
     createdAt: evidenceSet.createdAt.toISOString(),
     updatedAt: evidenceSet.updatedAt.toISOString(),
     items: (evidenceSet.items || []).map(serializeEvidenceItem),
+  };
+}
+
+function serializeListeningSession(session) {
+  if (!session) return null;
+
+  return {
+    id: session.id,
+    documentKey: session.documentKey,
+    mode: fromPrismaPlaybackScope(session.mode),
+    scopeStartNodeId: session.scopeStartNodeId || null,
+    scopeEndNodeId: session.scopeEndNodeId || null,
+    activeNodeId: session.activeNodeId || null,
+    activeSectionSlug: session.activeSectionSlug || null,
+    nodeOffsetMs: typeof session.nodeOffsetMs === "number" ? session.nodeOffsetMs : 0,
+    rate: typeof session.rate === "number" ? session.rate : 1,
+    provider: fromPrismaVoiceProvider(session.provider),
+    voiceId: session.voiceId || null,
+    status: fromPrismaListeningStatus(session.status),
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  };
+}
+
+function serializeVoicePreferences(profile) {
+  if (!profile) return null;
+
+  return {
+    preferredVoiceProvider: fromPrismaVoiceProvider(profile.preferredVoiceProvider),
+    preferredVoiceId: profile.preferredVoiceId || null,
+    preferredListeningRate:
+      typeof profile.preferredListeningRate === "number" ? profile.preferredListeningRate : 1,
   };
 }
 
@@ -148,14 +192,145 @@ export async function loadReaderWorkspaceForUser(
   const owner = await resolveWorkspaceOwner(userId);
   if (!owner) return null;
 
-  const [thread, evidenceSet] = await Promise.all([
+  const [thread, evidenceSet, listeningSession] = await Promise.all([
     ensureThreadRecord(owner, documentKey),
     ensureEvidenceSetRecord(owner, documentKey),
+    prisma.readerListeningSession.findUnique({
+      where: {
+        readerProfileId_documentKey: {
+          readerProfileId: owner.profileId,
+          documentKey,
+        },
+      },
+    }),
   ]);
 
   return {
     thread: serializeThread(thread),
     evidenceSet: serializeEvidenceSet(evidenceSet),
+    listeningSession: serializeListeningSession(listeningSession),
+    voicePreferences: serializeVoicePreferences(owner.profile),
+  };
+}
+
+export async function loadListeningSessionForUser(
+  userId,
+  documentKey = PRIMARY_DOCUMENT_KEY,
+) {
+  const owner = await resolveWorkspaceOwner(userId);
+  if (!owner) return null;
+
+  const session = await prisma.readerListeningSession.findUnique({
+    where: {
+      readerProfileId_documentKey: {
+        readerProfileId: owner.profileId,
+        documentKey,
+      },
+    },
+  });
+
+  return {
+    listeningSession: serializeListeningSession(session),
+    voicePreferences: serializeVoicePreferences(owner.profile),
+  };
+}
+
+export async function saveListeningSessionForUser(
+  userId,
+  {
+    documentKey = PRIMARY_DOCUMENT_KEY,
+    mode = "flow",
+    scopeStartNodeId = null,
+    scopeEndNodeId = null,
+    activeNodeId = null,
+    activeSectionSlug = null,
+    nodeOffsetMs = 0,
+    rate = 1,
+    provider = null,
+    voiceId = null,
+    status = "idle",
+    preferredVoiceProvider = undefined,
+    preferredVoiceId = undefined,
+    preferredListeningRate = undefined,
+  } = {},
+) {
+  const owner = await resolveWorkspaceOwner(userId);
+  if (!owner) return null;
+
+  const resolvedDocumentKey = String(documentKey || PRIMARY_DOCUMENT_KEY).trim() || PRIMARY_DOCUMENT_KEY;
+  const normalizedProvider = normalizeVoiceProvider(provider);
+  const normalizedPreferredProvider =
+    preferredVoiceProvider === undefined
+      ? normalizedProvider
+      : normalizeVoiceProvider(preferredVoiceProvider);
+  const normalizedRate = clampListeningRate(
+    preferredListeningRate === undefined ? rate : preferredListeningRate,
+    1,
+  );
+
+  const profileData = {};
+  if (preferredVoiceProvider !== undefined || provider) {
+    profileData.preferredVoiceProvider = toPrismaVoiceProvider(normalizedPreferredProvider);
+  }
+  if (preferredVoiceId !== undefined || voiceId !== null) {
+    profileData.preferredVoiceId = trimOptionalValue(
+      preferredVoiceId === undefined ? voiceId : preferredVoiceId,
+    );
+  }
+  if (preferredListeningRate !== undefined || rate !== undefined) {
+    profileData.preferredListeningRate = normalizedRate;
+  }
+
+  const [profile, session] = await prisma.$transaction([
+    Object.keys(profileData).length > 0
+      ? prisma.readerProfile.update({
+          where: { id: owner.profileId },
+          data: profileData,
+        })
+      : prisma.readerProfile.findUniqueOrThrow({
+          where: { id: owner.profileId },
+        }),
+    prisma.readerListeningSession.upsert({
+      where: {
+        readerProfileId_documentKey: {
+          readerProfileId: owner.profileId,
+          documentKey: resolvedDocumentKey,
+        },
+      },
+      update: {
+        mode: toPrismaPlaybackScope(mode),
+        scopeStartNodeId: trimOptionalValue(scopeStartNodeId),
+        scopeEndNodeId: trimOptionalValue(scopeEndNodeId),
+        activeNodeId: trimOptionalValue(activeNodeId),
+        activeSectionSlug: trimOptionalValue(activeSectionSlug),
+        nodeOffsetMs: Math.max(0, Math.round(Number(nodeOffsetMs) || 0)),
+        rate: clampListeningRate(rate, normalizedRate),
+        provider: toPrismaVoiceProvider(normalizedProvider),
+        voiceId: trimOptionalValue(voiceId),
+        status: toPrismaListeningStatus(normalizeListeningStatus(status)),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: owner.userId,
+        readerProfileId: owner.profileId,
+        documentKey: resolvedDocumentKey,
+        mode: toPrismaPlaybackScope(mode),
+        scopeStartNodeId: trimOptionalValue(scopeStartNodeId),
+        scopeEndNodeId: trimOptionalValue(scopeEndNodeId),
+        activeNodeId: trimOptionalValue(activeNodeId),
+        activeSectionSlug: trimOptionalValue(activeSectionSlug),
+        nodeOffsetMs: Math.max(0, Math.round(Number(nodeOffsetMs) || 0)),
+        rate: clampListeningRate(rate, normalizedRate),
+        provider: toPrismaVoiceProvider(normalizedProvider),
+        voiceId: trimOptionalValue(voiceId),
+        status: toPrismaListeningStatus(normalizeListeningStatus(status)),
+      },
+    }),
+  ]);
+
+  return {
+    listeningSession: serializeListeningSession(session),
+    voicePreferences: serializeVoicePreferences(profile),
   };
 }
 
