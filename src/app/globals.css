@@ -485,14 +485,16 @@ main {
 }
 
 .assembler-ai-toggle {
-  min-width: 26px;
+  min-width: 38px;
   min-height: 26px;
-  padding: 0;
+  padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
   color: var(--purple);
-  font-size: 14px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .assembler-ai-toggle.is-active {
@@ -932,6 +934,11 @@ main {
   color: var(--white);
   min-width: 72px;
   font-weight: 600;
+}
+
+.assembler-player__button.is-ai-active {
+  color: var(--purple);
+  border-color: rgba(167, 139, 250, 0.28);
 }
 
 .assembler-player__button.is-playing {

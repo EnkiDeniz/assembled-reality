@@ -308,7 +308,7 @@ function WorkspaceToolbar({
           onClick={onToggleAi}
           aria-label={aiOpen ? "Close AI prompt" : "Open AI prompt"}
         >
-          {aiOpen ? "x" : ">"}
+          {aiOpen ? "CLOSE" : "AI"}
         </button>
       </div>
 
@@ -659,6 +659,7 @@ function PlayerBar({
   voiceChoice,
   providerLabel,
   progress,
+  aiOpen,
   onTogglePlayback,
   onSeekBack,
   onSeekForward,
@@ -666,6 +667,7 @@ function PlayerBar({
   onNextBlock,
   onCycleRate,
   onVoiceChange,
+  onToggleAi,
 }) {
   return (
     <div className="assembler-player">
@@ -688,6 +690,13 @@ function PlayerBar({
         </button>
         <button type="button" className="assembler-player__button" onClick={onNextBlock}>
           NEXT
+        </button>
+        <button
+          type="button"
+          className={`assembler-player__button ${aiOpen ? "is-ai-active" : ""}`}
+          onClick={onToggleAi}
+        >
+          {aiOpen ? "CLOSE AI" : "AI"}
         </button>
       </div>
 
@@ -1673,18 +1682,6 @@ export default function WorkspaceShell({
           )}
         </section>
 
-        {aiOpen ? (
-          <AiBar
-            inputRef={aiInputRef}
-            value={aiInput}
-            pending={aiPending}
-            onChange={setAiInput}
-            onSubmit={runAiOperation}
-            onPreset={(preset) => setAiInput(`${preset} `)}
-            onClose={() => setAiOpen(false)}
-          />
-        ) : null}
-
         {clipboard.length || stagedAiBlocks.length ? (
           <ClipboardTray
             stagedBlocks={stagedAiBlocks}
@@ -1702,6 +1699,18 @@ export default function WorkspaceShell({
           />
         ) : null}
 
+        {aiOpen ? (
+          <AiBar
+            inputRef={aiInputRef}
+            value={aiInput}
+            pending={aiPending}
+            onChange={setAiInput}
+            onSubmit={runAiOperation}
+            onPreset={(preset) => setAiInput(`${preset} `)}
+            onClose={() => setAiOpen(false)}
+          />
+        ) : null}
+
         <PlayerBar
           currentBlock={currentBlock}
           nextBlock={nextBlock}
@@ -1714,6 +1723,7 @@ export default function WorkspaceShell({
           voiceChoice={voiceChoice || voiceCatalog[0]}
           providerLabel={providerLabel}
           progress={progress}
+          aiOpen={aiOpen}
           onTogglePlayback={togglePlayback}
           onSeekBack={() => seekAudio(-10)}
           onSeekForward={() => seekAudio(10)}
@@ -1724,6 +1734,7 @@ export default function WorkspaceShell({
             setVoiceChoice(choice);
             setProviderLabel(choice?.label || "Voice");
           }}
+          onToggleAi={() => setAiOpen((value) => !value)}
         />
       </div>
     </main>
