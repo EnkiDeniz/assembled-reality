@@ -744,6 +744,13 @@ main {
   background: rgba(12, 13, 13, 0.96);
 }
 
+.assembler-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .assembler-header__name {
   margin: 0;
   color: var(--white);
@@ -752,6 +759,20 @@ main {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.assembler-header__project {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(34, 197, 94, 0.24);
+  border-radius: 999px;
+  color: var(--green);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .assembler-header__actions {
@@ -794,6 +815,18 @@ main {
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
   background: rgba(11, 12, 12, 0.94);
+}
+
+.assembler-shelf__project {
+  display: grid;
+  gap: 4px;
+  min-width: max-content;
+}
+
+.assembler-shelf__project-name {
+  color: var(--white);
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 .assembler-shelf__group {
@@ -1082,6 +1115,58 @@ main {
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
+}
+
+.assembler-launchpad__project-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.05), transparent 70%),
+    rgba(14, 16, 16, 0.88);
+}
+
+.assembler-launchpad__project-head,
+.assembler-launchpad__project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.assembler-launchpad__project-label,
+.assembler-launchpad__project-key {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-launchpad__project-main {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-launchpad__project-title {
+  margin: 0;
+  color: var(--white);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.assembler-launchpad__project-body {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.assembler-launchpad__project-meta {
+  color: #c6cdca;
+  font-size: 12px;
 }
 
 .assembler-launchpad__actions {
@@ -1797,6 +1882,10 @@ main {
 
   .assembler-header {
     gap: 10px;
+  }
+
+  .assembler-header__identity {
+    flex-wrap: wrap;
   }
 
   .assembler-header__actions {

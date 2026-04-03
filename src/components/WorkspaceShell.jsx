@@ -16,6 +16,14 @@ import {
   formatVoiceLabel,
   VOICE_PROVIDERS,
 } from "@/lib/listening";
+import {
+  DEFAULT_PROJECT_KEY,
+  buildProjectsFromDocuments,
+  getProjectByKey,
+  getProjectDocuments,
+  getProjectEntryDocumentKey,
+  PRIMARY_WORKSPACE_DOCUMENT_KEY,
+} from "@/lib/project-model";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 
 const STORAGE_VERSION = 2;
@@ -235,6 +243,21 @@ function groupedDocuments(documents) {
   };
 }
 
+function buildWorkspaceUrl(documentKey, projectKey = DEFAULT_PROJECT_KEY) {
+  const params = new URLSearchParams();
+
+  if (projectKey && projectKey !== DEFAULT_PROJECT_KEY) {
+    params.set("project", projectKey);
+  }
+
+  if (documentKey && documentKey !== PRIMARY_WORKSPACE_DOCUMENT_KEY) {
+    params.set("document", documentKey);
+  }
+
+  const query = params.toString();
+  return query ? `/workspace?${query}` : "/workspace";
+}
+
 function ShelfGroup({ label, documents, activeDocumentKey, onSelect, loadingDocumentKey }) {
   return (
     <div className="assembler-shelf__group">
@@ -264,6 +287,7 @@ function ShelfGroup({ label, documents, activeDocumentKey, onSelect, loadingDocu
 }
 
 function WorkspaceShelf({
+  activeProject,
   documents,
   activeDocumentKey,
   loadingDocumentKey,
@@ -275,6 +299,13 @@ function WorkspaceShelf({
 
   return (
     <div className="assembler-shelf">
+      {activeProject ? (
+        <div className="assembler-shelf__project">
+          <span className="assembler-shelf__label">Project</span>
+          <span className="assembler-shelf__project-name">{activeProject.title}</span>
+        </div>
+      ) : null}
+
       <ShelfGroup
         label="Sources"
         documents={grouped.sources}
@@ -317,6 +348,8 @@ function WorkspaceShelf({
 }
 
 function WorkspaceLaunchpad({
+  activeProject,
+  projects,
   activeDocument,
   documents,
   loadingDocumentKey,
@@ -327,6 +360,12 @@ function WorkspaceLaunchpad({
 }) {
   const latestAssembly =
     documents.find((document) => document.isAssembly || document.documentType === "assembly") || null;
+  const projectEntryDocumentKey = getProjectEntryDocumentKey(activeProject);
+  const currentAssemblyDocument =
+    (activeProject?.currentAssemblyDocumentKey &&
+      documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
+    latestAssembly ||
+    null;
   const recentDocuments = documents.slice(0, 6);
   const sourceCount = documents.filter(
     (document) =>
@@ -358,25 +397,80 @@ function WorkspaceLaunchpad({
           </div>
 
           <p className="assembler-launchpad__body">
-            Turn source material into something you can use, then keep proof of how it came together.
+            Open a project, inspect its sources, shape the current assembly, and keep proof of how it came together.
           </p>
 
           <div className="assembler-launchpad__stats">
+            <span className="assembler-pill">{projects.length} project{projects.length === 1 ? "" : "s"}</span>
             <span className="assembler-pill is-green">{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
             <span className="assembler-pill is-cyan">{assemblyCount} assembl{assemblyCount === 1 ? "y" : "ies"}</span>
             <span className="assembler-pill">{documents.length} total docs</span>
           </div>
         </div>
 
+        {activeProject ? (
+          <div className="assembler-launchpad__project-card">
+            <div className="assembler-launchpad__project-head">
+              <span className="assembler-launchpad__project-label">Open project</span>
+              <span className="assembler-launchpad__project-key">{activeProject.projectKey}</span>
+            </div>
+            <div className="assembler-launchpad__project-main">
+              <h2 className="assembler-launchpad__project-title">{activeProject.title}</h2>
+              <p className="assembler-launchpad__project-body">{activeProject.subtitle}</p>
+            </div>
+            <div className="assembler-launchpad__project-meta">
+              <span>{sourceCount} sources</span>
+              <span>{assemblyCount} assemblies</span>
+              <span>
+                {currentAssemblyDocument ? `Current assembly: ${currentAssemblyDocument.title}` : "No assembly yet"}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
         <div className="assembler-launchpad__actions">
           <button type="button" className="assembler-launchpad__action is-primary" onClick={onContinue}>
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               ▣
             </span>
-            <span className="assembler-launchpad__action-label">Continue</span>
-            <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open source"}</span>
-            <span className="assembler-launchpad__action-detail">Pick up the source or assembly you were shaping</span>
+            <span className="assembler-launchpad__action-label">Open project</span>
+            <span className="assembler-launchpad__action-value">{activeProject?.title || "Main Project"}</span>
+            <span className="assembler-launchpad__action-detail">
+              Jump into the current project entry point and keep working
+            </span>
           </button>
+
+          {currentAssemblyDocument ? (
+            <button
+              type="button"
+              className="assembler-launchpad__action"
+              onClick={() => onOpenDocument(currentAssemblyDocument.documentKey)}
+            >
+              <span className="assembler-launchpad__action-icon" aria-hidden="true">
+                ≣
+              </span>
+              <span className="assembler-launchpad__action-label">Current assembly</span>
+              <span className="assembler-launchpad__action-value">{currentAssemblyDocument.title}</span>
+              <span className="assembler-launchpad__action-detail">
+                Open the current working assembly inside this project
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="assembler-launchpad__action"
+              onClick={() => onOpenDocument(projectEntryDocumentKey)}
+            >
+              <span className="assembler-launchpad__action-icon" aria-hidden="true">
+                ∎
+              </span>
+              <span className="assembler-launchpad__action-label">Primary source</span>
+              <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open source"}</span>
+              <span className="assembler-launchpad__action-detail">
+                Start from the built-in source while the project has no assembly yet
+              </span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -387,41 +481,17 @@ function WorkspaceLaunchpad({
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               ↥
             </span>
-            <span className="assembler-launchpad__action-label">Upload</span>
+            <span className="assembler-launchpad__action-label">Add source</span>
             <span className="assembler-launchpad__action-value">
               {uploading ? "Importing your source..." : "Import a new source document"}
             </span>
             <span className="assembler-launchpad__action-detail">Bring in PDF, Word, markdown, or plain text</span>
           </button>
-
-          {latestAssembly ? (
-            <button
-              type="button"
-              className="assembler-launchpad__action"
-              onClick={() => onOpenDocument(latestAssembly.documentKey)}
-            >
-              <span className="assembler-launchpad__action-icon" aria-hidden="true">
-                ≣
-              </span>
-              <span className="assembler-launchpad__action-label">Latest assembly</span>
-              <span className="assembler-launchpad__action-value">{latestAssembly.title}</span>
-              <span className="assembler-launchpad__action-detail">Open the newest assembled document</span>
-            </button>
-          ) : (
-            <Link href="/account" className="assembler-launchpad__action">
-              <span className="assembler-launchpad__action-icon" aria-hidden="true">
-                ⌘
-              </span>
-              <span className="assembler-launchpad__action-label">Account</span>
-              <span className="assembler-launchpad__action-value">Receipts, connection, profile</span>
-              <span className="assembler-launchpad__action-detail">Review status and manage integrations</span>
-            </Link>
-          )}
         </div>
 
         <div className="assembler-launchpad__recent">
           <div className="assembler-launchpad__recent-head">
-            <span>Recent sources and assemblies</span>
+            <span>Project contents</span>
             <Link href="/account" className="assembler-launchpad__recent-link">
               Account
             </Link>
@@ -1054,7 +1124,9 @@ function formatAudioErrorMessage(message) {
 export default function WorkspaceShell({
   userId,
   documents,
+  projects,
   initialDocument,
+  initialProjectKey = DEFAULT_PROJECT_KEY,
   voiceCatalog,
   defaultVoiceChoice,
   showLaunchpadInitially = false,
@@ -1077,6 +1149,9 @@ export default function WorkspaceShell({
   const storageKey = `document-assembler:${userId}:workspace`;
 
   const [documentsState, setDocumentsState] = useState(() => sortDocuments(documents));
+  const [activeProjectKey, setActiveProjectKey] = useState(
+    initialProjectKey || projects?.[0]?.projectKey || DEFAULT_PROJECT_KEY,
+  );
   const [documentCache, setDocumentCache] = useState({
     [initialDocument.documentKey]: initialDocument,
   });
@@ -1110,6 +1185,13 @@ export default function WorkspaceShell({
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
 
+  const projectsState = buildProjectsFromDocuments(documentsState);
+  const activeProject =
+    getProjectByKey(projectsState, activeProjectKey) ||
+    getProjectByKey(projects, activeProjectKey) ||
+    projectsState[0] ||
+    null;
+  const projectDocuments = getProjectDocuments(documentsState, activeProject);
   const availableVoiceCatalog = voiceCatalog.filter(
     (entry) =>
       entry.provider !== VOICE_PROVIDERS.device || deviceVoiceSupported,
@@ -1208,6 +1290,36 @@ export default function WorkspaceShell({
       setProviderLabel(resolvedVoiceChoice.label);
     }
   }, [resolvedVoiceChoice, voiceChoice]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    if (activeProject.projectKey === activeProjectKey) return;
+    setActiveProjectKey(activeProject.projectKey);
+  }, [activeProject, activeProjectKey]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+
+    const projectDocumentKeys = new Set(activeProject.documentKeys || []);
+    if (!projectDocumentKeys.size) return;
+
+    if (!projectDocumentKeys.has(activeDocumentKey)) {
+      const fallbackDocumentKey = getProjectEntryDocumentKey(activeProject);
+      if (fallbackDocumentKey && fallbackDocumentKey !== activeDocumentKey) {
+        startTransition(() => {
+          setActiveDocumentKey(fallbackDocumentKey);
+        });
+
+        if (typeof window !== "undefined") {
+          window.history.replaceState(
+            {},
+            "",
+            buildWorkspaceUrl(fallbackDocumentKey, activeProject.projectKey),
+          );
+        }
+      }
+    }
+  }, [activeProject, activeDocumentKey]);
 
   useEffect(() => {
     writeWorkspaceState(storageKey, {
@@ -1327,12 +1439,9 @@ export default function WorkspaceShell({
     });
   }
 
-  function updateUrl(documentKey) {
+  function updateUrl(documentKey, projectKey = activeProjectKey) {
     if (typeof window === "undefined") return;
-    const nextUrl =
-      documentKey === "assembled-reality-v07-final"
-        ? "/workspace"
-        : `/workspace?document=${encodeURIComponent(documentKey)}`;
+    const nextUrl = buildWorkspaceUrl(documentKey, projectKey);
     window.history.replaceState({}, "", nextUrl);
   }
 
@@ -1343,7 +1452,7 @@ export default function WorkspaceShell({
     setViewMode("doc");
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
-      window.history.replaceState({}, "", "/workspace");
+      window.history.replaceState({}, "", buildWorkspaceUrl("", activeProjectKey));
     }
   }
 
@@ -1494,7 +1603,7 @@ export default function WorkspaceShell({
       startTransition(() => {
         setActiveDocumentKey(documentKey);
       });
-      updateUrl(documentKey);
+      updateUrl(documentKey, activeProjectKey);
       setFeedback(`Opened ${documentsState.find((document) => document.documentKey === documentKey)?.title || "document"}.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Could not load the document.", "error");
@@ -1507,7 +1616,7 @@ export default function WorkspaceShell({
     setLaunchpadOpen(false);
 
     if (!documentKey || documentKey === activeDocumentKey) {
-      updateUrl(activeDocumentKey);
+      updateUrl(activeDocumentKey, activeProjectKey);
       return;
     }
 
@@ -2338,7 +2447,14 @@ export default function WorkspaceShell({
 
       <div className="assembler-shell">
         <header className="assembler-header">
-          <span className="assembler-header__name">Document Assembler</span>
+          <div className="assembler-header__identity">
+            <span className="assembler-header__name">Document Assembler</span>
+            {activeProject ? (
+              <span className="assembler-header__project">
+                {activeProject.title}
+              </span>
+            ) : null}
+          </div>
 
           <div className="assembler-header__actions">
             {!launchpadOpen ? (
@@ -2356,11 +2472,13 @@ export default function WorkspaceShell({
         {launchpadOpen ? (
           <section className="assembler-surface assembler-surface--launchpad">
             <WorkspaceLaunchpad
+              activeProject={activeProject}
+              projects={projectsState}
               activeDocument={activeDocument}
-              documents={documentsState}
+              documents={projectDocuments}
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
-              onContinue={() => enterWorkspace(activeDocumentKey)}
+              onContinue={() => enterWorkspace(getProjectEntryDocumentKey(activeProject))}
               onOpenDocument={enterWorkspace}
               onUpload={() => fileInputRef.current?.click()}
             />
@@ -2368,7 +2486,8 @@ export default function WorkspaceShell({
         ) : (
           <>
             <WorkspaceShelf
-              documents={documentsState}
+              activeProject={activeProject}
+              documents={projectDocuments}
               activeDocumentKey={activeDocumentKey}
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
@@ -2447,7 +2566,7 @@ export default function WorkspaceShell({
               <ClipboardTray
                 stagedBlocks={stagedAiBlocks}
                 clipboard={clipboard}
-                documents={documentsState}
+                documents={projectDocuments}
                 onAcceptStagedBlock={acceptStagedBlock}
                 onAcceptAllStagedBlocks={acceptAllStagedBlocks}
                 onClearStagedBlocks={() => setStagedAiBlocks([])}

@@ -11,6 +11,11 @@ import {
   getReaderDocumentDataForUser,
   listReaderDocumentsForUser,
 } from "@/lib/reader-documents";
+import {
+  buildProjectsFromDocuments,
+  getProjectByKey,
+  getProjectEntryDocumentKey,
+} from "@/lib/project-model";
 import { getReaderProfileByUserId } from "@/lib/reader-db";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +28,21 @@ export default async function WorkspacePage({ searchParams }) {
 
   const resolvedSearchParams = await searchParams;
   const requestedDocumentKey = String(resolvedSearchParams?.document || "").trim();
+  const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
 
   const [documents, readerData] = await Promise.all([
     listReaderDocumentsForUser(session.user.id),
     getReaderProfileByUserId(session.user.id),
   ]);
 
-  const fallbackDocumentKey = requestedDocumentKey || documents[0]?.documentKey || "";
+  const projects = buildProjectsFromDocuments(documents);
+  const initialProject = getProjectByKey(projects, requestedProjectKey);
+
+  const fallbackDocumentKey =
+    requestedDocumentKey ||
+    getProjectEntryDocumentKey(initialProject) ||
+    documents[0]?.documentKey ||
+    "";
   const initialDocument = await getReaderDocumentDataForUser(
     session.user.id,
     fallbackDocumentKey,
@@ -56,11 +69,12 @@ export default async function WorkspacePage({ searchParams }) {
     <WorkspaceShell
       userId={session.user.id}
       documents={documents}
+      projects={projects}
       initialDocument={initialDocument}
+      initialProjectKey={initialProject?.projectKey || null}
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={preferredVoiceChoice}
-      voiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
-      showLaunchpadInitially={!requestedDocumentKey}
+      showLaunchpadInitially={!requestedDocumentKey && !requestedProjectKey}
     />
   );
 }
