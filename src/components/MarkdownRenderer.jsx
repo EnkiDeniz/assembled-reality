@@ -158,7 +158,7 @@ function Block({
     });
 
     return () => onUnregisterBlock?.(blockId);
-  }, [blockId, onRegisterBlock, onUnregisterBlock, playable, sectionSlug, children]);
+  }, [blockId, onRegisterBlock, onUnregisterBlock, playable, sectionSlug]);
 
   return (
     <Tag

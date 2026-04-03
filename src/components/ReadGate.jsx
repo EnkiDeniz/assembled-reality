@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import ReaderShell from "@/components/ReaderShell";
 import {
   DEFAULT_READER_PREFERENCES,
   loadReaderPreferences,
+  saveReaderPreferences,
+  subscribeReaderPreferences,
 } from "@/lib/storage";
 
 export default function ReadGate({
@@ -24,13 +26,17 @@ export default function ReadGate({
   sevenTextProvider = null,
   sevenVoiceProvider = null,
 }) {
-  const [preferences, setPreferences] = useState(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_READER_PREFERENCES;
-    }
-
-    return loadReaderPreferences();
-  });
+  const preferencesSnapshot = useSyncExternalStore(
+    subscribeReaderPreferences,
+    () => JSON.stringify(loadReaderPreferences()),
+    () => JSON.stringify(DEFAULT_READER_PREFERENCES),
+  );
+  const preferences = useMemo(() => JSON.parse(preferencesSnapshot), [preferencesSnapshot]);
+  const setPreferences = useCallback((nextValue) => {
+    const nextPreferences =
+      typeof nextValue === "function" ? nextValue(loadReaderPreferences()) : nextValue;
+    saveReaderPreferences(nextPreferences);
+  }, []);
 
   return (
     <ReaderShell

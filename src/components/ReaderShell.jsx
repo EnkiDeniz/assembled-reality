@@ -33,7 +33,6 @@ import {
 } from "../lib/reader-player";
 import { EMPTY_READER_ANNOTATIONS } from "../lib/reader-store";
 import { clearBrowserSelection, getSelectionAnchor } from "../lib/selection";
-import { saveReaderPreferences } from "../lib/storage";
 import {
   buildPlaybackNodes,
   buildScopedPlaybackQueue,
@@ -2459,7 +2458,6 @@ export default function ReaderShell({
   }, []);
 
   useEffect(() => {
-    saveReaderPreferences(preferences);
     document.documentElement.dataset.theme = preferences.theme;
   }, [preferences]);
 

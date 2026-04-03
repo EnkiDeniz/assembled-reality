@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { signOut } from "next-auth/react";
 import {
   buildSevenFallbackMessage,
@@ -13,6 +13,7 @@ import {
   DEFAULT_READER_PREFERENCES,
   loadReaderPreferences,
   saveReaderPreferences,
+  subscribeReaderPreferences,
 } from "@/lib/storage";
 
 const TEXT_SIZE_OPTIONS = [
@@ -121,13 +122,17 @@ export default function AccountScreen({
   readingSnapshot = null,
 }) {
   const [displayName, setDisplayName] = useState(initialProfile?.displayName || "");
-  const [preferences, setPreferences] = useState(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_READER_PREFERENCES;
-    }
-
-    return loadReaderPreferences();
-  });
+  const preferencesSnapshot = useSyncExternalStore(
+    subscribeReaderPreferences,
+    () => JSON.stringify(loadReaderPreferences()),
+    () => JSON.stringify(DEFAULT_READER_PREFERENCES),
+  );
+  const preferences = useMemo(() => JSON.parse(preferencesSnapshot), [preferencesSnapshot]);
+  const setPreferences = useCallback((nextValue) => {
+    const nextPreferences =
+      typeof nextValue === "function" ? nextValue(loadReaderPreferences()) : nextValue;
+    saveReaderPreferences(nextPreferences);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -153,10 +158,6 @@ export default function AccountScreen({
   const readingProgress = readingSnapshot?.progressPercent ?? 0;
   const resumeHref = readingSnapshot?.resumeHref || "/read";
   const receiptsCount = drafts.length;
-
-  useEffect(() => {
-    saveReaderPreferences(preferences);
-  }, [preferences]);
 
   const handleSignOut = () => {
     clearUnlockState();
