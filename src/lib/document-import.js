@@ -31,6 +31,7 @@ const NON_BREAKING_SPACE_RE = /\u00a0/g;
 const SYMBOL_BULLET_RE = /^([>\s]*)[•◦▪▫▸▹►▻◉○●◆◇■□✦✧✱➜➤→]\s+/;
 const DASH_BULLET_RE = /^([>\s]*)[–—]\s+/;
 const PAGE_NUMBER_LINE_RE = /^(?:page\s+)?\d+(?:\s*(?:\/|of)\s*\d+)?$/i;
+const MARKDOWN_ESCAPE_RE = /\\(\\|`|\*|_|{|}|\[|\]|\(|\)|#|\+|-|!|\.|>)/g;
 
 function createPolishStats() {
   return {
@@ -38,6 +39,7 @@ function createPolishStats() {
     pageLinesRemoved: 0,
     bulletLinesNormalized: 0,
     repeatedParagraphsRemoved: 0,
+    markdownEscapesRemoved: 0,
     blocksRemoved: 0,
   };
 }
@@ -71,6 +73,14 @@ function summarizePolishStats(stats = {}, label = "Basic polish") {
     parts.push(
       `${stats.repeatedParagraphsRemoved} repeated artifact paragraph${
         stats.repeatedParagraphsRemoved === 1 ? "" : "s"
+      }`,
+    );
+  }
+
+  if (stats.markdownEscapesRemoved) {
+    parts.push(
+      `${stats.markdownEscapesRemoved} escaped markdown marker${
+        stats.markdownEscapesRemoved === 1 ? "" : "s"
       }`,
     );
   }
@@ -206,6 +216,20 @@ function isDecorativeOnlyLine(line, { aggressive = false } = {}) {
   return /^[*_~=\-|.·•◦▪▫▸▹►▻◉○●◆◇■□✦✧✱+\s]+$/u.test(normalized);
 }
 
+function unescapeMarkdownArtifacts(text, stats) {
+  let replacements = 0;
+  const next = String(text || "").replace(MARKDOWN_ESCAPE_RE, (_, character) => {
+    replacements += 1;
+    return character;
+  });
+
+  if (replacements > 0) {
+    stats.markdownEscapesRemoved += replacements;
+  }
+
+  return next;
+}
+
 function polishLineArtifacts(line, stats, { aggressive = false } = {}) {
   let next = normalizeArtifactTextValue(line).replace(/[ \t]+$/g, "");
   if (!next.trim()) return "";
@@ -228,6 +252,10 @@ function polishLineArtifacts(line, stats, { aggressive = false } = {}) {
   if (bulletMatch) {
     next = `${bulletMatch[1]}- ${next.slice(bulletMatch[0].length).trim()}`;
     stats.bulletLinesNormalized += 1;
+  }
+
+  if (aggressive) {
+    next = unescapeMarkdownArtifacts(next, stats);
   }
 
   return next;

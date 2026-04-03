@@ -10,6 +10,7 @@ import {
   normalizeWorkspaceBlockKind,
   normalizeWorkspaceBlocks,
   normalizeWorkspaceLogEntries,
+  stripMarkdownSyntax,
 } from "@/lib/document-blocks";
 import {
   clampListeningRate,
@@ -31,6 +32,11 @@ import { parseSevenAudioHeaders } from "@/lib/seven";
 const STORAGE_VERSION = 2;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
 const STATUS_TIMEOUT_MS = 5000;
+const AI_SCOPE_OPTIONS = [
+  { value: "document", label: "DOC" },
+  { value: "block", label: "BLOCK" },
+  { value: "clipboard", label: "CLIP" },
+];
 
 function browserSupportsDeviceVoice() {
   return (
@@ -108,6 +114,12 @@ function isTypingTarget(target) {
   );
 }
 
+function getAiPlaceholder(scope) {
+  if (scope === "block") return "ask about this block...";
+  if (scope === "clipboard") return "ask about the clipboard...";
+  return "ask about this document...";
+}
+
 function summarizePolishChanges(changes = null) {
   const parts = [];
   const normalized = changes || {};
@@ -142,11 +154,90 @@ function summarizePolishChanges(changes = null) {
     );
   }
 
+  if (normalized.markdownEscapesRemoved) {
+    parts.push(
+      `${normalized.markdownEscapesRemoved} markdown escape${
+        normalized.markdownEscapesRemoved === 1 ? "" : "s"
+      }`,
+    );
+  }
+
   if (normalized.blocksRemoved) {
     parts.push(`${normalized.blocksRemoved} empty block${normalized.blocksRemoved === 1 ? "" : "s"}`);
   }
 
   return parts.length ? parts.join(", ") : "";
+}
+
+function countLiteralOccurrences(text, query) {
+  if (!query) return 0;
+  return String(text || "").split(query).length - 1;
+}
+
+function unescapeMarkdownEscapes(text) {
+  let replacements = 0;
+  const next = String(text || "").replace(/\\(\\|`|\*|_|{|}|\[|\]|\(|\)|#|\+|-|!|\.|>)/g, (_, character) => {
+    replacements += 1;
+    return character;
+  });
+
+  return {
+    text: next,
+    replacements,
+  };
+}
+
+function SourceActionIcon({ kind }) {
+  if (kind === "clean") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="m12 4 1.2 3.3L16.5 8.5l-3.3 1.2L12 13l-1.2-3.3L7.5 8.5l3.3-1.2z" />
+        <path d="m18 13 0.8 2.2L21 16l-2.2 0.8L18 19l-0.8-2.2L15 16l2.2-0.8z" />
+      </svg>
+    );
+  }
+
+  if (kind === "replace") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M7 7h10" />
+        <path d="m13 3 4 4-4 4" />
+        <path d="M17 17H7" />
+        <path d="m11 13-4 4 4 4" />
+      </svg>
+    );
+  }
+
+  if (kind === "unescape") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M8 5 5 12l3 7" />
+        <path d="m16 5 3 7-3 7" />
+        <path d="m10 17 4-10" />
+      </svg>
+    );
+  }
+
+  if (kind === "delete") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M5.5 7h13" />
+        <path d="M9.5 4.5h5" />
+        <path d="M8 7l0.8 11h6.4L16 7" />
+      </svg>
+    );
+  }
+
+  if (kind === "close") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="m6 6 12 12" />
+        <path d="M18 6 6 18" />
+      </svg>
+    );
+  }
+
+  return null;
 }
 
 function WorkspaceActionIcon({ kind }) {
@@ -797,6 +888,83 @@ function WorkspaceLaunchpad({
   );
 }
 
+function SourceActionButton({
+  kind,
+  label,
+  active = false,
+  disabled = false,
+  danger = false,
+  onClick,
+}) {
+  return (
+    <button
+      type="button"
+      className={`assembler-icon-button ${active ? "is-active" : ""} ${danger ? "is-danger" : ""}`}
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <SourceActionIcon kind={kind} />
+    </button>
+  );
+}
+
+function SourceCleanupTray({
+  findValue,
+  replaceValue,
+  pendingAction = "",
+  onFindChange,
+  onReplaceChange,
+  onReplaceAll,
+  onDeleteMatches,
+  onClose,
+}) {
+  const replaceDisabled = !findValue.trim() || Boolean(pendingAction);
+  const deleteDisabled = !findValue.trim() || Boolean(pendingAction);
+
+  return (
+    <div className="assembler-cleanup">
+      <input
+        className="assembler-cleanup__input"
+        value={findValue}
+        onChange={(event) => onFindChange(event.target.value)}
+        placeholder="Find"
+        aria-label="Find text"
+      />
+      <input
+        className="assembler-cleanup__input"
+        value={replaceValue}
+        onChange={(event) => onReplaceChange(event.target.value)}
+        placeholder="Replace"
+        aria-label="Replace with"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !replaceDisabled) {
+            event.preventDefault();
+            onReplaceAll();
+          }
+        }}
+      />
+      <div className="assembler-cleanup__actions">
+        <SourceActionButton
+          kind="replace"
+          label={pendingAction === "replace" ? "Replacing..." : "Replace all"}
+          disabled={replaceDisabled}
+          onClick={onReplaceAll}
+        />
+        <SourceActionButton
+          kind="delete"
+          label={pendingAction === "deleteMatches" ? "Deleting..." : "Delete matching blocks"}
+          disabled={deleteDisabled}
+          danger
+          onClick={onDeleteMatches}
+        />
+        <SourceActionButton kind="close" label="Close cleanup tools" onClick={onClose} />
+      </div>
+    </div>
+  );
+}
+
 function WorkspaceToolbar({
   activeDocument,
   viewMode,
@@ -877,9 +1045,11 @@ function BlockRow({
   isNext,
   isSelected,
   editMode,
+  canDelete = false,
   saveState,
   onFocus,
   onAdd,
+  onDelete,
   onRemove,
   onEdit,
   blockRef,
@@ -923,6 +1093,21 @@ function BlockRow({
             +
           </button>
         )}
+
+        {canDelete ? (
+          <button
+            type="button"
+            className="assembler-block__icon assembler-block__icon--danger"
+            aria-label={`Delete block ${block.sourcePosition + 1}`}
+            title={`Delete block ${block.sourcePosition + 1}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(block.id);
+            }}
+          >
+            <SourceActionIcon kind="delete" />
+          </button>
+        ) : null}
       </div>
 
       <div className="assembler-block__body">
@@ -1053,10 +1238,16 @@ function LogView({
 function AiBar({
   inputRef,
   value,
+  scope,
   pending,
+  stagedBlocks,
   onChange,
+  onScopeChange,
   onSubmit,
   onPreset,
+  onAcceptStagedBlock,
+  onAcceptAllStagedBlocks,
+  onClearStagedBlocks,
   onClose,
 }) {
   return (
@@ -1074,6 +1265,19 @@ function AiBar({
         ))}
       </div>
 
+      <div className="assembler-ai__scope" role="tablist" aria-label="AI scope">
+        {AI_SCOPE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`assembler-ai__scope-button ${scope === option.value ? "is-active" : ""}`}
+            onClick={() => onScopeChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       <div className="assembler-ai__field">
         <span className="assembler-ai__prompt">&gt;</span>
         <input
@@ -1087,7 +1291,7 @@ function AiBar({
               onSubmit();
             }
           }}
-          placeholder={pending ? "thinking..." : "ask something about the current document..."}
+          placeholder={pending ? "thinking..." : getAiPlaceholder(scope)}
           disabled={pending}
         />
         <button
@@ -1102,14 +1306,48 @@ function AiBar({
           CLOSE
         </button>
       </div>
+
+      {stagedBlocks.length ? (
+        <div className="assembler-ai__results" aria-live="polite">
+          <div className="assembler-ai__results-head">
+            <span>RESULT · {stagedBlocks.length}</span>
+            <div className="assembler-ai__results-actions">
+              <button type="button" className="assembler-tiny-button" onClick={onAcceptAllStagedBlocks}>
+                Add all
+              </button>
+              <button type="button" className="assembler-tiny-button" onClick={onClearStagedBlocks}>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="assembler-ai__results-list">
+            {stagedBlocks.map((block, index) => (
+              <div key={block.id} className="assembler-ai__result-row">
+                <span className="assembler-ai__result-index">AI</span>
+                <span className="assembler-ai__result-text">{block.plainText || block.text}</span>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => onAcceptStagedBlock(index)}
+                >
+                  +
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function ClipboardTray({
+  expanded,
   stagedBlocks,
   clipboard,
   documents,
+  onToggleExpanded,
   onAcceptStagedBlock,
   onAcceptAllStagedBlocks,
   onClearStagedBlocks,
@@ -1118,7 +1356,6 @@ function ClipboardTray({
   onClearClipboard,
   onAssemble,
 }) {
-  const [expanded, setExpanded] = useState(true);
   const sourceCount = new Set(
     clipboard.map((block) => block.sourceDocumentKey || block.documentKey).filter(Boolean),
   ).size;
@@ -1133,10 +1370,13 @@ function ClipboardTray({
 
   return (
     <div className="assembler-clipboard">
-      <div className="assembler-clipboard__header" onClick={() => setExpanded((value) => !value)}>
+      <div className="assembler-clipboard__header" onClick={onToggleExpanded}>
         <span>
-          CLIPBOARD · {clipboard.length} block{clipboard.length === 1 ? "" : "s"} from{" "}
-          {sourceCount} doc{sourceCount === 1 ? "" : "s"}
+          CLIPBOARD
+          {stagedBlocks.length
+            ? ` · ${stagedBlocks.length} AI`
+            : ""}
+          {` · ${clipboard.length} block${clipboard.length === 1 ? "" : "s"} from ${sourceCount} doc${sourceCount === 1 ? "" : "s"}`}
         </span>
         <span>{expanded ? "▼" : "▶"}</span>
       </div>
@@ -1435,6 +1675,8 @@ export default function WorkspaceShell({
   const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
   const [stagedAiBlocks, setStagedAiBlocks] = useState([]);
+  const [clipboardExpanded, setClipboardExpanded] = useState(true);
+  const [aiScope, setAiScope] = useState("document");
   const [focusBlockId, setFocusBlockId] = useState(initialDocument.blocks[0]?.id || null);
   const [playheadBlockId, setPlayheadBlockId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -1451,6 +1693,10 @@ export default function WorkspaceShell({
   const [aiPending, setAiPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
   const [polishPending, setPolishPending] = useState(false);
+  const [cleanupPendingAction, setCleanupPendingAction] = useState("");
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [cleanupFind, setCleanupFind] = useState("");
+  const [cleanupReplace, setCleanupReplace] = useState("");
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState("");
   const [blockSaveStates, setBlockSaveStates] = useState({});
@@ -1493,6 +1739,11 @@ export default function WorkspaceShell({
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
     activeDocument?.documentType !== "assembly";
+  const canManageActiveSource =
+    Boolean(activeDocument?.documentKey) &&
+    !activeDocument?.isAssembly &&
+    activeDocument?.documentType !== "assembly" &&
+    Boolean(activeDocument?.isEditable);
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
@@ -1600,6 +1851,10 @@ export default function WorkspaceShell({
     setPlayheadBlockId(firstBlockId);
     setEditMode(false);
     setBlockSaveStates({});
+    setCleanupOpen(false);
+    setCleanupFind("");
+    setCleanupReplace("");
+    setCleanupPendingAction("");
   }, [activeDocumentKey, firstBlockId]);
 
   useEffect(() => {
@@ -2093,12 +2348,238 @@ export default function WorkspaceShell({
     }
   }
 
+  function buildEditedBlock(block, nextText, updatedAt = new Date().toISOString()) {
+    const normalizedText = String(nextText || "").trim();
+    return {
+      ...block,
+      text: normalizedText,
+      plainText: stripMarkdownSyntax(normalizedText),
+      kind: normalizeWorkspaceBlockKind(block.kind, normalizedText),
+      operation: "edited",
+      updatedAt,
+    };
+  }
+
+  async function saveTransformedSourceBlocks(
+    nextBlocks,
+    { pendingAction, successMessage, logAction, logDetail, nextFocusId = null } = {},
+  ) {
+    if (!canManageActiveSource) return false;
+
+    const preparedBlocks = (Array.isArray(nextBlocks) ? nextBlocks : [])
+      .filter((block) => String(block?.text || "").trim())
+      .map((block, index) => ({
+        ...block,
+        sourcePosition: index,
+      }));
+
+    if (!preparedBlocks.length) {
+      setFeedback("This would remove every block.", "error");
+      return false;
+    }
+
+    const normalizedNextBlocks = normalizeWorkspaceBlocks(preparedBlocks, {
+      documentKey: activeDocument.documentKey,
+      defaultSourceDocumentKey: activeDocument.documentKey,
+      defaultIsEditable: true,
+    });
+
+    if (currentBlock?.id) {
+      stopPlayback();
+    }
+
+    const nextDocument = {
+      ...activeDocument,
+      blocks: normalizedNextBlocks,
+      rawMarkdown: buildWorkspaceMarkdown({
+        title: activeDocument.title,
+        subtitle: activeDocument.subtitle || "",
+        blocks: normalizedNextBlocks,
+        sectionTitle: activeDocument.isAssembly ? "Assembly" : "Document",
+      }),
+    };
+
+    setCleanupPendingAction(pendingAction || "");
+    setBlockSaveStates({});
+    setDocumentState(activeDocument.documentKey, {
+      status: "saving",
+      message: "Saving changes...",
+    });
+    upsertDocument(nextDocument);
+    appendLog(logAction || "EDITED", logDetail || `${activeDocument.title} updated`, {
+      documentKey: activeDocument.documentKey,
+    });
+
+    try {
+      await saveDocument(nextDocument);
+      const resolvedFocusId =
+        normalizedNextBlocks.find((block) => block.id === focusBlockId)?.id ||
+        nextFocusId ||
+        normalizedNextBlocks[0]?.id ||
+        null;
+      setFocusBlockId(resolvedFocusId);
+      setPlayheadBlockId(resolvedFocusId);
+      setDocumentState(activeDocument.documentKey, {
+        status: "saved",
+        message: "All changes saved",
+      });
+      setFeedback(successMessage || "Source updated.", "success");
+      return true;
+    } catch (error) {
+      if (error?.code === "stale_document") {
+        setDocumentState(activeDocument.documentKey, {
+          status: "conflict",
+          message: "Newer version saved elsewhere",
+          serverDocument: error.currentDocument || null,
+        });
+        setFeedback("A newer version exists. Load latest before saving again.", "error");
+        return false;
+      }
+
+      setDocumentState(activeDocument.documentKey, {
+        status: "error",
+        message: "Save failed",
+      });
+      setFeedback(error instanceof Error ? error.message : "Could not save the cleanup.", "error");
+      return false;
+    } finally {
+      setCleanupPendingAction("");
+    }
+  }
+
+  async function unescapeActiveSource() {
+    if (!canManageActiveSource || cleanupPendingAction || polishPending) return;
+
+    let replacements = 0;
+    const updatedAt = new Date().toISOString();
+    const nextBlocks = blocks.map((block) => {
+      const result = unescapeMarkdownEscapes(block.text);
+      if (!result.replacements) {
+        return block;
+      }
+
+      replacements += result.replacements;
+      return buildEditedBlock(block, result.text, updatedAt);
+    });
+
+    if (!replacements) {
+      setFeedback("No escaped markdown found.");
+      return;
+    }
+
+    await saveTransformedSourceBlocks(nextBlocks, {
+      pendingAction: "unescape",
+      successMessage: `Removed ${replacements} escaped markdown marker${replacements === 1 ? "" : "s"}.`,
+      logAction: "CLEANED",
+      logDetail: `${activeDocument.title} — unescaped ${replacements} markdown marker${replacements === 1 ? "" : "s"}`,
+    });
+  }
+
+  async function replaceAcrossSource() {
+    if (!canManageActiveSource || cleanupPendingAction || polishPending) return;
+
+    const query = cleanupFind.trim();
+    if (!query) {
+      setFeedback("Enter text to find.", "error");
+      return;
+    }
+
+    let replacements = 0;
+    let removedBlocks = 0;
+    let changedBlocks = 0;
+    const updatedAt = new Date().toISOString();
+    const nextBlocks = [];
+
+    blocks.forEach((block) => {
+      const blockReplacements = countLiteralOccurrences(block.text, query);
+      if (!blockReplacements) {
+        nextBlocks.push(block);
+        return;
+      }
+
+      const nextText = String(block.text || "").split(query).join(cleanupReplace);
+      if (nextText === block.text) {
+        nextBlocks.push(block);
+        return;
+      }
+
+      replacements += blockReplacements;
+      changedBlocks += 1;
+      if (!nextText.trim()) {
+        removedBlocks += 1;
+        return;
+      }
+
+      nextBlocks.push(buildEditedBlock(block, nextText, updatedAt));
+    });
+
+    if (!replacements || !changedBlocks) {
+      setFeedback("No changes to apply.");
+      return;
+    }
+
+    await saveTransformedSourceBlocks(nextBlocks, {
+      pendingAction: "replace",
+      successMessage: `Replaced ${replacements} match${replacements === 1 ? "" : "es"}${removedBlocks ? ` and removed ${removedBlocks} empty block${removedBlocks === 1 ? "" : "s"}` : ""}.`,
+      logAction: "REPLACED",
+      logDetail: `${activeDocument.title} — replaced ${replacements} match${replacements === 1 ? "" : "es"} for "${query}"`,
+    });
+  }
+
+  async function deleteMatchingBlocks() {
+    if (!canManageActiveSource || cleanupPendingAction || polishPending) return;
+
+    const query = cleanupFind.trim();
+    if (!query) {
+      setFeedback("Enter text to find.", "error");
+      return;
+    }
+
+    const matchingBlocks = blocks.filter((block) => String(block.text || "").includes(query));
+    if (!matchingBlocks.length) {
+      setFeedback("No matching blocks found.");
+      return;
+    }
+
+    const matchingIds = new Set(matchingBlocks.map((block) => block.id));
+    const nextBlocks = blocks.filter((block) => !matchingIds.has(block.id));
+    const nextFocusId =
+      nextBlocks.find((block) => block.id === focusBlockId)?.id || nextBlocks[0]?.id || null;
+
+    await saveTransformedSourceBlocks(nextBlocks, {
+      pendingAction: "deleteMatches",
+      nextFocusId,
+      successMessage: `Deleted ${matchingBlocks.length} matching block${matchingBlocks.length === 1 ? "" : "s"}.`,
+      logAction: "DELETED",
+      logDetail: `${activeDocument.title} — deleted ${matchingBlocks.length} block${matchingBlocks.length === 1 ? "" : "s"} matching "${query}"`,
+    });
+  }
+
+  async function deleteBlock(blockId) {
+    if (!canManageActiveSource || cleanupPendingAction || polishPending) return;
+
+    const index = blocks.findIndex((block) => block.id === blockId);
+    if (index === -1) return;
+
+    const targetBlock = blocks[index];
+    const nextBlocks = blocks.filter((block) => block.id !== blockId);
+    const nextFocusId = nextBlocks[index]?.id || nextBlocks[index - 1]?.id || nextBlocks[0]?.id || null;
+
+    await saveTransformedSourceBlocks(nextBlocks, {
+      pendingAction: "deleteBlock",
+      nextFocusId,
+      successMessage: `Deleted block ${targetBlock.sourcePosition + 1}.`,
+      logAction: "DELETED",
+      logDetail: `${activeDocument.title} — deleted block ${targetBlock.sourcePosition + 1}`,
+    });
+  }
+
   async function polishActiveSource() {
     if (!canPolishActiveDocument || polishPending) return;
 
     const sourceTitle = activeDocument.title;
     setPolishPending(true);
-    setFeedback(`Polishing ${sourceTitle}...`);
+    setFeedback(`Cleaning ${sourceTitle}...`);
 
     try {
       const response = await fetch("/api/workspace/polish", {
@@ -2121,8 +2602,8 @@ export default function WorkspaceShell({
         const polishSummary = summarizePolishChanges(result?.changes);
         setFeedback(
           polishSummary
-            ? `No polished copy needed. ${polishSummary}.`
-            : `${sourceTitle} already looks clean.`,
+            ? `No new copy needed. ${polishSummary}.`
+            : `No formatting artifacts found in ${sourceTitle}.`,
           "success",
         );
         return;
@@ -2147,7 +2628,7 @@ export default function WorkspaceShell({
       setFeedback(
         [
           `Created ${result.document.title}.`,
-          polishSummary ? `Polish cleaned ${polishSummary}.` : "",
+          polishSummary ? `Cleaned ${polishSummary}.` : "",
           intakeWarning || "",
         ]
           .filter(Boolean)
@@ -2786,10 +3267,38 @@ export default function WorkspaceShell({
     const prompt = aiInput.trim();
     if (!prompt) return;
 
+    if (aiScope === "clipboard" && !clipboard.length) {
+      setFeedback("Add blocks to the clipboard first.", "error");
+      return;
+    }
+
+    if (aiScope === "block" && !focusedBlock) {
+      setFeedback("Focus a block first.", "error");
+      return;
+    }
+
+    const requestBlocks =
+      aiScope === "clipboard" ? clipboard : activeDocument.blocks;
+    const requestSelectedBlocks =
+      aiScope === "block"
+        ? focusedBlock
+          ? [focusedBlock]
+          : []
+        : aiScope === "clipboard"
+          ? clipboard
+          : [];
+
     setAiPending(true);
     appendLog("AI_QUERY", `"${prompt}"`, {
       documentKey: activeDocument.documentKey,
-      blockIds: focusedBlock ? [focusedBlock.id] : [],
+      blockIds:
+        aiScope === "block"
+          ? focusedBlock
+            ? [focusedBlock.id]
+            : []
+          : aiScope === "clipboard"
+            ? clipboard.map((block) => block.id)
+            : [],
     });
 
     try {
@@ -2800,10 +3309,11 @@ export default function WorkspaceShell({
         },
         body: JSON.stringify({
           prompt,
+          scope: aiScope,
           documentKey: activeDocument.documentKey,
           title: activeDocument.title,
-          blocks: activeDocument.blocks,
-          selectedBlocks: focusedBlock ? [focusedBlock] : [],
+          blocks: requestBlocks,
+          selectedBlocks: requestSelectedBlocks,
           clipboardBlocks: clipboard,
         }),
       });
@@ -2814,6 +3324,7 @@ export default function WorkspaceShell({
       }
 
       setStagedAiBlocks(payload.blocks);
+      setClipboardExpanded(true);
       appendLog(
         "AI_RESULT",
         `${payload.blocks.length} block${payload.blocks.length === 1 ? "" : "s"} produced (${payload.operation || "operation"})`,
@@ -3092,39 +3603,63 @@ export default function WorkspaceShell({
                 />
               ) : (
                 <div className="assembler-document">
-	                  <div className="assembler-document__header">
-	                    <div>
-	                      <h2 className="assembler-document__title">{activeDocument.title}</h2>
-	                      {activeDocument.subtitle ? (
-	                        <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
-	                      ) : null}
-	                    </div>
+                  <div className="assembler-document__header">
+                    <div>
+                      <h2 className="assembler-document__title">{activeDocument.title}</h2>
+                      {activeDocument.subtitle ? (
+                        <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
+                      ) : null}
+                    </div>
 
-	                    <div className="assembler-document__side">
-	                      <div className="assembler-document__meta">
-	                        <span>{activeDocument.documentType}</span>
-	                        <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
-	                        {activeDocument.sourceFiles?.length ? (
-	                          <span>source: {activeDocument.sourceFiles.join(", ")}</span>
-	                        ) : null}
-	                      </div>
-	                      <div className="assembler-document__actions">
-	                        {canPolishActiveDocument ? (
-	                          <button
-	                            type="button"
-	                            className="assembler-tiny-button"
-	                            onClick={() => void polishActiveSource()}
-	                            disabled={polishPending}
-	                          >
-	                            {polishPending ? "Polishing..." : "Polish source"}
-	                          </button>
-	                        ) : null}
-	                      </div>
-	                      {activeDocumentWarning ? (
-	                        <div className="assembler-document__note">{activeDocumentWarning}</div>
-	                      ) : null}
-	                    </div>
-	                  </div>
+                    <div className="assembler-document__side">
+                      <div className="assembler-document__meta">
+                        <span>{activeDocument.documentType}</span>
+                        <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
+                        {activeDocument.sourceFiles?.length ? (
+                          <span>source: {activeDocument.sourceFiles.join(", ")}</span>
+                        ) : null}
+                      </div>
+                      {canManageActiveSource ? (
+                        <div className="assembler-document__actions">
+                          <SourceActionButton
+                            kind="replace"
+                            label={cleanupOpen ? "Hide find and replace" : "Show find and replace"}
+                            active={cleanupOpen}
+                            disabled={Boolean(cleanupPendingAction) || polishPending}
+                            onClick={() => setCleanupOpen((value) => !value)}
+                          />
+                          <SourceActionButton
+                            kind="unescape"
+                            label={cleanupPendingAction === "unescape" ? "Unescaping markdown..." : "Unescape markdown"}
+                            disabled={Boolean(cleanupPendingAction) || polishPending}
+                            onClick={() => void unescapeActiveSource()}
+                          />
+                          <SourceActionButton
+                            kind="clean"
+                            label={polishPending ? "Cleaning formatting..." : "Clean formatting"}
+                            disabled={Boolean(cleanupPendingAction) || polishPending}
+                            onClick={() => void polishActiveSource()}
+                          />
+                        </div>
+                      ) : null}
+                      {activeDocumentWarning ? (
+                        <div className="assembler-document__note">{activeDocumentWarning}</div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {cleanupOpen && canManageActiveSource ? (
+                    <SourceCleanupTray
+                      findValue={cleanupFind}
+                      replaceValue={cleanupReplace}
+                      pendingAction={cleanupPendingAction}
+                      onFindChange={setCleanupFind}
+                      onReplaceChange={setCleanupReplace}
+                      onReplaceAll={() => void replaceAcrossSource()}
+                      onDeleteMatches={() => void deleteMatchingBlocks()}
+                      onClose={() => setCleanupOpen(false)}
+                    />
+                  ) : null}
 
                   <div className="assembler-document__blocks">
                     {blocks.map((block) => (
@@ -3139,9 +3674,11 @@ export default function WorkspaceShell({
                         isNext={block.id === nextBlock?.id}
                         isSelected={clipboard.some((item) => item.id === block.id)}
                         editMode={editMode}
+                        canDelete={editMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
                         saveState={blockSaveStates[block.id] || ""}
                         onFocus={focusBlock}
                         onAdd={addBlockToClipboard}
+                        onDelete={(blockId) => void deleteBlock(blockId)}
                         onRemove={removeBlockFromClipboard}
                         onEdit={editBlock}
                       />
@@ -3153,9 +3690,11 @@ export default function WorkspaceShell({
 
             {clipboard.length || stagedAiBlocks.length ? (
               <ClipboardTray
+                expanded={clipboardExpanded}
                 stagedBlocks={stagedAiBlocks}
                 clipboard={clipboard}
                 documents={projectDocuments}
+                onToggleExpanded={() => setClipboardExpanded((value) => !value)}
                 onAcceptStagedBlock={acceptStagedBlock}
                 onAcceptAllStagedBlocks={acceptAllStagedBlocks}
                 onClearStagedBlocks={() => setStagedAiBlocks([])}
@@ -3172,10 +3711,16 @@ export default function WorkspaceShell({
               <AiBar
                 inputRef={aiInputRef}
                 value={aiInput}
+                scope={aiScope}
                 pending={aiPending}
+                stagedBlocks={stagedAiBlocks}
                 onChange={setAiInput}
+                onScopeChange={setAiScope}
                 onSubmit={runAiOperation}
                 onPreset={(preset) => setAiInput(`${preset} `)}
+                onAcceptStagedBlock={acceptStagedBlock}
+                onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+                onClearStagedBlocks={() => setStagedAiBlocks([])}
                 onClose={() => setAiOpen(false)}
               />
             ) : null}
