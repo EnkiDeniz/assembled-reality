@@ -113,13 +113,17 @@ function extractJson(text) {
 
   try {
     return JSON.parse(normalized);
-  } catch {}
+  } catch {
+    // Fall through to fenced and brace-based parsing.
+  }
 
   const fenced = normalized.match(/```json\s*([\s\S]+?)```/i) || normalized.match(/```([\s\S]+?)```/);
   if (fenced?.[1]) {
     try {
       return JSON.parse(fenced[1]);
-    } catch {}
+    } catch {
+      // Fall through to brace-based parsing.
+    }
   }
 
   const firstBrace = normalized.indexOf("{");
@@ -127,7 +131,9 @@ function extractJson(text) {
   if (firstBrace >= 0 && lastBrace > firstBrace) {
     try {
       return JSON.parse(normalized.slice(firstBrace, lastBrace + 1));
-    } catch {}
+    } catch {
+      // Fall through to null.
+    }
   }
 
   return null;

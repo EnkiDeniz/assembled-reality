@@ -1,69 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
+const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
 
 const STEPS = [
   {
-    id: "mess",
-    headline: "You've got stuff everywhere.",
-    body: "Notes, PDFs, drafts, voice memos, screenshots. The problem is not having material. The problem is that none of it lines up when it is time to build.",
+    id: "source",
+    headline: "Start with a source.",
+    body: "Import PDF, Word, markdown, or plain text. The workspace turns it into blocks you can inspect, move, and reuse.",
   },
   {
-    id: "pieces",
-    headline: "We turn documents into pieces.",
-    body: "Drop in a file and it becomes blocks: headings, paragraphs, quotes, lists. Small enough to inspect. Small enough to move.",
+    id: "inspect",
+    headline: "Inspect it block by block.",
+    body: "Read it, play it, and pull the parts that matter into the clipboard without losing where they came from.",
   },
   {
-    id: "listen",
-    headline: "Listen instead of reading.",
-    body: "Press play and the document performs itself. The line you hear lights up. The next one waits. You can keep moving and still stay inside the text.",
+    id: "assemble",
+    headline: "Assemble something usable.",
+    body: "Order the blocks, edit where needed, and turn the selection into a new assembly with visible lineage.",
   },
   {
-    id: "pick",
-    headline: "Keep the parts that matter.",
-    body: "Tap plus. A block goes into your pocket. Do that across one source or five. You are not collecting files anymore. You are collecting usable parts.",
-  },
-  {
-    id: "build",
-    headline: "Assemble something new.",
-    body: "Order the blocks, add AI when it helps, edit what needs to change, and create a new document with visible lineage.",
-  },
-  {
-    id: "learn",
-    headline: "Live it. Then come back.",
-    body: "The document is not the finish line. It is the setup. Do the work, return with what happened, and keep the gap between plan and outcome visible.",
-  },
-  {
-    id: "loop",
-    headline: "Plan it. Live it. Learn from it.",
-    body: "That is the whole loop.",
+    id: "receipt",
+    headline: "Keep the receipt.",
+    body: "Draft or export the log so the source, selections, edits, and assembly stay attached to the outcome.",
   },
 ];
-
-function MessVisual() {
-  const items = [
-    "meeting-notes-march.pdf",
-    "voice memo 2:34am",
-    "research-plan-v3.docx",
-    "quote from Tuesday",
-    "slack screenshot",
-  ];
-
-  return (
-    <div className="intro-visual intro-visual--mess" aria-hidden="true">
-      {items.map((item) => (
-        <span key={item} className="intro-visual__scrap">
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 function PiecesVisual() {
   const pieces = [
@@ -134,30 +100,6 @@ function ListenVisual() {
   );
 }
 
-function PickVisual() {
-  const blocks = [
-    { text: "Ship before the quarter closes.", active: false },
-    { text: "Each team owns one deliverable.", active: true },
-    { text: "Move fast but leave receipts.", active: true },
-    { text: "Reports are due every Friday.", active: false },
-  ];
-
-  return (
-    <div className="intro-visual intro-visual--pick" aria-hidden="true">
-      {blocks.map((block) => (
-        <div key={block.text} className="intro-pick__row">
-          <span className={`intro-pick__toggle ${block.active ? "is-active" : ""}`}>
-            {block.active ? "−" : "+"}
-          </span>
-          <span className={`intro-pick__text ${block.active ? "is-active" : ""}`}>{block.text}</span>
-        </div>
-      ))}
-
-      <div className="intro-pick__pocket">Pocket · 2 pieces saved</div>
-    </div>
-  );
-}
-
 function BuildVisual() {
   const rows = [
     "[Source] Ship before the quarter closes",
@@ -180,28 +122,8 @@ function BuildVisual() {
   );
 }
 
-function LearnVisual() {
-  const moments = [
-    "You take the plan into the meeting.",
-    "Something lands. Something slips.",
-    "You return with what actually happened.",
-    "The gap becomes usable evidence.",
-  ];
-
-  return (
-    <div className="intro-visual intro-visual--learn" aria-hidden="true">
-      {moments.map((moment) => (
-        <div key={moment} className="intro-learn__row">
-          <span className="intro-learn__dot" />
-          <span>{moment}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function LoopVisual() {
-  const chain = ["UPLOAD", "LISTEN", "PICK", "BUILD", "LIVE", "LEARN"];
+  const chain = ["SOURCE", "BLOCKS", "ASSEMBLY", "RECEIPT"];
 
   return (
     <div className="intro-visual intro-visual--loop" aria-hidden="true">
@@ -213,19 +135,46 @@ function LoopVisual() {
           </div>
         ))}
       </div>
-      <span className="intro-loop__return">then do it again</span>
+      <span className="intro-loop__return">proof stays with the result</span>
     </div>
   );
 }
 
 function IntroVisual({ stepId }) {
-  if (stepId === "mess") return <MessVisual />;
-  if (stepId === "pieces") return <PiecesVisual />;
-  if (stepId === "listen") return <ListenVisual />;
-  if (stepId === "pick") return <PickVisual />;
-  if (stepId === "build") return <BuildVisual />;
-  if (stepId === "learn") return <LearnVisual />;
+  if (stepId === "source") return <PiecesVisual />;
+  if (stepId === "inspect") return <ListenVisual />;
+  if (stepId === "assemble") return <BuildVisual />;
   return <LoopVisual />;
+}
+
+function subscribeToIntroState(callback) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  window.addEventListener("storage", callback);
+  window.addEventListener(INTRO_STORAGE_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(INTRO_STORAGE_EVENT, callback);
+  };
+}
+
+function getIntroSeenSnapshot() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(INTRO_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function getIntroSeenServerSnapshot() {
+  return null;
 }
 
 function AuthPanel({ authCapabilities, signedIn }) {
@@ -264,8 +213,8 @@ function AuthPanel({ authCapabilities, signedIn }) {
       <div className="intro-auth">
         <div className="intro-auth__copy">
           <span className="terminal-kicker">Intro Replay</span>
-          <h2 className="intro-auth__title">You already know the loop.</h2>
-          <p className="terminal-copy">Go back to the workspace when you’re ready.</p>
+          <h2 className="intro-auth__title">Your workspace is ready.</h2>
+          <p className="terminal-copy">Open it when you’re ready to inspect a source, build an assembly, or draft a receipt.</p>
         </div>
         <div className="terminal-actions">
           <Link href="/workspace" className="terminal-link is-primary">
@@ -280,9 +229,9 @@ function AuthPanel({ authCapabilities, signedIn }) {
     <div className="intro-auth">
       <div className="intro-auth__copy">
         <span className="terminal-kicker">Get Started</span>
-        <h2 className="intro-auth__title">Start assembling.</h2>
+        <h2 className="intro-auth__title">Start with a source.</h2>
         <p className="terminal-copy">
-          Sign in once and the next stop is your workspace.
+          Sign in once and head straight to the workspace to import, inspect, assemble, and keep the receipt.
         </p>
       </div>
 
@@ -335,26 +284,21 @@ export default function IntroLanding({
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [stage, setStage] = useState(forceIntro ? "intro" : "loading");
-
-  useEffect(() => {
-    if (forceIntro || signedIn) {
-      setStage("intro");
-      return;
-    }
-
-    try {
-      const seenIntro = window.localStorage.getItem(INTRO_STORAGE_KEY) === "1";
-      setStage(seenIntro ? "auth" : "intro");
-    } catch {
-      setStage("intro");
-    }
-  }, [forceIntro, signedIn]);
+  const seenIntro = useSyncExternalStore(
+    subscribeToIntroState,
+    getIntroSeenSnapshot,
+    getIntroSeenServerSnapshot,
+  );
+  const stage =
+    forceIntro || signedIn ? "intro" : seenIntro === null ? "loading" : seenIntro ? "auth" : "intro";
 
   function markIntroSeen() {
     try {
       window.localStorage.setItem(INTRO_STORAGE_KEY, "1");
-    } catch {}
+      window.dispatchEvent(new Event(INTRO_STORAGE_EVENT));
+    } catch {
+      // Ignore storage failures and continue into the workspace flow.
+    }
   }
 
   function handleNext() {
@@ -369,8 +313,6 @@ export default function IntroLanding({
       router.push("/workspace");
       return;
     }
-
-    setStage("auth");
   }
 
   function handleSkip() {
@@ -380,8 +322,6 @@ export default function IntroLanding({
       router.push("/workspace");
       return;
     }
-
-    setStage("auth");
   }
 
   if (stage === "loading") {

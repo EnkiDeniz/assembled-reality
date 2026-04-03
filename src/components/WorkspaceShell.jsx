@@ -11,12 +11,62 @@ import {
   normalizeWorkspaceBlocks,
   normalizeWorkspaceLogEntries,
 } from "@/lib/document-blocks";
-import { clampListeningRate } from "@/lib/listening";
+import {
+  clampListeningRate,
+  formatVoiceLabel,
+  VOICE_PROVIDERS,
+} from "@/lib/listening";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
 const STATUS_TIMEOUT_MS = 5000;
+
+function browserSupportsDeviceVoice() {
+  return (
+    typeof window !== "undefined" &&
+    "speechSynthesis" in window &&
+    typeof window.SpeechSynthesisUtterance !== "undefined"
+  );
+}
+
+function createInitialDocumentLogMap(documents = []) {
+  return documents.reduce((map, document) => {
+    map[document.documentKey] = normalizeWorkspaceLogEntries(
+      document.logEntries,
+      document.documentKey,
+    );
+    return map;
+  }, {});
+}
+
+function getDocumentLogEntries(logMap, documentKey, fallback = []) {
+  return normalizeWorkspaceLogEntries(
+    logMap?.[documentKey] || fallback,
+    documentKey,
+  );
+}
+
+function mergeDocumentLogEntries(logMap, documentKey, incoming) {
+  return {
+    ...logMap,
+    [documentKey]: mergeLogs(logMap?.[documentKey] || [], incoming),
+  };
+}
+
+function applyDocumentLogState(document, logMap) {
+  if (!document?.documentKey) return document;
+
+  return {
+    ...document,
+    logEntries: getDocumentLogEntries(logMap, document.documentKey, document.logEntries),
+  };
+}
+
+function formatActualProviderLabel(provider, voiceId = null) {
+  if (!provider) return "Voice";
+  return formatVoiceLabel(provider, voiceId);
+}
 
 function formatDocumentFormat(value, originalFilename = "") {
   const normalized = String(value || "markdown").toLowerCase();
@@ -219,6 +269,7 @@ function WorkspaceShelf({
   loadingDocumentKey,
   onSelect,
   onUpload,
+  uploading = false,
 }) {
   const grouped = groupedDocuments(documents);
 
@@ -253,8 +304,13 @@ function WorkspaceShelf({
         }}
       />
 
-      <button type="button" className="assembler-shelf__upload" onClick={onUpload}>
-        + Upload
+      <button
+        type="button"
+        className="assembler-shelf__upload"
+        onClick={onUpload}
+        disabled={uploading}
+      >
+        {uploading ? "Importing..." : "+ Upload"}
       </button>
     </div>
   );
@@ -267,6 +323,7 @@ function WorkspaceLaunchpad({
   onContinue,
   onOpenDocument,
   onUpload,
+  uploading = false,
 }) {
   const latestAssembly =
     documents.find((document) => document.isAssembly || document.documentType === "assembly") || null;
@@ -301,7 +358,7 @@ function WorkspaceLaunchpad({
           </div>
 
           <p className="assembler-launchpad__body">
-            Compile source material into something you can actually use in life.
+            Turn source material into something you can use, then keep proof of how it came together.
           </p>
 
           <div className="assembler-launchpad__stats">
@@ -317,17 +374,24 @@ function WorkspaceLaunchpad({
               ▣
             </span>
             <span className="assembler-launchpad__action-label">Continue</span>
-            <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open workspace"}</span>
-            <span className="assembler-launchpad__action-detail">Resume the current working document</span>
+            <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open source"}</span>
+            <span className="assembler-launchpad__action-detail">Pick up the source or assembly you were shaping</span>
           </button>
 
-          <button type="button" className="assembler-launchpad__action" onClick={onUpload}>
+          <button
+            type="button"
+            className="assembler-launchpad__action"
+            onClick={onUpload}
+            disabled={uploading}
+          >
             <span className="assembler-launchpad__action-icon" aria-hidden="true">
               ↥
             </span>
             <span className="assembler-launchpad__action-label">Upload</span>
-            <span className="assembler-launchpad__action-value">Import a new source document</span>
-            <span className="assembler-launchpad__action-detail">PDF, Word, markdown, or plain text</span>
+            <span className="assembler-launchpad__action-value">
+              {uploading ? "Importing your source..." : "Import a new source document"}
+            </span>
+            <span className="assembler-launchpad__action-detail">Bring in PDF, Word, markdown, or plain text</span>
           </button>
 
           {latestAssembly ? (
@@ -350,14 +414,14 @@ function WorkspaceLaunchpad({
               </span>
               <span className="assembler-launchpad__action-label">Account</span>
               <span className="assembler-launchpad__action-value">Receipts, connection, profile</span>
-              <span className="assembler-launchpad__action-detail">Manage your settings and integrations</span>
+              <span className="assembler-launchpad__action-detail">Review status and manage integrations</span>
             </Link>
           )}
         </div>
 
         <div className="assembler-launchpad__recent">
           <div className="assembler-launchpad__recent-head">
-            <span>Recent documents</span>
+            <span>Recent sources and assemblies</span>
             <Link href="/account" className="assembler-launchpad__recent-link">
               Account
             </Link>
@@ -404,6 +468,8 @@ function WorkspaceToolbar({
   viewMode,
   editMode,
   aiOpen,
+  documentState,
+  onReloadLatest,
   status,
   statusTone,
   onSetViewMode,
@@ -441,6 +507,16 @@ function WorkspaceToolbar({
       </div>
 
       <div className="assembler-toolbar__right">
+        {documentState ? (
+          <div className={`assembler-toolbar__document-state is-${documentState.status}`}>
+            <span>{documentState.message}</span>
+            {documentState.status === "conflict" && onReloadLatest ? (
+              <button type="button" className="assembler-tiny-button" onClick={onReloadLatest}>
+                Load latest
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <button
           type="button"
           className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
@@ -474,12 +550,6 @@ function BlockRow({
   onEdit,
   blockRef,
 }) {
-  const [draftText, setDraftText] = useState(block.text);
-
-  useEffect(() => {
-    setDraftText(block.text);
-  }, [block.id, block.text]);
-
   return (
     <article
       ref={blockRef}
@@ -529,38 +599,12 @@ function BlockRow({
         </div>
 
         {editMode && block.isEditable ? (
-          <div className="assembler-block__editor-wrap">
-            <textarea
-              className="assembler-block__editor"
-              value={draftText}
-              onChange={(event) => setDraftText(event.target.value)}
-              onClick={(event) => event.stopPropagation()}
-              onBlur={() => onEdit(block.id, draftText)}
-              onKeyDown={(event) => {
-                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                  event.preventDefault();
-                  void onEdit(block.id, draftText);
-                  event.currentTarget.blur();
-                }
-
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  setDraftText(block.text);
-                  event.currentTarget.blur();
-                }
-              }}
-            />
-
-            <div className={`assembler-block__editor-status is-${saveState || "idle"}`}>
-              {saveState === "saving"
-                ? "Saving..."
-                : saveState === "saved"
-                  ? "Saved"
-                  : saveState === "error"
-                    ? "Not saved"
-                    : "Blur or Cmd/Ctrl+Enter to save"}
-            </div>
-          </div>
+          <BlockEditor
+            key={`${block.id}:${block.updatedAt || block.text}`}
+            block={block}
+            saveState={saveState}
+            onEdit={onEdit}
+          />
         ) : block.kind === "list" ? (
           <div className="assembler-block__text">
             {String(block.text || "")
@@ -582,6 +626,47 @@ function BlockRow({
         ) : null}
       </div>
     </article>
+  );
+}
+
+function BlockEditor({ block, saveState, onEdit }) {
+  const [draftText, setDraftText] = useState(block.text);
+
+  return (
+    <div className="assembler-block__editor-wrap">
+      <textarea
+        className="assembler-block__editor"
+        value={draftText}
+        onChange={(event) => setDraftText(event.target.value)}
+        onClick={(event) => event.stopPropagation()}
+        onBlur={() => onEdit(block.id, draftText)}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            event.preventDefault();
+            void onEdit(block.id, draftText);
+            event.currentTarget.blur();
+          }
+
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setDraftText(block.text);
+            event.currentTarget.blur();
+          }
+        }}
+      />
+
+      <div className={`assembler-block__editor-status is-${saveState || "idle"}`}>
+        {saveState === "saving"
+          ? "Saving..."
+          : saveState === "saved"
+            ? "Saved"
+            : saveState === "conflict"
+              ? "Reload latest before saving again"
+              : saveState === "error"
+                ? "Not saved"
+                : "Blur or Cmd/Ctrl+Enter to save"}
+      </div>
+    </div>
   );
 }
 
@@ -818,12 +903,14 @@ function PlayerBar({
   totalBlocks,
   isPlaying,
   loadingAudio,
+  playbackAvailable,
   rate,
   voiceCatalog,
   voiceChoice,
   providerLabel,
   progress,
   aiOpen,
+  deviceVoiceSupported,
   onTogglePlayback,
   onSeekBack,
   onSeekForward,
@@ -833,26 +920,51 @@ function PlayerBar({
   onVoiceChange,
   onToggleAi,
 }) {
+  const selectedVoiceValue = voiceChoice
+    ? `${voiceChoice.provider}:${voiceChoice.voiceId || "default"}`
+    : "";
+
   return (
     <div className="assembler-player">
       <div className="assembler-player__controls">
-        <button type="button" className="assembler-player__button" onClick={onSeekBack}>
+        <button
+          type="button"
+          className="assembler-player__button"
+          onClick={onSeekBack}
+          disabled={!playbackAvailable}
+        >
           ◄10
         </button>
         <button
           type="button"
           className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`}
           onClick={onTogglePlayback}
+          disabled={!playbackAvailable}
         >
           {loadingAudio ? "..." : isPlaying ? "PAUSE" : "PLAY"}
         </button>
-        <button type="button" className="assembler-player__button" onClick={onSeekForward}>
+        <button
+          type="button"
+          className="assembler-player__button"
+          onClick={onSeekForward}
+          disabled={!playbackAvailable}
+        >
           10►
         </button>
-        <button type="button" className="assembler-player__button" onClick={onPreviousBlock}>
+        <button
+          type="button"
+          className="assembler-player__button"
+          onClick={onPreviousBlock}
+          disabled={!playbackAvailable}
+        >
           PREV
         </button>
-        <button type="button" className="assembler-player__button" onClick={onNextBlock}>
+        <button
+          type="button"
+          className="assembler-player__button"
+          onClick={onNextBlock}
+          disabled={!playbackAvailable}
+        >
           NEXT
         </button>
         <button
@@ -883,7 +995,7 @@ function PlayerBar({
 
         <select
           className="assembler-player__select"
-          value={`${voiceChoice.provider}:${voiceChoice.voiceId || "default"}`}
+          value={selectedVoiceValue}
           onChange={(event) => {
             const [provider, voiceId] = event.target.value.split(":");
             onVoiceChange(
@@ -894,6 +1006,7 @@ function PlayerBar({
               ) || voiceCatalog[0],
             );
           }}
+          disabled={!voiceCatalog.length}
         >
           {voiceCatalog.map((entry) => (
             <option key={`${entry.provider}:${entry.voiceId || "default"}`} value={`${entry.provider}:${entry.voiceId || "default"}`}>
@@ -903,7 +1016,13 @@ function PlayerBar({
         </select>
 
         <span className="assembler-player__status">
-          {providerLabel} · {currentBlock ? `block ${currentBlock.sourcePosition + 1}` : "idle"}
+          {!playbackAvailable
+            ? deviceVoiceSupported
+              ? "Voice unavailable"
+              : "Device voice unavailable in this browser"
+            : `${providerLabel} · ${
+                currentBlock ? `block ${currentBlock.sourcePosition + 1}` : "idle"
+              }`}
         </span>
       </div>
     </div>
@@ -938,7 +1057,6 @@ export default function WorkspaceShell({
   initialDocument,
   voiceCatalog,
   defaultVoiceChoice,
-  voiceEnabled,
   showLaunchpadInitially = false,
 }) {
   const fileInputRef = useRef(null);
@@ -946,12 +1064,15 @@ export default function WorkspaceShell({
   const blockRefs = useRef({});
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
-  const playbackStateRef = useRef({ active: false });
+  const speechUtteranceRef = useRef(null);
+  const speechRunIdRef = useRef(0);
+  const playbackStateRef = useRef({ active: false, kind: null, paused: false });
   const storageHydratedRef = useRef(false);
   const activeDocumentRef = useRef(initialDocument);
   const blocksRef = useRef(initialDocument.blocks || []);
   const rateRef = useRef(1);
   const voiceChoiceRef = useRef(defaultVoiceChoice);
+  const documentLogsRef = useRef(createInitialDocumentLogMap([initialDocument]));
 
   const storageKey = `document-assembler:${userId}:workspace`;
 
@@ -959,15 +1080,17 @@ export default function WorkspaceShell({
   const [documentCache, setDocumentCache] = useState({
     [initialDocument.documentKey]: initialDocument,
   });
+  const [documentLogs, setDocumentLogs] = useState(() =>
+    createInitialDocumentLogMap([initialDocument]),
+  );
+  const [documentStates, setDocumentStates] = useState({});
+  const [deviceVoiceSupported, setDeviceVoiceSupported] = useState(false);
   const [activeDocumentKey, setActiveDocumentKey] = useState(initialDocument.documentKey);
   const [viewMode, setViewMode] = useState("doc");
   const [editMode, setEditMode] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
   const [stagedAiBlocks, setStagedAiBlocks] = useState([]);
-  const [sessionLog, setSessionLog] = useState(
-    normalizeWorkspaceLogEntries(initialDocument.logEntries, initialDocument.documentKey),
-  );
   const [focusBlockId, setFocusBlockId] = useState(initialDocument.blocks[0]?.id || null);
   const [playheadBlockId, setPlayheadBlockId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -987,11 +1110,32 @@ export default function WorkspaceShell({
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
 
-  const activeDocument = documentCache[activeDocumentKey] || initialDocument;
+  const availableVoiceCatalog = voiceCatalog.filter(
+    (entry) =>
+      entry.provider !== VOICE_PROVIDERS.device || deviceVoiceSupported,
+  );
+  const resolvedVoiceChoice =
+    availableVoiceCatalog.find(
+      (entry) =>
+        entry.provider === voiceChoice?.provider &&
+        String(entry.voiceId || "") === String(voiceChoice?.voiceId || ""),
+    ) ||
+    availableVoiceCatalog.find(
+      (entry) =>
+        entry.provider === defaultVoiceChoice?.provider &&
+        String(entry.voiceId || "") === String(defaultVoiceChoice?.voiceId || ""),
+    ) ||
+    availableVoiceCatalog[0] ||
+    null;
+  const playbackAvailable = availableVoiceCatalog.length > 0;
+  const activeDocumentBase = documentCache[activeDocumentKey] || initialDocument;
+  const activeDocument = applyDocumentLogState(activeDocumentBase, documentLogs);
   const blocks = activeDocument?.blocks || [];
+  const activeDocumentState = documentStates[activeDocumentKey] || null;
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
+  const firstBlockId = blocks[0]?.id || null;
   const currentIndex = Math.max(
     0,
     blocks.findIndex((block) => block.id === playbackBlockId),
@@ -1003,7 +1147,8 @@ export default function WorkspaceShell({
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
   rateRef.current = rate;
-  voiceChoiceRef.current = voiceChoice;
+  voiceChoiceRef.current = resolvedVoiceChoice;
+  documentLogsRef.current = documentLogs;
 
   useEffect(() => {
     if (storageHydratedRef.current) return;
@@ -1019,9 +1164,13 @@ export default function WorkspaceShell({
         defaultIsEditable: true,
       }),
     );
-    setSessionLog((previous) =>
-      mergeLogs(previous, normalizeWorkspaceLogEntries(stored.sessionLog)),
-    );
+    if (stored.documentLogs && typeof stored.documentLogs === "object") {
+      setDocumentLogs((previous) =>
+        Object.entries(stored.documentLogs).reduce((next, [documentKey, entries]) => {
+          return mergeDocumentLogEntries(next, documentKey, normalizeWorkspaceLogEntries(entries, documentKey));
+        }, previous),
+      );
+    }
     setRate(clampListeningRate(stored.rate, 1));
 
     if (stored.voiceChoice?.provider) {
@@ -1040,21 +1189,41 @@ export default function WorkspaceShell({
   }, [storageKey, voiceCatalog, defaultVoiceChoice, activeDocument.documentKey]);
 
   useEffect(() => {
-    writeWorkspaceState(storageKey, {
-      clipboard,
-      sessionLog,
-      rate,
-      voiceChoice,
-    });
-  }, [clipboard, rate, sessionLog, storageKey, voiceChoice]);
+    setDeviceVoiceSupported(browserSupportsDeviceVoice());
+  }, []);
 
   useEffect(() => {
-    const nextBlockId = blocks[0]?.id || null;
-    setFocusBlockId(nextBlockId);
-    setPlayheadBlockId(nextBlockId);
+    if (!resolvedVoiceChoice && voiceChoice) {
+      setVoiceChoice(null);
+      setProviderLabel("Voice");
+      return;
+    }
+
+    if (
+      resolvedVoiceChoice &&
+      (resolvedVoiceChoice.provider !== voiceChoice?.provider ||
+        String(resolvedVoiceChoice.voiceId || "") !== String(voiceChoice?.voiceId || ""))
+    ) {
+      setVoiceChoice(resolvedVoiceChoice);
+      setProviderLabel(resolvedVoiceChoice.label);
+    }
+  }, [resolvedVoiceChoice, voiceChoice]);
+
+  useEffect(() => {
+    writeWorkspaceState(storageKey, {
+      clipboard,
+      documentLogs,
+      rate,
+      voiceChoice: resolvedVoiceChoice,
+    });
+  }, [clipboard, documentLogs, rate, resolvedVoiceChoice, storageKey]);
+
+  useEffect(() => {
+    setFocusBlockId(firstBlockId);
+    setPlayheadBlockId(firstBlockId);
     setEditMode(false);
     setBlockSaveStates({});
-  }, [activeDocumentKey]);
+  }, [activeDocumentKey, firstBlockId]);
 
   useEffect(() => {
     if (!aiOpen) return;
@@ -1084,6 +1253,10 @@ export default function WorkspaceShell({
       if (audioUrlRef.current) {
         URL.revokeObjectURL(audioUrlRef.current);
         audioUrlRef.current = null;
+      }
+
+      if (browserSupportsDeviceVoice()) {
+        window.speechSynthesis.cancel();
       }
     },
     [],
@@ -1136,6 +1309,24 @@ export default function WorkspaceShell({
     setStatusTone(tone);
   }
 
+  function setDocumentState(documentKey, nextState = null) {
+    if (!documentKey) return;
+
+    setDocumentStates((previous) => {
+      if (!nextState) {
+        if (!(documentKey in previous)) return previous;
+        const next = { ...previous };
+        delete next[documentKey];
+        return next;
+      }
+
+      return {
+        ...previous,
+        [documentKey]: nextState,
+      };
+    });
+  }
+
   function updateUrl(documentKey) {
     if (typeof window === "undefined") return;
     const nextUrl =
@@ -1156,8 +1347,25 @@ export default function WorkspaceShell({
     }
   }
 
+  function cancelDeviceSpeech({ incrementRunId = true } = {}) {
+    if (incrementRunId) {
+      speechRunIdRef.current += 1;
+    }
+
+    speechUtteranceRef.current = null;
+
+    if (browserSupportsDeviceVoice()) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
   function stopPlayback({ keepPlayhead = true } = {}) {
-    playbackStateRef.current.active = false;
+    playbackStateRef.current = {
+      active: false,
+      kind: null,
+      paused: false,
+      documentKey: playbackStateRef.current.documentKey || null,
+    };
     setIsPlaying(false);
     setLoadingAudio(false);
 
@@ -1171,40 +1379,105 @@ export default function WorkspaceShell({
       audioUrlRef.current = null;
     }
 
+    cancelDeviceSpeech();
+
     if (!keepPlayhead) {
       setPlayheadBlockId(null);
     }
   }
 
   function pausePlayback() {
-    playbackStateRef.current.active = false;
+    playbackStateRef.current = {
+      ...playbackStateRef.current,
+      active: false,
+      paused: true,
+    };
     setIsPlaying(false);
     setLoadingAudio(false);
 
     if (audioRef.current) {
       audioRef.current.pause();
+      return;
+    }
+
+    if (speechUtteranceRef.current && browserSupportsDeviceVoice()) {
+      window.speechSynthesis.pause();
     }
   }
 
   function appendLog(action, detail, options = {}) {
+    const documentKey = options.documentKey || activeDocumentRef.current?.documentKey || "";
     const entry = createWorkspaceLogEntry({
       time: new Date().toISOString(),
       action,
       detail,
-      documentKey: options.documentKey || activeDocumentRef.current?.documentKey || "",
+      documentKey,
       blockIds: options.blockIds || [],
     });
 
-    setSessionLog((previous) => mergeLogs(previous, [entry]));
+    setDocumentLogs((previous) => mergeDocumentLogEntries(previous, documentKey, [entry]));
     return entry;
   }
 
-  function upsertDocument(document) {
+  function upsertDocument(document, { replaceLogs = false } = {}) {
+    const nextLogEntries = replaceLogs
+      ? normalizeWorkspaceLogEntries(document.logEntries, document.documentKey)
+      : mergeLogs(
+          documentLogsRef.current[document.documentKey] || [],
+          normalizeWorkspaceLogEntries(document.logEntries, document.documentKey),
+        );
+    const nextDocument = {
+      ...document,
+      logEntries: nextLogEntries,
+    };
+
+    setDocumentLogs((previous) => ({
+      ...previous,
+      [document.documentKey]: nextLogEntries,
+    }));
     setDocumentCache((previous) => ({
       ...previous,
-      [document.documentKey]: document,
+      [document.documentKey]: nextDocument,
     }));
-    setDocumentsState((previous) => mergeDocumentSummary(previous, document));
+    setDocumentsState((previous) => mergeDocumentSummary(previous, nextDocument));
+  }
+
+  async function fetchLatestDocument(documentKey) {
+    const response = await fetch(
+      `/api/workspace/document?documentKey=${encodeURIComponent(documentKey)}`,
+      { cache: "no-store" },
+    );
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.document) {
+      throw new Error(payload?.error || "Could not load the latest document.");
+    }
+
+    return payload.document;
+  }
+
+  async function reloadLatestDocument(documentKey = activeDocumentKey) {
+    if (!documentKey) return;
+
+    try {
+      if (documentKey === activeDocumentKey) {
+        stopPlayback();
+      }
+
+      const latestDocument = await fetchLatestDocument(documentKey);
+      upsertDocument(latestDocument, { replaceLogs: true });
+      setDocumentState(documentKey, {
+        status: "saved",
+        message: "Loaded latest version",
+      });
+      setBlockSaveStates({});
+      setFeedback(`Loaded the latest version of ${latestDocument.title}.`, "success");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not reload the latest version.",
+        "error",
+      );
+    }
   }
 
   async function loadDocument(documentKey) {
@@ -1215,17 +1488,7 @@ export default function WorkspaceShell({
 
     try {
       if (!documentCache[documentKey]) {
-        const response = await fetch(
-          `/api/workspace/document?documentKey=${encodeURIComponent(documentKey)}`,
-          { cache: "no-store" },
-        );
-        const payload = await response.json().catch(() => null);
-
-        if (!response.ok || !payload?.document) {
-          throw new Error(payload?.error || "Could not load the document.");
-        }
-
-        upsertDocument(payload.document);
+        upsertDocument(await fetchLatestDocument(documentKey), { replaceLogs: true });
       }
 
       startTransition(() => {
@@ -1263,17 +1526,29 @@ export default function WorkspaceShell({
         documentKey: nextDocument.documentKey,
         title: nextDocument.title,
         subtitle: nextDocument.subtitle || "",
+        baseUpdatedAt: nextDocument.updatedAt || null,
         blocks: nextDocument.blocks,
-        logEntries: sessionLog.filter((entry) => entry.documentKey === nextDocument.documentKey),
+        logEntries: getDocumentLogEntries(
+          documentLogsRef.current,
+          nextDocument.documentKey,
+          nextDocument.logEntries,
+        ),
       }),
     });
     const payload = await response.json().catch(() => null);
+
+    if (response.status === 409) {
+      const error = new Error(payload?.error || "This document changed somewhere else.");
+      error.code = payload?.code || "stale_document";
+      error.currentDocument = payload?.currentDocument || null;
+      throw error;
+    }
 
     if (!response.ok || !payload?.document) {
       throw new Error(payload?.error || "Could not save the document.");
     }
 
-    upsertDocument(payload.document);
+    upsertDocument(payload.document, { replaceLogs: true });
     return payload.document;
   }
 
@@ -1297,7 +1572,7 @@ export default function WorkspaceShell({
         throw new Error(payload?.error || "The document could not be imported.");
       }
 
-      setDocumentsState((previous) => sortDocuments([...previous, payload.document]));
+      upsertDocument(payload.document, { replaceLogs: true });
       appendLog("UPLOADED", `${payload.document.title} (${payload.document.formatLabel || "imported"})`, {
         documentKey: payload.document.documentKey,
       });
@@ -1346,7 +1621,16 @@ export default function WorkspaceShell({
         ...previous,
         [blockId]: "saved",
       }));
+      setDocumentState(activeDocument.documentKey, {
+        status: "saved",
+        message: "All changes saved",
+      });
       return;
+    }
+
+    if (currentBlock?.id === blockId) {
+      stopPlayback();
+      setFeedback("Playback stopped because the active block changed.");
     }
 
     const nextBlocks = activeDocument.blocks.map((block) =>
@@ -1376,6 +1660,10 @@ export default function WorkspaceShell({
       ...previous,
       [blockId]: "saving",
     }));
+    setDocumentState(activeDocument.documentKey, {
+      status: "saving",
+      message: "Saving changes...",
+    });
     upsertDocument(nextDocument);
     appendLog("EDITED", `${activeDocument.title} — block ${originalBlock.sourcePosition + 1} edited`, {
       documentKey: activeDocument.documentKey,
@@ -1388,13 +1676,30 @@ export default function WorkspaceShell({
         ...previous,
         [blockId]: "saved",
       }));
+      setDocumentState(activeDocument.documentKey, {
+        status: "saved",
+        message: "All changes saved",
+      });
       setFeedback(`Saved edit to block ${originalBlock.sourcePosition + 1}.`, "success");
     } catch (error) {
-      upsertDocument(activeDocument);
       setBlockSaveStates((previous) => ({
         ...previous,
-        [blockId]: "error",
+        [blockId]: error?.code === "stale_document" ? "conflict" : "error",
       }));
+      if (error?.code === "stale_document") {
+        setDocumentState(activeDocument.documentKey, {
+          status: "conflict",
+          message: "Newer version saved elsewhere",
+          serverDocument: error.currentDocument || null,
+        });
+        setFeedback("A newer version exists. Load latest before saving again.", "error");
+        return;
+      }
+
+      setDocumentState(activeDocument.documentKey, {
+        status: "error",
+        message: "Save failed",
+      });
       setFeedback(error instanceof Error ? error.message : "Could not save the edit.", "error");
     }
   }
@@ -1412,7 +1717,7 @@ export default function WorkspaceShell({
   }
 
   async function requestAudioForBlock(block) {
-    if (!voiceEnabled) {
+    if (!resolvedVoiceChoice || !playbackAvailable) {
       throw new Error("Voice is unavailable right now.");
     }
 
@@ -1423,11 +1728,11 @@ export default function WorkspaceShell({
       },
       body: JSON.stringify({
         text: block.plainText || block.text,
-        preferredProvider: voiceChoiceRef.current?.provider || undefined,
+        preferredProvider: resolvedVoiceChoice.provider || undefined,
         voiceId:
-          voiceChoiceRef.current?.provider === "device"
+          resolvedVoiceChoice.provider === "device"
             ? undefined
-            : voiceChoiceRef.current?.voiceId || undefined,
+            : resolvedVoiceChoice.voiceId || undefined,
         rate: rateRef.current,
       }),
     });
@@ -1451,7 +1756,7 @@ export default function WorkspaceShell({
     };
   }
 
-  async function playSequenceFromIndex(index) {
+  async function playCloudSequenceFromIndex(index) {
     const documentAtStart = activeDocumentRef.current;
     const sequence = blocksRef.current;
     const block = sequence[index];
@@ -1476,6 +1781,8 @@ export default function WorkspaceShell({
         audioUrlRef.current = null;
       }
 
+      cancelDeviceSpeech({ incrementRunId: false });
+
       const { blob, headers } = await requestAudioForBlock(block);
       const nextAudioUrl = URL.createObjectURL(blob);
       const audio = new Audio(nextAudioUrl);
@@ -1483,6 +1790,12 @@ export default function WorkspaceShell({
       audio.playbackRate = rateRef.current;
       audioRef.current = audio;
       audioUrlRef.current = nextAudioUrl;
+      playbackStateRef.current = {
+        active: true,
+        kind: headers.provider || voiceChoiceRef.current?.provider || null,
+        paused: false,
+        documentKey: documentAtStart.documentKey,
+      };
 
       audio.addEventListener("ended", () => {
         if (
@@ -1509,7 +1822,12 @@ export default function WorkspaceShell({
         setIsPlaying(true);
       });
 
-      setProviderLabel(headers.provider || voiceChoiceRef.current?.label || "Voice");
+      setProviderLabel(
+        formatActualProviderLabel(
+          headers.provider || voiceChoiceRef.current?.provider,
+          headers.voiceId || voiceChoiceRef.current?.voiceId || null,
+        ),
+      );
       appendLog(
         "LISTENED",
         `${documentAtStart.title} — block ${block.sourcePosition + 1}`,
@@ -1529,8 +1847,142 @@ export default function WorkspaceShell({
     }
   }
 
+  async function playDeviceSequenceFromIndex(index) {
+    const documentAtStart = activeDocumentRef.current;
+    const sequence = blocksRef.current;
+    const block = sequence[index];
+
+    if (!playbackStateRef.current.active || !block) {
+      stopPlayback();
+      return;
+    }
+
+    if (!browserSupportsDeviceVoice()) {
+      throw new Error("Device voice is unavailable in this browser.");
+    }
+
+    setPlayheadBlockId(block.id);
+    setFocusBlockId(block.id);
+    setLoadingAudio(true);
+
+    try {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
+
+      const runId = speechRunIdRef.current + 1;
+      speechRunIdRef.current = runId;
+      cancelDeviceSpeech({ incrementRunId: false });
+
+      const utterance = new SpeechSynthesisUtterance(block.plainText || block.text);
+      utterance.rate = rateRef.current;
+      speechUtteranceRef.current = utterance;
+      playbackStateRef.current = {
+        active: true,
+        kind: VOICE_PROVIDERS.device,
+        paused: false,
+        documentKey: documentAtStart.documentKey,
+      };
+
+      utterance.onstart = () => {
+        if (runId !== speechRunIdRef.current) return;
+
+        setIsPlaying(true);
+        setLoadingAudio(false);
+        setProviderLabel(formatActualProviderLabel(VOICE_PROVIDERS.device));
+        appendLog(
+          "LISTENED",
+          `${documentAtStart.title} — block ${block.sourcePosition + 1}`,
+          {
+            documentKey: documentAtStart.documentKey,
+            blockIds: [block.id],
+          },
+        );
+        setFeedback(`Playing block ${block.sourcePosition + 1}.`);
+      };
+
+      utterance.onpause = () => {
+        if (runId !== speechRunIdRef.current) return;
+
+        playbackStateRef.current = {
+          ...playbackStateRef.current,
+          active: false,
+          paused: true,
+        };
+        setIsPlaying(false);
+      };
+
+      utterance.onresume = () => {
+        if (runId !== speechRunIdRef.current) return;
+
+        playbackStateRef.current = {
+          ...playbackStateRef.current,
+          active: true,
+          paused: false,
+        };
+        setIsPlaying(true);
+      };
+
+      utterance.onerror = () => {
+        if (runId !== speechRunIdRef.current) return;
+
+        speechUtteranceRef.current = null;
+        stopPlayback();
+        setFeedback("Couldn't play this section. Try again.", "error");
+      };
+
+      utterance.onend = () => {
+        if (runId !== speechRunIdRef.current) return;
+
+        speechUtteranceRef.current = null;
+
+        if (
+          !playbackStateRef.current.active ||
+          playbackStateRef.current.documentKey !== documentAtStart.documentKey
+        ) {
+          stopPlayback();
+          return;
+        }
+
+        const nextIndex = index + 1;
+        if (nextIndex >= blocksRef.current.length) {
+          stopPlayback();
+          setFeedback(`Finished ${documentAtStart.title}.`, "success");
+          return;
+        }
+
+        void playDeviceSequenceFromIndex(nextIndex);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      stopPlayback();
+      setFeedback(error instanceof Error ? error.message : "Could not start playback.", "error");
+    } finally {
+      setLoadingAudio(false);
+    }
+  }
+
+  async function playSequenceFromIndex(index) {
+    if (voiceChoiceRef.current?.provider === VOICE_PROVIDERS.device) {
+      await playDeviceSequenceFromIndex(index);
+      return;
+    }
+
+    await playCloudSequenceFromIndex(index);
+  }
+
   async function togglePlayback() {
-    if (!blocks.length) return;
+    if (!blocks.length || !playbackAvailable) {
+      setFeedback("Voice is unavailable right now.", "error");
+      return;
+    }
 
     if (audioRef.current && !audioRef.current.paused) {
       pausePlayback();
@@ -1538,16 +1990,54 @@ export default function WorkspaceShell({
       return;
     }
 
-    if (audioRef.current && audioRef.current.paused && playbackStateRef.current.documentKey === activeDocument.documentKey) {
-      playbackStateRef.current.active = true;
+    if (
+      audioRef.current &&
+      audioRef.current.paused &&
+      playbackStateRef.current.documentKey === activeDocument.documentKey
+    ) {
+      playbackStateRef.current = {
+        ...playbackStateRef.current,
+        active: true,
+        paused: false,
+      };
       await audioRef.current.play();
       setIsPlaying(true);
       setFeedback("Playback resumed.");
       return;
     }
 
+    if (
+      speechUtteranceRef.current &&
+      playbackStateRef.current.kind === VOICE_PROVIDERS.device &&
+      playbackStateRef.current.documentKey === activeDocument.documentKey &&
+      playbackStateRef.current.paused
+    ) {
+      playbackStateRef.current = {
+        ...playbackStateRef.current,
+        active: true,
+        paused: false,
+      };
+      window.speechSynthesis.resume();
+      setIsPlaying(true);
+      setFeedback("Playback resumed.");
+      return;
+    }
+
+    if (
+      speechUtteranceRef.current &&
+      playbackStateRef.current.kind === VOICE_PROVIDERS.device &&
+      playbackStateRef.current.documentKey === activeDocument.documentKey &&
+      playbackStateRef.current.active
+    ) {
+      pausePlayback();
+      setFeedback("Playback paused.");
+      return;
+    }
+
     playbackStateRef.current = {
       active: true,
+      kind: voiceChoiceRef.current?.provider || null,
+      paused: false,
       documentKey: activeDocument.documentKey,
     };
 
@@ -1559,6 +2049,11 @@ export default function WorkspaceShell({
   }
 
   function seekAudio(deltaSeconds) {
+    if (playbackStateRef.current.kind === VOICE_PROVIDERS.device) {
+      setFeedback("Seek is only available during generated audio playback.", "error");
+      return;
+    }
+
     if (!audioRef.current) {
       setFeedback("Start playback before seeking.", "error");
       return;
@@ -1580,10 +2075,18 @@ export default function WorkspaceShell({
     setFocusBlockId(block.id);
     setPlayheadBlockId(block.id);
 
-    if (isPlaying || playbackStateRef.current.active) {
+    if (
+      isPlaying ||
+      playbackStateRef.current.active ||
+      playbackStateRef.current.paused ||
+      audioRef.current ||
+      speechUtteranceRef.current
+    ) {
       stopPlayback();
       playbackStateRef.current = {
         active: true,
+        kind: voiceChoiceRef.current?.provider || null,
+        paused: false,
         documentKey: activeDocument.documentKey,
       };
       await playSequenceFromIndex(clampedIndex);
@@ -1595,12 +2098,25 @@ export default function WorkspaceShell({
 
   function cycleRate() {
     const currentRate = clampListeningRate(rate, 1);
-    const currentIndex = RATE_STEPS.indexOf(currentRate);
-    const nextRate = RATE_STEPS[(currentIndex + 1) % RATE_STEPS.length];
+    const rateStepIndex = RATE_STEPS.indexOf(currentRate);
+    const nextRate = RATE_STEPS[(rateStepIndex + 1) % RATE_STEPS.length];
     setRate(nextRate);
     if (audioRef.current) {
       audioRef.current.playbackRate = nextRate;
     }
+
+    if (speechUtteranceRef.current && playbackStateRef.current.kind === VOICE_PROVIDERS.device) {
+      const restartIndex = currentIndex >= 0 ? currentIndex : 0;
+      stopPlayback();
+      playbackStateRef.current = {
+        active: true,
+        kind: VOICE_PROVIDERS.device,
+        paused: false,
+        documentKey: activeDocument.documentKey,
+      };
+      void playSequenceFromIndex(restartIndex);
+    }
+
     setFeedback(`Playback rate ${nextRate.toFixed(2)}x.`);
   }
 
@@ -1692,7 +2208,6 @@ export default function WorkspaceShell({
         body: JSON.stringify({
           title,
           blocks: clipboard,
-          logEntries: sessionLog,
           createReceipt: true,
         }),
       });
@@ -1702,25 +2217,32 @@ export default function WorkspaceShell({
         throw new Error(payload?.error || "Could not assemble the document.");
       }
 
-      upsertDocument(payload.document);
-      setDocumentsState(sortDocuments(payload.documents || mergeDocumentSummary(documentsState, payload.document)));
+      upsertDocument(payload.document, { replaceLogs: true });
+      setDocumentsState((previous) =>
+        sortDocuments(payload.documents || mergeDocumentSummary(previous, payload.document)),
+      );
       setClipboard([]);
       setStagedAiBlocks([]);
-      appendLog(
-        "ASSEMBLED",
-        `New document "${payload.document.title}" from ${payload.document.blocks.length} blocks`,
-        {
-          documentKey: payload.document.documentKey,
-          blockIds: payload.document.blocks.map((block) => block.id),
-        },
-      );
       if (payload?.draft?.id) {
-        appendLog("RECEIPT", `Drafted receipt for "${payload.document.title}"`, {
-          documentKey: payload.document.documentKey,
-        });
+        appendLog(
+          "RECEIPT",
+          payload.remoteReceipt
+            ? `Drafted receipt for "${payload.document.title}" and pushed it to GetReceipts`
+            : `Drafted receipt for "${payload.document.title}" locally`,
+          {
+            documentKey: payload.document.documentKey,
+          },
+        );
       }
       await loadDocument(payload.document.documentKey);
-      setFeedback(`Assembled ${payload.document.title}.`, "success");
+      setFeedback(
+        payload?.draft?.id
+          ? payload.remoteReceipt
+            ? `Assembled ${payload.document.title}. Receipt draft pushed to GetReceipts.`
+            : `Assembled ${payload.document.title}. Receipt draft saved locally.`
+          : `Assembled ${payload.document.title}.`,
+        "success",
+      );
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Could not assemble the document.", "error");
     }
@@ -1730,6 +2252,7 @@ export default function WorkspaceShell({
     setReceiptPending(true);
 
     try {
+      const receiptLogEntries = activeDocument.logEntries || [];
       const response = await fetch("/api/workspace/receipt", {
         method: "POST",
         headers: {
@@ -1738,7 +2261,7 @@ export default function WorkspaceShell({
         body: JSON.stringify({
           document: activeDocument,
           blocks: activeDocument.blocks,
-          logEntries: sessionLog,
+          logEntries: receiptLogEntries,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -1747,13 +2270,19 @@ export default function WorkspaceShell({
         throw new Error(payload?.error || "Could not draft the receipt.");
       }
 
-      appendLog("RECEIPT", `Drafted receipt for "${activeDocument.title}"`, {
-        documentKey: activeDocument.documentKey,
-      });
+      appendLog(
+        "RECEIPT",
+        payload.remoteReceipt
+          ? `Drafted receipt for "${activeDocument.title}" and pushed it to GetReceipts`
+          : `Drafted receipt for "${activeDocument.title}" locally`,
+        {
+          documentKey: activeDocument.documentKey,
+        },
+      );
       setFeedback(
         payload.remoteReceipt
-          ? `Drafted receipt and pushed it to GetReceipts.`
-          : `Drafted receipt locally.`,
+          ? "Drafted receipt and pushed it to GetReceipts."
+          : "Drafted receipt locally. It has not been pushed to GetReceipts.",
         "success",
       );
     } catch (error) {
@@ -1775,13 +2304,14 @@ export default function WorkspaceShell({
   }
 
   function exportReceipt() {
+    const receiptLogEntries = activeDocument.logEntries || [];
     downloadFile(
       `${activeDocument.documentKey}-receipt.json`,
       JSON.stringify(
         {
           documentKey: activeDocument.documentKey,
           title: activeDocument.title,
-          logEntries: sessionLog,
+          logEntries: receiptLogEntries,
         },
         null,
         2,
@@ -1829,6 +2359,7 @@ export default function WorkspaceShell({
               activeDocument={activeDocument}
               documents={documentsState}
               loadingDocumentKey={loadingDocumentKey}
+              uploading={uploading}
               onContinue={() => enterWorkspace(activeDocumentKey)}
               onOpenDocument={enterWorkspace}
               onUpload={() => fileInputRef.current?.click()}
@@ -1840,6 +2371,7 @@ export default function WorkspaceShell({
               documents={documentsState}
               activeDocumentKey={activeDocumentKey}
               loadingDocumentKey={loadingDocumentKey}
+              uploading={uploading}
               onSelect={loadDocument}
               onUpload={() => fileInputRef.current?.click()}
             />
@@ -1849,6 +2381,8 @@ export default function WorkspaceShell({
               viewMode={viewMode}
               editMode={editMode}
               aiOpen={aiOpen}
+              documentState={activeDocumentState}
+              onReloadLatest={() => void reloadLatestDocument()}
               status={status}
               statusTone={statusTone}
               onSetViewMode={setViewMode}
@@ -1859,7 +2393,7 @@ export default function WorkspaceShell({
             <section className="assembler-surface">
               {viewMode === "log" ? (
                 <LogView
-                  logEntries={sessionLog}
+                  logEntries={activeDocument.logEntries || []}
                   receiptPending={receiptPending}
                   onCreateReceipt={createReceiptDraft}
                   onExportReceipt={exportReceipt}
@@ -1944,12 +2478,14 @@ export default function WorkspaceShell({
               totalBlocks={blocks.length}
               isPlaying={isPlaying}
               loadingAudio={loadingAudio}
+              playbackAvailable={playbackAvailable}
               rate={rate}
-              voiceCatalog={voiceCatalog}
-              voiceChoice={voiceChoice || voiceCatalog[0]}
+              voiceCatalog={availableVoiceCatalog}
+              voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
               providerLabel={providerLabel}
               progress={progress}
               aiOpen={aiOpen}
+              deviceVoiceSupported={deviceVoiceSupported}
               onTogglePlayback={togglePlayback}
               onSeekBack={() => seekAudio(-10)}
               onSeekForward={() => seekAudio(10)}
@@ -1957,6 +2493,19 @@ export default function WorkspaceShell({
               onNextBlock={() => jumpToIndex(currentIndex + 1)}
               onCycleRate={cycleRate}
               onVoiceChange={(choice) => {
+                const changed =
+                  choice?.provider !== voiceChoiceRef.current?.provider ||
+                  String(choice?.voiceId || "") !== String(voiceChoiceRef.current?.voiceId || "");
+                if (
+                  changed &&
+                  (audioRef.current ||
+                    speechUtteranceRef.current ||
+                    playbackStateRef.current.active ||
+                    playbackStateRef.current.paused)
+                ) {
+                  stopPlayback();
+                  setFeedback("Playback stopped so the new voice can take over.");
+                }
                 setVoiceChoice(choice);
                 setProviderLabel(choice?.label || "Voice");
               }}

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   normalizeWorkspaceBlocks,
-  normalizeWorkspaceLogEntries,
 } from "@/lib/document-blocks";
 import {
   createRemoteReadingReceiptDraft,
@@ -34,7 +33,6 @@ export async function POST(request) {
     defaultIsAssemblyBlock: true,
     defaultOperation: "assembled",
   });
-  const logEntries = normalizeWorkspaceLogEntries(body?.logEntries);
   const createReceipt = body?.createReceipt !== false;
 
   if (blocks.length === 0) {
@@ -49,7 +47,6 @@ export async function POST(request) {
       title,
       subtitle,
       blocks,
-      logEntries,
     });
 
     let draft = null;
@@ -67,7 +64,7 @@ export async function POST(request) {
           profile: readerData.profile,
           document,
           blocks: document.blocks,
-          logEntries,
+          logEntries: document.logEntries,
           mode: "assembly",
         });
         let status = "LOCAL_DRAFT";
@@ -86,7 +83,7 @@ export async function POST(request) {
           ...buildWorkspaceReceiptDraftInput({
             document,
             blocks: document.blocks,
-            logEntries,
+            logEntries: document.logEntries,
             remoteReceiptId: remoteReceipt?.id || null,
             status,
             mode: "assembly",

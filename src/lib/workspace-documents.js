@@ -7,6 +7,7 @@ import {
   buildWorkspaceBlocksFromDocument,
   buildWorkspaceExcerptFromBlocks,
   buildWorkspaceMarkdown,
+  createWorkspaceLogEntry,
   normalizeWorkspaceBlocks,
   normalizeWorkspaceLogEntries,
 } from "@/lib/document-blocks";
@@ -51,6 +52,26 @@ function countWords(text) {
     .split(/\s+/)
     .map((part) => part.trim())
     .filter(Boolean).length;
+}
+
+function normalizeTimestampValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const parsed = Date.parse(raw);
+  if (Number.isNaN(parsed)) return null;
+  return new Date(parsed).toISOString();
+}
+
+function matchesDocumentRevision(baseUpdatedAt, currentUpdatedAt) {
+  return normalizeTimestampValue(baseUpdatedAt) === normalizeTimestampValue(currentUpdatedAt);
+}
+
+function createWorkspaceDocumentConflictError(document) {
+  const error = new Error("A newer version of this document was saved somewhere else.");
+  error.code = "stale_document";
+  error.currentDocument = document;
+  return error;
 }
 
 function getDocumentType(meta = {}, fallbackSourceType = "upload") {
@@ -311,6 +332,7 @@ export async function saveWorkspaceDocumentForUser(
     subtitle = "",
     blocks = [],
     logEntries = [],
+    baseUpdatedAt = null,
   },
 ) {
   if (!documentKey) {
@@ -342,6 +364,13 @@ export async function saveWorkspaceDocumentForUser(
         documentKey: storageDocumentKey,
       },
     });
+
+    if (!matchesDocumentRevision(baseUpdatedAt, existing?.updatedAt || current?.updatedAt || null)) {
+      throw createWorkspaceDocumentConflictError(
+        current ||
+          (await getWorkspaceDocumentForUser(userId, PRIMARY_DOCUMENT_KEY)),
+      );
+    }
 
     if (existing) {
       await prisma.readerDocument.update({
@@ -390,6 +419,12 @@ export async function saveWorkspaceDocumentForUser(
     throw new Error("Document not found.");
   }
 
+  if (!matchesDocumentRevision(baseUpdatedAt, existing.updatedAt)) {
+    throw createWorkspaceDocumentConflictError(
+      await getWorkspaceDocumentForUser(userId, existing.documentKey),
+    );
+  }
+
   const current = getWorkspaceDocumentFromRecord(existing, "upload");
 
   const normalizedBlocks = normalizeWorkspaceBlocks(blocks, {
@@ -432,7 +467,6 @@ export async function createAssemblyDocumentForUser(
     title,
     subtitle = "",
     blocks = [],
-    logEntries = [],
   },
 ) {
   const normalizedTitle = String(title || "").trim() || "Assembly";
@@ -466,6 +500,19 @@ export async function createAssemblyDocumentForUser(
       defaultIsAssemblyBlock: true,
     },
   );
+  const assemblyLogEntries = normalizeWorkspaceLogEntries(
+    [
+      createWorkspaceLogEntry({
+        action: "ASSEMBLED",
+        detail: `Created "${normalizedTitle}" from ${persistedBlocks.length} block${
+          persistedBlocks.length === 1 ? "" : "s"
+        }.`,
+        documentKey,
+        blockIds: persistedBlocks.map((block) => block.id),
+      }),
+    ],
+    documentKey,
+  );
 
   const contentMarkdown = buildStoredWorkspaceContent({
     title: normalizedTitle,
@@ -473,7 +520,7 @@ export async function createAssemblyDocumentForUser(
     documentType: "assembly",
     sourceFiles,
     blocks: persistedBlocks,
-    logEntries,
+    logEntries: assemblyLogEntries,
   });
 
   await prisma.readerDocument.create({

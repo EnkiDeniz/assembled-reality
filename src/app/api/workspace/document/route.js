@@ -47,6 +47,7 @@ export async function PUT(request) {
       documentKey,
       title: String(body?.title || "").trim(),
       subtitle: String(body?.subtitle || "").trim(),
+      baseUpdatedAt: body?.baseUpdatedAt || null,
       blocks: normalizeWorkspaceBlocks(body?.blocks, {
         documentKey,
         defaultSourceDocumentKey: documentKey,
@@ -57,6 +58,19 @@ export async function PUT(request) {
 
     return NextResponse.json({ ok: true, document });
   } catch (error) {
+    if (error?.code === "stale_document") {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          documentKey,
+          serverUpdatedAt: error.currentDocument?.updatedAt || null,
+          currentDocument: error.currentDocument || null,
+        },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not save the document." },
       { status: 400 },
