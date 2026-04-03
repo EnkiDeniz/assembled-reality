@@ -6676,6 +6676,32 @@ a {
     top: max(0.9rem, env(safe-area-inset-top));
     gap: 0.75rem;
     padding: 0.75rem 0.85rem;
+    background: color-mix(in srgb, var(--auth-panel-bg-strong) 96%, transparent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform;
+    contain: paint;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__library,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__actions,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__listen,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__utility {
+    touch-action: manipulation;
+  }
+
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__library,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__actions,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__listen,
+  .reader-shell.reader-shell--authenticated-reset .reader-player-topbar__utility {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
   }
 
   .reader-shell.reader-shell--authenticated-reset .reader-main {
