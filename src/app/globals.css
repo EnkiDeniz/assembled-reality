@@ -934,11 +934,20 @@ main {
   background: rgba(12, 13, 13, 0.96);
 }
 
+.assembler-header.is-workspace {
+  padding: 10px 14px;
+  gap: 10px;
+}
+
 .assembler-header__identity {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+.assembler-header.is-workspace .assembler-header__identity {
+  gap: 8px;
 }
 
 .assembler-header__name {
@@ -965,6 +974,14 @@ main {
   white-space: nowrap;
 }
 
+.assembler-header__context {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .assembler-header__actions {
   display: flex;
   align-items: center;
@@ -981,6 +998,11 @@ main {
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.assembler-header__start.is-active {
+  color: var(--white);
+  border-color: rgba(34, 197, 94, 0.24);
 }
 
 .assembler-header__account {
@@ -1195,20 +1217,23 @@ main {
 }
 
 .assembler-ai-toggle {
-  min-width: 38px;
+  min-width: 20px;
   min-height: 26px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--purple);
   font-size: 10px;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .assembler-ai-toggle.is-active {
-  border-color: rgba(167, 139, 250, 0.28);
+  color: #c4b5fd;
+  border-bottom-color: rgba(167, 139, 250, 0.55);
 }
 
 .assembler-surface {
@@ -3115,7 +3140,9 @@ main {
 
 .assembler-sheet__section-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -3527,6 +3554,15 @@ main {
     justify-content: space-between;
   }
 
+  .assembler-header.is-workspace {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .assembler-header.is-workspace .assembler-header__actions {
+    width: auto;
+  }
+
   .assembler-surface--launchpad {
     display: block;
     padding:
@@ -3703,10 +3739,22 @@ main {
     backdrop-filter: blur(16px);
   }
 
+  .assembler-header.is-workspace {
+    padding:
+      calc(var(--safe-top) + 10px)
+      max(16px, var(--safe-right))
+      10px
+      max(16px, var(--safe-left));
+  }
+
   .assembler-header__project {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .assembler-header__context {
+    display: none;
   }
 
   .assembler-header__actions {

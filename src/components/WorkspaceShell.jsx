@@ -862,117 +862,76 @@ function getResumeSessionLabel(summary) {
   return total ? `Block ${current} of ${total}` : `Block ${current}`;
 }
 
-function ShelfGroup({
-  label,
-  documents,
-  activeDocumentKey,
-  onSelect,
-  loadingDocumentKey,
-  emptyMessage = "",
-}) {
-  return (
-    <div className="assembler-shelf__group">
-      <span className="assembler-shelf__label">{label}</span>
-      <div className="assembler-shelf__items">
-        {documents.length ? (
-          documents.map((document) => (
-            <button
-              key={document.documentKey}
-              type="button"
-              className={`assembler-shelf__item ${
-                document.documentKey === activeDocumentKey ? "is-active" : ""
-              }`}
-              onClick={() => onSelect(document.documentKey)}
-            >
-              {document.isAssembly ? (
-                <span className="assembler-shelf__dot" aria-hidden="true" />
-              ) : null}
-              <span>{document.title}</span>
-              {loadingDocumentKey === document.documentKey ? (
-                <span className="assembler-shelf__loading">loading</span>
-              ) : null}
-            </button>
-          ))
-        ) : (
-          <span className="assembler-shelf__empty">{emptyMessage}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function WorkspaceShelf({
+  open = false,
   activeProject,
   documents,
   activeDocumentKey,
-  projectHomeActive = false,
   loadingDocumentKey,
   onOpenProjectHome,
-  onSelect,
+  onOpenDocument,
   onUpload,
+  onPasteSource,
+  onClose,
   uploading = false,
+  lastUsedMode = WORKSPACE_MODES.assemble,
 }) {
-  const grouped = groupedDocuments(documents);
-  const currentAssembly =
-    (activeProject?.currentAssemblyDocumentKey &&
-      grouped.assemblies.find(
-        (document) => document.documentKey === activeProject.currentAssemblyDocumentKey,
-      )) ||
-    grouped.assemblies[0] ||
-    null;
-  const priorAssemblies = grouped.assemblies.filter(
-    (document) => document.documentKey !== currentAssembly?.documentKey,
-  );
+  if (!open) return null;
 
   return (
-    <div className="assembler-shelf">
-      <button
-        type="button"
-        className={`assembler-shelf__home ${projectHomeActive ? "is-active" : ""}`}
-        onClick={onOpenProjectHome}
-      >
-        <span className="assembler-shelf__label">Project home</span>
-        <span className="assembler-shelf__project-name">{activeProject?.title || "Main Project"}</span>
-        <span className="assembler-shelf__home-detail">
-          {currentAssembly ? `Current assembly: ${currentAssembly.title}` : "No assembly yet"}
-        </span>
-      </button>
+    <div className={`assembler-sheet assembler-sheet--workspace ${open ? "is-open" : ""}`}>
+      <div className="assembler-sheet__backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="assembler-sheet__panel assembler-sheet__panel--workspace">
+        <div className="assembler-sheet__header">
+          <div className="assembler-home__copy">
+            <span className="assembler-sheet__eyebrow">{activeProject?.title || "Project"}</span>
+            <span className="assembler-sheet__title">Browse documents</span>
+          </div>
 
-      <ShelfGroup
-        label="Current assembly"
-        documents={currentAssembly ? [currentAssembly] : []}
-        activeDocumentKey={activeDocumentKey}
-        loadingDocumentKey={loadingDocumentKey}
-        onSelect={onSelect}
-        emptyMessage="Assemble from the clipboard to create one."
-      />
+          <div className="assembler-sheet__section-actions">
+            <button type="button" className="assembler-sheet__close" onClick={onOpenProjectHome}>
+              Project Home
+            </button>
+            <button
+              type="button"
+              className="assembler-sheet__close"
+              onClick={onUpload}
+              disabled={uploading}
+            >
+              {uploading ? "Importing..." : "Upload"}
+            </button>
+            <button type="button" className="assembler-sheet__close" onClick={onClose}>
+              Done
+            </button>
+          </div>
+        </div>
 
-      <ShelfGroup
-        label="Sources"
-        documents={grouped.sources}
-        activeDocumentKey={activeDocumentKey}
-        loadingDocumentKey={loadingDocumentKey}
-        onSelect={onSelect}
-        emptyMessage="Import or keep a source here."
-      />
+        <div className="assembler-sheet__content">
+          <ListenPicker
+            documents={documents}
+            activeDocumentKey={activeDocumentKey}
+            loadingDocumentKey={loadingDocumentKey}
+            lastUsedMode={lastUsedMode}
+            onOpenDocument={(documentKey, mode, options = {}) => {
+              onClose();
+              onOpenDocument(documentKey, mode, options);
+            }}
+          />
+        </div>
 
-      <ShelfGroup
-        label="Earlier assemblies"
-        documents={priorAssemblies}
-        activeDocumentKey={activeDocumentKey}
-        loadingDocumentKey={loadingDocumentKey}
-        onSelect={onSelect}
-        emptyMessage="No earlier assemblies yet."
-      />
-
-      <button
-        type="button"
-        className="assembler-shelf__upload"
-        onClick={onUpload}
-        disabled={uploading}
-      >
-        {uploading ? "Importing..." : "+ Drop anything"}
-      </button>
+        <div className="assembler-sheet__footer">
+          <button
+            type="button"
+            className="assembler-sheet__primary"
+            onClick={() => {
+              onClose();
+              onPasteSource();
+            }}
+          >
+            Paste Text
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1802,6 +1761,7 @@ function WorkspaceToolbar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const totalClipboardCount = clipboardCount + stagedCount;
+  const canShowEditAction = viewMode === "doc";
 
   return (
     <div className={`assembler-toolbar ${isMobileLayout ? "is-mobile" : ""}`}>
@@ -1853,20 +1813,29 @@ function WorkspaceToolbar({
           </div>
         ) : null}
 
-        {isMobileLayout ? (
-          <div className="assembler-toolbar__menu">
-            <button
-              type="button"
-              className="assembler-toolbar__menu-button"
-              onClick={() => setMenuOpen((value) => !value)}
-              aria-label="More document actions"
-            >
-              <WorkspaceActionIcon kind="menu" />
-            </button>
+        <button
+          type="button"
+          className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
+          onClick={onToggleAi}
+          aria-label={aiOpen ? "Close 7 prompt" : "Open 7 prompt"}
+        >
+          7
+        </button>
 
-            {menuOpen ? (
-              <div className="assembler-toolbar__menu-panel">
-                {viewMode === "doc" ? (
+        {isMobileLayout ? (
+          canShowEditAction ? (
+            <div className="assembler-toolbar__menu">
+              <button
+                type="button"
+                className="assembler-toolbar__menu-button"
+                onClick={() => setMenuOpen((value) => !value)}
+                aria-label="More document actions"
+              >
+                <WorkspaceActionIcon kind="menu" />
+              </button>
+
+              {menuOpen ? (
+                <div className="assembler-toolbar__menu-panel">
                   <button
                     type="button"
                     className="assembler-toolbar__menu-item"
@@ -1878,30 +1847,11 @@ function WorkspaceToolbar({
                   >
                     {editMode ? "Stop Editing" : "Edit"}
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="assembler-toolbar__menu-item"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onToggleAi();
-                  }}
-                >
-                  {aiOpen ? "Close AI" : "Open AI"}
-                </button>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
-            onClick={onToggleAi}
-            aria-label={aiOpen ? "Close AI prompt" : "Open AI prompt"}
-          >
-            {aiOpen ? "Close" : "AI"}
-          </button>
-        )}
+                </div>
+              ) : null}
+            </div>
+          ) : null
+        ) : null}
       </div>
 
       {status ? (
@@ -2761,6 +2711,7 @@ export default function WorkspaceShell({
   const [projectActionPending, setProjectActionPending] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
+  const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
   const [mobileSourceToolsOpen, setMobileSourceToolsOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
@@ -3077,6 +3028,7 @@ export default function WorkspaceShell({
     setCleanupReplace("");
     setCleanupPendingAction("");
     setListenPickerOpen(false);
+    setWorkspacePickerOpen(false);
     setMobileComposeOpen(false);
     setMobileSourceToolsOpen(false);
     pendingFocusBlockIdRef.current = null;
@@ -3176,6 +3128,11 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && workspacePickerOpen) {
+        setWorkspacePickerOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && mobileComposeOpen) {
         setMobileComposeOpen(false);
         return;
@@ -3196,7 +3153,7 @@ export default function WorkspaceShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
     async function handlePaste(event) {
@@ -3371,6 +3328,7 @@ export default function WorkspaceShell({
     setEditMode(false);
     setViewMode("doc");
     setListenPickerOpen(false);
+    setWorkspacePickerOpen(false);
     setMobileComposeOpen(false);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
@@ -3543,6 +3501,7 @@ export default function WorkspaceShell({
     }
     const normalizedMode = applyWorkspaceMode(mode);
     setLaunchpadOpen(false);
+    setWorkspacePickerOpen(false);
     setMobileComposeOpen(false);
     pendingFocusBlockIdRef.current = options.focusBlockId || null;
 
@@ -5122,6 +5081,8 @@ export default function WorkspaceShell({
     setFeedback(`Exported receipt log for ${activeDocument.title}.`, "success");
   }
 
+  const showComposeHeader = !launchpadOpen && !isListenMode;
+
   return (
     <main
       className={`assembler-page ${dropActive ? "is-dropping" : ""}`}
@@ -5165,18 +5126,42 @@ export default function WorkspaceShell({
       />
 
       <div className="assembler-shell">
-        <header className="assembler-header">
+        <header className={`assembler-header ${showComposeHeader ? "is-workspace" : ""}`}>
           <div className="assembler-header__identity">
-            <span className="assembler-header__name">Document Assembler</span>
-            {activeProject ? (
-              <span className="assembler-header__project">
-                {activeProject.title}
-              </span>
-            ) : null}
+            {showComposeHeader ? (
+              <>
+                <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
+                  Home
+                </button>
+                {activeProject ? (
+                  <span className="assembler-header__project">{activeProject.title}</span>
+                ) : null}
+                <span className="assembler-header__context">
+                  {getDocumentKindLabel(activeDocument)}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="assembler-header__name">Document Assembler</span>
+                {activeProject ? (
+                  <span className="assembler-header__project">
+                    {activeProject.title}
+                  </span>
+                ) : null}
+              </>
+            )}
           </div>
 
           <div className="assembler-header__actions">
-            {!launchpadOpen ? (
+            {showComposeHeader ? (
+              <button
+                type="button"
+                className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
+                onClick={() => setWorkspacePickerOpen(true)}
+              >
+                Browse
+              </button>
+            ) : !launchpadOpen ? (
               <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
                 Home
               </button>
@@ -5285,15 +5270,23 @@ export default function WorkspaceShell({
         ) : (
           <>
             <WorkspaceShelf
+              open={workspacePickerOpen}
               activeProject={activeProject}
               documents={projectDocuments}
               activeDocumentKey={activeDocumentKey}
-              projectHomeActive={launchpadOpen}
               loadingDocumentKey={loadingDocumentKey}
-              onOpenProjectHome={openLaunchpad}
+              onOpenProjectHome={() => {
+                setWorkspacePickerOpen(false);
+                openLaunchpad();
+              }}
               uploading={uploading}
-              onSelect={loadDocument}
+              onOpenDocument={(documentKey, mode, options = {}) => {
+                void enterWorkspace(documentKey, mode, options);
+              }}
               onUpload={() => fileInputRef.current?.click()}
+              onPasteSource={() => void pasteIntoWorkspace("source")}
+              onClose={() => setWorkspacePickerOpen(false)}
+              lastUsedMode={lastUsedMode}
             />
 
             <WorkspaceToolbar
