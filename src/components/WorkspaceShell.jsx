@@ -22,6 +22,7 @@ import {
   getProjectByKey,
   getProjectDocuments,
   getProjectEntryDocumentKey,
+  hydrateProjectsWithDocuments,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
 import { parseSevenAudioHeaders } from "@/lib/seven";
@@ -249,11 +250,15 @@ function groupedDocuments(documents) {
   };
 }
 
-function buildWorkspaceUrl(documentKey, projectKey = DEFAULT_PROJECT_KEY) {
+function buildWorkspaceUrl(documentKey, projectKey = DEFAULT_PROJECT_KEY, { launchpad = false } = {}) {
   const params = new URLSearchParams();
 
   if (projectKey && projectKey !== DEFAULT_PROJECT_KEY) {
     params.set("project", projectKey);
+  }
+
+  if (launchpad) {
+    params.set("launchpad", "1");
   }
 
   if (documentKey && documentKey !== PRIMARY_WORKSPACE_DOCUMENT_KEY) {
@@ -381,13 +386,17 @@ function WorkspaceShelf({
 
 function WorkspaceLaunchpad({
   activeProject,
+  activeProjectKey,
   projects,
   activeDocument,
   documents,
   projectDrafts = [],
+  projectActionPending = "",
   loadingDocumentKey,
   onContinue,
+  onCreateProject,
   onOpenDocument,
+  onOpenProject,
   onUpload,
   uploading = false,
 }) {
@@ -519,6 +528,48 @@ function WorkspaceLaunchpad({
         </div>
 
         <div className="assembler-launchpad__sections">
+          <div className="assembler-launchpad__section">
+            <div className="assembler-launchpad__section-head">
+              <span>Projects</span>
+              <button
+                type="button"
+                className="assembler-launchpad__section-action"
+                onClick={onCreateProject}
+                disabled={projectActionPending === "__create__"}
+              >
+                {projectActionPending === "__create__" ? "Creating..." : "New project"}
+              </button>
+            </div>
+
+            <div className="assembler-launchpad__section-list">
+              {projects.map((project) => (
+                <button
+                  key={project.projectKey}
+                  type="button"
+                  className={`assembler-launchpad__recent-row ${
+                    project.projectKey === activeProjectKey ? "is-active" : ""
+                  }`}
+                  onClick={() => onOpenProject(project.projectKey)}
+                  disabled={projectActionPending === project.projectKey}
+                >
+                  <div className="assembler-launchpad__recent-main">
+                    <span className="assembler-launchpad__recent-title">{project.title}</span>
+                    <span className="assembler-launchpad__recent-subtitle">
+                      {project.subtitle || "Project workspace"}
+                    </span>
+                  </div>
+                  <span className="assembler-launchpad__recent-meta">
+                    {projectActionPending === project.projectKey
+                      ? "opening"
+                      : project.projectKey === activeProjectKey
+                        ? "active"
+                        : `${project.sourceCount} src · ${project.assemblyCount} asm`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="assembler-launchpad__section">
             <div className="assembler-launchpad__section-head">
               <span>Current assembly</span>
@@ -1270,6 +1321,9 @@ export default function WorkspaceShell({
   const storageKey = `document-assembler:${userId}:workspace`;
 
   const [documentsState, setDocumentsState] = useState(() => sortDocuments(documents));
+  const [projectsState, setProjectsState] = useState(() =>
+    Array.isArray(projects) && projects.length ? projects : buildProjectsFromDocuments(documents),
+  );
   const [activeProjectKey, setActiveProjectKey] = useState(
     initialProjectKey || projects?.[0]?.projectKey || DEFAULT_PROJECT_KEY,
   );
@@ -1305,13 +1359,13 @@ export default function WorkspaceShell({
   const [statusTone, setStatusTone] = useState("");
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
+  const [projectActionPending, setProjectActionPending] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
 
-  const projectsState = buildProjectsFromDocuments(documentsState);
+  const hydratedProjects = hydrateProjectsWithDocuments(projectsState, documentsState);
   const activeProject =
-    getProjectByKey(projectsState, activeProjectKey) ||
-    getProjectByKey(projects, activeProjectKey) ||
-    projectsState[0] ||
+    getProjectByKey(hydratedProjects, activeProjectKey) ||
+    hydratedProjects[0] ||
     null;
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
   const availableVoiceCatalog = voiceCatalog.filter(
@@ -1567,6 +1621,58 @@ export default function WorkspaceShell({
     window.history.replaceState({}, "", nextUrl);
   }
 
+  function attachDocumentToActiveProject(document, { role = "SOURCE", setAsCurrentAssembly = false } = {}) {
+    if (!document?.documentKey) return;
+
+    setProjectsState((previous) =>
+      previous.map((project) => {
+        if (project.projectKey !== activeProjectKey) {
+          return project;
+        }
+
+        const nextDocumentKeys = Array.from(
+          new Set([...(Array.isArray(project.documentKeys) ? project.documentKeys : []), document.documentKey]),
+        );
+        const nextSourceDocumentKeys =
+          role === "SOURCE"
+            ? Array.from(
+                new Set([
+                  ...(Array.isArray(project.sourceDocumentKeys) ? project.sourceDocumentKeys : []),
+                  document.documentKey,
+                ]),
+              )
+            : Array.isArray(project.sourceDocumentKeys)
+              ? project.sourceDocumentKeys
+              : [];
+        const nextAssemblyDocumentKeys =
+          role === "ASSEMBLY"
+            ? Array.from(
+                new Set([
+                  ...(Array.isArray(project.assemblyDocumentKeys) ? project.assemblyDocumentKeys : []),
+                  document.documentKey,
+                ]),
+              )
+            : Array.isArray(project.assemblyDocumentKeys)
+              ? project.assemblyDocumentKeys
+              : [];
+
+        return {
+          ...project,
+          documentKeys: nextDocumentKeys,
+          sourceDocumentKeys: nextSourceDocumentKeys,
+          assemblyDocumentKeys: nextAssemblyDocumentKeys,
+          currentAssemblyDocumentKey: setAsCurrentAssembly
+            ? document.documentKey
+            : project.currentAssemblyDocumentKey,
+          subtitle: setAsCurrentAssembly
+            ? `Current assembly: ${document.title}`
+            : project.subtitle,
+          updatedAt: document.updatedAt || new Date().toISOString(),
+        };
+      }),
+    );
+  }
+
   function upsertProjectDraft(draft) {
     if (!draft?.id) return;
 
@@ -1576,6 +1682,48 @@ export default function WorkspaceShell({
     });
   }
 
+  function openProject(projectKey) {
+    if (!projectKey || typeof window === "undefined") return;
+
+    if (projectKey === activeProjectKey) {
+      openLaunchpad();
+      return;
+    }
+
+    setProjectActionPending(projectKey);
+    window.location.assign(buildWorkspaceUrl("", projectKey, { launchpad: true }));
+  }
+
+  async function createProject() {
+    const fallbackTitle = `Project ${hydratedProjects.length + 1}`;
+    const title = window.prompt("Name this project", fallbackTitle)?.trim();
+    if (!title) return;
+
+    setProjectActionPending("__create__");
+
+    try {
+      const response = await fetch("/api/workspace/project", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.project?.projectKey) {
+        throw new Error(payload?.error || "Could not create the project.");
+      }
+
+      window.location.assign(
+        buildWorkspaceUrl("", payload.project.projectKey, { launchpad: true }),
+      );
+    } catch (error) {
+      setProjectActionPending("");
+      setFeedback(error instanceof Error ? error.message : "Could not create the project.", "error");
+    }
+  }
+
   function openLaunchpad() {
     stopPlayback();
     setAiOpen(false);
@@ -1583,7 +1731,11 @@ export default function WorkspaceShell({
     setViewMode("doc");
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
-      window.history.replaceState({}, "", buildWorkspaceUrl("", activeProjectKey));
+      window.history.replaceState(
+        {},
+        "",
+        buildWorkspaceUrl("", activeProjectKey, { launchpad: true }),
+      );
     }
   }
 
@@ -1814,6 +1966,7 @@ export default function WorkspaceShell({
       }
 
       upsertDocument(payload.document, { replaceLogs: true });
+      attachDocumentToActiveProject(payload.document, { role: "SOURCE" });
       appendLog("UPLOADED", `${payload.document.title} (${payload.document.formatLabel || "imported"})`, {
         documentKey: payload.document.documentKey,
       });
@@ -2460,6 +2613,10 @@ export default function WorkspaceShell({
       }
 
       upsertDocument(payload.document, { replaceLogs: true });
+      attachDocumentToActiveProject(payload.document, {
+        role: "ASSEMBLY",
+        setAsCurrentAssembly: true,
+      });
       setDocumentsState((previous) =>
         sortDocuments(payload.documents || mergeDocumentSummary(previous, payload.document)),
       );
@@ -2609,14 +2766,18 @@ export default function WorkspaceShell({
           <section className="assembler-surface assembler-surface--launchpad">
             <WorkspaceLaunchpad
               activeProject={activeProject}
-              projects={projectsState}
+              activeProjectKey={activeProjectKey}
+              projects={hydratedProjects}
               activeDocument={activeDocument}
               documents={projectDocuments}
               projectDrafts={projectDraftsState}
+              projectActionPending={projectActionPending}
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
               onContinue={() => enterWorkspace(getProjectEntryDocumentKey(activeProject))}
+              onCreateProject={() => void createProject()}
               onOpenDocument={enterWorkspace}
+              onOpenProject={openProject}
               onUpload={() => fileInputRef.current?.click()}
             />
           </section>

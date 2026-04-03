@@ -1,4 +1,5 @@
 import { IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/Providers";
 import "@/app/globals.css";
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className={mono.variable}>
       <body>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );

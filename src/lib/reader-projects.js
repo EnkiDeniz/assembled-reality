@@ -4,9 +4,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_PROJECT_KEY,
+  PRIMARY_WORKSPACE_DOCUMENT_KEY,
   buildDefaultProjectFromDocuments,
   buildProjectsFromDocuments,
 } from "@/lib/project-model";
+import { slugify } from "@/lib/text";
 
 const DEFAULT_PROJECT_TITLE = "Main Project";
 const DEFAULT_PROJECT_SUBTITLE = "Start from a source and build toward a working assembly.";
@@ -42,6 +44,34 @@ function getDefaultProjectSeed(currentAssemblyDocumentKey = null) {
     subtitle: DEFAULT_PROJECT_SUBTITLE,
     currentAssemblyDocumentKey: currentAssemblyDocumentKey || null,
   };
+}
+
+async function ensureUniqueProjectKey(userId, baseKey) {
+  const readerProjectModel = getReaderProjectModel();
+  if (!readerProjectModel) {
+    return baseKey;
+  }
+
+  const normalizedBaseKey = String(baseKey || "").trim() || "project";
+  const existingKeys = new Set(
+    (
+      await readerProjectModel.findMany({
+        where: { userId },
+        select: { projectKey: true },
+      })
+    ).map((entry) => entry.projectKey),
+  );
+
+  if (!existingKeys.has(normalizedBaseKey)) {
+    return normalizedBaseKey;
+  }
+
+  let index = 2;
+  while (existingKeys.has(`${normalizedBaseKey}-${index}`)) {
+    index += 1;
+  }
+
+  return `${normalizedBaseKey}-${index}`;
 }
 
 function sortProjectDocumentsForPersistence(documents = []) {
@@ -269,6 +299,68 @@ export async function getReaderProjectForUser(
   options = {},
 ) {
   return findOrCreateProjectRecordForUser(userId, projectKey, options);
+}
+
+export async function createReaderProjectForUser(
+  userId,
+  {
+    title,
+    subtitle = "",
+    sourceDocumentKeys = [PRIMARY_WORKSPACE_DOCUMENT_KEY],
+  } = {},
+) {
+  const readerProjectModel = getReaderProjectModel();
+  const readerProjectDocumentModel = getReaderProjectDocumentModel();
+
+  if (!readerProjectModel || !readerProjectDocumentModel) {
+    throw new Error("Projects are temporarily unavailable.");
+  }
+
+  const normalizedTitle = String(title || "").trim() || "New Project";
+  const normalizedSubtitle = String(subtitle || "").trim() || DEFAULT_PROJECT_SUBTITLE;
+  const projectKey = await ensureUniqueProjectKey(userId, slugify(normalizedTitle) || "project");
+  const normalizedSourceKeys = [
+    ...new Set(
+      (Array.isArray(sourceDocumentKeys) ? sourceDocumentKeys : [PRIMARY_WORKSPACE_DOCUMENT_KEY])
+        .map((documentKey) => String(documentKey || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const initialSourceKeys = normalizedSourceKeys.length
+    ? normalizedSourceKeys
+    : [PRIMARY_WORKSPACE_DOCUMENT_KEY];
+
+  try {
+    const project = await readerProjectModel.create({
+      data: {
+        userId,
+        projectKey,
+        title: normalizedTitle,
+        subtitle: normalizedSubtitle,
+        currentAssemblyDocumentKey: null,
+        documents: {
+          create: initialSourceKeys.map((documentKey, index) => ({
+            documentKey,
+            role: "SOURCE",
+            position: index,
+          })),
+        },
+      },
+      include: {
+        documents: {
+          orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+        },
+      },
+    });
+
+    return project;
+  } catch (error) {
+    if (isMissingProjectTableError(error)) {
+      throw new Error("Projects are temporarily unavailable.");
+    }
+
+    throw error;
+  }
 }
 
 export async function attachDocumentToProjectForUser(

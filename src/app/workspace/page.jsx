@@ -32,6 +32,7 @@ export default async function WorkspacePage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const requestedDocumentKey = String(resolvedSearchParams?.document || "").trim();
   const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
+  const requestedLaunchpad = String(resolvedSearchParams?.launchpad || "").trim() === "1";
 
   const [documents, readerData] = await Promise.all([
     listReaderDocumentsForUser(session.user.id),
@@ -85,7 +86,7 @@ export default async function WorkspacePage({ searchParams }) {
       initialProjectKey={initialProject?.projectKey || null}
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={preferredVoiceChoice}
-      showLaunchpadInitially={!requestedDocumentKey && !requestedProjectKey}
+      showLaunchpadInitially={requestedLaunchpad || (!requestedDocumentKey && !requestedProjectKey)}
     />
   );
 }
