@@ -217,14 +217,16 @@ main {
   display: none;
 }
 
-.auth-shell,
-.account-shell {
+.auth-shell {
   display: grid;
   place-items: center;
 }
 
-.auth-shell__panel,
-.account-shell__panel {
+.account-shell {
+  min-height: 100vh;
+}
+
+.auth-shell__panel {
   width: min(780px, 100%);
   padding: 30px;
   border: 1px solid var(--line);
@@ -233,11 +235,65 @@ main {
   box-shadow: var(--shadow);
 }
 
+.account-shell__panel {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent 34%),
+    rgba(10, 11, 11, 0.94);
+  box-shadow: var(--shadow);
+}
+
 .auth-shell__copy,
 .account-shell__copy {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+}
+
+.auth-shell__copy {
   margin-bottom: 24px;
+}
+
+.account-shell__header {
+  display: grid;
+  gap: 14px;
+}
+
+.account-shell__lede {
+  max-width: 36rem;
+  margin: 0;
+  color: var(--soft);
+  line-height: 1.6;
+}
+
+.account-shell__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.account-shell__notice {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(17, 19, 19, 0.84);
+  color: var(--soft);
+  line-height: 1.55;
+}
+
+.account-shell__notice.is-success {
+  border-color: rgba(34, 197, 94, 0.24);
+  color: var(--green);
+}
+
+.account-shell__notice.is-error {
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #ff8b8b;
 }
 
 .auth-shell__title,
@@ -676,14 +732,23 @@ main {
 }
 
 .account-card {
+  display: grid;
+  gap: 12px;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: rgba(16, 18, 18, 0.82);
 }
 
+.account-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .account-card__title {
-  margin: 0 0 10px;
+  margin: 0;
   color: var(--muted);
   font-size: 11px;
   letter-spacing: 0.18em;
@@ -693,6 +758,108 @@ main {
 .account-card__value {
   margin: 0;
   line-height: 1.7;
+}
+
+.account-card__value--compact {
+  color: var(--soft);
+  line-height: 1.6;
+}
+
+.account-card__actions {
+  margin-top: 2px;
+}
+
+.account-card__list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.account-card__row {
+  display: grid;
+  grid-template-columns: minmax(0, 116px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.account-card__row dt {
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-card__row dd {
+  margin: 0;
+  color: var(--white);
+  word-break: break-word;
+}
+
+.account-card__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.account-profile-form {
+  display: grid;
+  gap: 12px;
+}
+
+.account-profile-form__field {
+  display: grid;
+  gap: 8px;
+}
+
+.account-profile-form__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.account-profile-form__status {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.account-profile-form__status.is-success {
+  color: var(--green);
+}
+
+.account-profile-form__status.is-error {
+  color: var(--red);
+}
+
+.account-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.account-metric {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(9, 11, 11, 0.82);
+}
+
+.account-metric__value {
+  color: var(--white);
+  font-size: clamp(1.3rem, 2.8vw, 1.7rem);
+  line-height: 1;
+}
+
+.account-metric__label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .receipt-list {
@@ -1667,6 +1834,57 @@ main {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+.assembler-document__asset {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  max-width: 360px;
+  margin-top: 12px;
+  margin-left: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(14, 16, 16, 0.92);
+}
+
+.assembler-document__asset-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.assembler-document__asset-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.assembler-document__asset-badge {
+  color: var(--amber);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-document__asset-label {
+  color: var(--white);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assembler-document__asset-link {
+  color: var(--green);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .assembler-document__actions {
@@ -2877,6 +3095,126 @@ main {
   gap: 8px;
 }
 
+.assembler-image-chooser {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.assembler-image-chooser__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.assembler-image-chooser__panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(680px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(10, 11, 11, 0.98);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+}
+
+.assembler-image-chooser__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.assembler-image-chooser__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-image-chooser__title {
+  margin: 0;
+  color: var(--white);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  line-height: 1.08;
+}
+
+.assembler-image-chooser__body {
+  max-width: 36rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.assembler-image-chooser__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-image-chooser__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assembler-image-chooser__action {
+  display: grid;
+  gap: 8px;
+  min-height: 152px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(18, 20, 20, 0.82);
+  color: var(--text);
+  text-align: left;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.assembler-image-chooser__action:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(21, 24, 24, 0.94);
+}
+
+.assembler-image-chooser__action:disabled {
+  opacity: 0.5;
+}
+
+.assembler-image-chooser__action.is-primary {
+  border-color: rgba(34, 197, 94, 0.28);
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.05), transparent 75%),
+    rgba(18, 20, 20, 0.88);
+}
+
+.assembler-image-chooser__action-label {
+  color: var(--amber);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-image-chooser__action-title {
+  color: var(--white);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.assembler-image-chooser__action-detail {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .assembler-mobile-clipboard__row {
   display: grid;
   gap: 10px;
@@ -2950,6 +3288,28 @@ main {
       max(10px, var(--safe-right))
       max(10px, var(--safe-bottom))
       max(10px, var(--safe-left));
+  }
+
+  .account-shell__panel {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .account-shell__title {
+    font-size: clamp(1.35rem, 7vw, 1.95rem);
+  }
+
+  .account-shell__actions {
+    width: 100%;
+  }
+
+  .account-shell__actions .terminal-link,
+  .account-shell__actions .terminal-button {
+    flex: 1 1 160px;
   }
 
   .assembler-shell {
@@ -3066,6 +3426,15 @@ main {
 
   .account-grid {
     grid-template-columns: 1fr;
+  }
+
+  .account-card__row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .account-metrics {
+    grid-template-columns: 1fr 1fr;
   }
 
   .assembler-log__row {
@@ -3189,6 +3558,30 @@ main {
 
   .assembler-home__action-label {
     font-size: 11px;
+  }
+
+  .assembler-image-chooser__panel {
+    top: auto;
+    right: 12px;
+    bottom: max(12px, var(--safe-bottom));
+    left: 12px;
+    width: auto;
+    transform: none;
+    padding: 16px;
+  }
+
+  .assembler-image-chooser__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assembler-document__asset {
+    grid-template-columns: 56px minmax(0, 1fr);
+    max-width: 100%;
+  }
+
+  .assembler-document__asset-thumb {
+    width: 56px;
+    height: 56px;
   }
 
   .assembler-document-row {
