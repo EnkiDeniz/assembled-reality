@@ -20,6 +20,10 @@
   --radius-xl: 24px;
   --radius-lg: 18px;
   --radius-md: 12px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
   --block-heading: #f8faf9;
   --block-paragraph: #6b7280;
   --block-list: #60a5fa;
@@ -1919,13 +1923,17 @@ main {
 
   .terminal-page,
   .assembler-page {
-    padding: 10px;
+    padding:
+      max(10px, var(--safe-top))
+      max(10px, var(--safe-right))
+      max(10px, var(--safe-bottom))
+      max(10px, var(--safe-left));
   }
 
   .assembler-shell {
-    height: calc(100dvh - 20px);
-    max-height: calc(100dvh - 20px);
-    min-height: calc(100vh - 20px);
+    height: 100%;
+    max-height: 100%;
+    min-height: 100%;
     border-radius: 20px;
   }
 
@@ -1949,13 +1957,28 @@ main {
   }
 
   .assembler-surface--launchpad {
-    padding: 18px;
+    display: block;
+    padding:
+      max(18px, var(--safe-top))
+      18px
+      max(18px, var(--safe-bottom));
     overflow-y: auto;
+  }
+
+  .assembler-launchpad {
+    min-height: auto;
+    place-items: stretch;
   }
 
   .assembler-launchpad__panel {
     gap: 20px;
-    padding: 12px 0 24px;
+    justify-items: stretch;
+    padding: 0 0 24px;
+  }
+
+  .assembler-launchpad__copy {
+    justify-items: start;
+    text-align: left;
   }
 
   .assembler-launchpad__brand {
