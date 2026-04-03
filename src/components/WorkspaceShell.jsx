@@ -818,9 +818,6 @@ function WorkspaceLaunchpad({
             </span>
             <span className="assembler-launchpad__action-label">Mode</span>
             <span className="assembler-launchpad__action-value">Listen</span>
-            {listenDocument?.title ? (
-              <span className="assembler-launchpad__action-detail">{listenDocument.title}</span>
-            ) : null}
           </button>
 
           <button
@@ -834,9 +831,6 @@ function WorkspaceLaunchpad({
             </span>
             <span className="assembler-launchpad__action-label">Mode</span>
             <span className="assembler-launchpad__action-value">Assemble</span>
-            {assembleDocument?.title ? (
-              <span className="assembler-launchpad__action-detail">{assembleDocument.title}</span>
-            ) : null}
           </button>
 
           <button
