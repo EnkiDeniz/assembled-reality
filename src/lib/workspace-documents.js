@@ -12,6 +12,11 @@ import {
 } from "@/lib/document-blocks";
 
 const META_RE = /^\s*<!--\s*assembler-meta:([A-Za-z0-9+/=_-]+)\s*-->\s*/;
+const BUILTIN_OVERRIDE_PREFIX = `${PRIMARY_DOCUMENT_KEY}--user-`;
+
+function getBuiltinWorkspaceOverrideKey(userId) {
+  return `${BUILTIN_OVERRIDE_PREFIX}${String(userId || "").trim()}`;
+}
 
 function encodeWorkspaceMeta(meta) {
   return Buffer.from(JSON.stringify(meta), "utf8").toString("base64");
@@ -190,7 +195,7 @@ export function getBuiltinWorkspaceDocument() {
   const blocks = buildWorkspaceBlocksFromDocument(parsedDocument, {
     documentKey: parsedDocument.documentKey,
     defaultSourceDocumentKey: parsedDocument.documentKey,
-    defaultIsEditable: false,
+    defaultIsEditable: true,
     defaultIsAssemblyBlock: false,
   });
 
@@ -211,7 +216,7 @@ export function getBuiltinWorkspaceDocument() {
     format: "markdown",
     excerpt: buildWorkspaceExcerptFromBlocks(blocks),
     isAssembly: false,
-    isEditable: false,
+    isEditable: true,
     createdAt: null,
     updatedAt: null,
   };
@@ -219,7 +224,47 @@ export function getBuiltinWorkspaceDocument() {
 
 export async function getWorkspaceDocumentForUser(userId, documentKey = PRIMARY_DOCUMENT_KEY) {
   if (!documentKey || documentKey === PRIMARY_DOCUMENT_KEY) {
-    return getBuiltinWorkspaceDocument();
+    const override = await prisma.readerDocument.findFirst({
+      where: {
+        userId,
+        documentKey: getBuiltinWorkspaceOverrideKey(userId),
+      },
+    });
+
+    if (!override) {
+      return getBuiltinWorkspaceDocument();
+    }
+
+    const document = getWorkspaceDocumentFromRecord(override, "builtin");
+    const blocks = normalizeWorkspaceBlocks(document.blocks, {
+      documentKey: PRIMARY_DOCUMENT_KEY,
+      defaultSourceDocumentKey: PRIMARY_DOCUMENT_KEY,
+      defaultIsEditable: true,
+      defaultIsAssemblyBlock: false,
+    });
+
+    return {
+      ...document,
+      documentKey: PRIMARY_DOCUMENT_KEY,
+      rawMarkdown: buildWorkspaceMarkdown({
+        title: document.title,
+        subtitle: document.subtitle || "",
+        blocks,
+        sectionTitle: "Document",
+      }),
+      blocks,
+      logEntries: normalizeWorkspaceLogEntries(document.logEntries, PRIMARY_DOCUMENT_KEY),
+      documentType: "builtin",
+      sourceType: "builtin",
+      sourceFiles: ["Assembled Reality"],
+      excerpt: buildWorkspaceExcerptFromBlocks(blocks),
+      isAssembly: false,
+      isEditable: true,
+    };
+  }
+
+  if (documentKey.startsWith(BUILTIN_OVERRIDE_PREFIX)) {
+    return null;
   }
 
   const record = await prisma.readerDocument.findFirst({
@@ -268,8 +313,70 @@ export async function saveWorkspaceDocumentForUser(
     logEntries = [],
   },
 ) {
-  if (!documentKey || documentKey === PRIMARY_DOCUMENT_KEY) {
-    throw new Error("The built-in document cannot be edited directly.");
+  if (!documentKey) {
+    throw new Error("Document key is required.");
+  }
+
+  if (documentKey === PRIMARY_DOCUMENT_KEY) {
+    const current = await getWorkspaceDocumentForUser(userId, PRIMARY_DOCUMENT_KEY);
+    const storageDocumentKey = getBuiltinWorkspaceOverrideKey(userId);
+    const normalizedBlocks = normalizeWorkspaceBlocks(blocks, {
+      documentKey: PRIMARY_DOCUMENT_KEY,
+      defaultSourceDocumentKey: PRIMARY_DOCUMENT_KEY,
+      defaultIsEditable: true,
+      defaultIsAssemblyBlock: false,
+    });
+    const nextTitle = String(title || current?.title || "Assembled Reality").trim();
+    const nextSubtitle = String(subtitle || current?.subtitle || "").trim();
+    const contentMarkdown = buildStoredWorkspaceContent({
+      title: nextTitle,
+      subtitle: nextSubtitle,
+      documentType: "builtin",
+      sourceFiles: ["Assembled Reality"],
+      blocks: normalizedBlocks,
+      logEntries,
+    });
+    const existing = await prisma.readerDocument.findFirst({
+      where: {
+        userId,
+        documentKey: storageDocumentKey,
+      },
+    });
+
+    if (existing) {
+      await prisma.readerDocument.update({
+        where: {
+          documentKey: storageDocumentKey,
+        },
+        data: {
+          title: nextTitle,
+          subtitle: nextSubtitle || null,
+          format: "MARKDOWN",
+          contentMarkdown,
+          wordCount: countWords(contentMarkdown),
+          sectionCount: 1,
+          mimeType: "text/markdown",
+          originalFilename: null,
+        },
+      });
+    } else {
+      await prisma.readerDocument.create({
+        data: {
+          userId,
+          documentKey: storageDocumentKey,
+          title: nextTitle,
+          subtitle: nextSubtitle || null,
+          format: "MARKDOWN",
+          mimeType: "text/markdown",
+          originalFilename: null,
+          contentMarkdown,
+          wordCount: countWords(contentMarkdown),
+          sectionCount: 1,
+        },
+      });
+    }
+
+    return getWorkspaceDocumentForUser(userId, PRIMARY_DOCUMENT_KEY);
   }
 
   const existing = await prisma.readerDocument.findFirst({

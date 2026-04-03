@@ -1,16 +1,12 @@
 import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import IntroLanding from "@/components/IntroLanding";
 import { authOptions } from "@/lib/auth";
 import { appEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function IntroPage() {
   const session = await getServerSession(authOptions);
-  if (session?.user?.id) {
-    redirect("/workspace");
-  }
 
   return (
     <IntroLanding
@@ -18,8 +14,8 @@ export default async function HomePage() {
         appleEnabled: appEnv.apple.enabled,
         magicLinksEnabled: appEnv.magicLinksEnabled,
       }}
-      signedIn={false}
-      forceIntro={false}
+      signedIn={Boolean(session?.user?.id)}
+      forceIntro
     />
   );
 }

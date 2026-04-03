@@ -260,6 +260,100 @@ function WorkspaceShelf({
   );
 }
 
+function WorkspaceLaunchpad({
+  activeDocument,
+  documents,
+  loadingDocumentKey,
+  onContinue,
+  onOpenDocument,
+  onUpload,
+}) {
+  const latestAssembly =
+    documents.find((document) => document.isAssembly || document.documentType === "assembly") || null;
+  const recentDocuments = documents.slice(0, 6);
+  const sourceCount = documents.filter(
+    (document) =>
+      document.documentType === "builtin" ||
+      (!document.isAssembly && document.documentType !== "assembly"),
+  ).length;
+  const assemblyCount = documents.filter(
+    (document) => document.isAssembly || document.documentType === "assembly",
+  ).length;
+
+  return (
+    <div className="assembler-launchpad">
+      <div className="assembler-launchpad__panel">
+        <div className="assembler-launchpad__copy">
+          <span className="terminal-kicker">Document Assembler</span>
+          <h1 className="assembler-launchpad__title">Choose a starting surface.</h1>
+          <p className="assembler-launchpad__body">
+            Open the working document, bring in a new source, or jump back into a recent assembly.
+          </p>
+          <div className="terminal-pill-row">
+            <span className="assembler-pill is-green">{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
+            <span className="assembler-pill is-cyan">{assemblyCount} assembl{assemblyCount === 1 ? "y" : "ies"}</span>
+            <span className="assembler-pill">{documents.length} total docs</span>
+          </div>
+        </div>
+
+        <div className="assembler-launchpad__actions">
+          <button type="button" className="assembler-launchpad__action is-primary" onClick={onContinue}>
+            <span className="assembler-launchpad__action-label">Continue</span>
+            <span className="assembler-launchpad__action-value">{activeDocument?.title || "Open workspace"}</span>
+          </button>
+
+          <button type="button" className="assembler-launchpad__action" onClick={onUpload}>
+            <span className="assembler-launchpad__action-label">Upload</span>
+            <span className="assembler-launchpad__action-value">Import a new source document</span>
+          </button>
+
+          {latestAssembly ? (
+            <button
+              type="button"
+              className="assembler-launchpad__action"
+              onClick={() => onOpenDocument(latestAssembly.documentKey)}
+            >
+              <span className="assembler-launchpad__action-label">Latest assembly</span>
+              <span className="assembler-launchpad__action-value">{latestAssembly.title}</span>
+            </button>
+          ) : (
+            <Link href="/account" className="assembler-launchpad__action">
+              <span className="assembler-launchpad__action-label">Account</span>
+              <span className="assembler-launchpad__action-value">Receipts, connection, profile</span>
+            </Link>
+          )}
+        </div>
+
+        <div className="assembler-launchpad__recent">
+          <div className="assembler-launchpad__recent-head">
+            <span>Recent documents</span>
+            <Link href="/account" className="assembler-launchpad__recent-link">
+              Account
+            </Link>
+          </div>
+
+          <div className="assembler-launchpad__recent-list">
+            {recentDocuments.map((document) => (
+              <button
+                key={document.documentKey}
+                type="button"
+                className="assembler-launchpad__recent-row"
+                onClick={() => onOpenDocument(document.documentKey)}
+              >
+                <span className="assembler-launchpad__recent-title">{document.title}</span>
+                <span className="assembler-launchpad__recent-meta">
+                  {document.isAssembly ? "assembly" : document.documentType === "builtin" ? "builtin" : "source"}
+                  {loadingDocumentKey === document.documentKey ? " · loading" : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorkspaceToolbar({
   activeDocument,
   viewMode,
@@ -328,6 +422,7 @@ function BlockRow({
   isNext,
   isSelected,
   editMode,
+  saveState,
   onFocus,
   onAdd,
   onRemove,
@@ -389,13 +484,38 @@ function BlockRow({
         </div>
 
         {editMode && block.isEditable ? (
-          <textarea
-            className="assembler-block__editor"
-            value={draftText}
-            onChange={(event) => setDraftText(event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-            onBlur={() => onEdit(block.id, draftText)}
-          />
+          <div className="assembler-block__editor-wrap">
+            <textarea
+              className="assembler-block__editor"
+              value={draftText}
+              onChange={(event) => setDraftText(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              onBlur={() => onEdit(block.id, draftText)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  void onEdit(block.id, draftText);
+                  event.currentTarget.blur();
+                }
+
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setDraftText(block.text);
+                  event.currentTarget.blur();
+                }
+              }}
+            />
+
+            <div className={`assembler-block__editor-status is-${saveState || "idle"}`}>
+              {saveState === "saving"
+                ? "Saving..."
+                : saveState === "saved"
+                  ? "Saved"
+                  : saveState === "error"
+                    ? "Not saved"
+                    : "Blur or Cmd/Ctrl+Enter to save"}
+            </div>
+          </div>
         ) : block.kind === "list" ? (
           <div className="assembler-block__text">
             {String(block.text || "")
@@ -649,7 +769,6 @@ function ClipboardTray({
 
 function PlayerBar({
   currentBlock,
-  nextBlock,
   currentIndex,
   totalBlocks,
   isPlaying,
@@ -739,13 +858,8 @@ function PlayerBar({
         </select>
 
         <span className="assembler-player__status">
-          {providerLabel} · {currentBlock?.sectionLabel || currentBlock?.sourceTitle || "idle"}
+          {providerLabel} · {currentBlock ? `block ${currentBlock.sourcePosition + 1}` : "idle"}
         </span>
-      </div>
-
-      <div className="assembler-player__blocks">
-        <span>now · {currentBlock?.plainText || currentBlock?.text || "no block selected"}</span>
-        <span>next · {nextBlock?.plainText || nextBlock?.text || "end of document"}</span>
       </div>
     </div>
   );
@@ -780,6 +894,7 @@ export default function WorkspaceShell({
   voiceCatalog,
   defaultVoiceChoice,
   voiceEnabled,
+  showLaunchpadInitially = false,
 }) {
   const fileInputRef = useRef(null);
   const aiInputRef = useRef(null);
@@ -824,6 +939,8 @@ export default function WorkspaceShell({
   const [receiptPending, setReceiptPending] = useState(false);
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState("");
+  const [blockSaveStates, setBlockSaveStates] = useState({});
+  const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
 
   const activeDocument = documentCache[activeDocumentKey] || initialDocument;
   const blocks = activeDocument?.blocks || [];
@@ -891,7 +1008,8 @@ export default function WorkspaceShell({
     setFocusBlockId(nextBlockId);
     setPlayheadBlockId(nextBlockId);
     setEditMode(false);
-  }, [activeDocumentKey, blocks]);
+    setBlockSaveStates({});
+  }, [activeDocumentKey]);
 
   useEffect(() => {
     if (!aiOpen) return;
@@ -982,6 +1100,17 @@ export default function WorkspaceShell({
     window.history.replaceState({}, "", nextUrl);
   }
 
+  function openLaunchpad() {
+    stopPlayback();
+    setAiOpen(false);
+    setEditMode(false);
+    setViewMode("doc");
+    setLaunchpadOpen(true);
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, "", "/workspace");
+    }
+  }
+
   function stopPlayback({ keepPlayhead = true } = {}) {
     playbackStateRef.current.active = false;
     setIsPlaying(false);
@@ -1066,6 +1195,17 @@ export default function WorkspaceShell({
     }
   }
 
+  async function enterWorkspace(documentKey = activeDocumentKey) {
+    setLaunchpadOpen(false);
+
+    if (!documentKey || documentKey === activeDocumentKey) {
+      updateUrl(activeDocumentKey);
+      return;
+    }
+
+    await loadDocument(documentKey);
+  }
+
   async function saveDocument(nextDocument) {
     if (!nextDocument?.isEditable) return;
 
@@ -1116,6 +1256,7 @@ export default function WorkspaceShell({
       appendLog("UPLOADED", `${payload.document.title} (${payload.document.formatLabel || "imported"})`, {
         documentKey: payload.document.documentKey,
       });
+      setLaunchpadOpen(false);
       await loadDocument(payload.document.documentKey);
       setFeedback(`Imported ${payload.document.title}.`, "success");
     } catch (error) {
@@ -1155,7 +1296,13 @@ export default function WorkspaceShell({
 
     const originalBlock = activeDocument.blocks.find((block) => block.id === blockId);
     if (!originalBlock) return;
-    if (normalizedText === originalBlock.text.trim()) return;
+    if (normalizedText === originalBlock.text.trim()) {
+      setBlockSaveStates((previous) => ({
+        ...previous,
+        [blockId]: "saved",
+      }));
+      return;
+    }
 
     const nextBlocks = activeDocument.blocks.map((block) =>
       block.id === blockId
@@ -1177,9 +1324,13 @@ export default function WorkspaceShell({
         subtitle: activeDocument.subtitle || "",
         blocks: nextBlocks,
         sectionTitle: activeDocument.isAssembly ? "Assembly" : "Document",
-      }),
+        }),
     };
 
+    setBlockSaveStates((previous) => ({
+      ...previous,
+      [blockId]: "saving",
+    }));
     upsertDocument(nextDocument);
     appendLog("EDITED", `${activeDocument.title} — block ${originalBlock.sourcePosition + 1} edited`, {
       documentKey: activeDocument.documentKey,
@@ -1188,8 +1339,17 @@ export default function WorkspaceShell({
 
     try {
       await saveDocument(nextDocument);
+      setBlockSaveStates((previous) => ({
+        ...previous,
+        [blockId]: "saved",
+      }));
       setFeedback(`Saved edit to block ${originalBlock.sourcePosition + 1}.`, "success");
     } catch (error) {
+      upsertDocument(activeDocument);
+      setBlockSaveStates((previous) => ({
+        ...previous,
+        [blockId]: "error",
+      }));
       setFeedback(error instanceof Error ? error.message : "Could not save the edit.", "error");
     }
   }
@@ -1605,137 +1765,160 @@ export default function WorkspaceShell({
         <header className="assembler-header">
           <span className="assembler-header__name">Document Assembler</span>
 
-          <Link href="/account" className="assembler-header__account" aria-label="Account">
-            [@]
-          </Link>
+          <div className="assembler-header__actions">
+            {!launchpadOpen ? (
+              <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
+                Start
+              </button>
+            ) : null}
+
+            <Link href="/account" className="assembler-header__account" aria-label="Account">
+              [@]
+            </Link>
+          </div>
         </header>
 
-        <WorkspaceShelf
-          documents={documentsState}
-          activeDocumentKey={activeDocumentKey}
-          loadingDocumentKey={loadingDocumentKey}
-          onSelect={loadDocument}
-          onUpload={() => fileInputRef.current?.click()}
-        />
-
-        <WorkspaceToolbar
-          activeDocument={activeDocument}
-          viewMode={viewMode}
-          editMode={editMode}
-          aiOpen={aiOpen}
-          status={status}
-          statusTone={statusTone}
-          onSetViewMode={setViewMode}
-          onToggleEditMode={() => setEditMode((value) => !value)}
-          onToggleAi={() => setAiOpen((value) => !value)}
-        />
-
-        <section className="assembler-surface">
-          {viewMode === "log" ? (
-            <LogView
-              logEntries={sessionLog}
-              receiptPending={receiptPending}
-              onCreateReceipt={createReceiptDraft}
-              onExportReceipt={exportReceipt}
-              onExportDocument={exportDocument}
+        {launchpadOpen ? (
+          <section className="assembler-surface assembler-surface--launchpad">
+            <WorkspaceLaunchpad
+              activeDocument={activeDocument}
+              documents={documentsState}
+              loadingDocumentKey={loadingDocumentKey}
+              onContinue={() => enterWorkspace(activeDocumentKey)}
+              onOpenDocument={enterWorkspace}
+              onUpload={() => fileInputRef.current?.click()}
             />
-          ) : (
-            <div className="assembler-document">
-              <div className="assembler-document__header">
-                <div>
-                  <h2 className="assembler-document__title">{activeDocument.title}</h2>
-                  {activeDocument.subtitle ? (
-                    <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
-                  ) : null}
+          </section>
+        ) : (
+          <>
+            <WorkspaceShelf
+              documents={documentsState}
+              activeDocumentKey={activeDocumentKey}
+              loadingDocumentKey={loadingDocumentKey}
+              onSelect={loadDocument}
+              onUpload={() => fileInputRef.current?.click()}
+            />
+
+            <WorkspaceToolbar
+              activeDocument={activeDocument}
+              viewMode={viewMode}
+              editMode={editMode}
+              aiOpen={aiOpen}
+              status={status}
+              statusTone={statusTone}
+              onSetViewMode={setViewMode}
+              onToggleEditMode={() => setEditMode((value) => !value)}
+              onToggleAi={() => setAiOpen((value) => !value)}
+            />
+
+            <section className="assembler-surface">
+              {viewMode === "log" ? (
+                <LogView
+                  logEntries={sessionLog}
+                  receiptPending={receiptPending}
+                  onCreateReceipt={createReceiptDraft}
+                  onExportReceipt={exportReceipt}
+                  onExportDocument={exportDocument}
+                />
+              ) : (
+                <div className="assembler-document">
+                  <div className="assembler-document__header">
+                    <div>
+                      <h2 className="assembler-document__title">{activeDocument.title}</h2>
+                      {activeDocument.subtitle ? (
+                        <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="assembler-document__meta">
+                      <span>{activeDocument.documentType}</span>
+                      <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
+                      {activeDocument.sourceFiles?.length ? (
+                        <span>source: {activeDocument.sourceFiles.join(", ")}</span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="assembler-document__blocks">
+                    {blocks.map((block) => (
+                      <BlockRow
+                        key={block.id}
+                        block={block}
+                        blockRef={(element) => {
+                          blockRefs.current[block.id] = element;
+                        }}
+                        isFocused={block.id === focusBlockId}
+                        isPlaying={block.id === currentBlock?.id && isPlaying}
+                        isNext={block.id === nextBlock?.id}
+                        isSelected={clipboard.some((item) => item.id === block.id)}
+                        editMode={editMode}
+                        saveState={blockSaveStates[block.id] || ""}
+                        onFocus={focusBlock}
+                        onAdd={addBlockToClipboard}
+                        onRemove={removeBlockFromClipboard}
+                        onEdit={editBlock}
+                      />
+                    ))}
+                  </div>
                 </div>
+              )}
+            </section>
 
-                <div className="assembler-document__meta">
-                  <span>{activeDocument.documentType}</span>
-                  <span>{formatDocumentFormat(activeDocument.format, activeDocument.originalFilename)}</span>
-                  {activeDocument.sourceFiles?.length ? (
-                    <span>source: {activeDocument.sourceFiles.join(", ")}</span>
-                  ) : null}
-                </div>
-              </div>
+            {clipboard.length || stagedAiBlocks.length ? (
+              <ClipboardTray
+                stagedBlocks={stagedAiBlocks}
+                clipboard={clipboard}
+                documents={documentsState}
+                onAcceptStagedBlock={acceptStagedBlock}
+                onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+                onClearStagedBlocks={() => setStagedAiBlocks([])}
+                onRemoveClipboardIndex={removeClipboardIndex}
+                onReorderClipboard={(index, delta) =>
+                  setClipboard((previous) => moveListItem(previous, index, delta))
+                }
+                onClearClipboard={() => setClipboard([])}
+                onAssemble={assembleClipboard}
+              />
+            ) : null}
 
-              <div className="assembler-document__blocks">
-                {blocks.map((block) => (
-                  <BlockRow
-                    key={block.id}
-                    block={block}
-                    blockRef={(element) => {
-                      blockRefs.current[block.id] = element;
-                    }}
-                    isFocused={block.id === focusBlockId}
-                    isPlaying={block.id === currentBlock?.id && isPlaying}
-                    isNext={block.id === nextBlock?.id}
-                    isSelected={clipboard.some((item) => item.id === block.id)}
-                    editMode={editMode}
-                    onFocus={focusBlock}
-                    onAdd={addBlockToClipboard}
-                    onRemove={removeBlockFromClipboard}
-                    onEdit={editBlock}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
+            {aiOpen ? (
+              <AiBar
+                inputRef={aiInputRef}
+                value={aiInput}
+                pending={aiPending}
+                onChange={setAiInput}
+                onSubmit={runAiOperation}
+                onPreset={(preset) => setAiInput(`${preset} `)}
+                onClose={() => setAiOpen(false)}
+              />
+            ) : null}
 
-        {clipboard.length || stagedAiBlocks.length ? (
-          <ClipboardTray
-            stagedBlocks={stagedAiBlocks}
-            clipboard={clipboard}
-            documents={documentsState}
-            onAcceptStagedBlock={acceptStagedBlock}
-            onAcceptAllStagedBlocks={acceptAllStagedBlocks}
-            onClearStagedBlocks={() => setStagedAiBlocks([])}
-            onRemoveClipboardIndex={removeClipboardIndex}
-            onReorderClipboard={(index, delta) =>
-              setClipboard((previous) => moveListItem(previous, index, delta))
-            }
-            onClearClipboard={() => setClipboard([])}
-            onAssemble={assembleClipboard}
-          />
-        ) : null}
-
-        {aiOpen ? (
-          <AiBar
-            inputRef={aiInputRef}
-            value={aiInput}
-            pending={aiPending}
-            onChange={setAiInput}
-            onSubmit={runAiOperation}
-            onPreset={(preset) => setAiInput(`${preset} `)}
-            onClose={() => setAiOpen(false)}
-          />
-        ) : null}
-
-        <PlayerBar
-          currentBlock={currentBlock}
-          nextBlock={nextBlock}
-          currentIndex={currentIndex}
-          totalBlocks={blocks.length}
-          isPlaying={isPlaying}
-          loadingAudio={loadingAudio}
-          rate={rate}
-          voiceCatalog={voiceCatalog}
-          voiceChoice={voiceChoice || voiceCatalog[0]}
-          providerLabel={providerLabel}
-          progress={progress}
-          aiOpen={aiOpen}
-          onTogglePlayback={togglePlayback}
-          onSeekBack={() => seekAudio(-10)}
-          onSeekForward={() => seekAudio(10)}
-          onPreviousBlock={() => jumpToIndex(currentIndex - 1)}
-          onNextBlock={() => jumpToIndex(currentIndex + 1)}
-          onCycleRate={cycleRate}
-          onVoiceChange={(choice) => {
-            setVoiceChoice(choice);
-            setProviderLabel(choice?.label || "Voice");
-          }}
-          onToggleAi={() => setAiOpen((value) => !value)}
-        />
+            <PlayerBar
+              currentBlock={currentBlock}
+              currentIndex={currentIndex}
+              totalBlocks={blocks.length}
+              isPlaying={isPlaying}
+              loadingAudio={loadingAudio}
+              rate={rate}
+              voiceCatalog={voiceCatalog}
+              voiceChoice={voiceChoice || voiceCatalog[0]}
+              providerLabel={providerLabel}
+              progress={progress}
+              aiOpen={aiOpen}
+              onTogglePlayback={togglePlayback}
+              onSeekBack={() => seekAudio(-10)}
+              onSeekForward={() => seekAudio(10)}
+              onPreviousBlock={() => jumpToIndex(currentIndex - 1)}
+              onNextBlock={() => jumpToIndex(currentIndex + 1)}
+              onCycleRate={cycleRate}
+              onVoiceChange={(choice) => {
+                setVoiceChoice(choice);
+                setProviderLabel(choice?.label || "Voice");
+              }}
+              onToggleAi={() => setAiOpen((value) => !value)}
+            />
+          </>
+        )}
       </div>
     </main>
   );

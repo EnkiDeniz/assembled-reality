@@ -60,6 +60,7 @@ export default async function WorkspacePage({ searchParams }) {
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={preferredVoiceChoice}
       voiceEnabled={appEnv.elevenlabs.enabled || appEnv.openai.enabled}
+      showLaunchpadInitially={!requestedDocumentKey}
     />
   );
 }

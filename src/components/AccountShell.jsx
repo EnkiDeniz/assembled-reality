@@ -27,6 +27,9 @@ export default function AccountShell({
             <Link href="/workspace" className="terminal-link is-primary">
               Back to workspace
             </Link>
+            <Link href="/intro" className="terminal-link">
+              View intro again
+            </Link>
             <SignOutButton className="terminal-button is-danger" />
           </div>
         </div>

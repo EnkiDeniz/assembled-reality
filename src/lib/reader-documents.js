@@ -126,7 +126,14 @@ export async function listReaderDocumentsForUser(userId) {
     buildProgressMapForUser(userId),
     readerDocumentModel
       ? readerDocumentModel.findMany({
-          where: { userId },
+          where: {
+            userId,
+            NOT: {
+              documentKey: {
+                startsWith: `${PRIMARY_DOCUMENT_KEY}--user-`,
+              },
+            },
+          },
           orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
         })
       : [],
