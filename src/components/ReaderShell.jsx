@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ReaderListenTray from "./ReaderListenTray";
@@ -33,7 +33,6 @@ import {
 } from "../lib/reader-player";
 import { EMPTY_READER_ANNOTATIONS } from "../lib/reader-store";
 import { clearBrowserSelection, getSelectionAnchor } from "../lib/selection";
-import { saveLocalReaderState } from "../lib/local-reader-db";
 import {
   buildPlaybackNodes,
   buildScopedPlaybackQueue,
@@ -296,7 +295,6 @@ function normalizeSevenView(view) {
 
 export default function ReaderShell({
   documentData,
-  sessionUser = null,
   preferences,
   setPreferences,
   initialReaderAnnotations = EMPTY_READER_ANNOTATIONS,
@@ -311,14 +309,6 @@ export default function ReaderShell({
   sevenVoiceEnabled = false,
   sevenTextProvider = null,
   sevenVoiceProvider = null,
-  persistenceMode = "remote",
-  localReaderStorageKey = null,
-  localDocumentId = null,
-  allowAdvancedFeatures = true,
-  allowAnnotations = true,
-  homeHref = "/",
-  homeLabel = "Home",
-  canSaveToAccount = false,
 }) {
   const router = useRouter();
   const initialVoiceChoice = resolvePreferredVoiceChoice(
@@ -389,7 +379,6 @@ export default function ReaderShell({
   const [noteDraft, setNoteDraft] = useState("");
   const [selectionNotice, setSelectionNotice] = useState("");
   const [receiptNotice, setReceiptNotice] = useState("");
-  const [savingLocalDocument, setSavingLocalDocument] = useState(false);
   const [evidenceItems, setEvidenceItems] = useState(() => initialEvidenceSet?.items || []);
   const [sevenView, setSevenView] = useState("guide");
   const [listenTrayCollapsed, setListenTrayCollapsed] = useState(() =>
@@ -486,12 +475,7 @@ export default function ReaderShell({
   const toolsOpen = activeOverlay === "more";
   const listenOpen = activeOverlay === "listen";
   const hasOpenOverlay = Boolean(activeOverlay);
-  const remotePersistenceEnabled = persistenceMode === "remote";
-  const localPersistenceEnabled = persistenceMode === "local" && Boolean(localReaderStorageKey);
-  const advancedFeaturesEnabled = Boolean(allowAdvancedFeatures && sessionUser?.id);
-  const annotationsEnabled = Boolean(allowAnnotations && advancedFeaturesEnabled);
-  const displayToolsLabel = advancedFeaturesEnabled ? "Advanced" : "Display";
-  const hasTrailingPanel = advancedFeaturesEnabled && (notebookOpen || sevenOpen);
+  const hasTrailingPanel = notebookOpen || sevenOpen;
   const effectiveVoiceEnabled =
     selectedVoice.provider === VOICE_PROVIDERS.device
       ? browserSpeechEnabled
@@ -569,7 +553,7 @@ export default function ReaderShell({
     listeningTransportActive || playerState.queue.length || savedListeningSession?.activeNodeId,
   );
   const listenScene = listenOpen ? "focus" : listenTrayCollapsed && hasDockSession ? "dock" : "hidden";
-  const showSevenLauncher = advancedFeaturesEnabled && !hasOpenOverlay && listenScene === "hidden";
+  const showSevenLauncher = !hasOpenOverlay && listenScene === "hidden";
 
   const lyricFocusBlockId =
     listeningTransportActive && playerCursor.blockId
@@ -679,9 +663,6 @@ export default function ReaderShell({
     voiceStatus.state === "error" ||
     voiceStatus.state === "device_fallback" ||
     !effectiveVoiceEnabled;
-  const canPersistLocalDocument = Boolean(
-    canSaveToAccount && sessionUser?.id && documentData.sourceType === "local",
-  );
 
   const registerBlock = useCallback((nextBlock) => {
     setRegisteredBlocks((current) => {
@@ -960,8 +941,8 @@ export default function ReaderShell({
 
   const openLibraryPage = useCallback(() => {
     closeOverlay({ restoreFocus: false });
-    router.push(homeHref);
-  }, [closeOverlay, homeHref, router]);
+    router.push("/library");
+  }, [closeOverlay, router]);
 
   const clearAudioUrl = useCallback(() => {
     if (audioUrlRef.current) {
@@ -2080,40 +2061,21 @@ export default function ReaderShell({
             }
           : current,
       );
-      if (remotePersistenceEnabled) {
-        void fetch("/api/reader/listening-session", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            documentKey: documentData.documentKey,
-            ...(savedListeningSession || {}),
-            preferredVoiceProvider: voiceOption.provider,
-            preferredVoiceId: voiceOption.voiceId || null,
-            preferredListeningRate: playbackSpeedRef.current,
-          }),
-        }).catch(() => {});
-      } else if (localPersistenceEnabled) {
-        void saveLocalReaderState(localReaderStorageKey, {
-          localDocumentId,
-          voicePreferences: {
-            preferredVoiceProvider: voiceOption.provider,
-            preferredVoiceId: voiceOption.voiceId || null,
-            preferredListeningRate: playbackSpeedRef.current,
-          },
-          lastOpenedAt: new Date().toISOString(),
-        }).catch(() => {});
-      }
+      void fetch("/api/reader/listening-session", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentKey: documentData.documentKey,
+          ...(savedListeningSession || {}),
+          preferredVoiceProvider: voiceOption.provider,
+          preferredVoiceId: voiceOption.voiceId || null,
+          preferredListeningRate: playbackSpeedRef.current,
+        }),
+      }).catch(() => {});
     },
-    [
-      documentData.documentKey,
-      localDocumentId,
-      localPersistenceEnabled,
-      localReaderStorageKey,
-      remotePersistenceEnabled,
-      savedListeningSession,
-    ],
+    [documentData.documentKey, savedListeningSession],
   );
 
   const handlePlaySelection = useCallback(async () => {
@@ -2318,12 +2280,6 @@ export default function ReaderShell({
   }, [playbackSpeed, selectedVoice.provider, selectedVoice.voiceId]);
 
   useEffect(() => {
-    if (advancedFeaturesEnabled) return;
-    if (activeOverlay !== "notebook" && activeOverlay !== "seven") return;
-    setActiveOverlay(null);
-  }, [activeOverlay, advancedFeaturesEnabled]);
-
-  useEffect(() => {
     if (activeOverlay === "listen") return;
     setListenTrayCollapsed(listeningTransportActive || Boolean(savedListeningSession?.activeNodeId));
   }, [activeOverlay, listeningTransportActive, savedListeningSession?.activeNodeId]);
@@ -2384,7 +2340,7 @@ export default function ReaderShell({
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    if (!remotePersistenceEnabled || !savedListeningSession?.activeNodeId) return undefined;
+    if (!savedListeningSession?.activeNodeId) return undefined;
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -2412,84 +2368,7 @@ export default function ReaderShell({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [
-    documentData.documentKey,
-    remotePersistenceEnabled,
-    savedListeningSession,
-    selectedVoice.provider,
-    selectedVoice.voiceId,
-  ]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    if (!localPersistenceEnabled) return undefined;
-
-    const timer = window.setTimeout(async () => {
-      try {
-        await saveLocalReaderState(localReaderStorageKey, {
-          localDocumentId,
-          listeningSession: savedListeningSession
-            ? {
-                ...savedListeningSession,
-                documentKey: documentData.documentKey,
-              }
-            : null,
-          voicePreferences: {
-            preferredVoiceProvider: selectedVoice.provider,
-            preferredVoiceId: selectedVoice.voiceId,
-            preferredListeningRate: playbackSpeedRef.current,
-          },
-          lastOpenedAt: new Date().toISOString(),
-        });
-      } catch {
-        // Local listening sync is best effort; the next state change will retry.
-      }
-    }, 320);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    documentData.documentKey,
-    localDocumentId,
-    localPersistenceEnabled,
-    localReaderStorageKey,
-    savedListeningSession,
-    selectedVoice.provider,
-    selectedVoice.voiceId,
-  ]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    if (!localPersistenceEnabled) return undefined;
-
-    const timer = window.setTimeout(async () => {
-      try {
-        await saveLocalReaderState(localReaderStorageKey, {
-          localDocumentId,
-          voicePreferences: {
-            preferredVoiceProvider: selectedVoice.provider,
-            preferredVoiceId: selectedVoice.voiceId,
-            preferredListeningRate: playbackSpeed,
-          },
-          lastOpenedAt: new Date().toISOString(),
-        });
-      } catch {
-        // Voice preferences are best effort for local docs.
-      }
-    }, 320);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    localDocumentId,
-    localPersistenceEnabled,
-    localReaderStorageKey,
-    playbackSpeed,
-    selectedVoice.provider,
-    selectedVoice.voiceId,
-  ]);
+  }, [documentData.documentKey, savedListeningSession, selectedVoice.provider, selectedVoice.voiceId]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
@@ -2848,10 +2727,6 @@ export default function ReaderShell({
       return undefined;
     }
 
-    if (!annotationsEnabled || !remotePersistenceEnabled) {
-      return undefined;
-    }
-
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
@@ -2875,7 +2750,7 @@ export default function ReaderShell({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [annotationsEnabled, documentData.documentKey, readerAnnotations, remotePersistenceEnabled]);
+  }, [documentData.documentKey, readerAnnotations]);
 
   useEffect(() => {
     if (!hasHydratedProgressRef.current) {
@@ -2883,54 +2758,31 @@ export default function ReaderShell({
       return undefined;
     }
 
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      const nextProgress = {
-        documentKey: documentData.documentKey,
-        sectionSlug: viewportSectionSlug,
-        progressPercent,
-        updatedAt: new Date().toISOString(),
-      };
-
-      if (remotePersistenceEnabled) {
-        try {
-          await fetch("/api/reader/progress", {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(nextProgress),
-          });
-        } catch {
-          // Progress saves are best effort.
-        }
-        return;
-      }
-
-      if (localPersistenceEnabled) {
-        try {
-          await saveLocalReaderState(localReaderStorageKey, {
-            localDocumentId,
-            progress: nextProgress,
-            lastOpenedAt: nextProgress.updatedAt,
-          });
-        } catch {
-          // Progress saves are best effort.
-        }
+      try {
+        await fetch("/api/reader/progress", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            documentKey: documentData.documentKey,
+            sectionSlug: viewportSectionSlug,
+            progressPercent,
+          }),
+          signal: controller.signal,
+        });
+      } catch {
+        // Progress saves are best effort.
       }
     }, 320);
 
     return () => {
+      controller.abort();
       window.clearTimeout(timer);
     };
-  }, [
-    documentData.documentKey,
-    localDocumentId,
-    localPersistenceEnabled,
-    localReaderStorageKey,
-    progressPercent,
-    remotePersistenceEnabled,
-    viewportSectionSlug,
-  ]);
+  }, [documentData.documentKey, progressPercent, viewportSectionSlug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -3172,61 +3024,6 @@ export default function ReaderShell({
     [addEvidenceItem, evidenceItems],
   );
 
-  const handleSaveLocalDocument = useCallback(async () => {
-    if (!canPersistLocalDocument || savingLocalDocument) return;
-
-    setSavingLocalDocument(true);
-
-    try {
-      const response = await fetch("/api/documents/import-local", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: documentData.title,
-          subtitle: documentData.subtitle || "",
-          format: documentData.format || "markdown",
-          originalFilename: documentData.originalFilename || "",
-          mimeType: documentData.mimeType || "",
-          contentMarkdown: documentData.contentMarkdown || "",
-          wordCount: documentData.wordCount || 0,
-          sectionCount: documentData.sectionCount || documentData.sections.length,
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.ok || !payload?.document?.href) {
-        throw new Error(payload?.error || "Could not save this document to your library.");
-      }
-
-      showReceiptNotice("Saved to your library.");
-      startTransition(() => {
-        router.replace(payload.document.href);
-      });
-    } catch (error) {
-      showReceiptNotice(
-        error instanceof Error ? error.message : "Could not save this document to your library.",
-      );
-    } finally {
-      setSavingLocalDocument(false);
-    }
-  }, [
-    canPersistLocalDocument,
-    documentData.contentMarkdown,
-    documentData.format,
-    documentData.mimeType,
-    documentData.originalFilename,
-    documentData.sectionCount,
-    documentData.sections.length,
-    documentData.subtitle,
-    documentData.title,
-    documentData.wordCount,
-    router,
-    savingLocalDocument,
-    showReceiptNotice,
-  ]);
-
   return (
     <div
       className={`reader-shell reader-shell--authenticated-reset text-size-${preferences.textSize} page-width-${preferences.pageWidth} ${
@@ -3248,10 +3045,10 @@ export default function ReaderShell({
           type="button"
           className="reader-player-topbar__library"
           onClick={openLibraryPage}
-          aria-label={`Return to ${homeLabel.toLowerCase()}`}
-          title={homeLabel}
+          aria-label="Return to library"
+          title="Library"
         >
-          <span>{homeLabel}</span>
+          <span>Library</span>
         </button>
 
         <div className="reader-player-topbar__identity">
@@ -3269,15 +3066,6 @@ export default function ReaderShell({
         <div className="reader-player-topbar__actions">
           <button
             type="button"
-            className={`reader-player-topbar__utility ${contentsOpen ? "is-active" : ""}`}
-            onClick={(event) => openOverlay("contents", event)}
-            aria-expanded={contentsOpen}
-            aria-label="Open contents"
-          >
-            <ContentsIcon />
-          </button>
-          <button
-            type="button"
             className={`reader-player-topbar__listen ${listenScene !== "hidden" ? "is-active" : ""}`}
             onClick={(event) => openListenTray(event)}
             aria-pressed={listenScene !== "hidden"}
@@ -3285,28 +3073,15 @@ export default function ReaderShell({
           >
             <ListenIcon />
           </button>
-          {canPersistLocalDocument ? (
-            <button
-              type="button"
-              className="reader-player-topbar__utility reader-player-topbar__tools"
-              onClick={() => void handleSaveLocalDocument()}
-              disabled={savingLocalDocument}
-              aria-label="Save to your library"
-            >
-              <span className="reader-player-topbar__tools-label">
-                {savingLocalDocument ? "Saving…" : "Save"}
-              </span>
-            </button>
-          ) : null}
           <button
             type="button"
             className={`reader-player-topbar__utility reader-player-topbar__tools ${toolsOpen ? "is-active" : ""}`}
             onClick={(event) => openOverlay("more", event)}
             aria-expanded={toolsOpen}
-            aria-label={`Open ${displayToolsLabel.toLowerCase()} options`}
+            aria-label="Open document actions"
           >
             <MoreIcon />
-            <span className="reader-player-topbar__tools-label">{displayToolsLabel}</span>
+            <span className="reader-player-topbar__tools-label">More</span>
           </button>
         </div>
       </header>
@@ -3341,39 +3116,43 @@ export default function ReaderShell({
             </button>
           </div>
 
-          {advancedFeaturesEnabled ? (
-            <div className="reader-more-sheet__quick-actions">
-              <button
-                type="button"
-                className={`reader-more-sheet__quick-button ${notebookOpen ? "is-active" : ""}`}
-                onClick={(event) => openOverlay("notebook", event)}
-              >
-                <NotebookIcon />
-                <span>Notebook</span>
-              </button>
-              <button
-                type="button"
-                className={`reader-more-sheet__quick-button ${sevenOpen ? "is-active" : ""}`}
-                onClick={(event) => openSevenView("guide", event)}
-              >
-                <SevenIcon />
-                <span>Seven</span>
-              </button>
-            </div>
-          ) : null}
+          <div className="reader-more-sheet__quick-actions">
+            <button
+              type="button"
+              className={`reader-more-sheet__quick-button ${contentsOpen ? "is-active" : ""}`}
+              onClick={(event) => openOverlay("contents", event)}
+            >
+              <ContentsIcon />
+              <span>Contents</span>
+            </button>
+            <button
+              type="button"
+              className={`reader-more-sheet__quick-button ${notebookOpen ? "is-active" : ""}`}
+              onClick={(event) => openOverlay("notebook", event)}
+            >
+              <NotebookIcon />
+              <span>Notebook</span>
+            </button>
+            <button
+              type="button"
+              className={`reader-more-sheet__quick-button ${sevenOpen ? "is-active" : ""}`}
+              onClick={(event) => openSevenView("guide", event)}
+            >
+              <SevenIcon />
+              <span>Seven</span>
+            </button>
+          </div>
 
-          {annotationsEnabled ? (
-            <div className="reader-more-sheet__actions">
-              <button
-                type="button"
-                className="reader-more-sheet__link"
-                onClick={handleToggleBookmark}
-                aria-pressed={currentBookmarked}
-              >
-                {currentBookmarked ? "Remove bookmark" : "Bookmark this section"}
-              </button>
-            </div>
-          ) : null}
+          <div className="reader-more-sheet__actions">
+            <button
+              type="button"
+              className="reader-more-sheet__link"
+              onClick={handleToggleBookmark}
+              aria-pressed={currentBookmarked}
+            >
+              {currentBookmarked ? "Remove bookmark" : "Bookmark this section"}
+            </button>
+          </div>
 
           <div className="reader-more-sheet__section">
             <p className="reader-more-sheet__section-title">Display</p>
@@ -3397,17 +3176,15 @@ export default function ReaderShell({
             />
           </div>
 
-          {advancedFeaturesEnabled ? (
-            <div className="reader-more-sheet__actions">
-              <button
-                type="button"
-                className="reader-more-sheet__link"
-                onClick={openAccountPage}
-              >
-                Open account
-              </button>
-            </div>
-          ) : null}
+          <div className="reader-more-sheet__actions">
+            <button
+              type="button"
+              className="reader-more-sheet__link"
+              onClick={openAccountPage}
+            >
+              Open account
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -3467,37 +3244,35 @@ export default function ReaderShell({
         </nav>
       </aside>
 
-      {advancedFeaturesEnabled ? (
-        <ReaderMarksPanel
-          open={notebookOpen}
-          currentLabel={currentLabel}
-          progressPercent={progressPercent}
-          scope={notebookScope}
-          onScopeChange={setNotebookScope}
-          currentBookmarked={currentBookmarked}
-          onToggleBookmark={handleToggleBookmark}
-          bookmarks={visibleBookmarks}
-          highlights={visibleHighlights}
-          notes={visibleNotes}
-          evidenceMarkIds={evidenceMarkIds}
-          onToggleMarkEvidence={handleToggleMarkEvidence}
-          onOpenSeven={(trigger) => openSevenView("evidence", trigger)}
-          onClose={() => closeOverlay()}
-          onJumpToBookmark={jumpToMark}
-          onJumpToMark={jumpToMark}
-          onDeleteBookmark={(bookmarkId) =>
-            setReaderAnnotations((current) => deleteBookmark(current, bookmarkId))
-          }
-          onDeleteHighlight={handleDeleteHighlight}
-          onDeleteNote={handleDeleteNote}
-          onUpdateNote={handleUpdateNote}
-        />
-      ) : null}
+      <ReaderMarksPanel
+        open={notebookOpen}
+        currentLabel={currentLabel}
+        progressPercent={progressPercent}
+        scope={notebookScope}
+        onScopeChange={setNotebookScope}
+        currentBookmarked={currentBookmarked}
+        onToggleBookmark={handleToggleBookmark}
+        bookmarks={visibleBookmarks}
+        highlights={visibleHighlights}
+        notes={visibleNotes}
+        evidenceMarkIds={evidenceMarkIds}
+        onToggleMarkEvidence={handleToggleMarkEvidence}
+        onOpenSeven={(trigger) => openSevenView("evidence", trigger)}
+        onClose={() => closeOverlay()}
+        onJumpToBookmark={jumpToMark}
+        onJumpToMark={jumpToMark}
+        onDeleteBookmark={(bookmarkId) =>
+          setReaderAnnotations((current) => deleteBookmark(current, bookmarkId))
+        }
+        onDeleteHighlight={handleDeleteHighlight}
+        onDeleteNote={handleDeleteNote}
+        onUpdateNote={handleUpdateNote}
+      />
 
       <ReaderListenTray
         scene={listenScene}
         sheet={listenSheet}
-        guideOpen={advancedFeaturesEnabled && sevenOpen}
+        guideOpen={sevenOpen}
         currentLabel={displayLabel}
         sectionLabel={displayLabel}
         heroText={heroPlaybackText}
@@ -3532,35 +3307,32 @@ export default function ReaderShell({
         onCloseSheet={() => setListenSheet(null)}
         onSelectQueueItem={(nodeId) => void handleJumpToQueueItem(nodeId)}
         onSelectVoice={handleSelectVoice}
-        showGuideShortcut={advancedFeaturesEnabled}
         onToggleGuide={() => openSevenView("guide")}
       />
 
-      {advancedFeaturesEnabled ? (
-        <SevenPanel
-          open={sevenOpen}
-          view={sevenView}
-          onChangeView={setSevenView}
-          textEnabled={sevenTextEnabled}
-          textProvider={sevenTextProvider}
-          effectiveVoiceEnabled={effectiveVoiceEnabled}
-          liveStatus={liveStatus}
-          showStatus={showStatus}
-          documentData={documentData}
-          activeSlug={displaySectionSlug}
-          currentLabel={displayLabel}
-          initialThread={initialConversationThread}
-          evidenceItems={evidenceItems}
-          onAddEvidenceItem={addEvidenceItem}
-          onRemoveEvidenceItem={removeEvidenceItem}
-          onShowNotice={showReceiptNotice}
-          onClose={() => closeOverlay()}
-          onOpenListen={() => openListenTray()}
-          messageAudioState={runtimeAudioState}
-          onPlayMessage={playMessageAudio}
-          onStopMessage={stopMessageAudio}
-        />
-      ) : null}
+      <SevenPanel
+        open={sevenOpen}
+        view={sevenView}
+        onChangeView={setSevenView}
+        textEnabled={sevenTextEnabled}
+        textProvider={sevenTextProvider}
+        effectiveVoiceEnabled={effectiveVoiceEnabled}
+        liveStatus={liveStatus}
+        showStatus={showStatus}
+        documentData={documentData}
+        activeSlug={displaySectionSlug}
+        currentLabel={displayLabel}
+        initialThread={initialConversationThread}
+        evidenceItems={evidenceItems}
+        onAddEvidenceItem={addEvidenceItem}
+        onRemoveEvidenceItem={removeEvidenceItem}
+        onShowNotice={showReceiptNotice}
+        onClose={() => closeOverlay()}
+        onOpenListen={() => openListenTray()}
+        messageAudioState={runtimeAudioState}
+        onPlayMessage={playMessageAudio}
+        onStopMessage={stopMessageAudio}
+      />
 
       <main className="reader-main">
         <div className="reader-column">
@@ -3573,13 +3345,7 @@ export default function ReaderShell({
                 focusedSectionSlug === "beginning" ? "is-focused-source" : ""
               } ${lyricSectionSlug === "beginning" ? "is-lyric-section" : ""}`}
             >
-              <p className="reader-beginning__eyebrow">
-                {documentData.sourceType === "builtin"
-                  ? "Sample document"
-                  : documentData.sourceType === "local"
-                    ? "Local document"
-                    : "Saved document"}
-              </p>
+              <p className="reader-beginning__eyebrow">Reading Instrument</p>
               <h1 className="reader-beginning__title">{documentData.title}</h1>
               <p className="reader-beginning__subtitle">{documentData.subtitle}</p>
               <MarkdownRenderer
@@ -3641,8 +3407,6 @@ export default function ReaderShell({
       <SelectionMenu
         selection={selectionState}
         noteDraft={noteDraft}
-        allowAnnotations={annotationsEnabled}
-        allowEvidence={advancedFeaturesEnabled}
         onPlaySelection={() => void handlePlaySelection()}
         onStartFromSelection={() => void handleStartFromSelection()}
         onQueueSelection={() => handleQueueSelectionNext()}

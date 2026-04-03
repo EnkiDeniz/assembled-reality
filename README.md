@@ -1,19 +1,19 @@
 # Assembled Reality
 
-Assembled Reality is a Next.js App Router application for importing documents and listening to them immediately. The primary product is now listener-first: a reader can land on `/`, import a text-based file without signing in, resume local progress in the browser, and use the reading player right away.
+Assembled Reality is a Next.js App Router application for a private, multi-user reading instrument. The current product is not a generic content site and not yet the full receipt-reading system described in the manuscript. What exists today is a reader-first application that lets a signed-in reader unlock the text, move through the manuscript, save personal marks, preserve progress, generate reading-receipt drafts, and use an embedded assistant called Seven for section-based explanation and read-aloud support.
 
-Signed-in features still exist, but they are secondary. Account-backed documents, annotations, receipt workflows, diagnostics, and Seven’s advanced surfaces remain available behind authenticated routes and reader views rather than blocking the main import-and-listen path.
+This README is meant to be the working foundation for the next phase of the project. It documents what is already built, how the app is structured, where the current boundaries are, and which next steps appear highest leverage.
 
 ## Product Thesis
 
-The repo now centers on one primary job:
+The repo centers on a strong product idea that already shows up clearly in the manuscript and internal docs:
 
-- import a document
-- press play immediately
-- preserve place and playback continuity
-- let save/sync/advanced tooling stay optional
+- the front door is a reading instrument, not a chatbot lobby
+- reading should preserve place, marks, and continuity
+- receipts matter more than story
+- Seven should eventually become a reader of receipts and operator structure, not only a manuscript explainer
 
-The advanced receipt/evidence/Seven work remains in the codebase, but it is no longer the product’s front door.
+Right now, the codebase implements the reading instrument more fully than it implements the deeper diagnostic system.
 
 ## What Is Built Today
 
@@ -22,26 +22,21 @@ The advanced receipt/evidence/Seven work remains in the codebase, but it is no l
 The current product loop is:
 
 1. Reader lands on `/`
-2. Reader imports a `.txt`, `.md`, `.markdown`, `.doc`, `.docx`, or `.pdf` file
-3. The file is normalized into reader markdown and saved locally in IndexedDB
-4. Reader enters `/read/local/[localDocumentId]` and starts playback immediately
-5. Reader refreshes or returns later and resumes local progress and listening state
-6. Reader optionally signs in to save a local document into the account-backed library
-7. Signed-in readers can still use `/library`, `/account`, annotations, receipts, and Seven on account-backed documents
+2. Reader passes an unlock gate through a code or cuneiform puzzle
+3. Reader signs in with Apple or email magic link if auth is configured
+4. Reader enters `/read`
+5. Reader reads the manuscript, creates bookmarks/highlights/notes, and preserves progress
+6. Reader can open Seven for section help and audio
+7. Reader can visit `/account` to manage identity, preferences, diagnostics, and receipt drafts
 
 ### Current shipped capabilities
 
-- public listener-first home on `/`
-- guest/local document ingest on `/api/documents/ingest`
-- IndexedDB-backed local document library and local reader state
-- guest/local reader route on `/read/local/[localDocumentId]`
-- public sample document route on `/read`
-- save-local-document-to-account flow on `/api/documents/import-local`
-- NextAuth-based authentication for save/sync/advanced features
+- landing-page unlock gate with session-scoped unlock state
+- alternate puzzle-based entry path
+- NextAuth-based authentication
 - Apple sign-in support when Apple credentials are present
 - email magic-link auth when Resend and sender env vars are present
-- authenticated saved-library experience on `/library`
-- authenticated advanced reader experience for account-backed docs
+- authenticated reader experience on `/read`
 - manuscript parsing from markdown in `content/assembled_reality_v07_final.md`
 - appendix replacement from repo docs so authoritative appendix files can override embedded manuscript sections
 - per-user bookmarks
@@ -70,20 +65,15 @@ The current product loop is:
 
 ### Routes
 
-- `/`: public import/listen home
-- `/read`: public sample reader with local resume for guests
-- `/read/local/[localDocumentId]`: local browser-backed reader
-- `/read/[documentKey]`: authenticated account-backed reader for saved documents
-- `/library`: authenticated saved-library view
+- `/`: unlock and auth entry flow
+- `/read`: authenticated reading application
 - `/account`: reader profile, preferences, diagnostics, reading snapshot, receipt drafts
 - `/connect/getreceipts`: starts GetReceipts connect flow
 
 ### API routes
 
+- `/api/unlock`: validates the bootstrap code
 - `/api/auth/[...nextauth]`: NextAuth entry point
-- `/api/documents`: authenticated account-backed upload/list route
-- `/api/documents/ingest`: public upload normalization route for guest/local docs
-- `/api/documents/import-local`: authenticated save-to-account route for local docs
 - `/api/reader/profile`: fetch/update reader profile
 - `/api/reader/marks`: load and save bookmarks, highlights, notes
 - `/api/reader/progress`: save reading progress
@@ -100,16 +90,15 @@ The UI is built in Next.js App Router with React 19.
 
 Key page entry points:
 
-- `src/app/page.jsx`: public listener-first home
-- `src/app/read/page.jsx`: sample document reader
-- `src/app/read/local/[localDocumentId]/page.jsx`: local document reader
-- `src/app/read/[documentKey]/page.jsx`: authenticated saved-document reader
+- `src/app/page.jsx`: session-aware landing page
+- `src/app/read/page.jsx`: authenticated reader page
 - `src/app/account/page.jsx`: authenticated account page
 
 Key UI components:
 
-- `src/components/ListenerHomeScreen.jsx`: public import/listen home
-- `src/components/LocalReadGate.jsx`: client-side local reader loader
+- `src/components/EntryGate.jsx`: bridges unlock state and auth state
+- `src/components/UnlockScreen.jsx`: access-code and puzzle front door
+- `src/components/AuthScreen.jsx`: Apple and magic-link auth UI
 - `src/components/ReadGate.jsx`: client handoff into the reader shell
 - `src/components/ReaderShell.jsx`: main reading application shell
 - `src/components/ReaderMarksPanel.jsx`: notebook/marks interface

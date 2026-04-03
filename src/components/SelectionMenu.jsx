@@ -12,8 +12,6 @@ export default function SelectionMenu({
   onChangeNoteDraft,
   onSaveNote,
   onCancel,
-  allowAnnotations = true,
-  allowEvidence = true,
 }) {
   if (!selection) return null;
 
@@ -53,36 +51,30 @@ export default function SelectionMenu({
           >
             Next
           </button>
-          {allowAnnotations ? (
-            <button
-              type="button"
-              className="selection-menu__button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onHighlight}
-            >
-              Highlight
-            </button>
-          ) : null}
-          {allowAnnotations ? (
-            <button
-              type="button"
-              className="selection-menu__button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onStartNote}
-            >
-              Add Note
-            </button>
-          ) : null}
-          {allowEvidence ? (
-            <button
-              type="button"
-              className="selection-menu__button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onAddToEvidence}
-            >
-              Add to Evidence
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onHighlight}
+          >
+            Highlight
+          </button>
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onStartNote}
+          >
+            Add Note
+          </button>
+          <button
+            type="button"
+            className="selection-menu__button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onAddToEvidence}
+          >
+            Add to Evidence
+          </button>
         </div>
       ) : (
         <div className="selection-menu__composer">

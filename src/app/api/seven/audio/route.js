@@ -12,6 +12,7 @@ import {
   getSevenReasonCode,
   getSevenRetryAfterSeconds,
 } from "@/lib/seven";
+import { getRequiredSession } from "@/lib/server-session";
 
 export const runtime = "nodejs";
 
@@ -183,6 +184,11 @@ async function requestElevenLabsSpeech(text, { voiceId = null } = {}) {
 }
 
 export async function POST(request) {
+  const session = await getRequiredSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json().catch(() => null);
   const text = String(body?.text || "").trim();
   const preferredProvider = normalizeVoiceProvider(body?.preferredProvider);
