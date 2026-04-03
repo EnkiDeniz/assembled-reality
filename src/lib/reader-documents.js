@@ -4,6 +4,10 @@ import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/do
 import { prisma } from "@/lib/prisma";
 import { buildExcerpt, slugify } from "@/lib/text";
 
+function getReaderDocumentModel() {
+  return prisma.readerDocument || null;
+}
+
 function buildDocumentHref(documentKey) {
   return documentKey === PRIMARY_DOCUMENT_KEY ? "/read" : `/read/${encodeURIComponent(documentKey)}`;
 }
@@ -91,12 +95,15 @@ async function buildProgressMapForUser(userId) {
 }
 
 async function ensureUniqueDocumentKey(baseKey) {
+  const readerDocumentModel = getReaderDocumentModel();
   const existing = new Set(
-    (
-      await prisma.readerDocument.findMany({
-        select: { documentKey: true },
-      })
-    ).map((entry) => entry.documentKey),
+    readerDocumentModel
+      ? (
+          await readerDocumentModel.findMany({
+            select: { documentKey: true },
+          })
+        ).map((entry) => entry.documentKey)
+      : [],
   );
   existing.add(PRIMARY_DOCUMENT_KEY);
 
@@ -117,12 +124,15 @@ export function getReaderDocumentHref(documentKey) {
 }
 
 export async function listReaderDocumentsForUser(userId) {
+  const readerDocumentModel = getReaderDocumentModel();
   const [progressMap, uploadedDocuments] = await Promise.all([
     buildProgressMapForUser(userId),
-    prisma.readerDocument.findMany({
-      where: { userId },
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-    }),
+    readerDocumentModel
+      ? readerDocumentModel.findMany({
+          where: { userId },
+          orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        })
+      : [],
   ]);
 
   return [
@@ -146,10 +156,15 @@ export async function createReaderDocumentForUser(
     sectionCount = 0,
   },
 ) {
+  const readerDocumentModel = getReaderDocumentModel();
+  if (!readerDocumentModel) {
+    throw new Error("Document uploads are temporarily unavailable.");
+  }
+
   const baseKey = slugify(title) || slugify(originalFilename) || "uploaded-document";
   const documentKey = await ensureUniqueDocumentKey(baseKey);
 
-  const record = await prisma.readerDocument.create({
+  const record = await readerDocumentModel.create({
     data: {
       userId,
       documentKey,
@@ -172,7 +187,12 @@ export async function getReaderDocumentDataForUser(userId, documentKey = PRIMARY
     return getParsedDocument();
   }
 
-  const record = await prisma.readerDocument.findFirst({
+  const readerDocumentModel = getReaderDocumentModel();
+  if (!readerDocumentModel) {
+    return null;
+  }
+
+  const record = await readerDocumentModel.findFirst({
     where: {
       userId,
       documentKey,
@@ -200,7 +220,12 @@ export async function getReaderDocumentSummaryForUser(userId, documentKey = PRIM
     return serializeBuiltinDocument();
   }
 
-  const record = await prisma.readerDocument.findFirst({
+  const readerDocumentModel = getReaderDocumentModel();
+  if (!readerDocumentModel) {
+    return null;
+  }
+
+  const record = await readerDocumentModel.findFirst({
     where: {
       userId,
       documentKey,

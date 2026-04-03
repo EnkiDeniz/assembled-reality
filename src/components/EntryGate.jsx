@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import AuthScreen from "@/components/AuthScreen";
 
 export default function EntryGate({
@@ -10,14 +8,6 @@ export default function EntryGate({
   documentTitle,
   authCapabilities,
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      router.replace("/library");
-    }
-  }, [router, session?.user?.id]);
-
   if (session?.user?.id) return null;
 
   return (
