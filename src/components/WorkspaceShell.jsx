@@ -1145,7 +1145,7 @@ function WorkspaceLaunchpad({
             <WorkspaceActionIcon kind="paste-source" />
           </span>
           <span className="assembler-home__action-label">
-            {pastePendingMode === "source" ? "Pasting…" : "Paste source"}
+            {pastePendingMode === "source" ? "Pasting…" : "Paste copied text"}
           </span>
         </button>
 
@@ -1158,7 +1158,7 @@ function WorkspaceLaunchpad({
           <span className="assembler-home__action-icon" aria-hidden="true">
             <WorkspaceActionIcon kind="browse" />
           </span>
-          <span className="assembler-home__action-label">Paste link</span>
+          <span className="assembler-home__action-label">Import from link</span>
         </button>
 
         <button
@@ -1652,10 +1652,10 @@ function LinkIntakeChooser({
           <div className="assembler-image-chooser__copy">
             <span className="assembler-sheet__eyebrow">Pasted link</span>
             <h2 id="link-intake-title" className="assembler-image-chooser__title">
-              Turn this link into a source?
+              Use this link as a source?
             </h2>
             <p className="assembler-image-chooser__body">
-              Fetch the readable page as a source document, or keep the raw URL text instead.
+              Fetch the page behind this link and turn it into a source document, or keep only the URL text.
             </p>
           </div>
 
@@ -1681,7 +1681,7 @@ function LinkIntakeChooser({
             disabled={pending}
           >
             <span className="assembler-image-chooser__action-label">LINK → DOC</span>
-            <span className="assembler-image-chooser__action-title">Fetch link source</span>
+            <span className="assembler-image-chooser__action-title">Fetch page from link</span>
             <span className="assembler-image-chooser__action-detail">
               Extract the readable page and keep the original URL as provenance.
             </span>
@@ -1694,7 +1694,7 @@ function LinkIntakeChooser({
             disabled={pending}
           >
             <span className="assembler-image-chooser__action-label">RAW TEXT</span>
-            <span className="assembler-image-chooser__action-title">Paste raw URL</span>
+            <span className="assembler-image-chooser__action-title">Keep URL as text</span>
             <span className="assembler-image-chooser__action-detail">
               Keep the link as text instead of fetching the page.
             </span>
@@ -3844,7 +3844,7 @@ export default function WorkspaceShell({
         url,
         payload: clipboardPayload,
       });
-      setFeedback("Choose how to use this link.");
+      setFeedback("Choose whether to fetch the page or keep the URL as text.");
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Could not read a link from the clipboard.", "error");
     }
@@ -4196,7 +4196,7 @@ export default function WorkspaceShell({
           url: urlFromClipboard,
           payload: clipboardPayload,
         });
-        setFeedback("Choose how to use this link.");
+        setFeedback("Choose whether to fetch the page or keep the URL as text.");
         return;
       }
 
@@ -5594,7 +5594,7 @@ export default function WorkspaceShell({
             const pendingUrl = pendingLinkIntake?.url || "";
             setPendingLinkIntake(null);
             setPastePendingMode("source");
-            setFeedback("Fetching link source...");
+            setFeedback("Fetching page from link...");
             void createLinkSource(pendingUrl)
               .catch((error) => {
                 setFeedback(
