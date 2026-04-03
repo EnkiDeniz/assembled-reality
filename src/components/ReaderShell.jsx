@@ -320,11 +320,9 @@ export default function ReaderShell({
       sevenVoiceProvider,
     initialVoicePreferences?.preferredVoiceId || initialListeningSession?.voiceId,
   );
-  const initialHash =
-    typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
-  const initialSectionSlug = initialHash || initialReadingProgress?.sectionSlug || "beginning";
+  const initialSectionSlug = initialReadingProgress?.sectionSlug || "beginning";
 
-  const [activeOverlay, setActiveOverlay] = useState(() => getSyncedOverlayFromUrl());
+  const [activeOverlay, setActiveOverlay] = useState(null);
   const [viewportSectionSlug, setViewportSectionSlug] = useState(initialSectionSlug);
   const [viewportBlockId, setViewportBlockId] = useState(null);
   const [playerCursor, setPlayerCursor] = useState({
@@ -2490,6 +2488,9 @@ export default function ReaderShell({
         window.location.hash.replace("#", "") ||
         initialReadingProgress?.sectionSlug ||
         "beginning";
+      const syncedOverlay = getSyncedOverlayFromUrl();
+      setActiveOverlay((current) => (current === syncedOverlay ? current : syncedOverlay));
+      setViewportSectionSlug((current) => (current === targetSlug ? current : targetSlug));
       const target = document.getElementById(targetSlug);
       if (!target) return;
 
@@ -2788,7 +2789,8 @@ export default function ReaderShell({
     if (typeof window === "undefined") return undefined;
 
     const handlePopState = () => {
-      setActiveOverlay(getSyncedOverlayFromUrl());
+      const syncedOverlay = getSyncedOverlayFromUrl();
+      setActiveOverlay((current) => (current === syncedOverlay ? current : syncedOverlay));
     };
 
     window.addEventListener("popstate", handlePopState);
