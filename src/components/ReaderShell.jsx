@@ -338,7 +338,6 @@ export default function ReaderShell({
     providerMode: initialVoiceChoice.provider === VOICE_PROVIDERS.device ? "device" : "provider",
     queue: [],
     currentIndex: -1,
-    overlay: null,
   }));
   const [runtimeAudioState, setRuntimeAudioState] = useState(() =>
     createIdleRuntimeAudioState(
@@ -702,10 +701,23 @@ export default function ReaderShell({
         node.blockId ||
         getFirstSectionBlock(blocks, node.sectionSlug)?.blockId ||
         null;
-      setPlayerCursor({
-        sectionSlug: node.sectionSlug || viewportSectionSlug,
-        blockId: fallbackBlockId,
-        blockIndex: fallbackBlockId ? getBlockIndex(blocks, fallbackBlockId) : -1,
+      const nextSectionSlug = node.sectionSlug || viewportSectionSlug;
+      const nextBlockIndex = fallbackBlockId ? getBlockIndex(blocks, fallbackBlockId) : -1;
+
+      setPlayerCursor((current) => {
+        if (
+          current.sectionSlug === nextSectionSlug &&
+          current.blockId === fallbackBlockId &&
+          current.blockIndex === nextBlockIndex
+        ) {
+          return current;
+        }
+
+        return {
+          sectionSlug: nextSectionSlug,
+          blockId: fallbackBlockId,
+          blockIndex: nextBlockIndex,
+        };
       });
     },
     [blocks, viewportSectionSlug],
@@ -2195,17 +2207,29 @@ export default function ReaderShell({
 
     setPlayerCursor((current) => {
       if (current.blockId && blocks.some((block) => block.blockId === current.blockId)) {
-        return {
-          ...current,
-          blockIndex: getBlockIndex(blocks, current.blockId),
-        };
+        const nextBlockIndex = getBlockIndex(blocks, current.blockId);
+        return current.blockIndex === nextBlockIndex
+          ? current
+          : {
+              ...current,
+              blockIndex: nextBlockIndex,
+            };
       }
 
       const fallback = getFirstSectionBlock(blocks, viewportSectionSlug) || blocks[0];
+      const nextBlockIndex = getBlockIndex(blocks, fallback.blockId);
+      if (
+        current.sectionSlug === fallback.sectionSlug &&
+        current.blockId === fallback.blockId &&
+        current.blockIndex === nextBlockIndex
+      ) {
+        return current;
+      }
+
       return {
         sectionSlug: fallback.sectionSlug,
         blockId: fallback.blockId,
-        blockIndex: getBlockIndex(blocks, fallback.blockId),
+        blockIndex: nextBlockIndex,
       };
     });
   }, [blocks, viewportSectionSlug]);
@@ -2254,13 +2278,6 @@ export default function ReaderShell({
   useEffect(() => {
     prefetchedAudioRef.current.clear();
   }, [playbackSpeed, selectedVoice.provider, selectedVoice.voiceId]);
-
-  useEffect(() => {
-    setPlayerState((current) => ({
-      ...current,
-      overlay: activeOverlay === "seven" ? sevenView : activeOverlay === "listen" ? "listen" : null,
-    }));
-  }, [activeOverlay, sevenView]);
 
   useEffect(() => {
     if (activeOverlay === "listen") return;
@@ -2441,6 +2458,7 @@ export default function ReaderShell({
 
     setPlayerState((current) => {
       if (
+        current.sourceType === runtimeAudioState.sourceType &&
         current.status === runtimeAudioState.status &&
         current.providerMode === runtimeAudioState.mode
       ) {
