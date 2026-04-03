@@ -63,8 +63,9 @@ function serializeDocumentSummary(documentData, record = null, progressPercent =
   };
 }
 
-function serializeBuiltinDocument(progressPercent = 0) {
-  return serializeDocumentSummary(getBuiltinWorkspaceDocument(), null, progressPercent);
+async function serializeBuiltinDocumentForUser(userId, progressPercent = 0) {
+  const documentData = await getWorkspaceDocumentForUser(userId, PRIMARY_DOCUMENT_KEY);
+  return serializeDocumentSummary(documentData || getBuiltinWorkspaceDocument(), null, progressPercent);
 }
 
 function serializeUploadedDocument(record, progressPercent = 0) {
@@ -139,9 +140,13 @@ export async function listReaderDocumentsForUser(userId) {
         })
       : [],
   ]);
+  const builtinDocument = await serializeBuiltinDocumentForUser(
+    userId,
+    progressMap.get(PRIMARY_DOCUMENT_KEY) || 0,
+  );
 
   return [
-    serializeBuiltinDocument(progressMap.get(PRIMARY_DOCUMENT_KEY) || 0),
+    builtinDocument,
     ...uploadedDocuments.map((record) =>
       serializeUploadedDocument(record, progressMap.get(record.documentKey) || 0),
     ),
@@ -214,7 +219,7 @@ export async function getReaderDocumentDataForUser(userId, documentKey = PRIMARY
 
 export async function getReaderDocumentSummaryForUser(userId, documentKey = PRIMARY_DOCUMENT_KEY) {
   if (!documentKey || documentKey === PRIMARY_DOCUMENT_KEY) {
-    return serializeBuiltinDocument();
+    return serializeBuiltinDocumentForUser(userId);
   }
 
   const readerDocumentModel = getReaderDocumentModel();
