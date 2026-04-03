@@ -62,19 +62,39 @@ Above the threshold, you need persistent intermediate memory, deliberate selecti
 
 ## 4. The Front Door
 
-The entry point is dead simple: **upload a document, press play, listen.**
+**Drop in anything. Listen to everything.**
 
-People have PDFs they haven't read. Research they've been meaning to get to. Briefs they skimmed. The immediate value: this tool reads it to you block by block while you watch it flow.
+The input is anything a human can produce: a PDF, a Word doc, a photo, a screenshot, a voice memo, a link, pasted text. The output is always the same: listenable blocks with lineage. Every format collapses into one atom — a block of markdown that can be heard, selected, assembled, and receipted. The intake layer is format-agnostic. The assembly layer doesn't care what the input was. It only cares that there are blocks with source tracking.
+
+This is the anything-to-blocks pipeline:
+
+- **Documents** (PDF, DOCX, MD, TXT) → parsed into sections → blocks
+- **Images and screenshots** → vision describes the content in detail → blocks. A photo of a house becomes "Two-story craftsman, cedar shingle siding, covered front porch with tapered columns, three dormers." A screenshot of a conversation becomes the extracted text with structure preserved.
+- **Voice memos** → transcribed → blocks. A rambling 3-minute voice note becomes structured paragraphs you can listen back to, pick from, and assemble with other material.
+- **Links** → page content extracted → blocks. An article, a product page, a recipe — pulled in and decomposed.
+- **Pasted content** → HTML or text normalized to markdown → blocks
+
+The output is always the same. Blocks you can hear.
+
+This changes the front door completely. "Upload a document" requires having a document. "Drop in anything" requires having a phone. You see a house you want to build — photograph it. You hear something worth remembering — voice memo. You find a page worth keeping — paste the link. Five seconds later, it's blocks. Press play.
+
+The immediate value: whatever is in your camera roll, your downloads folder, your screenshots, your voice memos — you can hear it, block by block, while you watch it flow.
 
 But something happens naturally. You're listening. A block hits you. You tap "+". You didn't plan to start assembling. You just saved something that mattered. You keep listening. You tap "+" two more times. The clipboard has three blocks. You see "Assemble." You tap it. A new document appears, made from the three parts that mattered to you. The receipt was created in the background.
 
 **The loop happened without the user knowing the loop exists.**
 
+Consider what this enables:
+
+An architect photographs five buildings they admire. Each photo becomes a detailed description in blocks. They listen to all five, pick the elements that matter — "cantilevered upper volume" from one, "vertical wood cladding" from another, "recessed ground floor" from a third. They assemble a mood document that describes the building they want to design. The receipt proves which images informed the design direction. That's Assembly Theory: basic parts (photos), intermediate memory (clipboard), selection (picking), construction (assembly), evidence (receipt).
+
+Or: someone plans a trip. They screenshot flight options, photograph a friend's handwritten restaurant list, paste in a hotel link, upload a PDF guide. All different formats. All become blocks. All listenable. They pick across all four sources and assemble a trip plan. Then they go on the trip. They photograph the places they actually visited. Those photos become blocks too — blocks that become part of the *return receipt*. Evidence of what actually happened, captured in the real world, turned into the same atoms as the plan. The gap between intention and outcome is visible because both are made of the same material.
+
 Then at some point they notice the built-in document on the shelf — "Assembled Reality." They press play out of curiosity. They start hearing operator sentences. "Friction is not failure. Friction is testimony." They tap "+". "Wipe the story. Keep the receipts." Plus. They're assembling the framework document using the framework's own tool.
 
 That is the product teaching itself. The document explains the tool the user has already been using. The theory arrives after the experience, not before.
 
-This means the product's first priority is making the simple version — listen, pick, build — feel flawless. Everything else is discovered through use.
+The product's first priority is making the simple version — drop, listen, pick, build — feel flawless. Everything else is discovered through use.
 
 ---
 

@@ -236,9 +236,9 @@ export default function IntroLanding({
       <section className="intro-shell">
         <div className="intro-copy">
           <span className="terminal-kicker">Assembled Reality</span>
-          <h1 className="intro-copy__title">Listen to any document. Keep what matters.</h1>
+          <h1 className="intro-copy__title">Drop in anything. Listen to everything.</h1>
           <p className="intro-copy__body">
-            Drop a PDF, press play, and build something from the parts that land.
+            PDFs, photos, voice memos, screenshots, links — everything becomes blocks you can hear, pick, and assemble.
           </p>
         </div>
 
