@@ -8,52 +8,6 @@ import { signIn } from "next-auth/react";
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
 const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
 
-const STEPS = [
-  {
-    id: "source",
-    headline: "Start with a source.",
-    body: "Import PDF, Word, markdown, or plain text. The workspace turns it into blocks you can inspect, move, and reuse.",
-  },
-  {
-    id: "inspect",
-    headline: "Inspect it block by block.",
-    body: "Read it, play it, and pull the parts that matter into the clipboard without losing where they came from.",
-  },
-  {
-    id: "assemble",
-    headline: "Assemble something usable.",
-    body: "Order the blocks, edit where needed, and turn the selection into a new assembly with visible lineage.",
-  },
-  {
-    id: "receipt",
-    headline: "Keep the receipt.",
-    body: "Draft or export the log so the source, selections, edits, and assembly stay attached to the outcome.",
-  },
-];
-
-function PiecesVisual() {
-  const pieces = [
-    { kind: "heading", text: "Project plan" },
-    { kind: "paragraph", text: "The goal is to ship before the quarter closes." },
-    { kind: "paragraph", text: "Each team owns one deliverable and reports weekly." },
-    { kind: "quote", text: "Move fast but leave receipts." },
-  ];
-
-  return (
-    <div className="intro-visual intro-visual--blocks" aria-hidden="true">
-      {pieces.map((piece) => (
-        <div key={piece.text} className={`intro-mini-block is-${piece.kind}`}>
-          <div className="intro-mini-block__stripe" />
-          <div className="intro-mini-block__body">
-            <span className="intro-mini-block__label">{piece.kind}</span>
-            <span className="intro-mini-block__text">{piece.text}</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function ListenVisual() {
   const [active, setActive] = useState(0);
   const lines = [
@@ -98,53 +52,6 @@ function ListenVisual() {
       </div>
     </div>
   );
-}
-
-function BuildVisual() {
-  const rows = [
-    "[Source] Ship before the quarter closes",
-    "[Notes] Each team owns one deliverable",
-    "[AI] Summary of both",
-  ];
-
-  return (
-    <div className="intro-visual intro-visual--build" aria-hidden="true">
-      <div className="intro-build__stack">
-        {rows.map((row, index) => (
-          <div key={row} className="intro-build__row">
-            <span className="intro-build__index">{index + 1}</span>
-            <span className="intro-build__text">{row}</span>
-          </div>
-        ))}
-      </div>
-      <div className="intro-build__result">Assemble → New document on shelf</div>
-    </div>
-  );
-}
-
-function LoopVisual() {
-  const chain = ["SOURCE", "BLOCKS", "ASSEMBLY", "RECEIPT"];
-
-  return (
-    <div className="intro-visual intro-visual--loop" aria-hidden="true">
-      <div className="intro-loop__chain">
-        {chain.map((item, index) => (
-          <div key={item} className="intro-loop__item">
-            <span>{item}</span>
-            {index < chain.length - 1 ? <span className="intro-loop__arrow">→</span> : null}
-          </div>
-        ))}
-      </div>
-      <span className="intro-loop__return">proof stays with the result</span>
-    </div>
-  );
-}
-
-function IntroVisual({ stepId }) {
-  if (stepId === "source") return <PiecesVisual />;
-  if (stepId === "inspect") return <ListenVisual />;
-  if (stepId === "assemble") return <BuildVisual />;
-  return <LoopVisual />;
 }
 
 function subscribeToIntroState(callback) {
@@ -193,7 +100,7 @@ function AuthPanel({ authCapabilities, signedIn }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace",
+        callbackUrl: "/workspace?mode=listen",
       });
 
       if (result?.error) {
@@ -212,9 +119,8 @@ function AuthPanel({ authCapabilities, signedIn }) {
     return (
       <div className="intro-auth">
         <div className="intro-auth__copy">
-          <span className="terminal-kicker">Intro Replay</span>
           <h2 className="intro-auth__title">Your workspace is ready.</h2>
-          <p className="terminal-copy">Open it when you’re ready to inspect a source, build an assembly, or draft a receipt.</p>
+          <p className="terminal-copy">Press play where you left off.</p>
         </div>
         <div className="terminal-actions">
           <Link href="/workspace" className="terminal-link is-primary">
@@ -229,10 +135,7 @@ function AuthPanel({ authCapabilities, signedIn }) {
     <div className="intro-auth">
       <div className="intro-auth__copy">
         <span className="terminal-kicker">Get Started</span>
-        <h2 className="intro-auth__title">Start with a source.</h2>
-        <p className="terminal-copy">
-          Sign in once and head straight to the workspace to import, inspect, assemble, and keep the receipt.
-        </p>
+        <h2 className="intro-auth__title">Sign in to start listening.</h2>
       </div>
 
       <div className="terminal-actions">
@@ -240,7 +143,7 @@ function AuthPanel({ authCapabilities, signedIn }) {
           type="button"
           className="terminal-button is-primary"
           disabled={!authCapabilities.appleEnabled}
-          onClick={() => signIn("apple", { callbackUrl: "/workspace" })}
+          onClick={() => signIn("apple", { callbackUrl: "/workspace?mode=listen" })}
         >
           Continue with Apple
         </button>
@@ -283,44 +186,34 @@ export default function IntroLanding({
   forceIntro = false,
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
   const seenIntro = useSyncExternalStore(
     subscribeToIntroState,
     getIntroSeenSnapshot,
     getIntroSeenServerSnapshot,
   );
   const stage =
-    forceIntro || signedIn ? "intro" : seenIntro === null ? "loading" : seenIntro ? "auth" : "intro";
+    forceIntro || signedIn
+      ? "landing"
+      : seenIntro === null
+        ? "loading"
+        : seenIntro
+          ? "auth"
+          : "landing";
 
   function markIntroSeen() {
     try {
       window.localStorage.setItem(INTRO_STORAGE_KEY, "1");
       window.dispatchEvent(new Event(INTRO_STORAGE_EVENT));
     } catch {
-      // Ignore storage failures and continue into the workspace flow.
+      // Ignore storage failures.
     }
   }
 
-  function handleNext() {
-    if (step < STEPS.length - 1) {
-      setStep((value) => value + 1);
-      return;
-    }
-
+  function handleEnter() {
     markIntroSeen();
 
     if (signedIn) {
-      router.push("/workspace");
-      return;
-    }
-  }
-
-  function handleSkip() {
-    markIntroSeen();
-
-    if (signedIn) {
-      router.push("/workspace");
-      return;
+      router.push("/workspace?mode=listen");
     }
   }
 
@@ -333,70 +226,42 @@ export default function IntroLanding({
       <main className="intro-page">
         <section className="intro-auth-shell">
           <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} />
-          {!forceIntro ? (
-            <Link href="/intro" className="intro-auth-shell__replay">
-              View intro again
-            </Link>
-          ) : null}
         </section>
       </main>
     );
   }
 
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
-
   return (
     <main className="intro-page">
       <section className="intro-shell">
-        <div className="intro-progress" aria-hidden="true">
-          {STEPS.map((entry, index) => (
-            <span
-              key={entry.id}
-              className={`intro-progress__dot ${
-                index === step ? "is-active" : index < step ? "is-complete" : ""
-              }`}
-            />
-          ))}
-        </div>
-
         <div className="intro-copy">
-          <span className="terminal-kicker">Document Assembler</span>
-          <h1 className="intro-copy__title">{current.headline}</h1>
-          <p className="intro-copy__body">{current.body}</p>
+          <span className="terminal-kicker">Assembled Reality</span>
+          <h1 className="intro-copy__title">Listen to any document. Keep what matters.</h1>
+          <p className="intro-copy__body">
+            Drop a PDF, press play, and build something from the parts that land.
+          </p>
         </div>
 
         <div className="intro-stage">
-          <IntroVisual stepId={current.id} />
+          <ListenVisual />
         </div>
 
-        <div className="intro-actions">
-          {step > 0 ? (
+        {signedIn ? (
+          <div className="intro-actions">
+            <span />
             <button
               type="button"
-              className="intro-actions__button"
-              onClick={() => setStep((value) => Math.max(0, value - 1))}
+              className="intro-actions__button is-primary"
+              onClick={handleEnter}
             >
-              Back
+              Open workspace
             </button>
-          ) : (
-            <span />
-          )}
-
-          <button
-            type="button"
-            className={`intro-actions__button ${isLast ? "is-primary" : ""}`}
-            onClick={handleNext}
-          >
-            {isLast ? (signedIn ? "Open workspace" : "Start assembling") : "Next"}
-          </button>
-        </div>
-
-        {!isLast ? (
-          <button type="button" className="intro-skip" onClick={handleSkip}>
-            skip intro
-          </button>
-        ) : null}
+          </div>
+        ) : (
+          <div className="intro-auth-inline">
+            <AuthPanel authCapabilities={authCapabilities} signedIn={false} />
+          </div>
+        )}
       </section>
     </main>
   );

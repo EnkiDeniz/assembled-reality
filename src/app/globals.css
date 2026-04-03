@@ -640,6 +640,17 @@ main {
   gap: 18px;
 }
 
+.intro-auth-inline {
+  width: min(520px, 100%);
+}
+
+.intro-auth-inline .intro-auth {
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .intro-auth {
   width: min(520px, 100%);
   padding: 30px;

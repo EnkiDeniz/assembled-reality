@@ -4,6 +4,22 @@ Document Assembler is a tool for reading, listening to, editing, and assembling 
 
 This repository is in the middle of a product pivot. The old reader-first specs have been removed. This `README.md` is now the product source of truth.
 
+## Active Docs
+
+Use these first:
+
+- `README.md` for the current product summary
+- `docs/AR Version 2.md` for next-stage product thinking
+- `docs/AR Version 2 Build Plan.md` for the implementation roadmap
+
+## Reference Docs
+
+These are still useful, but they are reference inputs, not the current source of truth:
+
+- `prototype/document-assembler-concept.md`
+- `prototype/document-assembler-addon-spec.md`
+- `prototype/document-assembler-cursor-inspiration.md`
+
 ## One-Line Summary
 
 Read it, think about it, build something new from it, and prove that you did.
