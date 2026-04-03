@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import {
   EMPTY_READER_ANNOTATIONS,
   normalizeIncomingStore,
@@ -11,6 +12,41 @@ import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
 import { getReaderProjectForUser } from "@/lib/reader-projects";
 import { buildExcerpt, slugify } from "@/lib/text";
 import { prisma } from "@/lib/prisma";
+
+const readingReceiptDraftSelection = {
+  id: true,
+  userId: true,
+  readerProfileId: true,
+  documentKey: true,
+  conversationThreadId: true,
+  getReceiptsReceiptId: true,
+  status: true,
+  title: true,
+  interpretation: true,
+  implications: true,
+  stance: true,
+  linkedEvidenceItemIds: true,
+  linkedMessageIds: true,
+  sourceSections: true,
+  sourceMarkIds: true,
+  payload: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
+function isMissingReceiptProjectIdColumnError(error) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2022") {
+    return false;
+  }
+
+  return String(error.meta?.column || "")
+    .toLowerCase()
+    .includes("projectid");
+}
 
 function toAnnotationStore({ bookmarks, highlights, notes }) {
   return {
@@ -304,30 +340,45 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
     projectId = project?.id || null;
   }
 
-  return prisma.readingReceiptDraft.create({
-    data: {
-      userId,
-      readerProfileId: profile.id,
-      projectId,
-      documentKey: draftInput.documentKey || PRIMARY_DOCUMENT_KEY,
-      conversationThreadId: draftInput.conversationThreadId || null,
-      getReceiptsReceiptId: draftInput.getReceiptsReceiptId || null,
-      status: draftInput.status || "LOCAL_DRAFT",
-      title: draftInput.title || null,
-      interpretation: draftInput.interpretation || null,
-      implications: draftInput.implications || null,
-      stance: draftInput.stance || "TENTATIVE",
-      linkedEvidenceItemIds: Array.isArray(draftInput.linkedEvidenceItemIds)
-        ? draftInput.linkedEvidenceItemIds
-        : [],
-      linkedMessageIds: Array.isArray(draftInput.linkedMessageIds)
-        ? draftInput.linkedMessageIds
-        : [],
-      sourceSections: Array.isArray(draftInput.sourceSections) ? draftInput.sourceSections : [],
-      sourceMarkIds: Array.isArray(draftInput.sourceMarkIds) ? draftInput.sourceMarkIds : [],
-      payload: draftInput.payload || null,
-    },
-  });
+  const data = {
+    userId,
+    readerProfileId: profile.id,
+    projectId,
+    documentKey: draftInput.documentKey || PRIMARY_DOCUMENT_KEY,
+    conversationThreadId: draftInput.conversationThreadId || null,
+    getReceiptsReceiptId: draftInput.getReceiptsReceiptId || null,
+    status: draftInput.status || "LOCAL_DRAFT",
+    title: draftInput.title || null,
+    interpretation: draftInput.interpretation || null,
+    implications: draftInput.implications || null,
+    stance: draftInput.stance || "TENTATIVE",
+    linkedEvidenceItemIds: Array.isArray(draftInput.linkedEvidenceItemIds)
+      ? draftInput.linkedEvidenceItemIds
+      : [],
+    linkedMessageIds: Array.isArray(draftInput.linkedMessageIds)
+      ? draftInput.linkedMessageIds
+      : [],
+    sourceSections: Array.isArray(draftInput.sourceSections) ? draftInput.sourceSections : [],
+    sourceMarkIds: Array.isArray(draftInput.sourceMarkIds) ? draftInput.sourceMarkIds : [],
+    payload: draftInput.payload || null,
+  };
+
+  try {
+    return await prisma.readingReceiptDraft.create({
+      data,
+      select: readingReceiptDraftSelection,
+    });
+  } catch (error) {
+    if (!isMissingReceiptProjectIdColumnError(error)) {
+      throw error;
+    }
+
+    const { projectId: _projectId, ...legacyData } = data;
+    return prisma.readingReceiptDraft.create({
+      data: legacyData,
+      select: readingReceiptDraftSelection,
+    });
+  }
 }
 
 export async function listReadingReceiptDraftsForUser(userId) {
@@ -337,6 +388,7 @@ export async function listReadingReceiptDraftsForUser(userId) {
     },
     orderBy: { createdAt: "desc" },
     take: 12,
+    select: readingReceiptDraftSelection,
   });
 }
 
@@ -378,14 +430,37 @@ export async function listReadingReceiptDraftsForProjectForUser(
     );
   }
 
-  return prisma.readingReceiptDraft.findMany({
-    where: {
-      userId,
-      ...(orFilters.length > 0 ? { OR: orFilters } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take,
-  });
+  try {
+    return await prisma.readingReceiptDraft.findMany({
+      where: {
+        userId,
+        ...(orFilters.length > 0 ? { OR: orFilters } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: readingReceiptDraftSelection,
+    });
+  } catch (error) {
+    if (!isMissingReceiptProjectIdColumnError(error)) {
+      throw error;
+    }
+
+    return prisma.readingReceiptDraft.findMany({
+      where: {
+        userId,
+        ...(normalizedDocumentKeys.length > 0
+          ? {
+              documentKey: {
+                in: normalizedDocumentKeys,
+              },
+            }
+          : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: readingReceiptDraftSelection,
+    });
+  }
 }
 
 export async function loadLatestReadingSnapshotForUser(userId) {
