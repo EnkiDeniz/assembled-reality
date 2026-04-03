@@ -208,6 +208,28 @@ function scrollReaderTarget(target, { behavior = "smooth", block = "start" } = {
   });
 }
 
+function areRegisteredBlocksEqual(left, right) {
+  if (left === right) return true;
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  if (left.length !== right.length) return false;
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftBlock = left[index];
+    const rightBlock = right[index];
+
+    if (
+      leftBlock?.blockId !== rightBlock?.blockId ||
+      leftBlock?.sectionSlug !== rightBlock?.sectionSlug ||
+      leftBlock?.text !== rightBlock?.text ||
+      leftBlock?.element !== rightBlock?.element
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function BookmarkIcon({ filled }) {
   return (
     <svg className="reader-icon" viewBox="0 0 20 20" aria-hidden="true">
@@ -411,6 +433,8 @@ export default function ReaderShell({
   const initialListeningHydratedRef = useRef(false);
   const canonicalSessionRef = useRef(null);
   const prefetchedAudioRef = useRef(new Map());
+  const blockRegistryRef = useRef(new Map());
+  const blockFlushFrameRef = useRef(null);
 
   const entries = useMemo(
     () => [
@@ -662,34 +686,44 @@ export default function ReaderShell({
     voiceStatus.state === "device_fallback" ||
     !effectiveVoiceEnabled;
 
-  const registerBlock = useCallback((nextBlock) => {
-    setRegisteredBlocks((current) => {
-      const existingIndex = current.findIndex((block) => block.blockId === nextBlock.blockId);
-      if (existingIndex === -1) {
-        return sortReaderBlocks([...current, nextBlock]);
-      }
+  const flushRegisteredBlocks = useCallback(() => {
+    if (blockFlushFrameRef.current != null) return;
 
-      const existing = current[existingIndex];
+    blockFlushFrameRef.current = window.requestAnimationFrame(() => {
+      blockFlushFrameRef.current = null;
+      const nextBlocks = sortReaderBlocks([...blockRegistryRef.current.values()]);
+      setRegisteredBlocks((current) =>
+        areRegisteredBlocksEqual(current, nextBlocks) ? current : nextBlocks,
+      );
+    });
+  }, []);
+
+  const registerBlock = useCallback(
+    (nextBlock) => {
+      const existing = blockRegistryRef.current.get(nextBlock.blockId);
       if (
+        existing &&
         existing.element === nextBlock.element &&
         existing.text === nextBlock.text &&
         existing.sectionSlug === nextBlock.sectionSlug
       ) {
-        return current;
+        return;
       }
 
-      const updated = [...current];
-      updated[existingIndex] = nextBlock;
-      return sortReaderBlocks(updated);
-    });
-  }, []);
+      blockRegistryRef.current.set(nextBlock.blockId, nextBlock);
+      flushRegisteredBlocks();
+    },
+    [flushRegisteredBlocks],
+  );
 
-  const unregisterBlock = useCallback((blockId) => {
-    setRegisteredBlocks((current) => {
-      if (!current.some((block) => block.blockId === blockId)) return current;
-      return current.filter((block) => block.blockId !== blockId);
-    });
-  }, []);
+  const unregisterBlock = useCallback(
+    (blockId) => {
+      if (!blockRegistryRef.current.has(blockId)) return;
+      blockRegistryRef.current.delete(blockId);
+      flushRegisteredBlocks();
+    },
+    [flushRegisteredBlocks],
+  );
 
   const updatePlayerCursorForNode = useCallback(
     (node) => {
@@ -2719,6 +2753,9 @@ export default function ReaderShell({
     return () => {
       if (noticeTimeoutRef.current) window.clearTimeout(noticeTimeoutRef.current);
       if (focusTimeoutRef.current) window.clearTimeout(focusTimeoutRef.current);
+      if (blockFlushFrameRef.current != null) {
+        window.cancelAnimationFrame(blockFlushFrameRef.current);
+      }
     };
   }, []);
 
