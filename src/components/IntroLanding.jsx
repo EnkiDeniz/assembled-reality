@@ -11,9 +11,9 @@ const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
 function ListenVisual() {
   const [active, setActive] = useState(0);
   const lines = [
-    "The goal is to ship before the quarter closes.",
-    "Each team owns one deliverable.",
-    "Move fast but leave receipts.",
+    "You have more material than you think.",
+    "Most of it is trapped in formats you never open.",
+    "Drop it in. Press play.",
   ];
 
   useEffect(() => {
@@ -238,7 +238,7 @@ export default function IntroLanding({
           <span className="terminal-kicker">Assembled Reality</span>
           <h1 className="intro-copy__title">Drop in anything. Listen to everything.</h1>
           <p className="intro-copy__body">
-            PDFs, photos, voice memos, screenshots, links — everything becomes blocks you can hear, pick, and assemble.
+            Whatever you have becomes blocks you can hear and build from.
           </p>
         </div>
 

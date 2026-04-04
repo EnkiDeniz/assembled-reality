@@ -19,8 +19,8 @@ const editorial = Newsreader({
 });
 
 export const metadata = {
-  title: "Document Assembler",
-  description: "Terminal-like workspace for reading, assembling, and receipting documents.",
+  title: "Assembled Reality",
+  description: "Drop in anything. Listen to everything. Assemble what matters. Keep the receipt.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

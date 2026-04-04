@@ -5142,7 +5142,7 @@ export default function WorkspaceShell({
               </>
             ) : (
               <>
-                <span className="assembler-header__name">Document Assembler</span>
+                <span className="assembler-header__name">Assembled Reality</span>
                 {activeProject ? (
                   <span className="assembler-header__project">
                     {activeProject.title}
