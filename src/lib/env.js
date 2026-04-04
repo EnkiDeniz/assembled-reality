@@ -80,10 +80,11 @@ export const appEnv = {
     "",
   openai: {
     apiKey: getOpenAiApiKey(),
-    textModel: normalizeSecret(process.env.OPENAI_SEVEN_MODEL) || "gpt-4o-mini",
+    textModel: normalizeSecret(process.env.OPENAI_SEVEN_MODEL) || "gpt-5.1",
     imageSourceModel:
-      normalizeSecret(process.env.OPENAI_IMAGE_SOURCE_MODEL) || "gpt-4.1-mini",
-    audioSourceModel: normalizeSecret(process.env.OPENAI_AUDIO_SOURCE_MODEL),
+      normalizeSecret(process.env.OPENAI_IMAGE_SOURCE_MODEL) || "gpt-5.1",
+    audioSourceModel:
+      normalizeSecret(process.env.OPENAI_AUDIO_SOURCE_MODEL) || "gpt-4o-transcribe",
     speechModel:
       normalizeSecret(process.env.OPENAI_SEVEN_SPEECH_MODEL) || "gpt-4o-mini-tts",
     voice: normalizeSecret(process.env.OPENAI_SEVEN_VOICE) || "sage",

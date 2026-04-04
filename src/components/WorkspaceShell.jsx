@@ -186,6 +186,15 @@ function isImageFileLike(file) {
   return String(file.type || "").trim().toLowerCase().startsWith("image/") || isImageFilename(file.name || "");
 }
 
+function isAudioFilename(value = "") {
+  return /\.(m4a|mp3|wav|webm|mp4)$/i.test(String(value || "").trim());
+}
+
+function isAudioFileLike(file) {
+  if (!file) return false;
+  return String(file.type || "").trim().toLowerCase().startsWith("audio/") || isAudioFilename(file.name || "");
+}
+
 function extractSingleUrlText(text = "") {
   const normalized = String(text || "").trim();
   if (!normalized || /\s/.test(normalized)) return "";
@@ -207,6 +216,13 @@ function formatAssetDuration(durationMs = 0) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatRecordingElapsed(totalSeconds = 0) {
+  const seconds = Math.max(0, Math.floor(Number(totalSeconds || 0)));
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
 function getSourceAssetLabel(asset) {
@@ -464,6 +480,17 @@ function WorkspaceActionIcon({ kind }) {
         <path d="M9.5 3.5h5" />
         <path d="M9.5 9.5h5" />
         <path d="M9.5 13h5" />
+      </svg>
+    );
+  }
+
+  if (kind === "speak") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <rect x="9" y="3.5" width="6" height="10" rx="3" />
+        <path d="M6.5 10.5a5.5 5.5 0 0 0 11 0" />
+        <path d="M12 16v4" />
+        <path d="M8.5 20h7" />
       </svg>
     );
   }
@@ -928,7 +955,7 @@ function WorkspaceShelf({
               onPasteSource();
             }}
           >
-            Paste Text
+            Paste from clipboard
           </button>
         </div>
       </div>
@@ -949,12 +976,11 @@ function WorkspaceLaunchpad({
   onOpenDocument,
   onOpenProject,
   onPasteClipboard,
-  onPasteSource,
-  onPasteLink,
-  onUpload,
-  onImportFolder,
+  onOpenSpeak,
+  onOpenIntake,
   uploading = false,
   pastePendingMode = "",
+  recordingVoice = false,
   clipboardCount = 0,
   lastUsedMode = WORKSPACE_MODES.assemble,
   resumeSessionSummary = null,
@@ -983,7 +1009,7 @@ function WorkspaceLaunchpad({
   const assemblyDocuments = grouped.assemblies;
   const sourceCount = sourceDocuments.length;
   const assemblyCount = assemblyDocuments.length;
-  const busy = uploading || Boolean(pastePendingMode);
+  const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
   const openMode = normalizeWorkspaceMode(lastUsedMode, WORKSPACE_MODES.assemble);
 
   function renderDocumentRow(document, { active = false } = {}) {
@@ -1024,10 +1050,10 @@ function WorkspaceLaunchpad({
   return (
     <div className="assembler-home">
       <div className="assembler-home__copy">
-        <span className="assembler-home__eyebrow">Project</span>
-        <h1 className="assembler-home__title">{activeProject?.title || "Main Project"}</h1>
+        <span className="assembler-home__eyebrow">Home loop</span>
+        <h1 className="assembler-home__title">Speak. Listen. Assemble. Drop anything.</h1>
         <p className="assembler-home__body">
-          {activeProject?.subtitle || "Drop anything: documents, images, screenshots, links, or voice memos."}
+          Talk a source into existence, return to the current thread of work, or bring in outside material without deciding the format first.
         </p>
       </div>
 
@@ -1083,53 +1109,25 @@ function WorkspaceLaunchpad({
         <button
           type="button"
           className="assembler-home__action"
-          onClick={onUpload}
+          onClick={onOpenSpeak}
+          disabled={uploading || Boolean(pastePendingMode)}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="speak" />
+          </span>
+          <span className="assembler-home__action-label">Speak</span>
+        </button>
+
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={onOpenIntake}
           disabled={busy}
         >
           <span className="assembler-home__action-icon" aria-hidden="true">
             <WorkspaceActionIcon kind="upload" />
           </span>
-          <span className="assembler-home__action-label">
-            {uploading ? "Importing…" : "Drop anything"}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={onPasteSource}
-          disabled={busy}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="paste-source" />
-          </span>
-          <span className="assembler-home__action-label">
-            {pastePendingMode === "source" ? "Pasting…" : "Paste copied text"}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={onPasteLink}
-          disabled={busy}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="browse" />
-          </span>
-          <span className="assembler-home__action-label">Import from link</span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={onImportFolder}
-          disabled={busy}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="browse" />
-          </span>
-          <span className="assembler-home__action-label">Import folder</span>
+          <span className="assembler-home__action-label">Drop anything</span>
         </button>
       </div>
 
@@ -1658,6 +1656,272 @@ function LinkIntakeChooser({
               Keep the link as text instead of fetching the page.
             </span>
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DropAnythingSheet({
+  open = false,
+  pending = false,
+  onClose,
+  onUpload,
+  onImportFolder,
+  onPaste,
+  onImportLink,
+}) {
+  const [manualLink, setManualLink] = useState("");
+
+  if (!open) return null;
+
+  const normalizedLink = extractSingleUrlText(manualLink);
+
+  return (
+    <div className="assembler-image-chooser assembler-image-chooser--intake">
+      <button
+        type="button"
+        className="assembler-image-chooser__backdrop"
+        aria-label="Close intake sheet"
+        onClick={pending ? undefined : onClose}
+      />
+
+      <div
+        className="assembler-image-chooser__panel assembler-drop-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drop-anything-title"
+      >
+        <div className="assembler-image-chooser__header">
+          <div className="assembler-image-chooser__copy">
+            <span className="assembler-sheet__eyebrow">Intake</span>
+            <h2 id="drop-anything-title" className="assembler-image-chooser__title">
+              Drop anything
+            </h2>
+            <p className="assembler-image-chooser__body">
+              Bring in files, folders, screenshots, copied text, or a public link. We will turn it into a source you can listen to and assemble.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={pending ? undefined : onClose}
+            disabled={pending}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="assembler-image-chooser__actions assembler-drop-sheet__actions">
+          <button
+            type="button"
+            className="assembler-image-chooser__action is-primary"
+            onClick={onUpload}
+            disabled={pending}
+          >
+            <span className="assembler-image-chooser__action-label">FILES</span>
+            <span className="assembler-image-chooser__action-title">Upload source files</span>
+            <span className="assembler-image-chooser__action-detail">
+              Documents, images, screenshots, and voice memos.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-image-chooser__action"
+            onClick={onPaste}
+            disabled={pending}
+          >
+            <span className="assembler-image-chooser__action-label">CLIPBOARD</span>
+            <span className="assembler-image-chooser__action-title">Paste from clipboard</span>
+            <span className="assembler-image-chooser__action-detail">
+              Copied text becomes a source. A single public URL fetches the page automatically.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-image-chooser__action"
+            onClick={onImportFolder}
+            disabled={pending}
+          >
+            <span className="assembler-image-chooser__action-label">FOLDER</span>
+            <span className="assembler-image-chooser__action-title">Import a folder</span>
+            <span className="assembler-image-chooser__action-detail">
+              Turn a bundle of mixed files into source documents inside this project.
+            </span>
+          </button>
+        </div>
+
+        <div className="assembler-drop-sheet__link">
+          <label className="assembler-drop-sheet__label" htmlFor="manual-link-input">
+            Or paste a public link manually
+          </label>
+          <div className="assembler-drop-sheet__link-row">
+            <input
+              id="manual-link-input"
+              className="assembler-drop-sheet__input"
+              value={manualLink}
+              onChange={(event) => setManualLink(event.target.value)}
+              placeholder="https://example.com/article"
+              disabled={pending}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && normalizedLink && !pending) {
+                  event.preventDefault();
+                  onImportLink(normalizedLink);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="assembler-drop-sheet__submit"
+              disabled={!normalizedLink || pending}
+              onClick={() => {
+                if (normalizedLink) {
+                  onImportLink(normalizedLink);
+                }
+              }}
+            >
+              Import link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VoiceRecorderDialog({
+  open = false,
+  phase = "idle",
+  elapsedSeconds = 0,
+  level = 0,
+  errorMessage = "",
+  onClose,
+  onStart,
+  onPause,
+  onResume,
+  onStop,
+}) {
+  if (!open) return null;
+
+  const recording = phase === "recording";
+  const paused = phase === "paused";
+  const busy = phase === "requesting" || phase === "finishing" || phase === "transcribing";
+  const meterLevel = Math.max(0, Math.min(1, Number(level || 0)));
+
+  return (
+    <div className="assembler-image-chooser assembler-image-chooser--recorder">
+      <button
+        type="button"
+        className="assembler-image-chooser__backdrop"
+        aria-label="Close recorder"
+        onClick={busy ? undefined : onClose}
+      />
+
+      <div
+        className="assembler-image-chooser__panel assembler-recorder"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="voice-recorder-title"
+      >
+        <div className="assembler-image-chooser__header">
+          <div className="assembler-image-chooser__copy">
+            <span className="assembler-sheet__eyebrow">Speak</span>
+            <h2 id="voice-recorder-title" className="assembler-image-chooser__title">
+              Talk a document into existence
+            </h2>
+            <p className="assembler-image-chooser__body">
+              Record a voice memo and we will turn it into a transcript source you can listen to, edit, and assemble.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={busy ? undefined : onClose}
+            disabled={busy}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="assembler-recorder__status">
+          <span className={`assembler-recorder__dot ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`} />
+          <span className="assembler-recorder__status-label">
+            {phase === "requesting"
+              ? "Requesting microphone..."
+              : phase === "recording"
+                ? "Recording"
+                : phase === "paused"
+                  ? "Paused"
+                  : phase === "finishing"
+                    ? "Finishing recording..."
+                    : phase === "transcribing"
+                      ? "Transcribing..."
+                      : "Ready to record"}
+          </span>
+          <span className="assembler-recorder__time">{formatRecordingElapsed(elapsedSeconds)}</span>
+        </div>
+
+        <div className="assembler-recorder__meter" aria-hidden="true">
+          <div
+            className={`assembler-recorder__meter-fill ${recording ? "is-live" : ""}`}
+            style={{ width: `${Math.max(6, Math.round(meterLevel * 100))}%` }}
+          />
+        </div>
+
+        {errorMessage ? (
+          <p className="assembler-recorder__error">{errorMessage}</p>
+        ) : null}
+
+        <div className="assembler-recorder__actions">
+          {phase === "idle" ? (
+            <button
+              type="button"
+              className="assembler-image-chooser__action is-primary"
+              onClick={onStart}
+            >
+              <span className="assembler-image-chooser__action-label">VOICE → DOC</span>
+              <span className="assembler-image-chooser__action-title">Start recording</span>
+              <span className="assembler-image-chooser__action-detail">
+                Capture a voice memo and turn it into a source document immediately after you stop.
+              </span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="assembler-image-chooser__action"
+                onClick={paused ? onResume : onPause}
+                disabled={busy || (!recording && !paused)}
+              >
+                <span className="assembler-image-chooser__action-label">{paused ? "RESUME" : "PAUSE"}</span>
+                <span className="assembler-image-chooser__action-title">
+                  {paused ? "Resume recording" : "Pause recording"}
+                </span>
+                <span className="assembler-image-chooser__action-detail">
+                  Keep the current memo and continue when you are ready.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="assembler-image-chooser__action is-primary"
+                onClick={onStop}
+                disabled={busy || (!recording && !paused)}
+              >
+                <span className="assembler-image-chooser__action-label">STOP</span>
+                <span className="assembler-image-chooser__action-title">
+                  {phase === "transcribing" ? "Creating document..." : "Stop and create document"}
+                </span>
+                <span className="assembler-image-chooser__action-detail">
+                  Turn this memo into a transcript source and open it in the workspace.
+                </span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -2636,6 +2900,14 @@ export default function WorkspaceShell({
   const blockRefs = useRef({});
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const recordingAnimationFrameRef = useRef(null);
+  const recordingAnalyserRef = useRef(null);
+  const recordingAudioContextRef = useRef(null);
+  const closeVoiceRecorderRef = useRef(() => {});
   const speechUtteranceRef = useRef(null);
   const speechRunIdRef = useRef(0);
   const playbackStateRef = useRef({ active: false, kind: null, paused: false });
@@ -2712,10 +2984,16 @@ export default function WorkspaceShell({
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
+  const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
   const [mobileSourceToolsOpen, setMobileSourceToolsOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [playbackStatus, setPlaybackStatus] = useState("idle");
+  const [voiceRecorderOpen, setVoiceRecorderOpen] = useState(false);
+  const [voiceRecorderPhase, setVoiceRecorderPhase] = useState("idle");
+  const [voiceRecorderElapsed, setVoiceRecorderElapsed] = useState(0);
+  const [voiceRecorderLevel, setVoiceRecorderLevel] = useState(0);
+  const [voiceRecorderError, setVoiceRecorderError] = useState("");
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
@@ -2904,6 +3182,34 @@ export default function WorkspaceShell({
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        window.clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+
+      if (recordingAnimationFrameRef.current) {
+        window.cancelAnimationFrame(recordingAnimationFrameRef.current);
+        recordingAnimationFrameRef.current = null;
+      }
+
+      if (mediaRecorderRef.current?.state && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      }
+
+      if (recordingAudioContextRef.current) {
+        recordingAudioContextRef.current.close().catch(() => {});
+        recordingAudioContextRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return undefined;
     }
@@ -3029,6 +3335,12 @@ export default function WorkspaceShell({
     setCleanupPendingAction("");
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
+    setDropAnythingOpen(false);
+    setVoiceRecorderOpen(false);
+    setVoiceRecorderPhase("idle");
+    setVoiceRecorderElapsed(0);
+    setVoiceRecorderLevel(0);
+    setVoiceRecorderError("");
     setMobileComposeOpen(false);
     setMobileSourceToolsOpen(false);
     pendingFocusBlockIdRef.current = null;
@@ -3133,6 +3445,16 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && dropAnythingOpen) {
+        setDropAnythingOpen(false);
+        return;
+      }
+
+      if (event.key === "Escape" && voiceRecorderOpen) {
+        closeVoiceRecorderRef.current?.();
+        return;
+      }
+
       if (event.key === "Escape" && mobileComposeOpen) {
         setMobileComposeOpen(false);
         return;
@@ -3153,7 +3475,7 @@ export default function WorkspaceShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, dropAnythingOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
     async function handlePaste(event) {
@@ -3329,6 +3651,8 @@ export default function WorkspaceShell({
     setViewMode("doc");
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
+    setDropAnythingOpen(false);
+    closeVoiceRecorder();
     setMobileComposeOpen(false);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
@@ -3502,6 +3826,8 @@ export default function WorkspaceShell({
     const normalizedMode = applyWorkspaceMode(mode);
     setLaunchpadOpen(false);
     setWorkspacePickerOpen(false);
+    setDropAnythingOpen(false);
+    closeVoiceRecorder();
     setMobileComposeOpen(false);
     pendingFocusBlockIdRef.current = options.focusBlockId || null;
 
@@ -3645,6 +3971,334 @@ export default function WorkspaceShell({
     return payload;
   }
 
+  async function submitUploadedFile(file, { derivationMode = "" } = {}) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("projectKey", activeProjectKey);
+    if (derivationMode) {
+      formData.append("derivationMode", derivationMode);
+    }
+
+    const response = await fetch("/api/documents", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.document) {
+      throw new Error(payload?.error || "The document could not be imported.");
+    }
+
+    return payload;
+  }
+
+  function stopVoiceRecorderMeter() {
+    if (recordingAnimationFrameRef.current) {
+      window.cancelAnimationFrame(recordingAnimationFrameRef.current);
+      recordingAnimationFrameRef.current = null;
+    }
+
+    if (recordingAudioContextRef.current) {
+      recordingAudioContextRef.current.close().catch(() => {});
+      recordingAudioContextRef.current = null;
+    }
+
+    recordingAnalyserRef.current = null;
+    setVoiceRecorderLevel(0);
+  }
+
+  function stopVoiceRecorderTracks() {
+    if (recordingTimerRef.current) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+
+    stopVoiceRecorderMeter();
+  }
+
+  function startVoiceRecorderTimer() {
+    if (recordingTimerRef.current) {
+      window.clearInterval(recordingTimerRef.current);
+    }
+
+    recordingTimerRef.current = window.setInterval(() => {
+      setVoiceRecorderElapsed((previous) => previous + 1);
+    }, 1000);
+  }
+
+  function startVoiceRecorderMeter(stream) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      setVoiceRecorderLevel(0);
+      return;
+    }
+
+    try {
+      const audioContext = new AudioContextClass();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      recordingAudioContextRef.current = audioContext;
+      recordingAnalyserRef.current = analyser;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
+      const tick = () => {
+        const activeAnalyser = recordingAnalyserRef.current;
+        if (!activeAnalyser) return;
+
+        activeAnalyser.getByteFrequencyData(data);
+        const average = data.reduce((sum, value) => sum + value, 0) / data.length;
+        setVoiceRecorderLevel(Math.max(0.05, average / 255));
+        recordingAnimationFrameRef.current = window.requestAnimationFrame(tick);
+      };
+
+      tick();
+    } catch {
+      setVoiceRecorderLevel(0);
+    }
+  }
+
+  function getVoiceRecorderMimeType() {
+    if (typeof window === "undefined" || typeof window.MediaRecorder === "undefined") {
+      return "";
+    }
+
+    const candidates = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "video/mp4",
+    ];
+
+    if (typeof window.MediaRecorder.isTypeSupported !== "function") {
+      return candidates[0];
+    }
+
+    return candidates.find((candidate) => window.MediaRecorder.isTypeSupported(candidate)) || "";
+  }
+
+  function openVoiceRecorder() {
+    setDropAnythingOpen(false);
+    setVoiceRecorderOpen(true);
+    setVoiceRecorderPhase("idle");
+    setVoiceRecorderElapsed(0);
+    setVoiceRecorderLevel(0);
+    setVoiceRecorderError("");
+  }
+
+  async function startVoiceRecorder() {
+    if (
+      typeof window === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof window.MediaRecorder === "undefined"
+    ) {
+      setVoiceRecorderError("Voice recording is not available in this browser.");
+      return;
+    }
+
+    try {
+      setVoiceRecorderError("");
+      setVoiceRecorderPhase("requesting");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = getVoiceRecorderMimeType();
+      const recorder = mimeType
+        ? new window.MediaRecorder(stream, { mimeType })
+        : new window.MediaRecorder(stream);
+
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingChunksRef.current = [];
+      setVoiceRecorderElapsed(0);
+      setVoiceRecorderLevel(0.08);
+
+      recorder.addEventListener("dataavailable", (event) => {
+        if (event.data && event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      });
+
+      recorder.start(1000);
+      startVoiceRecorderTimer();
+      startVoiceRecorderMeter(stream);
+      setVoiceRecorderPhase("recording");
+    } catch (error) {
+      stopVoiceRecorderTracks();
+      mediaRecorderRef.current = null;
+      setVoiceRecorderPhase("idle");
+      setVoiceRecorderError(
+        error instanceof Error && /notallowed|permission|denied/i.test(error.message)
+          ? "Microphone access was denied. Allow microphone access and try again."
+          : error instanceof Error
+            ? error.message
+            : "Could not start recording.",
+      );
+    }
+  }
+
+  function pauseVoiceRecorder() {
+    if (!mediaRecorderRef.current || typeof mediaRecorderRef.current.pause !== "function") {
+      return;
+    }
+
+    if (mediaRecorderRef.current.state !== "recording") {
+      return;
+    }
+
+    mediaRecorderRef.current.pause();
+    if (recordingTimerRef.current) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    stopVoiceRecorderMeter();
+    setVoiceRecorderPhase("paused");
+  }
+
+  function resumeVoiceRecorder() {
+    if (!mediaRecorderRef.current || typeof mediaRecorderRef.current.resume !== "function") {
+      return;
+    }
+
+    if (mediaRecorderRef.current.state !== "paused") {
+      return;
+    }
+
+    mediaRecorderRef.current.resume();
+    if (mediaStreamRef.current) {
+      startVoiceRecorderMeter(mediaStreamRef.current);
+    }
+    startVoiceRecorderTimer();
+    setVoiceRecorderPhase("recording");
+  }
+
+  async function stopVoiceRecorder({ discard = false } = {}) {
+    const recorder = mediaRecorderRef.current;
+
+    if (!recorder) {
+      setVoiceRecorderOpen(false);
+      setVoiceRecorderPhase("idle");
+      return;
+    }
+
+    setVoiceRecorderPhase(discard ? "idle" : "finishing");
+    const recordedMimeType = recorder.mimeType || getVoiceRecorderMimeType() || "audio/webm";
+
+    recorder.onstop = async () => {
+      const chunks = recordingChunksRef.current;
+      recordingChunksRef.current = [];
+      mediaRecorderRef.current = null;
+      stopVoiceRecorderTracks();
+
+      if (discard) {
+        setVoiceRecorderOpen(false);
+        setVoiceRecorderPhase("idle");
+        setVoiceRecorderElapsed(0);
+        setVoiceRecorderError("");
+        return;
+      }
+
+      const blob = new Blob(chunks, { type: recordedMimeType });
+      if (!blob.size) {
+        setVoiceRecorderPhase("idle");
+        setVoiceRecorderError("The recording was empty. Try again.");
+        return;
+      }
+
+      const extension = recordedMimeType.includes("mp4") ? "mp4" : "webm";
+      const file = new File(
+        [blob],
+        `voice-memo-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
+        { type: recordedMimeType },
+      );
+
+      setVoiceRecorderPhase("transcribing");
+      const result = await handleUpload(file, { sourceKind: "voice" });
+      if (result?.document?.documentKey) {
+        setVoiceRecorderOpen(false);
+        setVoiceRecorderPhase("idle");
+        setVoiceRecorderElapsed(0);
+        setVoiceRecorderLevel(0);
+        setVoiceRecorderError("");
+        return;
+      }
+
+      setVoiceRecorderPhase("idle");
+      setVoiceRecorderError("Could not turn that voice memo into a document. Try again.");
+    };
+
+    recorder.stop();
+  }
+
+  const closeVoiceRecorder = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+
+    const resetRecorderState = () => {
+      recordingChunksRef.current = [];
+      mediaRecorderRef.current = null;
+
+      if (recordingTimerRef.current) {
+        window.clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+
+      if (recordingAnimationFrameRef.current) {
+        window.cancelAnimationFrame(recordingAnimationFrameRef.current);
+        recordingAnimationFrameRef.current = null;
+      }
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      }
+
+      if (recordingAudioContextRef.current) {
+        recordingAudioContextRef.current.close().catch(() => {});
+        recordingAudioContextRef.current = null;
+      }
+
+      recordingAnalyserRef.current = null;
+      setVoiceRecorderOpen(false);
+      setVoiceRecorderPhase("idle");
+      setVoiceRecorderElapsed(0);
+      setVoiceRecorderLevel(0);
+      setVoiceRecorderError("");
+    };
+
+    if (recorder?.state && recorder.state !== "inactive") {
+      recorder.onstop = () => {
+        resetRecorderState();
+      };
+      recorder.stop();
+      return;
+    }
+
+    resetRecorderState();
+  }, []);
+
+  closeVoiceRecorderRef.current = closeVoiceRecorder;
+
+  async function importLinkFromIntake(url) {
+    setDropAnythingOpen(false);
+    setPastePendingMode("source");
+    setFeedback("Fetching page from link...");
+
+    try {
+      await createLinkSource(url);
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not create a source from that link.",
+        "error",
+      );
+    } finally {
+      setPastePendingMode("");
+    }
+  }
+
   async function importFileBatch(files, { bundleName = "" } = {}) {
     const normalizedFiles = Array.from(files || []).filter(Boolean);
     if (!normalizedFiles.length) return;
@@ -3711,7 +4365,9 @@ export default function WorkspaceShell({
     if (!file) return;
 
     const imageLike = isImageFileLike(file);
+    const audioLike = isAudioFileLike(file);
     const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
+    const sourceKind = options.sourceKind || "";
 
     if (imageLike && !normalizedImageMode) {
       setPendingImageIntake({
@@ -3729,26 +4385,15 @@ export default function WorkspaceShell({
     setFeedback(
       imageLike
         ? `Importing ${file.name} as ${getImageDerivationLabel(normalizedImageMode).toLowerCase()}...`
-        : `Importing ${file.name}...`,
+        : audioLike || sourceKind === "voice"
+          ? `Transcribing ${file.name || "voice memo"}...`
+          : `Importing ${file.name}...`,
     );
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("projectKey", activeProjectKey);
-      if (normalizedImageMode) {
-        formData.append("derivationMode", normalizedImageMode);
-      }
-
-      const response = await fetch("/api/documents", {
-        method: "POST",
-        body: formData,
+      const payload = await submitUploadedFile(file, {
+        derivationMode: normalizedImageMode,
       });
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.document) {
-        throw new Error(payload?.error || "The document could not be imported.");
-      }
 
       upsertDocument(payload.document, { replaceLogs: true });
       attachDocumentToActiveProject(payload.document, { role: "SOURCE" });
@@ -3770,42 +4415,27 @@ export default function WorkspaceShell({
       const intakeWarning = getPrimaryDiagnosticMessage(payload.intake);
       setFeedback(
         intakeWarning
-          ? payload?.sourceAsset || payload?.derivation?.kind
-            ? `Created ${payload.document.title} from image. ${intakeWarning}`
-            : `Imported ${payload.document.title}. ${intakeWarning}`
-          : payload?.sourceAsset || payload?.derivation?.kind
-            ? `Created ${payload.document.title} from image.`
-            : `Imported ${payload.document.title}.`,
+          ? payload?.derivation?.kind === "audio-transcript"
+            ? `Created ${payload.document.title} from voice memo. ${intakeWarning}`
+            : payload?.sourceAsset || payload?.derivation?.kind
+              ? `Created ${payload.document.title} from image. ${intakeWarning}`
+              : `Imported ${payload.document.title}. ${intakeWarning}`
+          : payload?.derivation?.kind === "audio-transcript"
+            ? `Created ${payload.document.title} from voice memo.`
+            : payload?.sourceAsset || payload?.derivation?.kind
+              ? `Created ${payload.document.title} from image.`
+              : `Imported ${payload.document.title}.`,
         intakeWarning ? "" : "success",
       );
+      return payload;
     } catch (error) {
       setFeedback(
         error instanceof Error ? error.message : "The document could not be imported.",
         "error",
       );
+      return null;
     } finally {
       setUploading(false);
-    }
-  }
-
-  async function handlePasteLink() {
-    if (pastePendingMode || uploading) return;
-
-    try {
-      const clipboardPayload = await readClipboardPayloadFromNavigator();
-      const url = extractSingleUrlText(clipboardPayload?.text || "");
-
-      if (!url) {
-        throw new Error("Clipboard does not contain a public link.");
-      }
-
-      setPendingLinkIntake({
-        url,
-        payload: clipboardPayload,
-      });
-      setFeedback("Choose whether to fetch the page or keep the URL as text.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Could not read a link from the clipboard.", "error");
     }
   }
 
@@ -4151,12 +4781,27 @@ export default function WorkspaceShell({
       const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
 
       if (mode === "source" && urlFromClipboard && !options.forceRawText) {
-        setPendingLinkIntake({
-          url: urlFromClipboard,
-          payload: clipboardPayload,
-        });
-        setFeedback("Choose whether to fetch the page or keep the URL as text.");
-        return;
+        setPastePendingMode("source");
+        setFeedback("Fetching page from link...");
+
+        try {
+          await createLinkSource(urlFromClipboard);
+          return;
+        } catch (error) {
+          setPendingLinkIntake({
+            url: urlFromClipboard,
+            payload: clipboardPayload,
+          });
+          setFeedback(
+            error instanceof Error
+              ? `${error.message} You can keep the URL as text instead.`
+              : "Could not fetch this link. You can keep the URL as text instead.",
+            "error",
+          );
+          return;
+        } finally {
+          setPastePendingMode("");
+        }
       }
 
       if (hasImagePayload && !normalizedImageMode) {
@@ -5190,11 +5835,10 @@ export default function WorkspaceShell({
               onCreateProject={() => void createProject()}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
-              onPasteSource={() => void pasteIntoWorkspace("source")}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
-              onPasteLink={() => void handlePasteLink()}
-              onUpload={() => fileInputRef.current?.click()}
-              onImportFolder={openFolderPicker}
+              onOpenSpeak={openVoiceRecorder}
+              onOpenIntake={() => setDropAnythingOpen(true)}
+              recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               lastUsedMode={lastUsedMode}
               resumeSessionSummary={resumeSessionSummaryState}
             />
@@ -5579,6 +6223,26 @@ export default function WorkspaceShell({
             }
           }}
         />
+        <DropAnythingSheet
+          open={dropAnythingOpen}
+          pending={uploading || Boolean(pastePendingMode)}
+          onClose={() => setDropAnythingOpen(false)}
+          onUpload={() => {
+            setDropAnythingOpen(false);
+            fileInputRef.current?.click();
+          }}
+          onImportFolder={() => {
+            setDropAnythingOpen(false);
+            openFolderPicker();
+          }}
+          onPaste={() => {
+            setDropAnythingOpen(false);
+            void pasteIntoWorkspace("source");
+          }}
+          onImportLink={(url) => {
+            void importLinkFromIntake(url);
+          }}
+        />
         <LinkIntakeChooser
           open={Boolean(pendingLinkIntake)}
           draft={pendingLinkIntake}
@@ -5607,6 +6271,18 @@ export default function WorkspaceShell({
             }
           }}
           onClose={() => setPendingLinkIntake(null)}
+        />
+        <VoiceRecorderDialog
+          open={voiceRecorderOpen}
+          phase={voiceRecorderPhase}
+          elapsedSeconds={voiceRecorderElapsed}
+          level={voiceRecorderLevel}
+          errorMessage={voiceRecorderError}
+          onClose={closeVoiceRecorder}
+          onStart={() => void startVoiceRecorder()}
+          onPause={pauseVoiceRecorder}
+          onResume={resumeVoiceRecorder}
+          onStop={() => void stopVoiceRecorder()}
         />
       </div>
       {dropActive ? (
