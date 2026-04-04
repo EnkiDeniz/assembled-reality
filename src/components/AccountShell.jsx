@@ -40,21 +40,17 @@ export default function AccountShell({
       <section className="account-shell__panel">
         <div className="account-shell__header">
           <div className="account-shell__copy">
-            <span className="terminal-kicker">Account</span>
-            <h1 className="account-shell__title">Identity and integrations</h1>
-            <p className="account-shell__lede">
-              Keep the controls here small and practical. Reading and assembly stay in the workspace.
-            </p>
+            <h1 className="account-shell__title">Account</h1>
           </div>
 
           <div className="account-shell__actions">
             <Link href="/workspace" className="terminal-link is-primary">
-              Back to workspace
+              Workspace
             </Link>
             <Link href="/intro" className="terminal-link">
               Intro
             </Link>
-            <SignOutButton className="terminal-button is-danger" />
+            <SignOutButton className="account-shell__signout" />
           </div>
         </div>
 
@@ -90,9 +86,7 @@ export default function AccountShell({
                 <dd>{formatListeningRate(profile?.preferredListeningRate)}</dd>
               </div>
             </dl>
-            <p className="account-card__hint">
-              These defaults follow your latest listening session in the workspace.
-            </p>
+            <p className="account-card__hint">Updated from your latest listening session.</p>
           </section>
 
           <section className="account-card">
@@ -108,8 +102,8 @@ export default function AccountShell({
             </div>
             <p className="account-card__value account-card__value--compact">
               {connectionStatus === "CONNECTED"
-                ? "Receipts can be pushed from the workspace."
-                : "Connect when you want drafts to flow out of the workspace."}
+                ? "Ready to receive drafts from the workspace."
+                : "Connect when you want drafts to flow out."}
             </p>
             <div className="terminal-actions account-card__actions">
               <Link href="/connect/getreceipts" className="terminal-link">

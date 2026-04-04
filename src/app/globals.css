@@ -252,7 +252,7 @@ main {
 .auth-shell__copy,
 .account-shell__copy {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .auth-shell__copy {
@@ -260,21 +260,18 @@ main {
 }
 
 .account-shell__header {
-  display: grid;
-  gap: 14px;
-}
-
-.account-shell__lede {
-  max-width: 36rem;
-  margin: 0;
-  color: var(--soft);
-  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
 }
 
 .account-shell__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
 }
 
 .account-shell__notice {
@@ -303,6 +300,19 @@ main {
   line-height: 1.14;
   font-weight: 500;
   color: var(--white);
+}
+
+.account-shell__signout {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--soft);
+}
+
+.account-shell__signout:hover,
+.account-shell__signout:focus-visible {
+  color: var(--red);
 }
 
 .auth-shell__body,
@@ -3645,9 +3655,13 @@ main {
     width: 100%;
   }
 
-  .account-shell__actions .terminal-link,
-  .account-shell__actions .terminal-button {
-    flex: 1 1 160px;
+  .account-shell__actions .terminal-link {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .account-shell__signout {
+    margin-left: auto;
   }
 
   .assembler-shell {
