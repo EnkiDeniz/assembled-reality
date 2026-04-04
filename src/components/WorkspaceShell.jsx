@@ -6,7 +6,7 @@ import AiUtilityRail from "@/components/AiUtilityRail";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
 import FirstBoxComposer from "@/components/FirstBoxComposer";
-import MobileControlDock from "@/components/MobileControlDock";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import ProjectHome from "@/components/ProjectHome";
 import OperateSurface from "@/components/OperateSurface";
 import ReceiptSurface from "@/components/ReceiptSurface";
@@ -1300,7 +1300,7 @@ function WorkspaceShelf({
 
           <div className="assembler-sheet__section-actions">
             <button type="button" className="assembler-sheet__close" onClick={onOpenProjectHome}>
-              Boxes
+              Home
             </button>
             <button
               type="button"
@@ -1358,7 +1358,6 @@ function WorkspaceLaunchpad({
   projectActionPending = "",
   loadingDocumentKey,
   onEnterMode,
-  onCreateProject,
   onBrowseBoxes,
   onManageProjects,
   onToggleProjectPinned,
@@ -1366,16 +1365,14 @@ function WorkspaceLaunchpad({
   onOpenReceipts,
   onOpenDocument,
   onOpenProject,
+  onResumeProject,
   onDeleteDocument,
   onPasteClipboard,
   onOpenSpeak,
   onOpenIntake,
-  onOpenPhoto,
-  onOpenSeven,
   uploading = false,
   pastePendingMode = "",
   recordingVoice = false,
-  clipboardCount = 0,
   resumeSessionSummary = null,
   isMobileLayout = false,
 }) {
@@ -1467,56 +1464,33 @@ function WorkspaceLaunchpad({
     connectionStatus: getReceiptsConnectionStatus,
     connectionLastError: getReceiptsConnectionLastError,
   });
-  const currentPositionAction = resumeSessionSummary?.documentKey
+  const resumeTarget = boxViewModel?.resumeTarget || null;
+  const currentPositionAction = resumeTarget?.documentKey
     ? {
-        label: "Resume",
+        label: resumeTarget.actionLabel || "Resume",
         disabled: busy,
         onClick: () =>
-          onEnterMode(WORKSPACE_MODES.listen, resumeSessionSummary.documentKey, {
-            phase: BOX_PHASES.think,
-          }),
+          onEnterMode(
+            resumeTarget.mode === "assemble" ? WORKSPACE_MODES.assemble : WORKSPACE_MODES.listen,
+            resumeTarget.documentKey,
+            {
+              phase: resumeTarget.phase || BOX_PHASES.think,
+            },
+          ),
       }
-    : currentAssemblyDocument?.documentKey
-      ? {
-          label: "Open seed",
-          disabled: busy,
-          onClick: () =>
-            onEnterMode(WORKSPACE_MODES.assemble, currentAssemblyDocument.documentKey, {
-              phase: BOX_PHASES.create,
-            }),
-        }
-      : boxViewModel?.latestTouchedSource?.documentKey
-        ? {
-            label: "Open source",
-            disabled: busy,
-            onClick: () =>
-              onEnterMode(WORKSPACE_MODES.listen, boxViewModel.latestTouchedSource.documentKey, {
-                phase: BOX_PHASES.think,
-              }),
-          }
-        : null;
-  const sevenTargetDocumentKey =
-    resumeSessionSummary?.documentKey ||
-    currentAssemblyDocument?.documentKey ||
-    boxViewModel?.latestTouchedSource?.documentKey ||
-    latestSourceDocument?.documentKey ||
-    listenDocument?.documentKey ||
-    "";
-
+    : null;
   if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.boxes) {
     return (
       <BoxesIndex
         activeProject={activeProject}
         activeProjectKey={activeProjectKey}
         projects={projects}
+        resumeTarget={resumeTarget}
         projectActionPending={projectActionPending}
         onOpenProjectHome={onOpenProject}
-        onCreateProject={onCreateProject}
+        onResumeProject={onResumeProject}
         onManageProjects={onManageProjects}
-        onPasteClipboard={onPasteClipboard}
-        onOpenSpeak={onOpenSpeak}
         onOpenIntake={onOpenIntake}
-        onOpenPhoto={onOpenPhoto}
         onToggleProjectPinned={onToggleProjectPinned}
         onToggleProjectArchived={onToggleProjectArchived}
       />
@@ -1528,10 +1502,8 @@ function WorkspaceLaunchpad({
       boxViewModel={boxViewModel}
       activeProject={activeProject}
       projectDrafts={projectDrafts}
-      projectActionPending={projectActionPending}
       loadingDocumentKey={loadingDocumentKey}
       busy={busy}
-      clipboardCount={clipboardCount}
       primaryAction={primaryAction}
       currentPositionAction={currentPositionAction}
       guideDocument={shouldFeatureGuide ? guideDocument : null}
@@ -1539,15 +1511,12 @@ function WorkspaceLaunchpad({
       currentAssemblyDocument={currentAssemblyDocument}
       recentAssemblies={recentAssemblies}
       onBrowseBoxes={onBrowseBoxes}
-      onManageProjects={onManageProjects}
       onOpenReceipts={onOpenReceipts}
       onOpenDocument={onOpenDocument}
       onDeleteDocument={onDeleteDocument}
       onPasteClipboard={onPasteClipboard}
       onOpenSpeak={onOpenSpeak}
       onOpenIntake={onOpenIntake}
-      onOpenPhoto={onOpenPhoto}
-      onAskSeven={() => onOpenSeven(sevenTargetDocumentKey)}
       ActionIcon={WorkspaceActionIcon}
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
       getDocumentKindLabel={getDocumentKindLabel}
@@ -1634,12 +1603,14 @@ function ListenSurface({
   pickerOpen,
   onTogglePicker,
   onOpenProjectHome,
+  onOpenSeven,
   onOpenDocument,
   projectDocuments,
   loadingDocumentKey,
   onOpenLog,
   onExportDocument,
   lastUsedMode = WORKSPACE_MODES.listen,
+  aiOpen = false,
   isMobileLayout = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1652,7 +1623,7 @@ function ListenSurface({
             type="button"
             className="assembler-listen__topbar-icon"
             onClick={onOpenProjectHome}
-            aria-label="Back to boxes"
+            aria-label="Open Box home"
           >
             <WorkspaceActionIcon kind="back" />
           </button>
@@ -1660,76 +1631,88 @@ function ListenSurface({
           <span className="assembler-listen__topbar-title">{activeDocument.title}</span>
 
           <div className="assembler-listen__topbar-actions">
-            <button
-              type="button"
-              className={`assembler-listen__topbar-button ${pickerOpen ? "is-active" : ""}`}
-              onClick={onTogglePicker}
-            >
-              Sources
-            </button>
-
-            <div className="assembler-listen__menu">
+            {isMobileLayout ? (
               <button
                 type="button"
-                className="assembler-listen__topbar-icon"
-                onClick={() => setMenuOpen((value) => !value)}
-                aria-label="More listening actions"
+                className={`assembler-listen__topbar-button ${aiOpen ? "is-active" : ""}`}
+                onClick={onOpenSeven}
               >
-                <WorkspaceActionIcon kind="menu" />
+                Seven
               </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={`assembler-listen__topbar-button ${pickerOpen ? "is-active" : ""}`}
+                  onClick={onTogglePicker}
+                >
+                  Sources
+                </button>
 
-              {menuOpen ? (
-                <div className="assembler-listen__menu-panel">
+                <div className="assembler-listen__menu">
                   <button
                     type="button"
-                    className="assembler-listen__menu-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onTogglePicker();
-                    }}
+                    className="assembler-listen__topbar-icon"
+                    onClick={() => setMenuOpen((value) => !value)}
+                    aria-label="More listening actions"
                   >
-                    Sources
+                    <WorkspaceActionIcon kind="menu" />
                   </button>
-                  <button
-                    type="button"
-                    className="assembler-listen__menu-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onSwitchToAssemble();
-                    }}
-                  >
-                    Seed
-                  </button>
-                  <button
-                    type="button"
-                    className="assembler-listen__menu-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onOpenLog();
-                    }}
-                  >
-                    Receipts
-                  </button>
-                  <button
-                    type="button"
-                    className="assembler-listen__menu-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onExportDocument();
-                    }}
-                  >
-                    Export Document
-                  </button>
-                  <Link
-                    href="/account"
-                    className="assembler-listen__menu-item"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Account
-                  </Link>
+
+                  {menuOpen ? (
+                    <div className="assembler-listen__menu-panel">
+                      <button
+                        type="button"
+                        className="assembler-listen__menu-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onTogglePicker();
+                        }}
+                      >
+                        Sources
+                      </button>
+                      <button
+                        type="button"
+                        className="assembler-listen__menu-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onSwitchToAssemble();
+                        }}
+                      >
+                        Seed
+                      </button>
+                      <button
+                        type="button"
+                        className="assembler-listen__menu-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onOpenLog();
+                        }}
+                      >
+                        Receipts
+                      </button>
+                      <button
+                        type="button"
+                        className="assembler-listen__menu-item"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onExportDocument();
+                        }}
+                      >
+                        Export Document
+                      </button>
+                      <Link
+                        href="/account"
+                        className="assembler-listen__menu-item"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Account
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -2935,9 +2918,11 @@ function LogView({
   receiptPending,
   activeDocumentTitle,
   onCreateReceipt,
+  onRunOperate,
   onExportReceipt,
   onExportDocument,
   onOpenGetReceipts,
+  isMobileLayout = false,
 }) {
   return (
     <ReceiptSurface
@@ -2947,9 +2932,11 @@ function LogView({
       receiptPending={receiptPending}
       activeDocumentTitle={activeDocumentTitle}
       onCreateReceipt={onCreateReceipt}
+      onRunOperate={onRunOperate}
       onExportReceipt={onExportReceipt}
       onExportDocument={onExportDocument}
       onOpenGetReceipts={onOpenGetReceipts}
+      isMobileLayout={isMobileLayout}
     />
   );
 }
@@ -3604,7 +3591,6 @@ export default function WorkspaceShell({
   const [photoIntakeOpen, setPhotoIntakeOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
   const [mobileSourceToolsOpen, setMobileSourceToolsOpen] = useState(false);
-  const [mobileControlDockOpen, setMobileControlDockOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [desktopSidecarPanel, setDesktopSidecarPanel] = useState(() =>
     getDefaultDesktopSidecarPanel(
@@ -3636,6 +3622,12 @@ export default function WorkspaceShell({
   const activeBoxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
   const realProjectSourceDocuments = listRealSourceDocuments(projectDocuments);
+  const latestRealSourceDocument =
+    [...realProjectSourceDocuments].sort((left, right) => {
+      const rightTimestamp = Date.parse(right?.updatedAt || right?.createdAt || "");
+      const leftTimestamp = Date.parse(left?.updatedAt || left?.createdAt || "");
+      return (Number.isNaN(rightTimestamp) ? 0 : rightTimestamp) - (Number.isNaN(leftTimestamp) ? 0 : leftTimestamp);
+    })[0] || null;
   const projectDocumentGroups = groupedDocuments(projectDocuments);
   const guideSourceDocument = projectDocumentGroups.sources.find(
     (document) => document.documentType === "builtin" || document.sourceType === "builtin",
@@ -3732,6 +3724,8 @@ export default function WorkspaceShell({
     projectDocuments,
     allDocuments: documentsState,
     projectDrafts: projectDraftsState,
+    currentAssemblyDocument: currentSeedDocument,
+    resumeSessionSummary: resumeSessionSummaryState,
   });
   const resolvedEntryMode = entryStateOverride || entryStateViewModel.mode;
   const currentSeedFingerprint = String(currentSeedDocument?.seedMeta?.sourceFingerprint || "").trim();
@@ -4199,13 +4193,10 @@ export default function WorkspaceShell({
   }, [resumeSessionSummary]);
 
   useEffect(() => {
-    if (!isMobileLayout && mobileControlDockOpen) {
-      setMobileControlDockOpen(false);
-    }
     if (!isMobileLayout && photoIntakeOpen) {
       setPhotoIntakeOpen(false);
     }
-  }, [isMobileLayout, mobileControlDockOpen, photoIntakeOpen]);
+  }, [isMobileLayout, photoIntakeOpen]);
 
   useEffect(() => {
     if (launchpadOpen) return;
@@ -4683,28 +4674,6 @@ export default function WorkspaceShell({
     photoLibraryInputRef.current?.click();
   }
 
-  function openSevenForDocument(documentKey = "") {
-    const targetDocumentKey =
-      String(documentKey || "").trim() ||
-      currentSeedDocument?.documentKey ||
-      activeDocument?.documentKey ||
-      getProjectListenDocumentKey(activeProject, projectDocuments) ||
-      "";
-
-    if (!targetDocumentKey) {
-      setFeedback("Open a source or seed before asking Seven.", "error");
-      return;
-    }
-
-    void enterWorkspace(targetDocumentKey, WORKSPACE_MODES.assemble, {
-      phase: BOX_PHASES.think,
-    });
-    if (!isMobileLayout) {
-      setDesktopSidecarPanel(DESKTOP_SIDECAR_PANELS.seven);
-    }
-    setAiOpen(true);
-  }
-
   function setDocumentState(documentKey, nextState = null) {
     if (!documentKey) return;
 
@@ -4851,7 +4820,6 @@ export default function WorkspaceShell({
       setPhotoIntakeOpen(false);
       closeVoiceRecorderRef.current?.();
       setMobileComposeOpen(false);
-      setMobileControlDockOpen(false);
       setLaunchpadView(nextLaunchpadView);
       setLaunchpadOpen(true);
       window.history.replaceState(
@@ -4878,6 +4846,45 @@ export default function WorkspaceShell({
     openProjectLaunchpad(projectKey, LAUNCHPAD_VIEWS.box);
   }
 
+  function resumeProject(projectKey = activeProjectKey) {
+    if (!projectKey || typeof window === "undefined") return;
+
+    if (projectKey !== activeProjectKey) {
+      setProjectActionPending(projectKey);
+      window.location.assign(
+        buildWorkspaceUrl("", projectKey, {
+          mode: WORKSPACE_MODES.listen,
+        }),
+      );
+      return;
+    }
+
+    const resumeDocumentKey =
+      String(resumeSessionSummaryState?.documentKey || "").trim() ||
+      String(currentSeedDocument?.documentKey || "").trim() ||
+      String(latestRealSourceDocument?.documentKey || "").trim() ||
+      "";
+    const resumeMode =
+      String(resumeSessionSummaryState?.documentKey || "").trim() || !currentSeedDocument?.documentKey
+        ? WORKSPACE_MODES.listen
+        : WORKSPACE_MODES.assemble;
+    const resumePhase =
+      resumeMode === WORKSPACE_MODES.assemble ? BOX_PHASES.create : BOX_PHASES.think;
+
+    if (resumeDocumentKey) {
+      void enterWorkspace(
+        resumeDocumentKey,
+        resumeMode,
+        {
+          phase: resumePhase,
+        },
+      );
+      return;
+    }
+
+    openCurrentBoxHome(projectKey);
+  }
+
   function openCurrentBoxHome(projectKey = activeProjectKey) {
     openProjectLaunchpad(projectKey, LAUNCHPAD_VIEWS.box);
   }
@@ -4899,7 +4906,6 @@ export default function WorkspaceShell({
     setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
-    setMobileControlDockOpen(false);
     setLaunchpadView(LAUNCHPAD_VIEWS.boxes);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
@@ -5346,6 +5352,42 @@ export default function WorkspaceShell({
     setFeedback("Dismissed the current seed suggestion.");
   }
 
+  function getMobileListenTargetKey() {
+    return (
+      String(resumeSessionSummaryState?.documentKey || "").trim() ||
+      String(latestRealSourceDocument?.documentKey || "").trim() ||
+      ""
+    );
+  }
+
+  function openMobileListenSurface() {
+    const targetDocumentKey = getMobileListenTargetKey();
+    if (!targetDocumentKey) {
+      openCurrentBoxHome(activeProjectKey);
+      return;
+    }
+
+    void enterWorkspace(targetDocumentKey, WORKSPACE_MODES.listen, {
+      phase: BOX_PHASES.think,
+    });
+  }
+
+  function openMobileSeedSurface() {
+    if (!currentSeedDocument?.documentKey && realProjectSourceDocuments.length) {
+      void handleSelectBoxPhase(BOX_PHASES.create);
+      return;
+    }
+
+    if (!currentSeedDocument?.documentKey) {
+      openCurrentBoxHome(activeProjectKey);
+      return;
+    }
+
+    void enterWorkspace(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
+      phase: BOX_PHASES.create,
+    });
+  }
+
   function openReceiptsSurface() {
     const targetDocumentKey =
       currentSeedDocument?.documentKey ||
@@ -5503,7 +5545,6 @@ export default function WorkspaceShell({
     setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
-    setMobileControlDockOpen(false);
     pendingFocusBlockIdRef.current = options.focusBlockId || null;
     const nextPhase = normalizeBoxPhase(
       options.phase,
@@ -7972,12 +8013,26 @@ export default function WorkspaceShell({
           : isOperatePhase
             ? "Operate"
             : isCreatePhase
-              ? "Seed"
-              : "Think";
+            ? "Seed"
+            : "Think";
+  const canOpenMobileSeed = Boolean(currentSeedDocument?.documentKey || realProjectSourceDocuments.length);
+  const showMobileBottomNav =
+    isMobileLayout &&
+    !isFirstTimeSurface &&
+    !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes);
+  const activeMobileTab = launchpadOpen
+    ? "home"
+    : isListenMode
+      ? "listen"
+      : isReceiptsPhase
+        ? "receipts"
+        : isOperatePhase
+          ? "operate"
+          : "seed";
 
   return (
     <main
-      className={`assembler-page ${dropActive ? "is-dropping" : ""}`}
+      className={`assembler-page ${dropActive ? "is-dropping" : ""} ${showMobileBottomNav ? "has-mobile-nav" : ""}`}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -8088,9 +8143,7 @@ export default function WorkspaceShell({
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
               pastePendingMode={pastePendingMode}
-              clipboardCount={clipboard.length}
               onEnterMode={openMode}
-              onCreateProject={() => openProjectManagement(activeProjectKey)}
               onBrowseBoxes={openBoxesIndex}
               onManageProjects={() => openProjectManagement(activeProjectKey)}
               onToggleProjectPinned={toggleProjectPinned}
@@ -8098,12 +8151,11 @@ export default function WorkspaceShell({
               onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
+              onResumeProject={resumeProject}
               onDeleteDocument={requestDeleteDocument}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onOpenSpeak={openVoiceRecorder}
               onOpenIntake={() => setDropAnythingOpen(true)}
-              onOpenPhoto={openPhotoIntake}
-              onOpenSeven={openSevenForDocument}
               recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               resumeSessionSummary={resumeSessionSummaryState}
               isMobileLayout={isMobileLayout}
@@ -8115,6 +8167,7 @@ export default function WorkspaceShell({
               boxTitle={activeBoxTitle}
               capturePending={uploading || Boolean(pastePendingMode)}
               writePending={Boolean(pastePendingMode) || uploading || seedStatusPending}
+              isMobileLayout={isMobileLayout}
               onUpload={() => {
                 pendingSeedFocusRef.current = true;
                 fileInputRef.current?.click();
@@ -8157,6 +8210,7 @@ export default function WorkspaceShell({
               pickerOpen={listenPickerOpen}
               onTogglePicker={() => setListenPickerOpen((value) => !value)}
               onOpenProjectHome={() => openCurrentBoxHome(activeProjectKey)}
+              onOpenSeven={() => setAiOpen((value) => !value)}
               onOpenDocument={(documentKey, mode, options = {}) => {
                 setListenPickerOpen(false);
                 void enterWorkspace(documentKey, mode, options);
@@ -8171,8 +8225,32 @@ export default function WorkspaceShell({
               }}
               onExportDocument={exportDocument}
               lastUsedMode={lastUsedMode}
+              aiOpen={aiOpen}
               isMobileLayout={isMobileLayout}
             />
+
+            {isMobileLayout && aiOpen ? (
+              <AiBar
+                inputRef={aiInputRef}
+                value={aiInput}
+                pending={aiPending}
+                loading={sevenThreadLoading}
+                errorMessage={sevenThreadError}
+                documentTitle={activeDocument.title}
+                thread={activeSevenThread}
+                suggestions={sevenSuggestions}
+                onChange={(nextValue) => {
+                  setAiInput(nextValue);
+                  if (sevenThreadError) {
+                    setSevenThreadError("");
+                  }
+                }}
+                onSubmit={runAiOperation}
+                onSuggestion={(prompt) => void runAiOperation(prompt)}
+                onStageMessage={stageSevenMessage}
+                onClose={() => setAiOpen(false)}
+              />
+            ) : null}
 
             <PlayerBar
               workspaceMode={workspaceMode}
@@ -8295,6 +8373,7 @@ export default function WorkspaceShell({
                       receiptPending={receiptPending}
                       activeDocumentTitle={currentSeedDocument?.title || activeDocument.title}
                       onCreateReceipt={createReceiptDraft}
+                      onRunOperate={() => void runOperate()}
                       onExportReceipt={exportReceipt}
                       onExportDocument={exportDocument}
                       onOpenGetReceipts={() => {
@@ -8302,6 +8381,7 @@ export default function WorkspaceShell({
                           window.location.assign("/account");
                         }
                       }}
+                      isMobileLayout={isMobileLayout}
                     />
                   ) : isOperatePhase ? (
                     <OperateSurface
@@ -8334,6 +8414,8 @@ export default function WorkspaceShell({
                           phase: BOX_PHASES.create,
                         });
                       }}
+                      onOpenStage={openStageSidecar}
+                      onRunOperate={() => void runOperate()}
                       onAssemble={() => void assembleClipboard()}
                       onApplySuggestion={() => void applySeedSuggestion()}
                       onEditSuggestion={() => {
@@ -8344,6 +8426,7 @@ export default function WorkspaceShell({
                         });
                       }}
                       onDismissSuggestion={dismissSeedSuggestion}
+                      isMobileLayout={isMobileLayout}
                     >
                       {documentWorkbench}
                     </SeedSurface>
@@ -8380,44 +8463,6 @@ export default function WorkspaceShell({
                   />
                 ) : null}
               </div>
-
-              {isMobileLayout ? (
-                <MobileControlDock
-                  open={mobileControlDockOpen}
-                  viewModel={controlSurfaceViewModel}
-                  onToggleOpen={() => setMobileControlDockOpen((value) => !value)}
-                  onOpenBoxes={openBoxesIndex}
-                  onSelectPhase={(phase) => {
-                    setMobileControlDockOpen(false);
-                    handleSelectBoxPhase(phase);
-                  }}
-                  onOpenIntake={() => {
-                    setMobileControlDockOpen(false);
-                    setDropAnythingOpen(true);
-                  }}
-                  onOpenPhoto={() => {
-                    setMobileControlDockOpen(false);
-                    openPhotoIntake();
-                  }}
-                  onOpenSpeak={() => {
-                    setMobileControlDockOpen(false);
-                    openVoiceRecorder();
-                  }}
-                  onToggleAi={() => {
-                    setMobileControlDockOpen(false);
-                    setBoxPhase(BOX_PHASES.think);
-                    setAiOpen((value) => !value);
-                  }}
-                  onRunOperate={() => {
-                    setMobileControlDockOpen(false);
-                    void runOperate();
-                  }}
-                  onOpenReceipts={() => {
-                    setMobileControlDockOpen(false);
-                    openReceiptsSurface();
-                  }}
-                />
-              ) : null}
 
               {!isMobileLayout && (isThinkPhase || isCreatePhase) ? (
                 <DesktopAssemblySidecar
@@ -8540,6 +8585,18 @@ export default function WorkspaceShell({
             />
           </>
         )}
+
+        {showMobileBottomNav ? (
+          <MobileBottomNav
+            activeTab={activeMobileTab}
+            canOpenSeed={canOpenMobileSeed}
+            onGoHome={() => openCurrentBoxHome(activeProjectKey)}
+            onGoListen={openMobileListenSurface}
+            onGoSeed={openMobileSeedSurface}
+            onGoReceipts={openReceiptsSurface}
+            onOpenAdd={() => setDropAnythingOpen(true)}
+          />
+        ) : null}
 
         <BoxManagementDialog
           open={boxManagementOpen}

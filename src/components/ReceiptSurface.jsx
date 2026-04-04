@@ -15,9 +15,11 @@ export default function ReceiptSurface({
   receiptPending = false,
   activeDocumentTitle = "",
   onCreateReceipt,
+  onRunOperate,
   onExportReceipt,
   onExportDocument,
   onOpenGetReceipts,
+  isMobileLayout = false,
 }) {
   const summary = receiptSummary || {
     draftCount: Array.isArray(drafts) ? drafts.length : 0,
@@ -85,17 +87,26 @@ export default function ReceiptSurface({
             >
               {receiptPending ? "Drafting…" : "Draft receipt"}
             </button>
+            {isMobileLayout && onRunOperate ? (
+              <button type="button" className="terminal-button" onClick={onRunOperate}>
+                Operate
+              </button>
+            ) : null}
             {showConnectAction ? (
               <button type="button" className="terminal-button" onClick={onOpenGetReceipts}>
                 Connect GetReceipts
               </button>
             ) : null}
-            <button type="button" className="terminal-button" onClick={onExportReceipt}>
-              Export receipts
-            </button>
-            <button type="button" className="terminal-button" onClick={onExportDocument}>
-              Export doc
-            </button>
+            {!isMobileLayout ? (
+              <button type="button" className="terminal-button" onClick={onExportReceipt}>
+                Export receipts
+              </button>
+            ) : null}
+            {!isMobileLayout ? (
+              <button type="button" className="terminal-button" onClick={onExportDocument}>
+                Export doc
+              </button>
+            ) : null}
           </div>
         </section>
 

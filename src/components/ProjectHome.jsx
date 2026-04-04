@@ -156,7 +156,6 @@ export default function ProjectHome({
   boxViewModel,
   activeProject,
   projectDrafts = [],
-  projectActionPending = "",
   loadingDocumentKey = "",
   busy = false,
   guideDocument = null,
@@ -166,15 +165,12 @@ export default function ProjectHome({
   primaryAction,
   currentPositionAction = null,
   onBrowseBoxes,
-  onManageProjects,
   onOpenReceipts,
   onOpenDocument,
   onDeleteDocument,
   onPasteClipboard,
   onOpenSpeak,
   onOpenIntake,
-  onOpenPhoto,
-  onAskSeven,
   ActionIcon,
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
@@ -213,19 +209,11 @@ export default function ProjectHome({
         }
       : null,
     {
-      key: "paste",
-      icon: "paste",
-      label: "Paste",
-      detail: "Create a source now",
-      onClick: onPasteClipboard,
-      disabled: busy,
-    },
-    {
-      key: "photo",
-      icon: "photo",
-      label: "Photo",
-      detail: "Camera or library",
-      onClick: onOpenPhoto,
+      key: "add",
+      icon: "plus",
+      label: "Add source",
+      detail: "Upload, paste, link, photo, or speak",
+      onClick: onOpenIntake,
       disabled: busy,
     },
     {
@@ -234,14 +222,6 @@ export default function ProjectHome({
       label: "Speak",
       detail: "Capture a voice note",
       onClick: onOpenSpeak,
-      disabled: busy,
-    },
-    {
-      key: "seven",
-      icon: "seven",
-      label: "Ask Seven",
-      detail: "Talk to the current box",
-      onClick: onAskSeven,
       disabled: busy,
     },
     {
@@ -292,14 +272,6 @@ export default function ProjectHome({
                 onClick={onBrowseBoxes}
               >
                 All boxes
-              </button>
-              <button
-                type="button"
-                className="assembler-project-home__secondary-button"
-                onClick={onManageProjects}
-                disabled={Boolean(projectActionPending)}
-              >
-                Manage
               </button>
             </div>
           </div>

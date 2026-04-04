@@ -16,6 +16,7 @@ export default function FirstBoxComposer({
   boxTitle = "Untitled Box",
   capturePending = false,
   writePending = false,
+  isMobileLayout = false,
   onUpload,
   onPhoto,
   onPaste,
@@ -58,7 +59,11 @@ export default function FirstBoxComposer({
             </button>
             <button type="button" className="assembler-first-box__action" onClick={onPhoto} disabled={pending}>
               <span>Add photo</span>
-              <small>Use camera or library and turn it into a source</small>
+              <small>
+                {isMobileLayout
+                  ? "Take a photo or choose one from your library"
+                  : "Choose a photo from your library and turn it into a source"}
+              </small>
             </button>
             <button type="button" className="assembler-first-box__action" onClick={onPaste} disabled={pending}>
               <span>Paste text</span>

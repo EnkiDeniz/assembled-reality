@@ -199,7 +199,7 @@ function BoxRow({
             onClick={() => onOpenProjectHome(project.projectKey)}
             disabled={pending}
           >
-            Open
+            Open Box
           </button>
         </div>
       </div>
@@ -211,14 +211,13 @@ export default function BoxesIndex({
   activeProject = null,
   activeProjectKey = "",
   projects = [],
+  resumeTarget = null,
   projectActionPending = "",
   onOpenProjectHome,
+  onResumeProject,
   onCreateProject: _onCreateProject,
   onManageProjects,
-  onPasteClipboard,
-  onOpenSpeak,
   onOpenIntake,
-  onOpenPhoto,
   onToggleProjectPinned,
   onToggleProjectArchived,
 }) {
@@ -270,38 +269,29 @@ export default function BoxesIndex({
           <ActionCard
             icon="open"
             eyebrow="Resume"
-            title="Open current box"
-            detail="Start from Box home and continue the latest seed or source."
-            onClick={() => activeProject?.projectKey && onOpenProjectHome(activeProject.projectKey)}
+            title="Resume current work"
+            detail={
+              resumeTarget?.title
+                ? `${resumeTarget.title} · ${resumeTarget.detail || "Continue where you left off."}`
+                : "Continue the most recent source or seed."
+            }
+            onClick={() => activeProject?.projectKey && onResumeProject?.(activeProject.projectKey)}
             disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
             primary
           />
           <ActionCard
-            icon="paste"
-            eyebrow="Capture"
-            title="Paste source"
-            detail="Bring in text immediately."
-            onClick={onPasteClipboard}
-          />
-          <ActionCard
-            icon="photo"
-            eyebrow="Capture"
-            title="Add photo"
-            detail="Create a source from camera or library."
-            onClick={onOpenPhoto}
-          />
-          <ActionCard
-            icon="speak"
-            eyebrow="Capture"
-            title="Speak note"
-            detail="Capture the live signal in your own voice."
-            onClick={onOpenSpeak}
+            icon="box"
+            eyebrow="Home"
+            title="Open Box Home"
+            detail="Orient, review proof, and choose the next move."
+            onClick={() => activeProject?.projectKey && onOpenProjectHome(activeProject.projectKey)}
+            disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
           />
           <ActionCard
             icon="plus"
-            eyebrow="Intake"
+            eyebrow="Capture"
             title="Add source"
-            detail="Upload, link, paste, or speak."
+            detail="Upload, paste, link, photo, or speak."
             onClick={onOpenIntake}
           />
           <ActionCard

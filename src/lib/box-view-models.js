@@ -187,6 +187,11 @@ export function buildBoxViewModel({
 
   const resumeTarget = resumeSessionSummary
     ? {
+        kind: "resume",
+        actionLabel: "Resume",
+        documentKey: resumeSessionSummary.documentKey || "",
+        mode: "listen",
+        phase: BOX_PHASES.think,
         title: resumeSessionSummary.title || "Resume the last session",
         detail:
           typeof resumeSessionSummary.blockPosition === "number" &&
@@ -195,17 +200,32 @@ export function buildBoxViewModel({
             ? `Block ${resumeSessionSummary.blockPosition} of ${resumeSessionSummary.totalBlocks}`
             : "Resume where you left off",
       }
-    : seedDocument
+      : seedDocument
       ? {
+          kind: "seed",
+          actionLabel: "Open seed",
+          documentKey: seedDocument.documentKey || "",
+          mode: "assemble",
+          phase: BOX_PHASES.create,
           title: seedDocument.title || "Current seed",
           detail: "Seed is the current working position of this box.",
         }
       : latestTouchedSource
         ? {
+            kind: "source",
+            actionLabel: "Open source",
+            documentKey: latestTouchedSource.documentKey || "",
+            mode: "listen",
+            phase: BOX_PHASES.think,
             title: latestTouchedSource.title,
             detail: `${latestTouchedSource.metaLine} · Latest touched source`,
           }
         : {
+            kind: "empty",
+            actionLabel: "Add source",
+            documentKey: "",
+            mode: "listen",
+            phase: BOX_PHASES.think,
             title: guideSource?.title || "Add the first real source",
             detail: "The built-in guide stays available, but real work starts with a source.",
           };
@@ -309,19 +329,28 @@ export function buildEntryStateViewModel({
   projectDocuments = [],
   allDocuments = [],
   projectDrafts = [],
+  currentAssemblyDocument = null,
+  resumeSessionSummary = null,
 } = {}) {
   const normalizedProjects = Array.isArray(projects) ? projects.filter(Boolean) : [];
   const normalizedDocuments = Array.isArray(allDocuments) ? allDocuments.filter(Boolean) : [];
   const realSourceCount = listRealSourceDocuments(normalizedDocuments).length;
+  const currentBoxRealSources = listRealSourceDocuments(projectDocuments);
+  const latestProjectSource = getMostRecentItem(currentBoxRealSources);
   const seedCount = normalizedDocuments.filter(
     (document) => document?.isAssembly || document?.documentType === "assembly",
   ).length;
   const receiptCount = Array.isArray(projectDrafts) ? projectDrafts.length : 0;
-  const currentBoxRealSourceCount = listRealSourceDocuments(projectDocuments).length;
+  const currentBoxRealSourceCount = currentBoxRealSources.length;
   const isFirstTime = realSourceCount === 0 && seedCount === 0 && receiptCount === 0;
   const isPowerUser =
     !isFirstTime &&
     (normalizedProjects.length >= 2 || currentBoxRealSourceCount >= 5 || receiptCount >= 3);
+  const resumeDocumentKey =
+    String(resumeSessionSummary?.documentKey || "").trim() ||
+    String(latestProjectSource?.documentKey || "").trim() ||
+    "";
+  const resumeSeedKey = String(currentAssemblyDocument?.documentKey || "").trim();
 
   return {
     isFirstTime,
@@ -329,6 +358,10 @@ export function buildEntryStateViewModel({
     isPowerUser,
     mode: isFirstTime ? "first-time" : isPowerUser ? "power" : "returning",
     activeBoxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
+    resumeDocumentKey,
+    resumeSeedKey,
+    desktopInitialSurface: isFirstTime ? "first-time" : "home",
+    mobileInitialSurface: resumeDocumentKey ? "listen" : "home",
   };
 }
 

@@ -41,6 +41,11 @@ function getProjectTimestamp(project = null) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function getDocumentTimestamp(document = null) {
+  const parsed = Date.parse(document?.updatedAt || document?.createdAt || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 function listRealDocuments(documents = []) {
   return (Array.isArray(documents) ? documents : []).filter(
     (document) =>
@@ -48,6 +53,15 @@ function listRealDocuments(documents = []) {
       document?.sourceType !== "builtin" &&
       !document?.isAssembly &&
       document?.documentType !== "assembly",
+  );
+}
+
+function getLatestRealProjectDocumentKey(project = null, documents = []) {
+  return (
+    [...listRealDocuments(documents).filter((document) =>
+      Array.isArray(project?.documentKeys) ? project.documentKeys.includes(document.documentKey) : false,
+    )].sort((left, right) => getDocumentTimestamp(right) - getDocumentTimestamp(left))[0]?.documentKey ||
+    ""
   );
 }
 
@@ -84,9 +98,6 @@ export default async function WorkspacePage({ searchParams }) {
     (document) => document?.isAssembly || document?.documentType === "assembly",
   );
   const isFirstTime = realDocuments.length === 0 && !hasSeed;
-  const showLaunchpadInitially =
-    requestedLaunchpad ||
-    (!mobileRequest && !isFirstTime && !requestedDocumentKey);
   const resumeProject =
     getProjectForDocumentKey(projects, requestedDocumentKey) ||
     null;
@@ -100,6 +111,9 @@ export default async function WorkspacePage({ searchParams }) {
     projects[0] ||
     null;
   const initialProject = resolvedProject;
+  const initialProjectDocuments = documents.filter((document) =>
+    Array.isArray(initialProject?.documentKeys) ? initialProject.documentKeys.includes(document.documentKey) : false,
+  );
   const initialListenDocumentKey =
     getProjectListenDocumentKey(initialProject, documents) ||
     getProjectEntryDocumentKey(initialProject) ||
@@ -110,19 +124,34 @@ export default async function WorkspacePage({ searchParams }) {
     getProjectEntryDocumentKey(initialProject) ||
     documents[0]?.documentKey ||
     "";
+  const resumeSessionSummary = await buildResumeSessionSummaryForUser(
+    session.user.id,
+    initialProject?.documentKeys || documents.map((document) => document.documentKey),
+  );
+  const mobileResumeDocumentKey =
+    String(resumeSessionSummary?.documentKey || "").trim() ||
+    getLatestRealProjectDocumentKey(initialProject, initialProjectDocuments) ||
+    "";
 
   const defaultMode =
     requestedMode === "listen" || requestedMode === "assemble"
       ? requestedMode
-      : initialProject?.currentAssemblyDocumentKey
+      : mobileRequest
+        ? "listen"
+        : initialProject?.currentAssemblyDocumentKey
         ? "assemble"
         : "listen";
+  const showLaunchpadInitially =
+    requestedLaunchpad ||
+    (!isFirstTime && !requestedDocumentKey && (!mobileRequest || !mobileResumeDocumentKey));
   const fallbackDocumentKey =
     requestedDocumentKey ||
-    (defaultMode === "assemble"
-      ? initialAssembleDocumentKey
-      : initialListenDocumentKey);
-  const [initialDocument, projectDrafts, resumeSessionSummary, readerData] = await Promise.all([
+    (mobileRequest
+      ? mobileResumeDocumentKey || initialAssembleDocumentKey
+      : defaultMode === "assemble"
+        ? initialAssembleDocumentKey
+        : initialListenDocumentKey);
+  const [initialDocument, projectDrafts, readerData] = await Promise.all([
     getReaderDocumentDataForUser(
       session.user.id,
       fallbackDocumentKey,
@@ -132,10 +161,6 @@ export default async function WorkspacePage({ searchParams }) {
       documentKeys: initialProject?.documentKeys || [],
       take: 6,
     }),
-    buildResumeSessionSummaryForUser(
-      session.user.id,
-      initialProject?.documentKeys || documents.map((document) => document.documentKey),
-    ),
     getReaderProfileByUserId(session.user.id),
   ]);
 

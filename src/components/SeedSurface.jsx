@@ -9,14 +9,18 @@ export default function SeedSurface({
   suggestion = null,
   suggestionPending = false,
   onOpenSeed,
+  onOpenStage,
+  onRunOperate,
   onAssemble,
   onApplySuggestion,
   onEditSuggestion,
   onDismissSuggestion,
+  isMobileLayout = false,
   children,
 }) {
   const selectedBlockCount = viewModel?.selectedBlockCount || 0;
   const stagedReplyCount = viewModel?.stagedReplyCount || 0;
+  const stageCount = selectedBlockCount + stagedReplyCount;
   const showSeedDocument =
     Boolean(activeDocument?.documentKey) &&
     (activeDocument?.isAssembly || activeDocument?.documentType === "assembly");
@@ -62,6 +66,21 @@ export default function SeedSurface({
               ? "Keep the seed honest: name the aim, describe what is actually here, and keep the gap visible until proof closes it."
               : "The first real source will create the first seed. Until then, staging can keep gathering material."}
           </p>
+          {isMobileLayout ? (
+            <div className="assembler-seed-surface__hero-actions">
+              <button type="button" className="terminal-button" onClick={onOpenStage}>
+                {stageCount ? `Stage ${stageCount}` : "Stage"}
+              </button>
+              <button
+                type="button"
+                className="terminal-button is-primary"
+                onClick={onRunOperate}
+                disabled={!viewModel?.hasSeed}
+              >
+                Operate
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 

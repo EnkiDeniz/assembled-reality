@@ -10,11 +10,11 @@ function ModeButton({ active = false, label, onClick }) {
   );
 }
 
-function ActionButton({ active = false, disabled = false, label, onClick, tone = "" }) {
+function ActionButton({ disabled = false, label, onClick, tone = "" }) {
   return (
     <button
       type="button"
-      className={`assembler-control-surface__action ${active ? "is-active" : ""} ${tone ? `is-${tone}` : ""}`}
+      className={`assembler-control-surface__action ${tone ? `is-${tone}` : ""}`}
       onClick={onClick}
       disabled={disabled}
     >
@@ -26,16 +26,11 @@ function ActionButton({ active = false, disabled = false, label, onClick, tone =
 export default function WorkspaceControlSurface({
   viewModel,
   isMobileLayout = false,
-  activeSidecar = "",
   onOpenBoxes,
   onOpenBoxHome,
   onSelectPhase,
   onOpenIntake,
   onOpenSpeak,
-  onOpenSeven,
-  onOpenStage,
-  onRunOperate,
-  onOpenReceipts,
   onManageBox,
 }) {
   return (
@@ -76,26 +71,8 @@ export default function WorkspaceControlSurface({
       </div>
 
       <div className="assembler-control-surface__actions">
-        <ActionButton label="Add source" onClick={onOpenIntake} />
+        <ActionButton label="Add source" onClick={onOpenIntake} tone="primary" />
         <ActionButton label="Speak" onClick={onOpenSpeak} />
-        <ActionButton active={activeSidecar === "seven"} label="Seven" onClick={onOpenSeven} />
-        <ActionButton
-          active={activeSidecar === "stage"}
-          label={viewModel?.stageCount ? `Stage ${viewModel.stageCount}` : "Stage"}
-          onClick={onOpenStage}
-        />
-        <ActionButton
-          active={viewModel?.boxPhase === "operate"}
-          label="Operate"
-          onClick={onRunOperate}
-          disabled={!viewModel?.canRunOperate}
-          tone="primary"
-        />
-        <ActionButton
-          active={viewModel?.boxPhase === "receipts"}
-          label="Receipts"
-          onClick={onOpenReceipts}
-        />
         {!isMobileLayout ? (
           <ActionButton label="Box" onClick={onManageBox} />
         ) : null}
