@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
-import { BRAND_TRUTH, PRODUCT_NAME } from "@/lib/product-language";
+import { ACTION_LINE, BRAND_TRUTH, PRODUCT_MARK } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
@@ -84,7 +84,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
             className="terminal-link is-primary"
             onClick={() => onEnter?.()}
           >
-            Open {PRODUCT_NAME}
+            Open {PRODUCT_MARK}
           </Link>
         </div>
       </div>
@@ -178,9 +178,9 @@ export default function IntroLanding({
         <section className="intro-shell intro-shell--operator">
           <div className="intro-shell__stage intro-shell__stage--auth">
             <div className="intro-copy intro-copy--auth">
-              <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
+              <span className="intro-copy__eyebrow">{PRODUCT_MARK}</span>
               <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
-              <p className="intro-copy__support">Drop anything to build something.</p>
+              <p className="intro-copy__support">{ACTION_LINE}</p>
             </div>
             <div className="intro-auth-inline intro-auth-inline--stacked">
               <AuthPanel
@@ -200,9 +200,9 @@ export default function IntroLanding({
       <section className="intro-shell intro-shell--operator">
         <div className="intro-shell__stage">
           <div className="intro-copy">
-            <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
+            <span className="intro-copy__eyebrow">{PRODUCT_MARK}</span>
             <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
-            <p className="intro-copy__support">Drop anything to build something.</p>
+            <p className="intro-copy__support">{ACTION_LINE}</p>
           </div>
 
           <div className="intro-auth-inline">

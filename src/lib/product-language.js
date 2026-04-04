@@ -1,6 +1,9 @@
-export const PRODUCT_NAME = "Assembled Reality";
-export const BRAND_TRUTH = "Words are Legos.";
-export const ACTION_LINE = "Drop anything to build something.";
+export const COMPANY_NAME = "Lakin AI Inc.";
+export const PRODUCT_NAME = "Loegos";
+export const PRODUCT_MARK = "Lœgos";
+export const BRAND_TRUTH = "Meaning is an assembled object.";
+export const ACTION_LINE = "Build working documents from source material.";
+export const PRODUCT_DESCRIPTOR = "Source to assembly to receipt.";
 
 export const HOME_LOOP = Object.freeze({
   speak: "Speak",
@@ -10,4 +13,4 @@ export const HOME_LOOP = Object.freeze({
 });
 
 export const HOME_LOOP_TITLE = `${HOME_LOOP.speak}. ${HOME_LOOP.listen}. ${HOME_LOOP.assemble}. ${HOME_LOOP.drop}.`;
-export const METADATA_DESCRIPTION = `${BRAND_TRUTH} ${ACTION_LINE} Speak, listen, assemble, and keep the receipt.`;
+export const METADATA_DESCRIPTION = `${PRODUCT_NAME} is a desktop-first workbench for source to assembly to receipt.`;

@@ -47,7 +47,7 @@ export const appEnv = {
   emailFrom:
     normalizeSecret(process.env.NEXTAUTH_EMAIL_FROM) ||
     normalizeSecret(process.env.EMAIL_FROM) ||
-    "Assembled Reality <noreply@updates.getreceipts.com>",
+    "Loegos <noreply@updates.getreceipts.com>",
   magicLinksEnabled: Boolean(
     process.env.RESEND_API_KEY && (process.env.NEXTAUTH_EMAIL_FROM || process.env.EMAIL_FROM),
   ),

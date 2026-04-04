@@ -324,6 +324,13 @@ main {
   color: var(--white);
 }
 
+.auth-shell__subtitle {
+  margin: 0;
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .account-shell__signout {
   min-height: 36px;
   padding: 0 4px;
@@ -3164,6 +3171,22 @@ main {
 
 .assembler-toolbar.is-mobile {
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 8px 14px;
+}
+
+.assembler-toolbar.is-mobile .assembler-toolbar__left {
+  min-width: 0;
+}
+
+.assembler-toolbar.is-mobile .assembler-tab {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.assembler-toolbar.is-mobile .assembler-toolbar__right {
+  justify-content: flex-end;
 }
 
 .assembler-toolbar__menu-button {

@@ -113,7 +113,7 @@ export async function deriveSourceFromLink(urlValue) {
       redirect: "follow",
       headers: {
         Accept: "text/html, text/plain, text/markdown;q=0.9, */*;q=0.1",
-        "User-Agent": "AssembledRealityBot/1.0 (+https://assembledreality.com)",
+        "User-Agent": "LoegosBot/1.0 (+https://loegos.com)",
       },
       signal: AbortSignal.timeout(15000),
     });

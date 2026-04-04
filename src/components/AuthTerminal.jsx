@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { PRODUCT_NAME } from "@/lib/product-language";
+import { ACTION_LINE, PRODUCT_MARK } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 
 export default function AuthTerminal({ authCapabilities }) {
@@ -44,7 +44,8 @@ export default function AuthTerminal({ authCapabilities }) {
     <main className="intro-page auth-shell">
       <section className="auth-shell__panel">
         <div className="auth-shell__copy">
-          <h1 className="auth-shell__title">{PRODUCT_NAME}</h1>
+          <h1 className="auth-shell__title">{PRODUCT_MARK}</h1>
+          <p className="auth-shell__subtitle">{ACTION_LINE}</p>
         </div>
 
         <div className="auth-shell__body">

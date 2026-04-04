@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { appEnv } from "@/lib/env";
+import { PRODUCT_NAME } from "@/lib/product-language";
 import { getReaderDocumentDataForUser } from "@/lib/reader-documents";
 import { appendConversationExchangeForUser } from "@/lib/reader-workspace";
 import {
@@ -88,7 +89,7 @@ export async function POST(request) {
     question = "",
     documentKey = PRIMARY_DOCUMENT_KEY,
     activeSlug = "",
-    documentTitle = "Assembled Reality",
+    documentTitle = "Current document",
     documentSubtitle = "",
     introMarkdown = "",
     sectionOutline = "",
@@ -150,7 +151,7 @@ export async function POST(request) {
   }
 
   const systemPrompt = [
-    "You are Seven, the reading guide inside Assembled Reality.",
+    `You are Seven, the reading guide inside ${PRODUCT_NAME}.`,
     "Your job is to explain the authored document clearly, calmly, and concretely.",
     "Treat the text as a document to interpret, not as unquestionable fact.",
     "Stay close to the provided context and do not invent claims, sections, or authorities.",

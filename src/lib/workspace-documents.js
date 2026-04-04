@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
 import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
 import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
+import { PRODUCT_MARK } from "@/lib/product-language";
 import { slugify } from "@/lib/text";
 import {
   buildWorkspaceBlocksFromDocument,
@@ -85,6 +86,13 @@ function isMissingProjectTableError(error) {
   );
 }
 
+function isSkippableWorkspaceCleanupError(error) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2021" || error.code === "P2022")
+  );
+}
+
 async function detachDocumentFromProjects(tx, userId, documentKey) {
   if (!tx.readerProject || !tx.readerProjectDocument) {
     return;
@@ -138,7 +146,24 @@ async function detachDocumentFromProjects(tx, userId, documentKey) {
       },
     });
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isSkippableWorkspaceCleanupError(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
+async function runWorkspaceCleanupStep(label, operation) {
+  try {
+    await operation();
+  } catch (error) {
+    if (isSkippableWorkspaceCleanupError(error)) {
+      console.warn(
+        `[workspace-documents] Skipping ${label} cleanup due to schema drift: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`,
+      );
       return;
     }
 
@@ -354,7 +379,7 @@ export function getBuiltinWorkspaceDocument() {
     logEntries: [],
     documentType: "builtin",
     sourceType: "builtin",
-    sourceFiles: ["Assembled Reality"],
+    sourceFiles: [PRODUCT_MARK],
     sourceAssetIds: [],
     sourceAssets: [],
     originalFilename: null,
@@ -427,7 +452,7 @@ export async function getWorkspaceDocumentForUser(userId, documentKey = PRIMARY_
       logEntries: normalizeWorkspaceLogEntries(document.logEntries, PRIMARY_DOCUMENT_KEY),
       documentType: "builtin",
       sourceType: "builtin",
-      sourceFiles: ["Assembled Reality"],
+      sourceFiles: [PRODUCT_MARK],
       sourceAssetIds: [],
       sourceAssets: [],
       excerpt: buildWorkspaceExcerptFromBlocks(blocks),
@@ -503,13 +528,13 @@ export async function saveWorkspaceDocumentForUser(
       defaultIsEditable: true,
       defaultIsAssemblyBlock: false,
     });
-    const nextTitle = String(title || current?.title || "Assembled Reality").trim();
+    const nextTitle = String(title || current?.title || PRODUCT_MARK).trim();
     const nextSubtitle = String(subtitle || current?.subtitle || "").trim();
     const contentMarkdown = buildStoredWorkspaceContent({
       title: nextTitle,
       subtitle: nextSubtitle,
       documentType: "builtin",
-      sourceFiles: ["Assembled Reality"],
+      sourceFiles: [PRODUCT_MARK],
       sourceAssetIds: current?.sourceAssetIds || [],
       blocks: normalizedBlocks,
       logEntries,
@@ -802,70 +827,82 @@ export async function deleteWorkspaceDocumentForUser(userId, documentKey) {
     select: { id: true },
   });
 
-  await prisma.$transaction(async (tx) => {
-    await detachDocumentFromProjects(tx, userId, normalizedDocumentKey);
+  await runWorkspaceCleanupStep("project membership", () =>
+    detachDocumentFromProjects(prisma, userId, normalizedDocumentKey),
+  );
 
-    if (readerProfile?.id) {
-      await Promise.all([
-        tx.bookmark.deleteMany({
-          where: {
-            readerProfileId: readerProfile.id,
-            documentKey: normalizedDocumentKey,
-          },
-        }),
-        tx.highlight.deleteMany({
-          where: {
-            readerProfileId: readerProfile.id,
-            documentKey: normalizedDocumentKey,
-          },
-        }),
-        tx.note.deleteMany({
-          where: {
-            readerProfileId: readerProfile.id,
-            documentKey: normalizedDocumentKey,
-          },
-        }),
-        tx.readingProgress.deleteMany({
-          where: {
-            readerProfileId: readerProfile.id,
-            documentKey: normalizedDocumentKey,
-          },
-        }),
-      ]);
-    }
+  if (readerProfile?.id) {
+    await runWorkspaceCleanupStep("bookmarks", () =>
+      prisma.bookmark.deleteMany({
+        where: {
+          readerProfileId: readerProfile.id,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+    );
+    await runWorkspaceCleanupStep("highlights", () =>
+      prisma.highlight.deleteMany({
+        where: {
+          readerProfileId: readerProfile.id,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+    );
+    await runWorkspaceCleanupStep("notes", () =>
+      prisma.note.deleteMany({
+        where: {
+          readerProfileId: readerProfile.id,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+    );
+    await runWorkspaceCleanupStep("reading progress", () =>
+      prisma.readingProgress.deleteMany({
+        where: {
+          readerProfileId: readerProfile.id,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+    );
+  }
 
-    await Promise.all([
-      tx.readingReceiptDraft.deleteMany({
-        where: {
-          userId,
-          documentKey: normalizedDocumentKey,
-        },
-      }),
-      tx.readerConversationThread.deleteMany({
-        where: {
-          userId,
-          documentKey: normalizedDocumentKey,
-        },
-      }),
-      tx.readerEvidenceSet.deleteMany({
-        where: {
-          userId,
-          documentKey: normalizedDocumentKey,
-        },
-      }),
-      tx.readerListeningSession.deleteMany({
-        where: {
-          userId,
-          documentKey: normalizedDocumentKey,
-        },
-      }),
-    ]);
-
-    await tx.readerDocument.delete({
+  await runWorkspaceCleanupStep("receipt drafts", () =>
+    prisma.readingReceiptDraft.deleteMany({
       where: {
+        userId,
         documentKey: normalizedDocumentKey,
       },
-    });
+    }),
+  );
+  await runWorkspaceCleanupStep("seven threads", () =>
+    prisma.readerConversationThread.deleteMany({
+      where: {
+        userId,
+        documentKey: normalizedDocumentKey,
+      },
+    }),
+  );
+  await runWorkspaceCleanupStep("evidence sets", () =>
+    prisma.readerEvidenceSet.deleteMany({
+      where: {
+        userId,
+        documentKey: normalizedDocumentKey,
+      },
+    }),
+  );
+  await runWorkspaceCleanupStep("listening sessions", () =>
+    prisma.readerListeningSession.deleteMany({
+      where: {
+        userId,
+        documentKey: normalizedDocumentKey,
+      },
+    }),
+  );
+
+  await prisma.readerDocument.delete({
+    where: {
+      documentKey: normalizedDocumentKey,
+    },
   });
 
   return {

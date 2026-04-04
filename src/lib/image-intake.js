@@ -6,6 +6,7 @@ import imageSize from "image-size";
 import { buildWorkspaceBlocksFromDocument, buildWorkspaceExcerptFromBlocks } from "@/lib/document-blocks";
 import { appEnv } from "@/lib/env";
 import { parseDocument } from "@/lib/document";
+import { PRODUCT_NAME } from "@/lib/product-language";
 import { slugify } from "@/lib/text";
 
 export const IMAGE_DERIVATION_MODES = Object.freeze({
@@ -125,7 +126,7 @@ function getBlobExtension(mimeType, filename = "") {
 function buildOpenAiPrompt(derivationMode, titleHint) {
   if (derivationMode === IMAGE_DERIVATION_MODES.notes) {
     return [
-      "You are turning an image into a source document for Assembled Reality.",
+      `You are turning an image into a source document for ${PRODUCT_NAME}.`,
       "Return markdown only.",
       `Use this fallback title if the image has no obvious title: ${titleHint}.`,
       "This is image-to-source-notes mode.",
@@ -144,7 +145,7 @@ function buildOpenAiPrompt(derivationMode, titleHint) {
   }
 
   return [
-    "You are turning an image into a markdown source document for Assembled Reality.",
+    `You are turning an image into a markdown source document for ${PRODUCT_NAME}.`,
     "Return markdown only.",
     `Use this fallback title if the image has no obvious title: ${titleHint}.`,
     "This is image-to-document mode.",

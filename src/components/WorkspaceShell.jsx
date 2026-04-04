@@ -32,7 +32,7 @@ import {
   isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
-import { PRODUCT_NAME } from "@/lib/product-language";
+import { PRODUCT_MARK, PRODUCT_NAME } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 
@@ -913,7 +913,7 @@ function toDocumentSummary(document, previous = null) {
     ),
     originalFilename: document.originalFilename || previous?.originalFilename || null,
     href:
-      document.documentKey === "assembled-reality-v07-final"
+      document.documentKey === PRIMARY_WORKSPACE_DOCUMENT_KEY
         ? "/workspace"
         : `/workspace?document=${encodeURIComponent(document.documentKey)}`,
     wordCount: previous?.wordCount || 0,
@@ -2256,6 +2256,12 @@ function WorkspaceToolbar({
     activeDocument?.isAssembly || activeDocument?.documentType === "assembly"
       ? "Assembly"
       : "Document";
+  const receiptTabLabel = isMobileLayout ? "Receipt" : "Receipt log";
+  const stagingTabLabel = totalClipboardCount
+    ? `${isMobileLayout ? "Stage" : "Staging"} ${totalClipboardCount}`
+    : isMobileLayout
+      ? "Stage"
+      : "Staging";
 
   return (
     <div className={`assembler-toolbar ${isMobileLayout ? "is-mobile" : ""}`}>
@@ -2272,7 +2278,7 @@ function WorkspaceToolbar({
           className={`assembler-tab ${viewMode === "log" ? "is-active is-log" : ""}`}
           onClick={() => onSetViewMode("log")}
         >
-          Receipt log
+          {receiptTabLabel}
         </button>
 
         {isMobileLayout ? (
@@ -2281,7 +2287,7 @@ function WorkspaceToolbar({
             className={`assembler-tab ${isClipboardOpen ? "is-active" : ""}`}
             onClick={onOpenClipboard}
           >
-            {totalClipboardCount ? `Staging ${totalClipboardCount}` : "Staging"}
+            {stagingTabLabel}
           </button>
         ) : viewMode === "doc" ? (
           <button
@@ -6285,7 +6291,7 @@ export default function WorkspaceShell({
               </>
             ) : (
               <>
-                <span className="assembler-header__name">{PRODUCT_NAME}</span>
+                <span className="assembler-header__name">{PRODUCT_MARK}</span>
                 {activeProject ? (
                   <span className="assembler-header__project">
                     {activeProject.title}

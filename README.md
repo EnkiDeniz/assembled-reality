@@ -1,9 +1,9 @@
-# Assembled Reality
+# Loegos
 
-**Words are Legos.**  
-**Drop anything to build something.**
+**Meaning is an assembled object.**  
+**Build working documents from source material.**
 
-Assembled Reality `1.0` is an invite-only beta for solo operators. It is a desktop-first web workbench for turning source material into a working assembly with visible proof.
+Loegos `1.0` is an invite-only beta for solo operators. It is a desktop-first web workbench for turning source material into a working assembly with visible proof.
 
 This `README.md` is the current product source of truth.
 
@@ -42,7 +42,7 @@ The active hierarchy is:
 - current assembly
 - receipts
 
-The built-in Assembled Reality guide stays pinned in the source list, but it is not the hero of the app.
+The built-in `Lœgos` guide stays pinned in the source list, but it is not the hero of the app.
 
 ## Supported Intake For 1.0
 

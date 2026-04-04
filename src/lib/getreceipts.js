@@ -167,7 +167,7 @@ export function buildReadingReceiptPayload({
   const evidenceIds = items.map((item) => item.id);
 
   return {
-    aim: title || `Read and internalize ${sectionTitles || "Assembled Reality"}`,
+    aim: title || `Read and internalize ${sectionTitles || "the current document"}`,
     tried: `Reviewed evidence inside ${PRODUCT_NAME} and assembled a human interpretation receipt.`,
     outcome: excerpt
       ? `Reviewed source passages including: "${excerpt}"`

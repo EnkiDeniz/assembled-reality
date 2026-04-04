@@ -503,7 +503,7 @@ export async function loadLatestReadingSnapshotForUser(userId) {
 
   return {
     documentKey,
-    documentTitle: documentSummary?.title || "Assembled Reality",
+    documentTitle: documentSummary?.title || "Current document",
     progressPercent: latestProgress?.progressPercent || 0,
     sectionSlug: latestProgress?.sectionSlug || "beginning",
     resumeHref: getReaderDocumentHref(documentKey),

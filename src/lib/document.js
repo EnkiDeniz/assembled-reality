@@ -4,6 +4,7 @@ import { cache } from "react";
 import { slugify } from "@/lib/text";
 
 export const PRIMARY_DOCUMENT_KEY = "assembled-reality-v07-final";
+const BUILTIN_DOCUMENT_SEGMENTS = ["content", "loegos.md"];
 
 const SECTION_HEADER_RE = /^##\s+(\d+)\s+·\s+(.+)$/gm;
 const APPENDIX_DOCUMENTS = [
@@ -92,7 +93,7 @@ export function parseDocument(markdown, { documentKey = PRIMARY_DOCUMENT_KEY } =
     firstSectionIndex === -1 ? normalized : normalized.slice(0, firstSectionIndex).trim();
   const titleMatch = preambleSource.match(/^#\s+(.+)$/m);
   const subtitleMatch = preambleSource.match(/^###\s+(.+)$/m);
-  const title = titleMatch?.[1]?.trim() || "ASSEMBLED REALITY";
+  const title = titleMatch?.[1]?.trim() || "Untitled document";
   const subtitle = subtitleMatch?.[1]?.trim() || "";
 
   const introMarkdown = preambleSource
@@ -127,6 +128,6 @@ export function parseDocument(markdown, { documentKey = PRIMARY_DOCUMENT_KEY } =
 }
 
 export const getParsedDocument = cache(() => {
-  const baseDocument = normalizeMarkdown(readMarkdownFile("content", "assembled_reality_v07_final.md"));
+  const baseDocument = normalizeMarkdown(readMarkdownFile(...BUILTIN_DOCUMENT_SEGMENTS));
   return applyAuthoritativeAppendices(parseDocument(baseDocument));
 });

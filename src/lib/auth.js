@@ -4,6 +4,7 @@ import EmailProvider from "next-auth/providers/email";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { appEnv } from "@/lib/env";
+import { PRODUCT_NAME } from "@/lib/product-language";
 import { ensureReaderProfileForUser } from "@/lib/reader-db";
 import { sendVerificationRequest } from "@/lib/email";
 
@@ -62,7 +63,7 @@ export const authOptions = {
             from: appEnv.emailFrom,
             sendVerificationRequest,
             maxAge: 15 * 60,
-            brandName: "Assembled Reality",
+            brandName: PRODUCT_NAME,
           }),
         ]
       : []),

@@ -24,12 +24,12 @@ function resolveMetadataBase() {
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXTAUTH_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
-    "https://assembledreality.com";
+    "https://loegos.com";
 
   try {
     return new URL(raw);
   } catch {
-    return new URL("https://assembledreality.com");
+    return new URL("https://loegos.com");
   }
 }
 

@@ -3,6 +3,8 @@ import {
   ACTION_LINE,
   BRAND_TRUTH,
   METADATA_DESCRIPTION,
+  PRODUCT_DESCRIPTOR,
+  PRODUCT_MARK,
   PRODUCT_NAME,
 } from "@/lib/product-language";
 
@@ -153,7 +155,7 @@ export default function OpenGraphImage() {
                     letterSpacing: -2.6,
                   }}
                 >
-                  {PRODUCT_NAME}
+                  {PRODUCT_MARK}
                 </div>
                 <div
                   style={{
@@ -195,7 +197,7 @@ export default function OpenGraphImage() {
                   maxWidth: 560,
                 }}
               >
-                {METADATA_DESCRIPTION}
+                {`${PRODUCT_DESCRIPTOR}. ${METADATA_DESCRIPTION}`}
               </div>
             </div>
           </div>
@@ -239,7 +241,7 @@ export default function OpenGraphImage() {
             />
             <MockRow
               title="Source material"
-              meta="Drop anything to build something."
+              meta={ACTION_LINE}
             />
             <MockRow
               title="Current assembly"

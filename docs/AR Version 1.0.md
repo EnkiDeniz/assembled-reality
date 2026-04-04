@@ -2,7 +2,7 @@
 
 ## Summary
 
-Assembled Reality `1.0` is an invite-only beta for solo operators.
+Loegos `1.0` is an invite-only beta for solo operators.
 
 It is a desktop-first workbench for one reliable loop:
 
@@ -57,7 +57,7 @@ Before signoff, the live product must make these flows feel trustworthy:
 
 - The landing page stays minimal and warm-audience oriented.
 - The workspace is the product.
-- The built-in guide is pinned, but never the hero action.
+- The built-in `Lœgos` guide is pinned, but never the hero action.
 - Receipt log is proof/history, not a competing editing mode.
 - GetReceipts is optional and account-level.
 - Failure to sync remotely must never block a local receipt draft.
