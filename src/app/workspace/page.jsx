@@ -12,9 +12,11 @@ import {
   listReaderDocumentsForUser,
 } from "@/lib/reader-documents";
 import {
+  buildProjectsFromDocuments,
   getProjectByKey,
   getProjectEntryDocumentKey,
   getProjectListenDocumentKey,
+  PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import {
@@ -70,6 +72,15 @@ function isMobileRequest(userAgent = "") {
   return /iphone|ipad|ipod|android|mobile|blackberry|opera mini|windows phone/.test(normalized);
 }
 
+async function safeWorkspaceRead(label, action, fallback) {
+  try {
+    return await action();
+  } catch (error) {
+    console.error(`[workspace] ${label} failed`, error);
+    return typeof fallback === "function" ? fallback(error) : fallback;
+  }
+}
+
 export default async function WorkspacePage({ searchParams }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -91,8 +102,16 @@ export default async function WorkspacePage({ searchParams }) {
         ? "box"
         : "boxes";
 
-  const documents = await listReaderDocumentsForUser(session.user.id);
-  const projects = await listReaderProjectsForUser(session.user.id, documents);
+  const documents = await safeWorkspaceRead(
+    "listReaderDocumentsForUser",
+    () => listReaderDocumentsForUser(session.user.id),
+    [],
+  );
+  const projects = await safeWorkspaceRead(
+    "listReaderProjectsForUser",
+    () => listReaderProjectsForUser(session.user.id, documents),
+    () => buildProjectsFromDocuments(documents),
+  );
   const realDocuments = listRealDocuments(documents);
   const hasSeed = documents.some(
     (document) => document?.isAssembly || document?.documentType === "assembly",
@@ -124,9 +143,14 @@ export default async function WorkspacePage({ searchParams }) {
     getProjectEntryDocumentKey(initialProject) ||
     documents[0]?.documentKey ||
     "";
-  const resumeSessionSummary = await buildResumeSessionSummaryForUser(
-    session.user.id,
-    initialProject?.documentKeys || documents.map((document) => document.documentKey),
+  const resumeSessionSummary = await safeWorkspaceRead(
+    "buildResumeSessionSummaryForUser",
+    () =>
+      buildResumeSessionSummaryForUser(
+        session.user.id,
+        initialProject?.documentKeys || documents.map((document) => document.documentKey),
+      ),
+    null,
   );
   const mobileResumeDocumentKey =
     String(resumeSessionSummary?.documentKey || "").trim() ||
@@ -151,20 +175,42 @@ export default async function WorkspacePage({ searchParams }) {
       : defaultMode === "assemble"
         ? initialAssembleDocumentKey
         : initialListenDocumentKey);
-  const [initialDocument, projectDrafts, readerData] = await Promise.all([
-    getReaderDocumentDataForUser(
-      session.user.id,
-      fallbackDocumentKey,
+  let [initialDocument, projectDrafts, readerData] = await Promise.all([
+    safeWorkspaceRead(
+      "getReaderDocumentDataForUser",
+      () => getReaderDocumentDataForUser(session.user.id, fallbackDocumentKey),
+      null,
     ),
-    listReadingReceiptDraftsForProjectForUser(session.user.id, {
-      projectId: initialProject?.id || null,
-      documentKeys: initialProject?.documentKeys || [],
-      take: 6,
-    }),
-    getReaderProfileByUserId(session.user.id),
+    safeWorkspaceRead(
+      "listReadingReceiptDraftsForProjectForUser",
+      () =>
+        listReadingReceiptDraftsForProjectForUser(session.user.id, {
+          projectId: initialProject?.id || null,
+          documentKeys: initialProject?.documentKeys || [],
+          take: 6,
+        }),
+      [],
+    ),
+    safeWorkspaceRead(
+      "getReaderProfileByUserId",
+      () => getReaderProfileByUserId(session.user.id),
+      null,
+    ),
   ]);
 
+  if (!initialDocument) {
+    initialDocument = await safeWorkspaceRead(
+      "getReaderDocumentDataForUser builtin fallback",
+      () => getReaderDocumentDataForUser(session.user.id, PRIMARY_WORKSPACE_DOCUMENT_KEY),
+      null,
+    );
+  }
+
   if (!initialDocument && !isFirstTime) {
+    redirect("/");
+  }
+
+  if (!initialDocument) {
     redirect("/");
   }
 
