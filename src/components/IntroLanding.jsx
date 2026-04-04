@@ -169,6 +169,9 @@ export default function IntroLanding({
     return (
       <main className="intro-page">
         <section className="intro-auth-shell">
+          <div className="intro-copy intro-copy--auth">
+            <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
+          </div>
           <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} onEnter={markIntroSeen} />
         </section>
       </main>
@@ -179,6 +182,7 @@ export default function IntroLanding({
     <main className="intro-page">
       <section className="intro-shell">
         <div className="intro-copy">
+          <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
           <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
         </div>
 

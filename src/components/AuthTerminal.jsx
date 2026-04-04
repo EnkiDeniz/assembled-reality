@@ -36,18 +36,10 @@ export default function AuthTerminal({ authCapabilities }) {
   }
 
   return (
-    <main className="terminal-page auth-shell">
+    <main className="intro-page auth-shell">
       <section className="auth-shell__panel">
         <div className="auth-shell__copy">
           <h1 className="auth-shell__title">{PRODUCT_NAME}</h1>
-          <div className="terminal-pill-row">
-            <span className={`terminal-pill ${authCapabilities.appleEnabled ? "is-green" : ""}`}>
-              Apple sign-in {authCapabilities.appleEnabled ? "available" : "unavailable"}
-            </span>
-            <span className={`terminal-pill ${authCapabilities.magicLinksEnabled ? "is-green" : ""}`}>
-              Magic link {authCapabilities.magicLinksEnabled ? "available" : "unavailable"}
-            </span>
-          </div>
         </div>
 
         <div className="auth-shell__body">

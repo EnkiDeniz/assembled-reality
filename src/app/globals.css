@@ -211,11 +211,35 @@ main {
   margin: 18px 0;
 }
 
+.auth-shell .terminal-actions,
+.intro-auth .terminal-actions,
+.auth-shell .terminal-upload,
+.intro-auth .terminal-upload {
+  width: 100%;
+}
+
+.auth-shell .terminal-actions,
+.intro-auth .terminal-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-shell .terminal-button,
+.auth-shell .terminal-link,
+.intro-auth .terminal-button,
+.intro-auth .terminal-link {
+  width: 100%;
+  min-height: 40px;
+  justify-content: center;
+  border-radius: 14px;
+}
+
 .terminal-file-input {
   display: none;
 }
 
 .auth-shell {
+  width: 100%;
   display: grid;
   place-items: center;
 }
@@ -225,11 +249,13 @@ main {
 }
 
 .auth-shell__panel {
-  width: min(780px, 100%);
-  padding: 30px;
+  width: min(760px, 100%);
+  padding: 34px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background: rgba(10, 11, 11, 0.92);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 36%),
+    rgba(10, 11, 11, 0.94);
   box-shadow: var(--shadow);
 }
 
@@ -254,7 +280,7 @@ main {
 }
 
 .auth-shell__copy {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .account-shell__header {
@@ -316,7 +342,7 @@ main {
 .auth-shell__body,
 .account-grid {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .account-grid {
@@ -332,13 +358,20 @@ main {
 
 .intro-shell,
 .intro-auth-shell {
-  width: min(860px, 100%);
+  width: min(760px, 100%);
   display: grid;
   justify-items: center;
+  padding: 34px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 36%),
+    rgba(10, 11, 11, 0.94);
+  box-shadow: var(--shadow);
 }
 
 .intro-shell {
-  gap: 28px;
+  gap: 24px;
 }
 
 .intro-progress {
@@ -366,16 +399,29 @@ main {
 .intro-copy {
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: 8px;
   text-align: center;
 }
 
+.intro-copy__eyebrow {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.intro-copy--auth {
+  width: 100%;
+  justify-items: start;
+  text-align: left;
+}
+
 .intro-copy__title {
-  width: min(520px, 100%);
+  width: min(420px, 100%);
   margin: 0;
   color: var(--white);
-  font-size: clamp(1.9rem, 4vw, 2.7rem);
-  line-height: 1.08;
+  font-size: clamp(1.8rem, 4vw, 2.45rem);
+  line-height: 1.02;
   font-weight: 600;
   letter-spacing: -0.04em;
 }
@@ -699,7 +745,7 @@ main {
 }
 
 .intro-auth-inline {
-  width: min(520px, 100%);
+  width: 100%;
 }
 
 .intro-auth-inline .intro-auth {
@@ -710,12 +756,12 @@ main {
 }
 
 .intro-auth {
-  width: min(520px, 100%);
-  padding: 30px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background: rgba(10, 11, 11, 0.92);
-  box-shadow: var(--shadow);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .intro-auth__copy {
@@ -2595,10 +2641,10 @@ main {
 }
 
 .assembler-home {
-  width: min(760px, 100%);
+  width: min(700px, 100%);
   margin: 0 auto;
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .assembler-home__copy {
@@ -2628,13 +2674,25 @@ main {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
-  padding: 18px 18px;
+  padding: 18px;
   border: 1px solid rgba(34, 197, 94, 0.24);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.07), transparent 78%),
-    rgba(14, 16, 16, 0.92);
+    linear-gradient(180deg, rgba(34, 197, 94, 0.05), transparent 72%),
+    rgba(12, 14, 14, 0.92);
   text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.assembler-home__resume:hover {
+  border-color: rgba(34, 197, 94, 0.34);
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.06), transparent 72%),
+    rgba(14, 16, 16, 0.96);
+}
+
+.assembler-home__resume:disabled {
+  opacity: 0.5;
 }
 
 .assembler-home__resume-copy {
@@ -2653,7 +2711,7 @@ main {
 .assembler-home__resume-title {
   min-width: 0;
   color: var(--white);
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -2666,34 +2724,40 @@ main {
 }
 
 .assembler-home__resume-icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(34, 197, 94, 0.24);
   color: var(--green);
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(34, 197, 94, 0.04);
 }
 
 .assembler-home__actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .assembler-home__action {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 0 14px;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(16, 18, 18, 0.88);
+  border-radius: 12px;
+  background: rgba(14, 16, 16, 0.9);
   color: var(--white);
   text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.assembler-home__action:hover {
+  border-color: var(--line-strong);
+  background: rgba(16, 18, 18, 0.96);
 }
 
 .assembler-home__action:disabled {
@@ -2701,19 +2765,17 @@ main {
 }
 
 .assembler-home__action-icon {
-  width: 34px;
-  height: 34px;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--soft);
 }
 
 .assembler-home__action-label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -2740,10 +2802,16 @@ main {
 .assembler-sheet__close {
   border: 0;
   background: transparent;
-  color: var(--blue);
+  color: var(--soft);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.assembler-home__section-action:hover,
+.assembler-home__footer-link:hover,
+.assembler-sheet__close:hover {
+  color: var(--white);
 }
 
 .assembler-home__section-list {
@@ -3158,11 +3226,13 @@ main {
   width: min(680px, calc(100vw - 32px));
   transform: translate(-50%, -50%);
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  background: rgba(10, 11, 11, 0.98);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 34%),
+    rgba(10, 11, 11, 0.98);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
 }
 
@@ -3204,27 +3274,25 @@ main {
 
 .assembler-image-chooser__actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .assembler-image-chooser__action {
   display: grid;
-  gap: 8px;
-  min-height: 152px;
-  padding: 16px;
+  gap: 4px;
+  min-height: 72px;
+  padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(18, 20, 20, 0.82);
+  border-radius: 14px;
+  background: rgba(14, 16, 16, 0.92);
   color: var(--text);
   text-align: left;
-  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
 .assembler-image-chooser__action:hover {
-  transform: translateY(-1px);
   border-color: var(--line-strong);
-  background: rgba(21, 24, 24, 0.94);
+  background: rgba(16, 18, 18, 0.98);
 }
 
 .assembler-image-chooser__action:disabled {
@@ -3233,13 +3301,11 @@ main {
 
 .assembler-image-chooser__action.is-primary {
   border-color: rgba(34, 197, 94, 0.28);
-  background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.05), transparent 75%),
-    rgba(18, 20, 20, 0.88);
+  background: rgba(14, 18, 15, 0.94);
 }
 
 .assembler-image-chooser__action-label {
-  color: var(--amber);
+  color: var(--soft);
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -3247,8 +3313,8 @@ main {
 
 .assembler-image-chooser__action-title {
   color: var(--white);
-  font-size: 15px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .assembler-drop-sheet {
@@ -3266,22 +3332,21 @@ main {
 .assembler-drop-sheet__action {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  min-height: 68px;
-  padding: 12px 14px;
+  min-height: 56px;
+  padding: 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(16, 18, 18, 0.88);
+  border-radius: 12px;
+  background: rgba(14, 16, 16, 0.92);
   color: var(--text);
   text-align: left;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
 .assembler-drop-sheet__action:hover {
-  transform: translateY(-1px);
   border-color: var(--line-strong);
-  background: rgba(20, 22, 22, 0.94);
+  background: rgba(16, 18, 18, 0.98);
 }
 
 .assembler-drop-sheet__action:disabled {
@@ -3290,37 +3355,29 @@ main {
 
 .assembler-drop-sheet__action.is-primary {
   border-color: rgba(34, 197, 94, 0.24);
-  background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.05), transparent 78%),
-    rgba(16, 18, 18, 0.92);
+  background: rgba(14, 18, 15, 0.94);
 }
 
 .assembler-drop-sheet__action-icon {
-  width: 34px;
-  height: 34px;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--soft);
-  background: rgba(10, 11, 11, 0.72);
 }
 
 .assembler-drop-sheet__action-icon svg {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
 }
 
 .assembler-drop-sheet__action.is-primary .assembler-drop-sheet__action-icon {
-  border-color: rgba(34, 197, 94, 0.22);
   color: var(--green);
-  background: rgba(34, 197, 94, 0.08);
 }
 
 .assembler-drop-sheet__action-copy {
-  display: grid;
-  gap: 3px;
+  display: block;
   min-width: 0;
 }
 
@@ -3364,7 +3421,7 @@ main {
   padding: 0 14px;
   border: 1px solid rgba(34, 197, 94, 0.24);
   border-radius: 12px;
-  background: rgba(16, 18, 18, 0.88);
+  background: rgba(14, 16, 16, 0.92);
   color: var(--white);
   font-size: 11px;
   letter-spacing: 0.12em;
@@ -3380,9 +3437,7 @@ main {
 }
 
 .assembler-voice-screen__backdrop {
-  background:
-    radial-gradient(circle at 50% 100%, rgba(245, 158, 11, 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(15, 16, 18, 0.95), rgba(15, 16, 18, 0.98));
+  background: rgba(4, 5, 5, 0.82);
 }
 
 .assembler-voice-screen__panel {
@@ -3392,11 +3447,11 @@ main {
   grid-template-rows: auto 1fr auto;
   gap: 24px;
   padding: 22px 22px 28px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 32px;
   background:
-    radial-gradient(circle at 50% 100%, rgba(249, 115, 22, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(28, 28, 26, 0.96), rgba(19, 19, 18, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 40%),
+    rgba(8, 9, 9, 0.98);
   overflow: hidden;
 }
 
@@ -3412,67 +3467,80 @@ main {
   padding: 0 12px;
 }
 
+.assembler-voice-screen__live {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-voice-screen__live.is-live {
+  color: var(--green);
+}
+
+.assembler-voice-screen__live.is-paused {
+  color: var(--muted);
+}
+
 .assembler-voice-screen__center {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 14px;
+  gap: 12px;
   text-align: center;
-}
-
-.assembler-voice-screen__pulse {
-  width: clamp(112px, 22vw, 164px);
-  height: clamp(112px, 22vw, 164px);
-  border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 56%, transparent 66%),
-    radial-gradient(circle, rgba(249, 115, 22, 0.16), transparent 72%);
-  box-shadow:
-    0 0 0 calc(10px + (var(--voice-level, 0.08) * 36px)) rgba(249, 115, 22, 0.08),
-    0 18px 80px rgba(0, 0, 0, 0.28);
-  transition: box-shadow 120ms linear, transform 120ms linear, opacity 120ms linear;
-}
-
-.assembler-voice-screen__pulse.is-live {
-  transform: scale(calc(1 + (var(--voice-level, 0.08) * 0.08)));
-  box-shadow:
-    0 0 0 calc(14px + (var(--voice-level, 0.12) * 52px)) rgba(249, 115, 22, 0.11),
-    0 20px 90px rgba(0, 0, 0, 0.34);
-}
-
-.assembler-voice-screen__pulse.is-paused {
-  opacity: 0.66;
-  box-shadow:
-    0 0 0 16px rgba(255, 255, 255, 0.04),
-    0 18px 70px rgba(0, 0, 0, 0.24);
 }
 
 .assembler-voice-screen__title {
   margin: 0;
   color: var(--white);
-  font-size: clamp(2.2rem, 6vw, 3.35rem);
+  font-size: clamp(2rem, 5.2vw, 3rem);
   font-weight: 500;
   letter-spacing: -0.04em;
-  line-height: 0.96;
+  line-height: 0.98;
 }
 
 .assembler-voice-screen__time {
   margin: 0;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
+  color: rgba(255, 255, 255, 0.74);
+  font-size: clamp(1rem, 2.6vw, 1.3rem);
   letter-spacing: -0.02em;
+}
+
+.assembler-voice-screen__meter {
+  width: min(220px, 54vw);
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.assembler-voice-screen__meter-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: rgba(255, 255, 255, 0.24);
+  transition: transform 100ms linear, background 100ms linear;
+}
+
+.assembler-voice-screen__meter-fill.is-live {
+  background: var(--green);
+}
+
+.assembler-voice-screen__meter-fill.is-paused {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .assembler-voice-screen__detail {
   max-width: 24rem;
   margin: 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
 .assembler-voice-screen__detail.is-error {
-  color: var(--amber);
+  color: #ffb4b4;
 }
 
 .assembler-voice-screen__controls {
@@ -3484,57 +3552,62 @@ main {
 
 .assembler-voice-screen__secondary {
   justify-self: start;
-  min-height: 52px;
-  padding: 0 18px;
+  min-height: 44px;
+  padding: 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--white);
-  font-size: 15px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-voice-screen__secondary-placeholder {
+  justify-self: start;
+  width: 68px;
+  min-height: 44px;
 }
 
 .assembler-voice-screen__mic {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: clamp(72px, 14vw, 92px);
-  height: clamp(72px, 14vw, 92px);
+  width: clamp(64px, 12vw, 84px);
+  height: clamp(64px, 12vw, 84px);
   padding: 0;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--white);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 18px 40px rgba(0, 0, 0, 0.22);
 }
 
 .assembler-voice-screen__mic svg {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 .assembler-voice-screen__mic.is-live {
-  background: rgba(249, 115, 22, 0.18);
-  color: rgba(255, 255, 255, 0.98);
+  border-color: rgba(34, 197, 94, 0.24);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--green);
 }
 
 .assembler-voice-screen__mic.is-paused {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .assembler-voice-screen__stop {
   justify-self: end;
   min-width: 108px;
-  min-height: 56px;
-  padding: 0 24px;
+  min-height: 50px;
+  padding: 0 22px;
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
   color: rgba(18, 18, 18, 0.96);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
-  letter-spacing: -0.02em;
 }
 
 .assembler-voice-screen__stop-placeholder {
@@ -3562,25 +3635,14 @@ main {
 }
 
 .assembler-drop-overlay__panel {
-  display: grid;
-  gap: 8px;
-  width: min(520px, calc(100vw - 48px));
-  padding: 22px;
+  width: min(340px, calc(100vw - 48px));
+  padding: 18px 20px;
   border: 1px solid rgba(34, 197, 94, 0.28);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.08), transparent 70%),
-    rgba(10, 11, 11, 0.98);
+  border-radius: 16px;
+  background: rgba(10, 11, 11, 0.98);
   color: var(--white);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.4);
   text-align: center;
-}
-
-.assembler-drop-overlay__eyebrow {
-  color: var(--green);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
 }
 
 .assembler-mobile-clipboard__row {
@@ -3758,8 +3820,12 @@ main {
     padding: 18px;
   }
 
-  .intro-shell {
-    gap: 22px;
+  .intro-shell,
+  .intro-auth-shell,
+  .auth-shell__panel {
+    width: 100%;
+    padding: 24px 20px;
+    border-radius: 22px;
   }
 
   .intro-stage {
@@ -3768,10 +3834,6 @@ main {
 
   .intro-actions {
     width: 100%;
-  }
-
-  .intro-auth {
-    padding: 22px;
   }
 
   .terminal-page,
@@ -3987,7 +4049,7 @@ main {
 
 @media (max-width: 640px) {
   .assembler-launchpad__actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -4070,7 +4132,7 @@ main {
   }
 
   .assembler-home__action {
-    min-height: 50px;
+    min-height: 44px;
     padding: 0 12px;
   }
 
@@ -4103,12 +4165,7 @@ main {
   }
 
   .assembler-voice-screen__title {
-    font-size: clamp(2.05rem, 8vw, 2.8rem);
-  }
-
-  .assembler-voice-screen__detail {
-    max-width: 18rem;
-    font-size: 14px;
+    font-size: clamp(1.8rem, 8vw, 2.5rem);
   }
 
   .assembler-voice-screen__controls {
@@ -4116,21 +4173,21 @@ main {
   }
 
   .assembler-voice-screen__secondary {
-    min-height: 48px;
-    padding: 0 14px;
-    font-size: 14px;
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .assembler-voice-screen__stop {
-    min-width: 92px;
-    min-height: 52px;
+    min-width: 88px;
+    min-height: 46px;
     padding: 0 18px;
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .assembler-voice-screen__stop-placeholder {
-    width: 92px;
-    min-height: 52px;
+    width: 88px;
+    min-height: 46px;
   }
 
   .assembler-drop-sheet__link-row {

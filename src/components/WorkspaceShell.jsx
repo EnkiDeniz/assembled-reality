@@ -1003,12 +1003,12 @@ function WorkspaceShelf({
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">{activeProject?.title || "Project"}</span>
-            <span className="assembler-sheet__title">Browse documents</span>
+            <span className="assembler-sheet__title">Browse sources</span>
           </div>
 
           <div className="assembler-sheet__section-actions">
             <button type="button" className="assembler-sheet__close" onClick={onOpenProjectHome}>
-              Project Home
+              Project
             </button>
             <button
               type="button"
@@ -1046,7 +1046,7 @@ function WorkspaceShelf({
               onPasteSource();
             }}
           >
-            Paste from clipboard
+            Paste
           </button>
         </div>
       </div>
@@ -1102,6 +1102,46 @@ function WorkspaceLaunchpad({
   const assemblyCount = assemblyDocuments.length;
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
   const openMode = normalizeWorkspaceMode(lastUsedMode, WORKSPACE_MODES.assemble);
+  const primaryAction = resumeSessionSummary?.documentKey
+    ? {
+        label: "Continue",
+        title: resumeSessionSummary.title,
+        detail: getResumeSessionLabel(resumeSessionSummary),
+        icon: "continue",
+        disabled: false,
+        onClick: () =>
+          onOpenDocument(
+            resumeSessionSummary.documentKey,
+            WORKSPACE_MODES.listen,
+            { focusBlockId: resumeSessionSummary.blockId || null },
+          ),
+      }
+    : listenDocument
+      ? {
+          label: HOME_LOOP.listen,
+          title: listenDocument.title,
+          detail: getDocumentBlockCountLabel(listenDocument),
+          icon: "listen",
+          disabled: busy,
+          onClick: () => onEnterMode(WORKSPACE_MODES.listen, listenDocument.documentKey),
+        }
+      : assembleDocument
+        ? {
+            label: HOME_LOOP.assemble,
+            title: assembleDocument.title,
+            detail: getDocumentBlockCountLabel(assembleDocument),
+            icon: "assemble",
+            disabled: busy,
+            onClick: () => onEnterMode(WORKSPACE_MODES.assemble, assembleDocument.documentKey),
+          }
+        : {
+            label: HOME_LOOP.drop,
+            title: activeProject?.title || PRODUCT_NAME,
+            detail: "Start here.",
+            icon: "upload",
+            disabled: busy,
+            onClick: onOpenIntake,
+          };
 
   function renderDocumentRow(document, { active = false } = {}) {
     return (
@@ -1140,31 +1180,35 @@ function WorkspaceLaunchpad({
 
   return (
     <div className="assembler-home">
-      {resumeSessionSummary?.documentKey ? (
-        <button
-          type="button"
-          className="assembler-home__resume"
-          onClick={() =>
-            onOpenDocument(
-              resumeSessionSummary.documentKey,
-              WORKSPACE_MODES.listen,
-              { focusBlockId: resumeSessionSummary.blockId || null },
-            )}
-        >
-          <div className="assembler-home__resume-copy">
-            <span className="assembler-home__resume-label">Continue Listening</span>
-            <span className="assembler-home__resume-title">{resumeSessionSummary.title}</span>
-            <span className="assembler-home__resume-detail">
-              {getResumeSessionLabel(resumeSessionSummary)}
-            </span>
-          </div>
-          <span className="assembler-home__resume-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="listen" />
-          </span>
-        </button>
-      ) : null}
+      <button
+        type="button"
+        className="assembler-home__resume"
+        onClick={primaryAction.onClick}
+        disabled={primaryAction.disabled}
+      >
+        <div className="assembler-home__resume-copy">
+          <span className="assembler-home__resume-label">{primaryAction.label}</span>
+          <span className="assembler-home__resume-title">{primaryAction.title}</span>
+          <span className="assembler-home__resume-detail">{primaryAction.detail}</span>
+        </div>
+        <span className="assembler-home__resume-icon" aria-hidden="true">
+          <WorkspaceActionIcon kind={primaryAction.icon} />
+        </span>
+      </button>
 
       <div className="assembler-home__actions">
+        <button
+          type="button"
+          className="assembler-home__action"
+          onClick={onOpenSpeak}
+          disabled={uploading || Boolean(pastePendingMode)}
+        >
+          <span className="assembler-home__action-icon" aria-hidden="true">
+            <WorkspaceActionIcon kind="speak" />
+          </span>
+          <span className="assembler-home__action-label">{HOME_LOOP.speak}</span>
+        </button>
+
         <button
           type="button"
           className="assembler-home__action"
@@ -1187,18 +1231,6 @@ function WorkspaceLaunchpad({
             <WorkspaceActionIcon kind="assemble" />
           </span>
           <span className="assembler-home__action-label">{HOME_LOOP.assemble}</span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={onOpenSpeak}
-          disabled={uploading || Boolean(pastePendingMode)}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="speak" />
-          </span>
-          <span className="assembler-home__action-label">{HOME_LOOP.speak}</span>
         </button>
 
         <button
@@ -1299,7 +1331,7 @@ function WorkspaceLaunchpad({
               onClick={onPasteClipboard}
               disabled={pastePendingMode === "clipboard" || busy}
             >
-              {pastePendingMode === "clipboard" ? "Pasting…" : "Add from Clipboard"}
+              {pastePendingMode === "clipboard" ? "Pasting…" : "Paste"}
             </button>
           ) : null}
         </div>
@@ -1711,8 +1743,8 @@ function LinkIntakeChooser({
             onClick={onFetchLink}
             disabled={pending}
           >
-            <span className="assembler-image-chooser__action-label">LINK → DOC</span>
-            <span className="assembler-image-chooser__action-title">Fetch page from link</span>
+            <span className="assembler-image-chooser__action-label">LINK</span>
+            <span className="assembler-image-chooser__action-title">Import page</span>
           </button>
 
           <button
@@ -1721,8 +1753,8 @@ function LinkIntakeChooser({
             onClick={onPasteRaw}
             disabled={pending}
           >
-            <span className="assembler-image-chooser__action-label">RAW TEXT</span>
-            <span className="assembler-image-chooser__action-title">Keep URL as text</span>
+            <span className="assembler-image-chooser__action-label">TEXT</span>
+            <span className="assembler-image-chooser__action-title">Keep as text</span>
           </button>
         </div>
       </div>
@@ -1762,7 +1794,6 @@ function DropAnythingSheet({
       >
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
-            <span className="assembler-sheet__eyebrow">{PRODUCT_NAME}</span>
             <h2 id="drop-anything-title" className="assembler-image-chooser__title">
               {HOME_LOOP.drop}
             </h2>
@@ -1789,7 +1820,7 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="upload" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Upload files</span>
+              <span className="assembler-drop-sheet__action-title">Upload</span>
             </span>
           </button>
 
@@ -1817,14 +1848,14 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="browse" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Import folder</span>
+              <span className="assembler-drop-sheet__action-title">Folder</span>
             </span>
           </button>
         </div>
 
         <div className="assembler-drop-sheet__link">
           <label className="assembler-drop-sheet__label" htmlFor="manual-link-input">
-            Public link
+            Link
           </label>
           <div className="assembler-drop-sheet__link-row">
             <input
@@ -1851,7 +1882,7 @@ function DropAnythingSheet({
                 }
               }}
             >
-              Fetch link
+              Import
             </button>
           </div>
         </div>
@@ -1888,7 +1919,7 @@ function VoiceRecorderDialog({
           : phase === "finishing"
             ? "Wrapping up"
             : phase === "transcribing"
-              ? "Turning it into a source"
+              ? "Creating source"
               : "Start talking";
   return (
     <div className="assembler-image-chooser assembler-image-chooser--recorder assembler-voice-screen">
@@ -1906,7 +1937,9 @@ function VoiceRecorderDialog({
         aria-labelledby="voice-recorder-title"
       >
         <div className="assembler-voice-screen__top">
-          <span className="assembler-sheet__eyebrow">Speak</span>
+          <span className={`assembler-voice-screen__live ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`}>
+            Speak
+          </span>
           <button
             type="button"
             className="assembler-sheet__close assembler-voice-screen__close"
@@ -1918,15 +1951,16 @@ function VoiceRecorderDialog({
         </div>
 
         <div className="assembler-voice-screen__center">
-          <div
-            className={`assembler-voice-screen__pulse ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`}
-            style={{ "--voice-level": meterLevel }}
-            aria-hidden="true"
-          />
           <h2 id="voice-recorder-title" className="assembler-voice-screen__title">
             {headline}
           </h2>
           <p className="assembler-voice-screen__time">{formatRecordingElapsed(elapsedSeconds)}</p>
+          <div className="assembler-voice-screen__meter" aria-hidden="true">
+            <span
+              className={`assembler-voice-screen__meter-fill ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`}
+              style={{ transform: `scaleX(${meterLevel})` }}
+            />
+          </div>
           {errorMessage ? (
             <p className="assembler-voice-screen__detail is-error">{errorMessage}</p>
           ) : null}
@@ -1935,13 +1969,7 @@ function VoiceRecorderDialog({
         <div className="assembler-voice-screen__controls">
           {phase === "idle" ? (
             <>
-              <button
-                type="button"
-                className="assembler-voice-screen__secondary"
-                onClick={onClose}
-              >
-                Cancel
-              </button>
+              <span className="assembler-voice-screen__secondary-placeholder" aria-hidden="true" />
               <button
                 type="button"
                 className="assembler-voice-screen__mic"
@@ -1955,14 +1983,7 @@ function VoiceRecorderDialog({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className="assembler-voice-screen__secondary"
-                onClick={onClose}
-                disabled={busy}
-              >
-                Cancel
-              </button>
+              <span className="assembler-voice-screen__secondary-placeholder" aria-hidden="true" />
               <button
                 type="button"
                 className={`assembler-voice-screen__mic ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`}
@@ -5881,7 +5902,7 @@ export default function WorkspaceShell({
                 className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
                 onClick={() => setWorkspacePickerOpen(true)}
               >
-                Browse
+                Sources
               </button>
             ) : !launchpadOpen ? (
               <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
@@ -6365,8 +6386,7 @@ export default function WorkspaceShell({
       {dropActive ? (
         <div className="assembler-drop-overlay" aria-hidden="true">
           <div className="assembler-drop-overlay__panel">
-            <span className="assembler-drop-overlay__eyebrow">Drop anything</span>
-            <strong>Files, folders, images, screenshots, links, voice memos</strong>
+            <strong>Drop anything</strong>
           </div>
         </div>
       ) : null}
