@@ -3089,6 +3089,8 @@ export default function WorkspaceShell({
   const recordingSampleRateRef = useRef(16000);
   const recordingEnabledRef = useRef(false);
   const closeVoiceRecorderRef = useRef(() => {});
+  const ensureSeedForActiveProjectRef = useRef(async () => null);
+  const requestSeedSuggestionRef = useRef(async () => null);
   const speechUtteranceRef = useRef(null);
   const speechRunIdRef = useRef(0);
   const playbackStateRef = useRef({ active: false, kind: null, paused: false });
@@ -3751,11 +3753,10 @@ export default function WorkspaceShell({
 
     seedEnsureFingerprintRef.current = nextFingerprint;
     const shouldFocusSeed = resolvedEntryMode !== "first-time" || pendingSeedFocusRef.current;
-    void ensureSeedForActiveProject({ focus: shouldFocusSeed });
+    void ensureSeedForActiveProjectRef.current?.({ focus: shouldFocusSeed });
   }, [
     activeProjectKey,
     currentSeedDocument?.documentKey,
-    ensureSeedForActiveProject,
     launchpadOpen,
     realProjectSourceDocuments.length,
     resolvedEntryMode,
@@ -3776,14 +3777,13 @@ export default function WorkspaceShell({
     if (seedSuggestFingerprintRef.current === nextFingerprint) return;
 
     seedSuggestFingerprintRef.current = nextFingerprint;
-    void requestSeedSuggestion();
+    void requestSeedSuggestionRef.current?.();
   }, [
     activeProjectKey,
     currentSeedDocument?.documentKey,
     currentSeedFingerprint,
     launchpadOpen,
     realProjectSourceDocuments.length,
-    requestSeedSuggestion,
     seedSourceFingerprint,
     seedStatusPending,
     seedSuggestion,
@@ -4295,7 +4295,7 @@ export default function WorkspaceShell({
       setListenPickerOpen(false);
       setWorkspacePickerOpen(false);
       setDropAnythingOpen(false);
-      closeVoiceRecorder();
+      closeVoiceRecorderRef.current?.();
       setMobileComposeOpen(false);
       setMobileControlDockOpen(false);
       setLaunchpadView(nextLaunchpadView);
@@ -4342,7 +4342,7 @@ export default function WorkspaceShell({
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
     setDropAnythingOpen(false);
-    closeVoiceRecorder();
+    closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
     setMobileControlDockOpen(false);
     setLaunchpadView(LAUNCHPAD_VIEWS.boxes);
@@ -4641,6 +4641,9 @@ export default function WorkspaceShell({
     seedSuggestionPending,
   ]);
 
+  ensureSeedForActiveProjectRef.current = ensureSeedForActiveProject;
+  requestSeedSuggestionRef.current = requestSeedSuggestion;
+
   async function applySeedSuggestion() {
     if (!seedSuggestion || seedSuggestionPending) return;
 
@@ -4839,7 +4842,7 @@ export default function WorkspaceShell({
     setLaunchpadOpen(false);
     setWorkspacePickerOpen(false);
     setDropAnythingOpen(false);
-    closeVoiceRecorder();
+    closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
     setMobileControlDockOpen(false);
     pendingFocusBlockIdRef.current = options.focusBlockId || null;
