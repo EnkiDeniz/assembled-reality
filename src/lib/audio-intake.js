@@ -33,6 +33,12 @@ const AUDIO_EXTENSION_BY_MIME = new Map([
   ["video/mp4", "mp4"],
 ]);
 
+const AUDIO_TRANSCRIPTION_FALLBACK_MODELS = [
+  "gpt-4o-transcribe",
+  "gpt-4o-mini-transcribe",
+  "whisper-1",
+];
+
 function createAudioIntakeError(code, message) {
   const error = new Error(message);
   error.code = code;
@@ -84,6 +90,59 @@ function getBlobExtension(mimeType, filename = "") {
     String(filename || "").trim().split(".").pop()?.toLowerCase() ||
     "bin"
   );
+}
+
+function getTranscriptionModelCandidates(preferredModel = "") {
+  const candidates = [
+    String(preferredModel || "").trim(),
+    ...AUDIO_TRANSCRIPTION_FALLBACK_MODELS,
+  ].filter(Boolean);
+
+  return [...new Set(candidates)];
+}
+
+function shouldRetryTranscriptionWithFallback(response, payload) {
+  if (!response || response.ok) return false;
+
+  const status = Number(response.status || 0);
+  const param = String(payload?.error?.param || "").trim().toLowerCase();
+  const code = String(payload?.error?.code || "").trim().toLowerCase();
+  const message = String(payload?.error?.message || "").trim().toLowerCase();
+
+  if (status === 404) return true;
+  if (param === "model") return true;
+  if (code === "model_not_found") return true;
+
+  return (
+    /model/.test(message) &&
+    /(not found|does not exist|unsupported|unavailable|permission)/.test(message)
+  );
+}
+
+async function requestTranscription({ buffer, mimeType, filename, model }) {
+  const formData = new FormData();
+  formData.append(
+    "file",
+    new Blob([buffer], { type: mimeType }),
+    filename || `voice-memo.${getBlobExtension(mimeType, filename)}`,
+  );
+  formData.append("model", model);
+
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${appEnv.openai.apiKey}`,
+    },
+    body: formData,
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  return {
+    model,
+    response,
+    payload,
+  };
 }
 
 export function validateAudioInput({ buffer, mimeType = "", filename = "" }) {
@@ -171,38 +230,49 @@ export async function deriveTranscriptFromAudio({
   filename = "",
 }) {
   const normalizedMimeType = validateAudioInput({ buffer, mimeType, filename });
+  const preferredModel = appEnv.openai.audioSourceModel;
 
-  if (!appEnv.openai.enabled || !appEnv.openai.audioSourceModel) {
+  if (!appEnv.openai.enabled || !preferredModel) {
     throw createAudioIntakeError(
       "audio_ai_unavailable",
       "Voice memo transcription is unavailable right now.",
     );
   }
 
-  const formData = new FormData();
-  formData.append(
-    "file",
-    new Blob([buffer], { type: normalizedMimeType }),
-    filename || `voice-memo.${getBlobExtension(normalizedMimeType, filename)}`,
-  );
-  formData.append("model", appEnv.openai.audioSourceModel);
+  const modelCandidates = getTranscriptionModelCandidates(preferredModel);
+  let transcriptionResult = null;
 
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${appEnv.openai.apiKey}`,
-    },
-    body: formData,
-  });
+  for (let index = 0; index < modelCandidates.length; index += 1) {
+    const model = modelCandidates[index];
+    const result = await requestTranscription({
+      buffer,
+      mimeType: normalizedMimeType,
+      filename,
+      model,
+    });
 
-  if (!response.ok) {
+    if (result.response.ok) {
+      transcriptionResult = result;
+      break;
+    }
+
+    const hasFallback = index < modelCandidates.length - 1;
+    if (hasFallback && shouldRetryTranscriptionWithFallback(result.response, result.payload)) {
+      continue;
+    }
+
+    transcriptionResult = result;
+    break;
+  }
+
+  if (!transcriptionResult?.response?.ok) {
     throw createAudioIntakeError(
       "audio_transcription_failed",
-      `Could not transcribe this voice memo right now (${response.status}).`,
+      `Could not transcribe this voice memo right now (${transcriptionResult?.response?.status || 500}).`,
     );
   }
 
-  const payload = await response.json().catch(() => null);
+  const payload = transcriptionResult.payload;
   const transcriptText = String(payload?.text || "").trim();
 
   if (!transcriptText) {
@@ -226,10 +296,19 @@ export async function deriveTranscriptFromAudio({
         "info",
         "Created transcript source from voice memo.",
       ),
+      ...(transcriptionResult.model !== preferredModel
+        ? [
+            createIntakeDiagnostic(
+              "audio_model_fallback",
+              "warning",
+              `Voice memo transcription used ${transcriptionResult.model} after ${preferredModel} was unavailable.`,
+            ),
+          ]
+        : []),
       ...(imported.diagnostics || []),
     ],
     derivationKind: "audio-transcript",
-    derivationModel: appEnv.openai.audioSourceModel,
+    derivationModel: transcriptionResult.model,
     derivationStatus: "succeeded",
   };
 }
