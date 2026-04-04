@@ -1,0 +1,98 @@
+%% Loegos.com User Flow Diagrams
+%% Generated: 2026-04-04
+
+%% ============================================
+%% DIAGRAM 1: Full Site Architecture
+%% ============================================
+
+graph TD
+    HOME["/ (Homepage)<br/>Login + Product Pitch"]
+    ABOUT["/about<br/>Product Explanation"]
+    TRUST["/trust<br/>Trust Model"]
+    PRIVACY["/privacy<br/>Privacy Policy"]
+    TERMS["/terms<br/>Beta Terms"]
+    LLMS["/llms.txt<br/>LLM Index"]
+    LLMSCTX["/llms-ctx.txt<br/>LLM Context Pack"]
+
+    WORKSPACE["/workspace<br/>🔒 Auth-gated"]
+    LIBRARY["/library<br/>🔒 Auth-gated"]
+    INTRO["/intro<br/>🔒 Auth-gated"]
+    READ["/read<br/>🔒 Auth-gated"]
+    ACCOUNT["/account<br/>🔒 Auth-gated"]
+    CONNECT["/connect<br/>❌ 404 Dead"]
+
+    HOME <--> ABOUT
+    HOME <--> TRUST
+    HOME <--> PRIVACY
+    HOME <--> TERMS
+    ABOUT <--> TRUST
+    ABOUT <--> PRIVACY
+    ABOUT <--> TERMS
+    TRUST <--> PRIVACY
+    TRUST <--> TERMS
+    PRIVACY <--> TERMS
+
+    HOME -.->|"Apple/Email Auth"| WORKSPACE
+    HOME -.->|"Apple/Email Auth"| LIBRARY
+    HOME -.->|"Apple/Email Auth"| INTRO
+
+    LLMS -.->|"referenced"| HOME
+    LLMS -.->|"referenced"| ABOUT
+    LLMS -.->|"referenced"| TRUST
+    LLMS -.->|"referenced"| PRIVACY
+    LLMS -.->|"referenced"| TERMS
+    LLMS -.->|"extended"| LLMSCTX
+
+    style HOME fill:#2563eb,color:#fff
+    style CONNECT fill:#ef4444,color:#fff
+    style WORKSPACE fill:#6b7280,color:#fff
+    style LIBRARY fill:#6b7280,color:#fff
+    style INTRO fill:#6b7280,color:#fff
+    style READ fill:#6b7280,color:#fff
+    style ACCOUNT fill:#6b7280,color:#fff
+
+%% ============================================
+%% DIAGRAM 2: User Path — New Visitor to Signup
+%% ============================================
+
+graph LR
+    LAND["Land on Homepage"]
+    READ_PITCH["Read Tagline +<br/>Product Description"]
+    DECIDE{"Understand<br/>the product?"}
+    GO_ABOUT["Visit /about"]
+    READ_ABOUT["Read About Page"]
+    RETURN["Return to Homepage"]
+    AUTH["Click Apple / Enter Email"]
+    GATED["Auth-gated App"]
+
+    LAND --> READ_PITCH --> DECIDE
+    DECIDE -->|"Yes"| AUTH --> GATED
+    DECIDE -->|"No"| GO_ABOUT --> READ_ABOUT --> RETURN --> AUTH
+
+    style LAND fill:#2563eb,color:#fff
+    style AUTH fill:#16a34a,color:#fff
+    style GATED fill:#6b7280,color:#fff
+
+%% ============================================
+%% DIAGRAM 3: Shortest Path — Homepage to Conversion
+%% ============================================
+
+graph LR
+    H["Homepage"]
+    A["Click 'Continue with Apple'<br/>or Enter Email"]
+    C["Converted ✓"]
+
+    H -->|"1 click"| A --> C
+
+    style H fill:#2563eb,color:#fff
+    style C fill:#16a34a,color:#fff
+
+%% ============================================
+%% DIAGRAM 4: Longest Common Path
+%% ============================================
+
+graph LR
+    H["Homepage"] --> AB["/about"] --> TR["/trust"] --> PR["/privacy"] --> TE["/terms"] --> H2["Homepage"] --> AUTH["Signup"]
+
+    style H fill:#2563eb,color:#fff
+    style AUTH fill:#16a34a,color:#fff

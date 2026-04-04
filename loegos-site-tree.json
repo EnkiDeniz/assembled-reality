@@ -1,0 +1,104 @@
+{
+  "crawl_date": "2026-04-04",
+  "domain": "loegos.com",
+  "www_domain": "www.loegos.com",
+  "total_pages": 5,
+  "total_llm_files": 2,
+  "total_auth_gated_routes": 5,
+  "total_broken_routes": 1,
+  "pages": {
+    "/": {
+      "url": "https://www.loegos.com/",
+      "title": "Loegos",
+      "meta_description": "Loegos is an invite-only, desktop-first workspace for solo operators. It turns source material into a Box you can think in, create from, and read with Operate.",
+      "h1": "Meaning is an assembled object.",
+      "type": "landing_page",
+      "has_auth_forms": true,
+      "ctas": [
+        { "label": "Continue with Apple", "type": "auth_button" },
+        { "label": "Email magic link / Send magic link", "type": "auth_form" }
+      ],
+      "internal_links": ["/about", "/privacy", "/terms", "/trust"],
+      "external_links": [],
+      "parent": null,
+      "children": ["/about", "/privacy", "/terms", "/trust"]
+    },
+    "/about": {
+      "url": "https://www.loegos.com/about",
+      "title": "About Loegos",
+      "meta_description": "What Loegos is, how the Box and Operate model work, and how the product fits inside the broader Lakin system.",
+      "h1": "About Lœgos",
+      "type": "informational",
+      "has_auth_forms": false,
+      "ctas": [],
+      "internal_links": ["/", "/about", "/privacy", "/terms", "/trust"],
+      "external_links": [],
+      "parent": "/",
+      "children": []
+    },
+    "/trust": {
+      "url": "https://www.loegos.com/trust",
+      "title": "Trust",
+      "meta_description": "Public trust and provenance model for Loegos, including L1-L3 trust levels, provenance rules, and the distinction between normalization and verification.",
+      "h1": "Trust",
+      "type": "informational",
+      "has_auth_forms": false,
+      "ctas": [],
+      "internal_links": ["/", "/about", "/privacy", "/terms", "/trust"],
+      "external_links": [],
+      "parent": "/",
+      "children": []
+    },
+    "/privacy": {
+      "url": "https://www.loegos.com/privacy",
+      "title": "Privacy",
+      "meta_description": "Draft privacy note for the Loegos invite-only beta, covering sign-in, analytics, uploaded sources, AI processing, and optional GetReceipts sync.",
+      "h1": "Privacy",
+      "type": "legal",
+      "has_auth_forms": false,
+      "ctas": [],
+      "internal_links": ["/", "/about", "/terms", "/trust"],
+      "external_links": [],
+      "parent": "/",
+      "children": []
+    },
+    "/terms": {
+      "url": "https://www.loegos.com/terms",
+      "title": "Terms",
+      "meta_description": "Draft terms for the Loegos invite-only beta, covering access, acceptable use, ownership, third-party services, and output limitations.",
+      "h1": "Terms",
+      "type": "legal",
+      "has_auth_forms": false,
+      "ctas": [],
+      "internal_links": ["/", "/about", "/privacy", "/terms", "/trust"],
+      "external_links": [],
+      "parent": "/",
+      "children": []
+    }
+  },
+  "llm_files": {
+    "/llms.txt": {
+      "url": "https://www.loegos.com/llms.txt",
+      "type": "llm_index",
+      "description": "Index/navigation guide for AI agents with links to key pages and product truth statements"
+    },
+    "/llms-ctx.txt": {
+      "url": "https://www.loegos.com/llms-ctx.txt",
+      "type": "llm_context_pack",
+      "description": "Comprehensive context pack with product capabilities, ecosystem info, and policy details"
+    }
+  },
+  "auth_gated_routes": {
+    "/workspace": { "status": "redirects_to_login", "note": "Disallowed in robots.txt" },
+    "/library": { "status": "redirects_to_login", "note": "Disallowed in robots.txt" },
+    "/intro": { "status": "redirects_to_login", "note": "Disallowed in robots.txt" },
+    "/read": { "status": "redirects_to_login", "note": "Disallowed in robots.txt" },
+    "/account": { "status": "redirects_to_login", "note": "Disallowed in robots.txt" }
+  },
+  "broken_routes": {
+    "/connect": { "status": 404, "note": "Disallowed in robots.txt but returns 404 — dead route" }
+  },
+  "subdomains": {
+    "app.loegos.com": { "status": "ECONNREFUSED", "note": "No server listening — subdomain does not exist" }
+  }
+}

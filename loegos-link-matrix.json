@@ -1,0 +1,37 @@
+{
+  "crawl_date": "2026-04-04",
+  "description": "Adjacency list of all internal page links on loegos.com",
+  "adjacency_list": {
+    "/": ["/about", "/privacy", "/terms", "/trust"],
+    "/about": ["/", "/about", "/privacy", "/terms", "/trust"],
+    "/trust": ["/", "/about", "/privacy", "/terms", "/trust"],
+    "/privacy": ["/", "/about", "/terms", "/trust"],
+    "/terms": ["/", "/about", "/privacy", "/terms", "/trust"]
+  },
+  "inbound_link_counts": {
+    "/": { "count": 4, "from": ["/about", "/trust", "/privacy", "/terms"] },
+    "/about": { "count": 5, "from": ["/", "/about", "/trust", "/privacy", "/terms"] },
+    "/privacy": { "count": 4, "from": ["/", "/about", "/trust", "/terms"] },
+    "/terms": { "count": 4, "from": ["/", "/about", "/trust", "/privacy"] },
+    "/trust": { "count": 4, "from": ["/", "/about", "/privacy", "/terms"] }
+  },
+  "outbound_link_counts": {
+    "/": 4,
+    "/about": 5,
+    "/trust": 5,
+    "/privacy": 4,
+    "/terms": 5
+  },
+  "orphan_pages": [],
+  "dead_end_pages_no_outbound": [],
+  "dead_end_pages_no_cta": ["/about", "/trust", "/privacy", "/terms"],
+  "external_links": {
+    "total": 0,
+    "inventory": []
+  },
+  "notes": {
+    "self_links": "/about, /trust, and /terms link to themselves in navigation",
+    "privacy_anomaly": "/privacy does not link to itself (minor inconsistency in footer nav)",
+    "fully_connected": "All 5 public pages are fully interconnected via footer navigation"
+  }
+}
