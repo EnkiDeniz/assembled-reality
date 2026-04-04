@@ -78,7 +78,6 @@ main {
   padding: 22px;
 }
 
-.terminal-kicker,
 .terminal-label,
 .assembler-shelf__label {
   color: var(--muted);
@@ -87,7 +86,6 @@ main {
   text-transform: uppercase;
 }
 
-.terminal-copy,
 .terminal-muted {
   color: var(--muted);
   line-height: 1.7;
@@ -380,14 +378,6 @@ main {
   line-height: 1.08;
   font-weight: 600;
   letter-spacing: -0.04em;
-}
-
-.intro-copy__body {
-  width: min(460px, 100%);
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.8;
 }
 
 .intro-stage {
@@ -2633,14 +2623,6 @@ main {
   letter-spacing: -0.03em;
 }
 
-.assembler-home__body {
-  max-width: 42rem;
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
 .assembler-home__resume {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3203,14 +3185,6 @@ main {
   line-height: 1.08;
 }
 
-.assembler-image-chooser__body {
-  max-width: 36rem;
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
 .assembler-image-chooser__meta {
   display: flex;
   flex-wrap: wrap;
@@ -3275,12 +3249,6 @@ main {
   color: var(--white);
   font-size: 15px;
   line-height: 1.35;
-}
-
-.assembler-image-chooser__action-detail {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .assembler-drop-sheet {
@@ -3360,12 +3328,6 @@ main {
   color: var(--white);
   font-size: 14px;
   line-height: 1.2;
-}
-
-.assembler-drop-sheet__action-detail {
-  color: var(--soft);
-  font-size: 11px;
-  line-height: 1.4;
 }
 
 .assembler-drop-sheet__link {

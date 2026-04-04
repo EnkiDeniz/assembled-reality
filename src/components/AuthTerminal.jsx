@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { ACTION_LINE, HOME_LOOP_TITLE, PRODUCT_NAME } from "@/lib/product-language";
+import { PRODUCT_NAME } from "@/lib/product-language";
 
 export default function AuthTerminal({ authCapabilities }) {
   const [email, setEmail] = useState("");
@@ -39,11 +39,7 @@ export default function AuthTerminal({ authCapabilities }) {
     <main className="terminal-page auth-shell">
       <section className="auth-shell__panel">
         <div className="auth-shell__copy">
-          <span className="terminal-kicker">{PRODUCT_NAME}</span>
-          <h1 className="auth-shell__title">{HOME_LOOP_TITLE}</h1>
-          <p className="terminal-copy">
-            {ACTION_LINE} Sign in to turn scattered material into sources you can hear, shape, and receipt.
-          </p>
+          <h1 className="auth-shell__title">{PRODUCT_NAME}</h1>
           <div className="terminal-pill-row">
             <span className={`terminal-pill ${authCapabilities.appleEnabled ? "is-green" : ""}`}>
               Apple sign-in {authCapabilities.appleEnabled ? "available" : "unavailable"}

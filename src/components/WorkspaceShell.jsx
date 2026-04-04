@@ -29,9 +29,7 @@ import {
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
 import {
-  ACTION_LINE,
   HOME_LOOP,
-  HOME_LOOP_TITLE,
   PRODUCT_NAME,
 } from "@/lib/product-language";
 import { parseSevenAudioHeaders } from "@/lib/seven";
@@ -169,14 +167,6 @@ function getImageDerivationLabel(value = "") {
     IMAGE_DERIVATION_OPTIONS.find((option) => option.value === value)?.label ||
     IMAGE_DERIVATION_OPTIONS[0].label
   );
-}
-
-function getImageDerivationDetail(value = "") {
-  if (value === "notes") {
-    return "Best for spaces, objects, site visits, and visual observations.";
-  }
-
-  return "Best for screenshots, photographed pages, whiteboards, and scanned notes.";
 }
 
 function isSupportedImageMimeType(value = "") {
@@ -1150,14 +1140,6 @@ function WorkspaceLaunchpad({
 
   return (
     <div className="assembler-home">
-      <div className="assembler-home__copy">
-        <span className="assembler-home__eyebrow">Home loop</span>
-        <h1 className="assembler-home__title">{HOME_LOOP_TITLE}</h1>
-        <p className="assembler-home__body">
-          {ACTION_LINE} Talk a source into existence, return to the current thread of work, or bring in outside material without deciding the format first.
-        </p>
-      </div>
-
       {resumeSessionSummary?.documentKey ? (
         <button
           type="button"
@@ -1635,11 +1617,8 @@ function ImageIntakeChooser({
           <div className="assembler-image-chooser__copy">
             <span className="assembler-sheet__eyebrow">{sourceLabel}</span>
             <h2 id="image-intake-title" className="assembler-image-chooser__title">
-              Choose how to turn this image into a source
+              Image
             </h2>
-            <p className="assembler-image-chooser__body">
-              One image becomes one source document. The original image stays attached as provenance.
-            </p>
           </div>
 
           <button
@@ -1670,9 +1649,6 @@ function ImageIntakeChooser({
             >
               <span className="assembler-image-chooser__action-label">{option.shortLabel}</span>
               <span className="assembler-image-chooser__action-title">{option.label}</span>
-              <span className="assembler-image-chooser__action-detail">
-                {getImageDerivationDetail(option.value)}
-              </span>
             </button>
           ))}
         </div>
@@ -1710,11 +1686,8 @@ function LinkIntakeChooser({
           <div className="assembler-image-chooser__copy">
             <span className="assembler-sheet__eyebrow">Pasted link</span>
             <h2 id="link-intake-title" className="assembler-image-chooser__title">
-              Use this link as a source?
+              Link
             </h2>
-            <p className="assembler-image-chooser__body">
-              Fetch the page behind this link and turn it into a source document, or keep only the URL text.
-            </p>
           </div>
 
           <button
@@ -1740,9 +1713,6 @@ function LinkIntakeChooser({
           >
             <span className="assembler-image-chooser__action-label">LINK → DOC</span>
             <span className="assembler-image-chooser__action-title">Fetch page from link</span>
-            <span className="assembler-image-chooser__action-detail">
-              Extract the readable page and keep the original URL as provenance.
-            </span>
           </button>
 
           <button
@@ -1753,9 +1723,6 @@ function LinkIntakeChooser({
           >
             <span className="assembler-image-chooser__action-label">RAW TEXT</span>
             <span className="assembler-image-chooser__action-title">Keep URL as text</span>
-            <span className="assembler-image-chooser__action-detail">
-              Keep the link as text instead of fetching the page.
-            </span>
           </button>
         </div>
       </div>
@@ -1795,13 +1762,10 @@ function DropAnythingSheet({
       >
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
-            <span className="assembler-sheet__eyebrow">Source intake</span>
+            <span className="assembler-sheet__eyebrow">{PRODUCT_NAME}</span>
             <h2 id="drop-anything-title" className="assembler-image-chooser__title">
               {HOME_LOOP.drop}
             </h2>
-            <p className="assembler-image-chooser__body">
-              {ACTION_LINE} Files, folders, screenshots, clipboard text, and public links all become sources you can listen to and assemble.
-            </p>
           </div>
 
           <button
@@ -1825,8 +1789,7 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="upload" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Upload source files</span>
-              <span className="assembler-drop-sheet__action-detail">Documents, images, and voice memos</span>
+              <span className="assembler-drop-sheet__action-title">Upload files</span>
             </span>
           </button>
 
@@ -1840,8 +1803,7 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="clipboard" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Paste from clipboard</span>
-              <span className="assembler-drop-sheet__action-detail">Text, screenshots, or one public link</span>
+              <span className="assembler-drop-sheet__action-title">Paste</span>
             </span>
           </button>
 
@@ -1855,15 +1817,14 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="browse" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Import a folder</span>
-              <span className="assembler-drop-sheet__action-detail">Turn a mixed batch into project sources</span>
+              <span className="assembler-drop-sheet__action-title">Import folder</span>
             </span>
           </button>
         </div>
 
         <div className="assembler-drop-sheet__link">
           <label className="assembler-drop-sheet__label" htmlFor="manual-link-input">
-            Or bring in a public link
+            Public link
           </label>
           <div className="assembler-drop-sheet__link-row">
             <input
@@ -1929,20 +1890,6 @@ function VoiceRecorderDialog({
             : phase === "transcribing"
               ? "Turning it into a source"
               : "Start talking";
-  const detail =
-    errorMessage ||
-    (phase === "idle"
-      ? "Stop when you are ready."
-      : phase === "requesting"
-        ? "Allow microphone access."
-        : phase === "recording"
-          ? "This becomes a source when you stop."
-          : phase === "paused"
-            ? "Resume or stop."
-            : phase === "transcribing"
-              ? "Opening the source."
-              : "Finishing the memo.");
-
   return (
     <div className="assembler-image-chooser assembler-image-chooser--recorder assembler-voice-screen">
       <button
@@ -1980,9 +1927,9 @@ function VoiceRecorderDialog({
             {headline}
           </h2>
           <p className="assembler-voice-screen__time">{formatRecordingElapsed(elapsedSeconds)}</p>
-          <p className={`assembler-voice-screen__detail ${errorMessage ? "is-error" : ""}`}>
-            {detail}
-          </p>
+          {errorMessage ? (
+            <p className="assembler-voice-screen__detail is-error">{errorMessage}</p>
+          ) : null}
         </div>
 
         <div className="assembler-voice-screen__controls">

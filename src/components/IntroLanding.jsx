@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
-import { ACTION_LINE, BRAND_TRUTH, PRODUCT_NAME } from "@/lib/product-language";
+import { BRAND_TRUTH, PRODUCT_NAME } from "@/lib/product-language";
 
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
 const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
@@ -180,7 +180,6 @@ export default function IntroLanding({
       <section className="intro-shell">
         <div className="intro-copy">
           <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
-          <p className="intro-copy__body">{ACTION_LINE}</p>
         </div>
 
         <div className="intro-auth-inline">
