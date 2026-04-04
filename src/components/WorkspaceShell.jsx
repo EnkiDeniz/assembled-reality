@@ -1694,13 +1694,10 @@ function DropAnythingSheet({
       >
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
-            <span className="assembler-sheet__eyebrow">Intake</span>
+            <span className="assembler-sheet__eyebrow">Import</span>
             <h2 id="drop-anything-title" className="assembler-image-chooser__title">
-              Drop anything
+              Add source
             </h2>
-            <p className="assembler-image-chooser__body">
-              Bring in files, folders, screenshots, copied text, or a public link. We will turn it into a source you can listen to and assemble.
-            </p>
           </div>
 
           <button
@@ -1713,50 +1710,56 @@ function DropAnythingSheet({
           </button>
         </div>
 
-        <div className="assembler-image-chooser__actions assembler-drop-sheet__actions">
+        <div className="assembler-drop-sheet__actions">
           <button
             type="button"
-            className="assembler-image-chooser__action is-primary"
+            className="assembler-drop-sheet__action is-primary"
             onClick={onUpload}
             disabled={pending}
           >
-            <span className="assembler-image-chooser__action-label">FILES</span>
-            <span className="assembler-image-chooser__action-title">Upload source files</span>
-            <span className="assembler-image-chooser__action-detail">
-              Documents, images, screenshots, and voice memos.
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="upload" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Upload</span>
+              <span className="assembler-drop-sheet__action-detail">Files, images, audio</span>
             </span>
           </button>
 
           <button
             type="button"
-            className="assembler-image-chooser__action"
+            className="assembler-drop-sheet__action"
             onClick={onPaste}
             disabled={pending}
           >
-            <span className="assembler-image-chooser__action-label">CLIPBOARD</span>
-            <span className="assembler-image-chooser__action-title">Paste from clipboard</span>
-            <span className="assembler-image-chooser__action-detail">
-              Copied text becomes a source. A single public URL fetches the page automatically.
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="clipboard" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Paste</span>
+              <span className="assembler-drop-sheet__action-detail">Clipboard text or one link</span>
             </span>
           </button>
 
           <button
             type="button"
-            className="assembler-image-chooser__action"
+            className="assembler-drop-sheet__action"
             onClick={onImportFolder}
             disabled={pending}
           >
-            <span className="assembler-image-chooser__action-label">FOLDER</span>
-            <span className="assembler-image-chooser__action-title">Import a folder</span>
-            <span className="assembler-image-chooser__action-detail">
-              Turn a bundle of mixed files into source documents inside this project.
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="browse" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Folder</span>
+              <span className="assembler-drop-sheet__action-detail">Import a batch</span>
             </span>
           </button>
         </div>
 
         <div className="assembler-drop-sheet__link">
           <label className="assembler-drop-sheet__label" htmlFor="manual-link-input">
-            Or paste a public link manually
+            Public link
           </label>
           <div className="assembler-drop-sheet__link-row">
             <input
@@ -1783,7 +1786,7 @@ function DropAnythingSheet({
                 }
               }}
             >
-              Import link
+              Import
             </button>
           </div>
         </div>

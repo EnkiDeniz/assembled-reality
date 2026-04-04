@@ -3284,16 +3284,94 @@ main {
 }
 
 .assembler-drop-sheet {
-  gap: 18px;
+  gap: 12px;
+  max-height: min(720px, calc(100dvh - max(24px, var(--safe-top) + var(--safe-bottom) + 24px)));
+  overflow-y: auto;
+  align-content: start;
 }
 
 .assembler-drop-sheet__actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-drop-sheet__action {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 68px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(16, 18, 18, 0.88);
+  color: var(--text);
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.assembler-drop-sheet__action:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(20, 22, 22, 0.94);
+}
+
+.assembler-drop-sheet__action:disabled {
+  opacity: 0.5;
+}
+
+.assembler-drop-sheet__action.is-primary {
+  border-color: rgba(34, 197, 94, 0.24);
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.05), transparent 78%),
+    rgba(16, 18, 18, 0.92);
+}
+
+.assembler-drop-sheet__action-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--soft);
+  background: rgba(10, 11, 11, 0.72);
+}
+
+.assembler-drop-sheet__action-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.assembler-drop-sheet__action.is-primary .assembler-drop-sheet__action-icon {
+  border-color: rgba(34, 197, 94, 0.22);
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.assembler-drop-sheet__action-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.assembler-drop-sheet__action-title {
+  color: var(--white);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.assembler-drop-sheet__action-detail {
+  color: var(--soft);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .assembler-drop-sheet__link {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .assembler-drop-sheet__label {
@@ -3951,13 +4029,18 @@ main {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .assembler-drop-sheet__actions,
   .assembler-recorder__actions {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .assembler-drop-sheet__link-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assembler-drop-sheet {
+    top: max(12px, var(--safe-top));
+    bottom: max(12px, var(--safe-bottom));
+    max-height: none;
   }
 
   .assembler-document__asset {
