@@ -47,8 +47,9 @@ function ProjectHomeDocumentRow({
             className="assembler-project-home__row-delete"
             onClick={onDelete}
             aria-label={`Delete ${document.title}`}
+            title={`Delete ${document.title}`}
           >
-            Delete
+            <_ActionIcon kind="delete" />
           </button>
         ) : null}
       </div>
@@ -121,7 +122,7 @@ export default function ProjectHome({
   const secondaryActions = [
     {
       title: "Import source",
-      description: "Upload a file, folder, image, audio clip, or link.",
+      description: "File, folder, image, audio clip, or link.",
       icon: "upload",
       onClick: onOpenIntake,
       disabled: busy,
@@ -130,8 +131,8 @@ export default function ProjectHome({
     {
       title: "Paste to staging",
       description: clipboardCount
-        ? `${clipboardCount} block${clipboardCount === 1 ? "" : "s"} already staged.`
-        : "Bring copied material straight into the working assembly.",
+        ? `${clipboardCount} block${clipboardCount === 1 ? "" : "s"} ready to place.`
+        : "Move clipboard material into the working assembly.",
       icon: "paste-source",
       onClick: onPasteClipboard,
       disabled: busy,
@@ -139,7 +140,7 @@ export default function ProjectHome({
     },
     {
       title: "Speak note",
-      description: "Capture a voice memo and turn it into source material.",
+      description: "Turn a voice memo into source material.",
       icon: "speak",
       onClick: onOpenSpeak,
       disabled: busy,

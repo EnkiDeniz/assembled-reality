@@ -601,6 +601,16 @@ function WorkspaceActionIcon({ kind }) {
     );
   }
 
+  if (kind === "delete") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M5.5 7h13" />
+        <path d="M9.5 4.5h5" />
+        <path d="M8 7l0.8 11h6.4L16 7" />
+      </svg>
+    );
+  }
+
   if (kind === "account") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">

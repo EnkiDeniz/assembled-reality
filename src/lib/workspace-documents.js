@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
 import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
@@ -75,6 +76,74 @@ function createWorkspaceDocumentConflictError(document) {
   error.code = "stale_document";
   error.currentDocument = document;
   return error;
+}
+
+function isMissingProjectTableError(error) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2021"
+  );
+}
+
+async function detachDocumentFromProjects(tx, userId, documentKey) {
+  if (!tx.readerProject || !tx.readerProjectDocument) {
+    return;
+  }
+
+  try {
+    const affectedProjects = await tx.readerProject.findMany({
+      where: {
+        userId,
+        OR: [
+          { currentAssemblyDocumentKey: documentKey },
+          { documents: { some: { documentKey } } },
+        ],
+      },
+      include: {
+        documents: {
+          orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+        },
+      },
+    });
+
+    if (affectedProjects.length === 0) {
+      return;
+    }
+
+    for (const project of affectedProjects) {
+      const remainingDocuments = project.documents.filter(
+        (membership) => membership.documentKey !== documentKey,
+      );
+      const nextCurrentAssemblyDocumentKey =
+        project.currentAssemblyDocumentKey === documentKey
+          ? remainingDocuments.find((membership) => membership.role === "ASSEMBLY")?.documentKey || null
+          : project.currentAssemblyDocumentKey;
+
+      if (nextCurrentAssemblyDocumentKey !== project.currentAssemblyDocumentKey) {
+        await tx.readerProject.update({
+          where: { id: project.id },
+          data: {
+            currentAssemblyDocumentKey: nextCurrentAssemblyDocumentKey,
+          },
+        });
+      }
+    }
+
+    await tx.readerProjectDocument.deleteMany({
+      where: {
+        projectId: {
+          in: affectedProjects.map((project) => project.id),
+        },
+        documentKey,
+      },
+    });
+  } catch (error) {
+    if (isMissingProjectTableError(error)) {
+      return;
+    }
+
+    throw error;
+  }
 }
 
 function getDocumentType(meta = {}, fallbackSourceType = "upload") {
@@ -734,50 +803,7 @@ export async function deleteWorkspaceDocumentForUser(userId, documentKey) {
   });
 
   await prisma.$transaction(async (tx) => {
-    const affectedProjects = await tx.readerProject.findMany({
-      where: {
-        userId,
-        OR: [
-          { currentAssemblyDocumentKey: normalizedDocumentKey },
-          { documents: { some: { documentKey: normalizedDocumentKey } } },
-        ],
-      },
-      include: {
-        documents: {
-          orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-        },
-      },
-    });
-
-    if (affectedProjects.length > 0) {
-      for (const project of affectedProjects) {
-        const remainingDocuments = project.documents.filter(
-          (membership) => membership.documentKey !== normalizedDocumentKey,
-        );
-        const nextCurrentAssemblyDocumentKey =
-          project.currentAssemblyDocumentKey === normalizedDocumentKey
-            ? remainingDocuments.find((membership) => membership.role === "ASSEMBLY")?.documentKey || null
-            : project.currentAssemblyDocumentKey;
-
-        if (nextCurrentAssemblyDocumentKey !== project.currentAssemblyDocumentKey) {
-          await tx.readerProject.update({
-            where: { id: project.id },
-            data: {
-              currentAssemblyDocumentKey: nextCurrentAssemblyDocumentKey,
-            },
-          });
-        }
-      }
-
-      await tx.readerProjectDocument.deleteMany({
-        where: {
-          projectId: {
-            in: affectedProjects.map((project) => project.id),
-          },
-          documentKey: normalizedDocumentKey,
-        },
-      });
-    }
+    await detachDocumentFromProjects(tx, userId, normalizedDocumentKey);
 
     if (readerProfile?.id) {
       await Promise.all([
