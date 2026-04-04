@@ -1,58 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
 const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
-
-function ListenVisual() {
-  const [active, setActive] = useState(0);
-  const lines = [
-    "You have more material than you think.",
-    "Most of it is trapped in formats you never open.",
-    "Drop it in. Press play.",
-  ];
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setActive((value) => (value + 1) % lines.length);
-    }, 1800);
-
-    return () => window.clearInterval(intervalId);
-  }, [lines.length]);
-
-  return (
-    <div className="intro-visual intro-visual--listen" aria-hidden="true">
-      <div className="intro-listen__lines">
-        {lines.map((line, index) => (
-          <div
-            key={line}
-            className={`intro-listen__line ${index === active ? "is-active" : ""}`}
-          >
-            <div className="intro-listen__stripe" />
-            <span>{line}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="intro-listen__player">
-        <span className="intro-listen__play">PLAY</span>
-        <div className="intro-listen__rail">
-          <div
-            className="intro-listen__fill"
-            style={{ width: `${((active + 1) / lines.length) * 100}%` }}
-          />
-        </div>
-        <span className="intro-listen__count">
-          {active + 1}/{lines.length}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function subscribeToIntroState(callback) {
   if (typeof window === "undefined") {
@@ -118,10 +72,6 @@ function AuthPanel({ authCapabilities, signedIn }) {
   if (signedIn) {
     return (
       <div className="intro-auth">
-        <div className="intro-auth__copy">
-          <h2 className="intro-auth__title">Your workspace is ready.</h2>
-          <p className="terminal-copy">Press play where you left off.</p>
-        </div>
         <div className="terminal-actions">
           <Link href="/workspace" className="terminal-link is-primary">
             Open workspace
@@ -133,11 +83,6 @@ function AuthPanel({ authCapabilities, signedIn }) {
 
   return (
     <div className="intro-auth">
-      <div className="intro-auth__copy">
-        <span className="terminal-kicker">Get Started</span>
-        <h2 className="intro-auth__title">Sign in to start listening.</h2>
-      </div>
-
       <div className="terminal-actions">
         <button
           type="button"
@@ -235,33 +180,13 @@ export default function IntroLanding({
     <main className="intro-page">
       <section className="intro-shell">
         <div className="intro-copy">
-          <span className="terminal-kicker">Assembled Reality</span>
-          <h1 className="intro-copy__title">Drop in anything. Listen to everything.</h1>
-          <p className="intro-copy__body">
-            Whatever you have becomes blocks you can hear and build from.
-          </p>
+          <h1 className="intro-copy__title">Words are Lego.</h1>
+          <p className="intro-copy__body">Drop anything to build something.</p>
         </div>
 
-        <div className="intro-stage">
-          <ListenVisual />
+        <div className="intro-auth-inline">
+          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} />
         </div>
-
-        {signedIn ? (
-          <div className="intro-actions">
-            <span />
-            <button
-              type="button"
-              className="intro-actions__button is-primary"
-              onClick={handleEnter}
-            >
-              Open workspace
-            </button>
-          </div>
-        ) : (
-          <div className="intro-auth-inline">
-            <AuthPanel authCapabilities={authCapabilities} signedIn={false} />
-          </div>
-        )}
       </section>
     </main>
   );
