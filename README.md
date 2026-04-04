@@ -3,332 +3,165 @@
 **Words are Legos.**  
 **Drop anything to build something.**
 
-Assembled Reality turns scattered material into sources you can speak, listen to, assemble, and receipt. It accepts supported files, images, voice memos, links, folders, and pasted content, normalizes them into words and blocks, and lets the user build working outputs with visible lineage.
+Assembled Reality `1.0` is an invite-only beta for solo operators. It is a desktop-first web workbench for turning source material into a working assembly with visible proof.
 
-This repository is in the middle of a product pivot. The old reader-first specs have been removed. This `README.md` is now the product source of truth.
+This `README.md` is the current product source of truth.
 
 ## Active Docs
 
-Use these first:
+- `README.md`
+- `docs/AR Version 1.0.md`
 
-- `README.md` for the current product summary
-- `docs/AR Version 2.md` for next-stage product thinking
-- `docs/AR Version 2 Build Plan.md` for the implementation roadmap
+## Release Posture
 
-## Reference Docs
+- invite-only beta
+- `noindex`
+- desktop-first
+- solo operator first
+- GetReceipts optional
+- warm-audience landing, not broad public marketing
 
-These are still useful, but they are reference inputs, not the current source of truth:
+## Core Loop
 
-- `prototype/document-assembler-concept.md`
-- `prototype/document-assembler-addon-spec.md`
-- `prototype/document-assembler-cursor-inspiration.md`
+`import source → listen / ask Seven → stage blocks → assemble → draft receipt`
 
-## One-Line Summary
+This is the only loop that must feel excellent in `1.0`.
 
-Drop anything to build something, then keep the receipt.
+## Product Model
 
-## Product
+The authenticated product is one workbench with three clear verbs:
 
-The product centers on five ideas:
+- `7` talks
+- `Staging` collects
+- `Edit` rewrites
 
-1. Every imported source becomes canonical Markdown.
-2. Every source is made of addressable blocks.
-3. Users work inside projects that hold sources, assemblies, and receipts.
-4. AI can propose blocks and operations, but the human composes the final assembly.
-5. Every important action can become part of a receipt.
+The active hierarchy is:
 
-## Core Objects
+- project
+- sources
+- current assembly
+- receipts
 
-### Canonical markdown
+The built-in Assembled Reality guide stays pinned in the source list, but it is not the hero of the app.
 
-All uploaded files are normalized into Markdown, regardless of whether they began as PDF, DOC, DOCX, text, or Markdown.
+## Supported Intake For 1.0
 
-### Blocks
+Launch-supported intake paths:
 
-Blocks are the atomic unit of the system. A block can be:
+- PDF
+- DOCX
+- Markdown / TXT
+- paste
+- link import
+- voice memo capture via `Speak note`
 
-- a paragraph
-- a heading
-- a list item
-- a quote
-- a generated synthesis block
+Supported in code but not part of the public `1.0` promise:
 
-Each block should eventually carry durable identity and lineage.
+- folder import
+- image-to-document flows
+- arbitrary audio-file upload
+- legacy DOC upload
 
-### Projects
+If those paths remain reachable, they should feel secondary or beta-quality, not like the main product promise.
 
-A project is the container for a real thing the user is trying to make happen.
+## Workspace Model
 
-Projects hold sources, assemblies, and receipts.
+The live product is the workspace.
 
-### Sources and assemblies
-
-A source is imported material that has been normalized into blocks.
-
-An assembly is the current built artifact shaped from those sources.
-
-These can be:
-
-- imported source documents
-- edited working documents
-- newly assembled documents derived from many sources
-
-### Receipts
-
-Receipts are the proof layer.
-
-The system will support three receipt types:
-
-- consumption receipts
-- assembly receipts
-- synthesis receipts
-
-Receipts should be exportable and handoff-ready for GetReceipts.
-
-## MVP
-
-The MVP should do the following:
-
-1. Authenticate users.
-2. Ingest supported sources including PDF, DOCX, DOC, text, Markdown, images, voice memos, links, folders, and pasted content.
-3. Convert every imported source into canonical Markdown.
-4. Open projects and sources in a minimal terminal-like workspace.
-5. Let users inspect and select document blocks.
-6. Let users listen to a full document or a scoped selection.
-7. Let users run AI operations on one or more documents:
-   - extract
-   - summarize
-   - synthesize
-   - search for evidence
-8. Save AI output as explicit, labeled blocks.
-9. Let users assemble a new working document from source blocks and generated blocks.
-10. Let users edit assembled documents in place.
-11. Log the important steps that led to the final output.
-12. Create receipt drafts locally and optionally in GetReceipts.
-
-## Product Direction
-
-The next frontend should be rebuilt from scratch as a minimal workspace, likely terminal-like in feel:
-
-- text-first
-- low ornament
-- block-first
-- command/action oriented
-- optimized for fast MVP iteration
-
-The current frontend should not define the new experience.
-
-## Frontend V1
-
-The frontend should be one authenticated workspace, not a maze of pages.
-
-### Primary routes
+### Public routes
 
 - `/`
 - `/workspace`
 - `/account`
+- `/opengraph-image`
 
-Legacy routes can redirect into the workspace while the product is in transition.
+### Main surfaces
 
-### Workspace information architecture
+- project home as a dense launcher
+- source rail for navigation
+- main document surface for read, listen, select, and edit
+- right-side context split between Seven conversation and staging
+- receipt log as proof/history, not as a peer editing mode
+- playback always visible
 
-The workspace should have four persistent areas:
+### Seven
 
-- sources
-- buffer
-- context
-- transport + command line
+- `7` opens a real thread tied to the active document
+- replies render as conversation, not hidden operator output
+- useful replies can move into staging with one explicit action
 
-### Sources
+### Staging
 
-The left pane is the document tree:
+- staging collects selected blocks and accepted Seven output
+- staging is the input to assembly
+- staging is not the same thing as Seven
 
-- source documents
-- assembled documents
-- receipts
+### Edit
 
-In MVP, this can begin with source documents first and placeholders for assemblies and receipts.
+- edit is literal block editing
+- it only affects editable document blocks
+- saves must expose clear saving, saved, conflict, and error states
 
-### Buffer
+## What 1.0 Must Do
 
-The center pane is the active working surface.
+1. Authenticate users with Apple or magic link.
+2. Import supported sources and normalize them into usable source documents.
+3. Let users open a source, listen to it, and ask Seven about it.
+4. Let users stage blocks from the source and from Seven replies.
+5. Assemble a new working document from staged material.
+6. Draft a local receipt for the current document or assembly.
+7. Optionally push that receipt draft to GetReceipts without making GetReceipts required.
 
-It can show:
+## Trust And Proof Bar
 
-- an imported source document
-- an assembly draft
-- a receipt preview
+For launch, these flows need clear status handling:
 
-This pane should be block-oriented and easy to scan.
+- auth
+- source intake
+- document save/edit
+- delete
+- playback
+- Seven replies
+- assembly creation
+- receipt drafting
 
-### Context
+Failure to sync with GetReceipts must never block a local receipt draft.
 
-The right pane changes with the user’s mode and selection.
+## Share Surface
 
-It should show:
+Shared links should keep the canonical app brand:
 
-- selected block metadata
-- lineage
-- evidence
-- AI outputs
-- receipt draft context
+- root metadata
+- Open Graph card
+- Twitter card
 
-### Transport
+## Out Of Scope For 1.0
 
-Playback is a first-class feature and should always be visible.
+- collaboration
+- teams
+- billing
+- public discovery growth loops
+- reflection / Learn flows
+- voice economics
+- “all file types” marketing
 
-The transport should stay pinned and include:
+## Current Visual Direction
 
-- play / pause
-- rewind
-- forward
-- previous block
-- next block
-- rate
-- voice / scope
+The visual system is locked to the current graphite/blue desktop workbench language:
 
-### Command line
+- graphite surfaces
+- blue accent
+- system UI typography in app chrome
+- restrained, tool-first composition
 
-The workspace should always include a command bar for direct operations.
+The goal is calm, trustworthy utility, not feature theater.
 
-Early commands can include:
+## Reference Docs
 
-- open
-- next
-- prev
-- play
-- pause
-- connect
-- account
+These are useful inputs, but this README wins when they disagree:
 
-### Visual language
-
-The UI should feel like a calm editorial terminal:
-
-- dark background
-- restrained text colors
-- monospace typography
-- semantic accents for state
-- almost no decorative chrome
-
-### Color semantics
-
-- default text for source material
-- cyan for current or selected block
-- amber for AI-generated or pending material
-- green for accepted / connected / ready states
-- red for errors
-
-### Frontend principle
-
-Do not design for delight first.
-
-Design for:
-
-1. import
-2. inspect
-3. select
-4. transform
-5. assemble
-6. receipt
-
-## What We Already Have
-
-The existing backend already gives us a strong starting point.
-
-### Reusable now
-
-- authentication with NextAuth
-- Apple sign-in and email magic links
-- per-user profiles
-- document upload and storage
-- file normalization into canonical Markdown
-- private per-user document library
-- document-scoped progress and annotation persistence
-- stable runtime block IDs in the renderer
-- per-document AI thread persistence
-- evidence set persistence
-- text-to-speech with ElevenLabs and OpenAI fallback
-- listening session persistence
-- local receipt draft persistence
-- GetReceipts connection flow
-- optional remote receipt draft creation in GetReceipts
-
-### Existing code likely to survive the pivot
-
-- `src/lib/auth.js`
-- `src/lib/document-import.js`
-- `src/lib/reader-documents.js`
-- `src/lib/reader-db.js`
-- `src/lib/reader-workspace.js`
-- `src/lib/getreceipts.js`
-- `src/app/api/*`
-- `prisma/schema.prisma`
-
-## What Still Needs To Be Built
-
-The pivot does not require a backend rewrite, but it does require new domain models and new flows.
-
-### Needed for MVP
-
-- persistent block records, not only runtime block IDs
-- durable block lineage across edits and assemblies
-- document editing and save/update flows
-- versioning for edited and assembled documents
-- a first-class assembly model
-- AI operations that return structured block outputs
-- explicit labeling of AI-authored blocks
-- operation logging for receipt generation
-- receipt builders for:
-  - consumption
-  - assembly
-  - synthesis
-- a new terminal-like frontend
-
-### Probably not needed in MVP
-
-- polished visual design
-- collaborative editing
-- complex permissions
-- analytics-heavy product instrumentation
-- advanced workflow orchestration
-
-## GetReceipts
-
-GetReceipts should remain the external receipt destination, not the place where our internal document lineage lives.
-
-Our app should own:
-
-- document ingestion
-- block identity
-- assembly state
-- operation logs
-- receipt preparation
-
-GetReceipts should own:
-
-- receipt destination
-- receipt review/sharing flow
-- external verification surface
-
-## Principles
-
-- blocks before pages
-- lineage before polish
-- receipts before rhetoric
-- human composition over autonomous generation
-- one canonical representation per document
-- simple UI, serious provenance
-
-## Working Rule
-
-When product or implementation questions come up, optimize for the smallest path that gets us to:
-
-1. import
-2. inspect
-3. select
-4. transform
-5. assemble
-6. receipt
-
-If something does not help that chain, it is probably not MVP.
+- `docs/AR Version 2.md`
+- `docs/AR Version 2 Build Plan.md`
+- `prototype/document-assembler-concept.md`
+- `prototype/document-assembler-addon-spec.md`
+- `prototype/document-assembler-cursor-inspiration.md`

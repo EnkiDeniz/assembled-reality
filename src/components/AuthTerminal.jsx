@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { PRODUCT_NAME } from "@/lib/product-language";
+import { recordProductEvent } from "@/lib/product-analytics";
 
 export default function AuthTerminal({ authCapabilities }) {
   const [email, setEmail] = useState("");
@@ -29,6 +30,10 @@ export default function AuthTerminal({ authCapabilities }) {
 
       setStatus("Magic link sent. Check your inbox.");
     } catch (thrownError) {
+      recordProductEvent("auth_failed", {
+        method: "magic_link",
+        surface: "auth_terminal",
+      });
       setError(thrownError instanceof Error ? thrownError.message : "Could not send magic link.");
     } finally {
       setSubmitting(false);

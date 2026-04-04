@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { BRAND_TRUTH, PRODUCT_NAME } from "@/lib/product-language";
+import { recordProductEvent } from "@/lib/product-analytics";
 
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
 const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
@@ -64,6 +65,10 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
 
       setStatus("Magic link sent. Check your inbox.");
     } catch (thrownError) {
+      recordProductEvent("auth_failed", {
+        method: "magic_link",
+        surface: "landing",
+      });
       setError(thrownError instanceof Error ? thrownError.message : "Could not send magic link.");
     } finally {
       setSubmitting(false);

@@ -121,8 +121,8 @@ export default function ProjectHome({
   const featuredDrafts = projectDrafts.slice(0, 3);
   const secondaryActions = [
     {
-      title: "Import source",
-      description: "File, folder, image, audio clip, or link.",
+      title: "Add source",
+      description: "PDF, DOCX, Markdown, TXT, or link.",
       icon: "upload",
       onClick: onOpenIntake,
       disabled: busy,
@@ -132,7 +132,7 @@ export default function ProjectHome({
       title: "Paste to staging",
       description: clipboardCount
         ? `${clipboardCount} block${clipboardCount === 1 ? "" : "s"} ready to place.`
-        : "Move clipboard material into the working assembly.",
+        : "Move copied material into the working assembly.",
       icon: "paste-source",
       onClick: onPasteClipboard,
       disabled: busy,
@@ -140,7 +140,7 @@ export default function ProjectHome({
     },
     {
       title: "Speak note",
-      description: "Turn a voice memo into source material.",
+      description: "Capture a voice memo as source material.",
       icon: "speak",
       onClick: onOpenSpeak,
       disabled: busy,
@@ -157,7 +157,7 @@ export default function ProjectHome({
             {activeProject?.title || "Main Project"}
           </h1>
           <p className="assembler-project-home__subtitle">
-            {activeProject?.subtitle || "Bring in source material, shape an assembly, keep the receipt."}
+            {activeProject?.subtitle || "Import a source, ask Seven, shape the current assembly, keep the receipt."}
           </p>
           <div className="assembler-project-home__meta">
             <span>{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>

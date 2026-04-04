@@ -32,10 +32,8 @@ import {
   isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
-import {
-  HOME_LOOP,
-  PRODUCT_NAME,
-} from "@/lib/product-language";
+import { PRODUCT_NAME } from "@/lib/product-language";
+import { recordProductEvent } from "@/lib/product-analytics";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 
 const STORAGE_VERSION = 3;
@@ -50,8 +48,7 @@ const IMAGE_DERIVATION_OPTIONS = [
   { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
   { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
 ];
-const SOURCE_ACCEPT_VALUE =
-  ".txt,.md,.markdown,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.gif,.m4a,.mp3,.wav,.webm,.mp4";
+const SOURCE_ACCEPT_VALUE = ".txt,.md,.markdown,.docx,.pdf";
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -59,6 +56,7 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
+const LAUNCH_SOURCE_HINT = "Version 1.0 supports PDF, DOCX, Markdown, TXT, link import, paste, and Speak note.";
 
 function normalizeImageDerivationMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase();
@@ -287,6 +285,73 @@ function isAudioFilename(value = "") {
 function isAudioFileLike(file) {
   if (!file) return false;
   return String(file.type || "").trim().toLowerCase().startsWith("audio/") || isAudioFilename(file.name || "");
+}
+
+function isLegacyDocFilename(value = "") {
+  return /\.doc$/i.test(String(value || "").trim());
+}
+
+function isLaunchSupportedUpload(file) {
+  if (!file) return false;
+
+  const name = String(file.name || "").trim().toLowerCase();
+  const mimeType = String(file.type || "").trim().toLowerCase();
+
+  return (
+    name.endsWith(".pdf") ||
+    name.endsWith(".docx") ||
+    name.endsWith(".md") ||
+    name.endsWith(".markdown") ||
+    name.endsWith(".txt") ||
+    mimeType === "application/pdf" ||
+    mimeType.includes("wordprocessingml") ||
+    mimeType === "text/plain" ||
+    mimeType === "text/markdown" ||
+    mimeType === "text/x-markdown"
+  );
+}
+
+function getSourceIntakeKind(file, sourceKind = "") {
+  if (sourceKind === "voice") return "voice_memo";
+  if (!file) return "unknown";
+  if (isImageFileLike(file)) return "image";
+  if (isAudioFileLike(file)) return "audio_upload";
+  if (isLegacyDocFilename(file.name || "")) return "doc";
+
+  const name = String(file.name || "").trim().toLowerCase();
+  if (name.endsWith(".pdf")) return "pdf";
+  if (name.endsWith(".docx")) return "docx";
+  if (name.endsWith(".md") || name.endsWith(".markdown")) return "markdown";
+  if (name.endsWith(".txt")) return "txt";
+
+  const mimeType = String(file.type || "").trim().toLowerCase();
+  if (mimeType === "application/pdf") return "pdf";
+  if (mimeType.includes("wordprocessingml")) return "docx";
+  if (mimeType === "text/plain") return "txt";
+  if (mimeType === "text/markdown" || mimeType === "text/x-markdown") return "markdown";
+  return "unknown";
+}
+
+function getLaunchUploadBlockedMessage(file, sourceKind = "") {
+  const intakeKind = getSourceIntakeKind(file, sourceKind);
+
+  if (intakeKind === "voice_memo") {
+    return "";
+  }
+
+  if (intakeKind === "image") {
+    return "Image import stays in beta for now. Use PDF, DOCX, Markdown, TXT, paste, link import, or Speak note.";
+  }
+
+  if (intakeKind === "audio_upload") {
+    return "Audio file upload stays in beta for now. Use Speak note to capture a voice memo.";
+  }
+
+  if (intakeKind === "doc") {
+    return "Legacy DOC upload stays in beta for now. Use DOCX, PDF, Markdown, or TXT.";
+  }
+
+  return "Version 1.0 accepts PDF, DOCX, Markdown, and TXT uploads. Use link import, paste, or Speak note for the rest.";
 }
 
 function extractSingleUrlText(text = "") {
@@ -1257,6 +1322,7 @@ function WorkspaceLaunchpad({
   );
   const sourceDocuments = shouldFeatureGuide ? userSourceDocuments : grouped.sources;
   const assemblyDocuments = grouped.assemblies;
+  const primarySourceDocument = userSourceDocuments[0] || null;
   const recentAssemblies = assemblyDocuments
     .filter((document) => document.documentKey !== currentAssemblyDocument?.documentKey)
     .slice(0, 3);
@@ -1284,18 +1350,18 @@ function WorkspaceLaunchpad({
           disabled: busy,
           onClick: () => onEnterMode(WORKSPACE_MODES.assemble, currentAssemblyDocument.documentKey),
         }
-      : shouldFeatureGuide && guideDocument
+      : primarySourceDocument
         ? {
-            label: "Open built-in guide",
-            title: guideDocument.title,
-            detail: getDocumentBlockCountLabel(guideDocument),
+            label: "Open source",
+            title: primarySourceDocument.title,
+            detail: getDocumentBlockCountLabel(primarySourceDocument),
             icon: "listen",
             disabled: busy,
-            onClick: () => onEnterMode(WORKSPACE_MODES.listen, guideDocument.documentKey),
+            onClick: () => onEnterMode(WORKSPACE_MODES.listen, primarySourceDocument.documentKey),
           }
         : listenDocument
           ? {
-              label: "Open source",
+              label: guideDocument?.documentKey === listenDocument.documentKey ? "Open built-in guide" : "Open source",
               title: listenDocument.title,
               detail: getDocumentBlockCountLabel(listenDocument),
               icon: "listen",
@@ -1303,9 +1369,9 @@ function WorkspaceLaunchpad({
               onClick: () => onEnterMode(WORKSPACE_MODES.listen, listenDocument.documentKey),
             }
           : {
-            label: "Import source",
+            label: "Add source",
             title: activeProject?.title || PRODUCT_NAME,
-            detail: "Start with material you can actually work with.",
+            detail: "Start with a supported source for the 1.0 beta.",
             icon: "upload",
             disabled: busy,
             onClick: onOpenIntake,
@@ -1850,7 +1916,6 @@ function DropAnythingSheet({
   pending = false,
   onClose,
   onUpload,
-  onImportFolder,
   onPaste,
   onImportLink,
 }) {
@@ -1878,8 +1943,9 @@ function DropAnythingSheet({
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
             <h2 id="drop-anything-title" className="assembler-image-chooser__title">
-              {HOME_LOOP.drop}
+              Add source
             </h2>
+            <p className="assembler-drop-sheet__note">{LAUNCH_SOURCE_HINT}</p>
           </div>
 
           <button
@@ -1903,7 +1969,7 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="upload" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Upload</span>
+              <span className="assembler-drop-sheet__action-title">Upload file</span>
             </span>
           </button>
 
@@ -1917,21 +1983,7 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="clipboard" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Paste</span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className="assembler-drop-sheet__action"
-            onClick={onImportFolder}
-            disabled={pending}
-          >
-            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="browse" />
-            </span>
-            <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Folder</span>
+              <span className="assembler-drop-sheet__action-title">Paste text</span>
             </span>
           </button>
         </div>
@@ -2200,6 +2252,10 @@ function WorkspaceToolbar({
 }) {
   const totalClipboardCount = clipboardCount + stagedCount;
   const canShowEditAction = viewMode === "doc";
+  const documentTabLabel =
+    activeDocument?.isAssembly || activeDocument?.documentType === "assembly"
+      ? "Assembly"
+      : "Document";
 
   return (
     <div className={`assembler-toolbar ${isMobileLayout ? "is-mobile" : ""}`}>
@@ -2209,14 +2265,14 @@ function WorkspaceToolbar({
           className={`assembler-tab ${viewMode === "doc" ? "is-active" : ""}`}
           onClick={() => onSetViewMode("doc")}
         >
-          Document
+          {documentTabLabel}
         </button>
         <button
           type="button"
           className={`assembler-tab ${viewMode === "log" ? "is-active is-log" : ""}`}
           onClick={() => onSetViewMode("log")}
         >
-          Receipt
+          Receipt log
         </button>
 
         {isMobileLayout ? (
@@ -2685,7 +2741,7 @@ function MobileComposeSheet({
       <div className="assembler-sheet__panel">
         <div className="assembler-sheet__header">
           <div>
-            <span className="assembler-sheet__eyebrow">Clipboard</span>
+            <span className="assembler-sheet__eyebrow">Staging</span>
             <span className="assembler-sheet__title">
               {clipboard.length} block{clipboard.length === 1 ? "" : "s"} from {sourceCount} source{sourceCount === 1 ? "" : "s"}
             </span>
@@ -2703,7 +2759,7 @@ function MobileComposeSheet({
           {stagedBlocks.length ? (
             <div className="assembler-sheet__section">
               <div className="assembler-sheet__section-head">
-                <span>AI Staging</span>
+                <span>Seven replies</span>
                 <div className="assembler-sheet__section-actions">
                   <button type="button" className="assembler-tiny-button" onClick={onAcceptAllStagedBlocks}>
                     Add all
@@ -2716,7 +2772,7 @@ function MobileComposeSheet({
 
               {stagedBlocks.map((block, index) => (
                 <div key={block.id} className="assembler-mobile-clipboard__row is-staged">
-                  <span className="assembler-mobile-clipboard__source">AI</span>
+                  <span className="assembler-mobile-clipboard__source">7</span>
                   <span className="assembler-mobile-clipboard__text">{block.plainText || block.text}</span>
                   <button
                     type="button"
@@ -2988,7 +3044,6 @@ export default function WorkspaceShell({
   resumeSessionSummary = null,
 }) {
   const fileInputRef = useRef(null);
-  const folderInputRef = useRef(null);
   const aiInputRef = useRef(null);
   const blockRefs = useRef({});
   const audioRef = useRef(null);
@@ -3292,13 +3347,6 @@ export default function WorkspaceShell({
   }, []);
 
   useEffect(() => {
-    if (!folderInputRef.current) return;
-
-    folderInputRef.current.setAttribute("webkitdirectory", "");
-    folderInputRef.current.setAttribute("directory", "");
-  }, []);
-
-  useEffect(() => {
     return () => {
       if (recordingTimerRef.current) {
         window.clearInterval(recordingTimerRef.current);
@@ -3374,6 +3422,12 @@ export default function WorkspaceShell({
       })
       .catch((error) => {
         if (cancelled) return;
+        recordProductEvent("seven_thread_load_failed", {
+          project_key: activeProjectKey || undefined,
+          document_key: documentKey || undefined,
+          workspace_mode: workspaceMode,
+          surface: "workspace",
+        });
         setSevenThreadError(
           error instanceof Error ? error.message : "Could not load the Seven conversation.",
         );
@@ -3388,7 +3442,7 @@ export default function WorkspaceShell({
     return () => {
       cancelled = true;
     };
-  }, [activeDocument.documentKey]);
+  }, [activeDocument.documentKey, activeProjectKey, workspaceMode]);
 
   useEffect(() => {
     if (!resolvedVoiceChoice && voiceChoice) {
@@ -3663,6 +3717,15 @@ export default function WorkspaceShell({
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
   }, [pastePendingMode]);
+
+  function trackWorkspaceEvent(name, properties = {}) {
+    recordProductEvent(name, {
+      project_key: activeProjectKey || undefined,
+      document_key: activeDocumentRef.current?.documentKey || undefined,
+      workspace_mode: workspaceMode,
+      ...properties,
+    });
+  }
 
   function setFeedback(message, tone = "") {
     setStatus(message);
@@ -4452,6 +4515,9 @@ export default function WorkspaceShell({
     try {
       await createLinkSource(url);
     } catch (error) {
+      trackWorkspaceEvent("source_import_failed", {
+        source_kind: "link",
+      });
       setFeedback(
         error instanceof Error ? error.message : "Could not create a source from that link.",
         "error",
@@ -4465,19 +4531,32 @@ export default function WorkspaceShell({
     const normalizedFiles = Array.from(files || []).filter(Boolean);
     if (!normalizedFiles.length) return;
 
-    if (normalizedFiles.length === 1 && !normalizedFiles[0]?.webkitRelativePath) {
-      await handleUpload(normalizedFiles[0]);
+    const supportedFiles = normalizedFiles.filter((file) => isLaunchSupportedUpload(file));
+    const skippedFiles = normalizedFiles.filter((file) => !isLaunchSupportedUpload(file));
+
+    if (!supportedFiles.length) {
+      const message = getLaunchUploadBlockedMessage(normalizedFiles[0]);
+      trackWorkspaceEvent("source_import_blocked", {
+        source_kind: getSourceIntakeKind(normalizedFiles[0]),
+        intake_surface: "upload_batch",
+      });
+      setFeedback(message, "error");
+      return;
+    }
+
+    if (supportedFiles.length === 1 && !supportedFiles[0]?.webkitRelativePath) {
+      await handleUpload(supportedFiles[0]);
       return;
     }
 
     setUploading(true);
     setFeedback(
-      `Importing ${normalizedFiles.length} source${normalizedFiles.length === 1 ? "" : "s"}…`,
+      `Importing ${supportedFiles.length} source${supportedFiles.length === 1 ? "" : "s"}…`,
     );
 
     try {
       const formData = new FormData();
-      normalizedFiles.forEach((file) => {
+      supportedFiles.forEach((file) => {
         formData.append("files", file);
       });
       formData.append("projectKey", activeProjectKey);
@@ -4492,7 +4571,7 @@ export default function WorkspaceShell({
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !Array.isArray(payload?.results) || !payload.results.length) {
-        throw new Error(payload?.error || "Could not import this folder.");
+        throw new Error(payload?.error || "Could not import those sources.");
       }
 
       payload.results.forEach((result) => {
@@ -4509,14 +4588,21 @@ export default function WorkspaceShell({
       }
 
       const skippedCount = Array.isArray(payload?.skipped) ? payload.skipped.length : 0;
+      const totalSkippedCount = skippedCount + skippedFiles.length;
       setFeedback(
         `Imported ${payload.results.length} source${payload.results.length === 1 ? "" : "s"}${
-          skippedCount ? `, skipped ${skippedCount}` : ""
+          totalSkippedCount
+            ? `, skipped ${totalSkippedCount} outside the 1.0 upload set`
+            : ""
         }.`,
         "success",
       );
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Could not import this folder.", "error");
+      trackWorkspaceEvent("source_import_failed", {
+        source_kind: "batch",
+        file_count: supportedFiles.length,
+      });
+      setFeedback(error instanceof Error ? error.message : "Could not import those sources.", "error");
     } finally {
       setUploading(false);
       setDropActive(false);
@@ -4530,6 +4616,16 @@ export default function WorkspaceShell({
     const audioLike = isAudioFileLike(file);
     const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
     const sourceKind = options.sourceKind || "";
+
+    if (sourceKind !== "voice" && !isLaunchSupportedUpload(file)) {
+      const message = getLaunchUploadBlockedMessage(file, sourceKind);
+      trackWorkspaceEvent("source_import_blocked", {
+        source_kind: getSourceIntakeKind(file, sourceKind),
+        intake_surface: "upload",
+      });
+      setFeedback(message, "error");
+      return null;
+    }
 
     if (imageLike && !normalizedImageMode) {
       setPendingImageIntake({
@@ -4591,6 +4687,10 @@ export default function WorkspaceShell({
       );
       return payload;
     } catch (error) {
+      trackWorkspaceEvent("source_import_failed", {
+        source_kind: getSourceIntakeKind(file, sourceKind),
+        intake_surface: sourceKind === "voice" ? "voice" : "upload",
+      });
       setFeedback(
         error instanceof Error ? error.message : "The document could not be imported.",
         "error",
@@ -4599,10 +4699,6 @@ export default function WorkspaceShell({
     } finally {
       setUploading(false);
     }
-  }
-
-  function openFolderPicker() {
-    folderInputRef.current?.click();
   }
 
   function handleDragEnter(event) {
@@ -4712,6 +4808,9 @@ export default function WorkspaceShell({
       return true;
     } catch (error) {
       if (error?.code === "stale_document") {
+        trackWorkspaceEvent("document_save_conflict", {
+          surface: "cleanup",
+        });
         setDocumentState(activeDocument.documentKey, {
           status: "conflict",
           message: "Newer version saved elsewhere",
@@ -4721,6 +4820,9 @@ export default function WorkspaceShell({
         return false;
       }
 
+      trackWorkspaceEvent("document_save_failed", {
+        surface: "cleanup",
+      });
       setDocumentState(activeDocument.documentKey, {
         status: "error",
         message: "Save failed",
@@ -5096,6 +5198,10 @@ export default function WorkspaceShell({
           await createLinkSource(urlFromClipboard);
           return;
         } catch (error) {
+          trackWorkspaceEvent("source_import_failed", {
+            source_kind: "link",
+            intake_surface: "paste",
+          });
           setPendingLinkIntake({
             url: urlFromClipboard,
             payload: clipboardPayload,
@@ -5113,14 +5219,14 @@ export default function WorkspaceShell({
       }
 
       if (hasImagePayload && !normalizedImageMode) {
-        setPendingImageIntake({
-          source: "paste",
-          payload: clipboardPayload,
-          filename: clipboardPayload?.imageFilename || "clipboard-image.png",
-          mimeType: resolvedImageMimeType,
-          selectedMode: preferredImageDerivationMode,
+        trackWorkspaceEvent("source_import_blocked", {
+          source_kind: "image",
+          intake_surface: "paste",
         });
-        setFeedback("Choose how to turn this image into a source.");
+        setFeedback(
+          "Image paste stays in beta for now. Paste text, use a link, or import PDF, DOCX, Markdown, or TXT.",
+          "error",
+        );
         return;
       }
 
@@ -5217,11 +5323,15 @@ export default function WorkspaceShell({
       const blockLabel = `${pastedBlocks.length} block${pastedBlocks.length === 1 ? "" : "s"}`;
       setFeedback(
         intakeWarning
-          ? `Pasted ${blockLabel} to clipboard. ${intakeWarning}`
-          : `Pasted ${blockLabel} to clipboard.`,
+          ? `Pasted ${blockLabel} to staging. ${intakeWarning}`
+          : `Pasted ${blockLabel} to staging.`,
         intakeWarning ? "" : "success",
       );
     } catch (error) {
+      trackWorkspaceEvent("source_import_failed", {
+        source_kind: mode === "source" ? "paste_source" : "paste_staging",
+        intake_surface: "paste",
+      });
       setFeedback(
         error instanceof Error ? error.message : "Could not paste into the workspace.",
         "error",
@@ -5238,7 +5348,7 @@ export default function WorkspaceShell({
     if (alreadySelected) return;
 
     setClipboard((previous) => mergeClipboard(previous, [block]));
-    appendLog("SELECTED", `${activeDocument.title} — block ${block.sourcePosition + 1} → clipboard`, {
+    appendLog("SELECTED", `${activeDocument.title} — block ${block.sourcePosition + 1} → staging`, {
       documentKey: activeDocument.documentKey,
       blockIds: [block.id],
     });
@@ -5331,6 +5441,9 @@ export default function WorkspaceShell({
         [blockId]: error?.code === "stale_document" ? "conflict" : "error",
       }));
       if (error?.code === "stale_document") {
+        trackWorkspaceEvent("document_save_conflict", {
+          block_id: blockId,
+        });
         setDocumentState(activeDocument.documentKey, {
           status: "conflict",
           message: "Newer version saved elsewhere",
@@ -5340,6 +5453,9 @@ export default function WorkspaceShell({
         return;
       }
 
+      trackWorkspaceEvent("document_save_failed", {
+        block_id: blockId,
+      });
       setDocumentState(activeDocument.documentKey, {
         status: "error",
         message: "Save failed",
@@ -5500,6 +5616,9 @@ export default function WorkspaceShell({
       await audio.play();
       setFeedback(`Playing block ${block.sourcePosition + 1}.`);
     } catch (error) {
+      trackWorkspaceEvent("playback_failed", {
+        provider: voiceChoiceRef.current?.provider || "cloud",
+      });
       stopPlayback();
       setFeedback(error instanceof Error ? error.message : "Could not start playback.", "error");
     } finally {
@@ -5629,6 +5748,9 @@ export default function WorkspaceShell({
 
       window.speechSynthesis.speak(utterance);
     } catch (error) {
+      trackWorkspaceEvent("playback_failed", {
+        provider: VOICE_PROVIDERS.device,
+      });
       stopPlayback();
       setFeedback(error instanceof Error ? error.message : "Could not start playback.", "error");
     } finally {
@@ -5910,6 +6032,9 @@ export default function WorkspaceShell({
         error instanceof Error ? error.message : "Seven couldn't answer right now.";
       const failedAt = new Date().toISOString();
 
+      trackWorkspaceEvent("seven_answer_failed", {
+        surface: "workspace",
+      });
       setSevenThreadError(message);
       setSevenThreads((previous) => {
         const currentThread =
@@ -6030,6 +6155,9 @@ export default function WorkspaceShell({
         "success",
       );
     } catch (error) {
+      trackWorkspaceEvent("assembly_failed", {
+        block_count: clipboard.length,
+      });
       setFeedback(error instanceof Error ? error.message : "Could not assemble the document.", "error");
     }
   }
@@ -6074,6 +6202,9 @@ export default function WorkspaceShell({
         "success",
       );
     } catch (error) {
+      trackWorkspaceEvent("receipt_draft_failed", {
+        draft_scope: activeDocument?.documentKey ? "document" : "unknown",
+      });
       setFeedback(error instanceof Error ? error.message : "Could not draft the receipt.", "error");
     } finally {
       setReceiptPending(false);
@@ -6132,22 +6263,6 @@ export default function WorkspaceShell({
             bundleName: files[0]?.webkitRelativePath
               ? files[0].webkitRelativePath.split("/")[0]
               : "",
-          });
-          event.target.value = "";
-        }}
-      />
-      <input
-        ref={folderInputRef}
-        className="terminal-file-input"
-        type="file"
-        multiple
-        onChange={(event) => {
-          const files = Array.from(event.target.files || []);
-          if (!files.length) return;
-          void importFileBatch(files, {
-            bundleName: files[0]?.webkitRelativePath
-              ? files[0].webkitRelativePath.split("/")[0]
-              : "Imported Folder",
           });
           event.target.value = "";
         }}
@@ -6685,10 +6800,6 @@ export default function WorkspaceShell({
             setDropAnythingOpen(false);
             fileInputRef.current?.click();
           }}
-          onImportFolder={() => {
-            setDropAnythingOpen(false);
-            openFolderPicker();
-          }}
           onPaste={() => {
             setDropAnythingOpen(false);
             void pasteIntoWorkspace("source");
@@ -6757,7 +6868,7 @@ export default function WorkspaceShell({
       {dropActive ? (
         <div className="assembler-drop-overlay" aria-hidden="true">
           <div className="assembler-drop-overlay__panel">
-            <strong>Drop anything</strong>
+            <strong>Drop supported source</strong>
           </div>
         </div>
       ) : null}

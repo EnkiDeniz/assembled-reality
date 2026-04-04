@@ -38,7 +38,7 @@ export default function StagingPanel({
         {stagedBlocks.length ? (
           <div className="assembler-staging-panel__section">
             <div className="assembler-staging-panel__section-head">
-              <span>AI staging</span>
+              <span>Seven replies</span>
               <div className="assembler-staging-panel__section-actions">
                 <button
                   type="button"
