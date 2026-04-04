@@ -29,7 +29,6 @@ import {
   ingestUploadedDocument,
   MAX_DOCUMENT_UPLOAD_BYTES,
 } from "@/lib/document-import";
-import { deriveSourceFromLink } from "@/lib/link-intake";
 import { parseDocument } from "@/lib/document";
 
 function buildAiBlocksFromMarkdown(markdown, documentKey, operation = "extracted") {
@@ -298,6 +297,7 @@ export async function ingestLinkSourceForUser(
     url,
   },
 ) {
+  const { deriveSourceFromLink } = await import("@/lib/link-intake");
   const derived = await deriveSourceFromLink(url);
   const blocks = buildAiBlocksFromMarkdown(
     derived.contentMarkdown,

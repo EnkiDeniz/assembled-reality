@@ -1,7 +1,6 @@
 import "server-only";
 
 import { Readability } from "@mozilla/readability";
-import { JSDOM } from "jsdom";
 import {
   ingestHtmlSource,
   ingestPlainTextSource,
@@ -146,6 +145,7 @@ export async function deriveSourceFromLink(urlValue) {
   }
 
   if (contentType.includes("html") || /<html[\s>]|<body[\s>]|<article[\s>]/i.test(bodyText)) {
+    const { JSDOM } = await import("jsdom");
     const dom = new JSDOM(bodyText, { url: finalUrl.toString() });
     const document = dom.window.document;
     const readability = new Readability(document);
