@@ -112,10 +112,16 @@ export default function ProjectHome({
   sourceOpenMode,
 }) {
   const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
+  const boxRows =
+    projects.length > 0
+      ? projects
+      : activeProject
+        ? [activeProject]
+        : [];
   const boxSubtitle =
-    activeProject?.boxSubtitle ||
-    activeProject?.subtitle ||
-    "Import a source, ask Seven, shape the assembly, keep the receipt.";
+    boxRows.length > 1
+      ? `Select a box, create a new one, or keep shaping the assembly in ${boxTitle}.`
+      : "This is your only box right now. Create another one or keep shaping the assembly here.";
   const sourceRows = guideDocument
     ? [guideDocument, ...sourceDocuments]
     : sourceDocuments;
@@ -165,7 +171,7 @@ export default function ProjectHome({
     <div className="assembler-project-home">
       <section className="assembler-project-home__masthead">
         <div className="assembler-project-home__copy">
-          <span className="assembler-project-home__eyebrow">What&apos;s in the Box</span>
+          <span className="assembler-project-home__eyebrow">Boxes</span>
           <h1 className="assembler-project-home__title">{boxTitle}</h1>
           <p className="assembler-project-home__subtitle">{boxSubtitle}</p>
           <div className="assembler-project-home__meta">
@@ -182,44 +188,42 @@ export default function ProjectHome({
           </p>
         </div>
 
-        {projects.length > 1 ? (
-          <div className="assembler-project-home__projects">
-            <div className="assembler-project-home__section-head">
-              <span>Boxes</span>
-              <button
-                type="button"
-                className="assembler-project-home__section-action"
-                onClick={onCreateProject}
-                disabled={projectActionPending === "__create__"}
-              >
-                {projectActionPending === "__create__" ? "Creating…" : "New Box"}
-              </button>
-            </div>
-
-            <div className="assembler-project-home__project-list">
-              {projects.map((project) => (
-                <button
-                  key={project.projectKey}
-                  type="button"
-                  className={`assembler-project-home__project-row ${
-                    project.projectKey === activeProjectKey ? "is-active" : ""
-                  }`}
-                  onClick={() => onOpenProject(project.projectKey)}
-                  disabled={projectActionPending === project.projectKey}
-                >
-                  <span className="assembler-project-home__project-title">
-                    {project.boxTitle || project.title || "Untitled Box"}
-                  </span>
-                  <span className="assembler-project-home__project-meta">
-                    {projectActionPending === project.projectKey
-                      ? "Opening…"
-                      : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
-                  </span>
-                </button>
-              ))}
-            </div>
+        <div className="assembler-project-home__projects">
+          <div className="assembler-project-home__section-head">
+            <span>{`Boxes ${boxRows.length ? `· ${boxRows.length}` : ""}`}</span>
+            <button
+              type="button"
+              className="assembler-project-home__section-action"
+              onClick={onCreateProject}
+              disabled={projectActionPending === "__create__"}
+            >
+              {projectActionPending === "__create__" ? "Creating…" : "New Box"}
+            </button>
           </div>
-        ) : null}
+
+          <div className="assembler-project-home__project-list">
+            {boxRows.map((project) => (
+              <button
+                key={project.projectKey}
+                type="button"
+                className={`assembler-project-home__project-row ${
+                  project.projectKey === activeProjectKey ? "is-active" : ""
+                }`}
+                onClick={() => onOpenProject(project.projectKey)}
+                disabled={projectActionPending === project.projectKey}
+              >
+                <span className="assembler-project-home__project-title">
+                  {project.boxTitle || project.title || "Untitled Box"}
+                </span>
+                <span className="assembler-project-home__project-meta">
+                  {projectActionPending === project.projectKey
+                    ? "Opening…"
+                    : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="assembler-project-home__control-strip">

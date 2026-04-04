@@ -1,5 +1,9 @@
 # Phase 0 Review Note
 
+**Status:** Historical implementation note from the pre-Box migration phase.
+
+This document describes the product before the Loegos Box language and branding pass. When it says `Document Assembler`, `project`, or similar older terms, read them as historical context rather than the current live product vocabulary.
+
 ## What I was asked to do
 
 Implement the Phase 0 hardening plan for the current `Document Assembler` product:

@@ -1,31 +1,61 @@
-# Assembled Reality Language Alignment Audit
+# Loegos Language Alignment Audit
 
-**Date:** April 3, 2026  
-**Purpose:** Capture the pre-alignment findings that drove the visible copy and deeper system language pass.
+**Date:** April 2026  
+**Purpose:** Record the current language rules for the live Loegos product and make historical terminology easier to spot.
+
+## Live Product Language
+
+The live product should use these nouns consistently:
+
+- `Box`
+- `Sources`
+- `Assembly`
+- `Receipts`
+- `Seven`
+
+The live product should use these brand forms consistently:
+
+- `Loegos` for plain text, metadata, URLs, and system-facing copy
+- `Lœgos` for the stylized in-product mark or guide label when appropriate
 
 ## Keep
 
-- `Words are Legos.` and `Drop anything to build something.` in the intro
-- `Speak / Listen / Assemble / Drop anything` as the workspace home loop
-- `Assembled Reality` as the visible product name in the workspace shell
-- `project`, `source`, `assembly`, and `receipt` as the dominant product nouns
+- `Words are Legos.` and `Drop anything to build something.` on the minimal front door
+- `Box`, `Sources`, `Assembly`, `Receipts`, and `Seven` as the dominant product nouns
+- calm, operational workspace copy that sounds like a tool, not a manifesto
+- `Seven` as the name of the contextual conversation surface
 
 ## Rewrite
 
-- Auth and sign-in surfaces still using `Document Assembler` and old slogans
-- App metadata still using the older `Drop in anything. Listen to everything.` line
-- Receipt payload and draft language still saying `inside Document Assembler`
-- Workspace AI prompt still framed as operating inside `Document Assembler`
-- README and current product docs that still describe the product as `Document Assembler`
+- any visible `Project` language in the product shell
+- any visible `Current assembly` phrasing
+- any visible `Receipt log` phrasing
+- any old `Document Assembler` copy on auth, metadata, or system surfaces
+- any app copy that still frames the tool as `Assembled Reality`
 
-## Remove
+## Remove From Live Surfaces
 
-- Primary visible use of `Document Assembler` on customer-facing surfaces
-- Dev-facing auth copy like `Minimal workspace. Working auth. No old reader chrome.`
-- Mixed slogans that make the product sound like an older reader-first tool
+- `Document Assembler`
+- `Main Project`
+- `Project home`
+- `Receipt log`
+- `Assembled Reality` as the app name
+
+## Keep Only In Historical Context
+
+These can still appear in historical docs when clearly framed as historical:
+
+- `Assembled Reality`
+- `Document Assembler`
+- `Project`
+- earlier review language from the pre-Box product
 
 ## Defer
 
-- Historical review documents that refer to the old product name in historical context
-- Folder/project inference language that should not be promised before it ships
-- Internal metadata keys, tags, and legacy identifiers like `document_assembler` where changing them would be structural rather than presentational
+- internal persistence names like `ReaderProject`, `projectKey`, and `/api/workspace/project`
+- deep doctrine language from `△ □ ○ × 1–7` unless the user has enough material for Seven to earn a read
+- broader company-architecture language unless the current screen needs it
+
+## Practical Rule
+
+If a user can see it in the live product, it should describe today’s Loegos box workbench rather than an earlier AR or Document Assembler phase.

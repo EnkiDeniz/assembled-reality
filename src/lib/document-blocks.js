@@ -30,6 +30,7 @@ const LOG_ACTION_COLORS = {
   DELETED: "#ef4444",
   POLISHED: "#f59e0b",
   ASSEMBLED: "#f59e0b",
+  OPERATED: "#339cff",
   RECEIPT: "#22c55e",
 };
 

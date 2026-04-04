@@ -5,6 +5,14 @@ function unique(values) {
   return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
 }
 
+function getOperateDocumentKeys(operateResult = null) {
+  return unique(
+    (Array.isArray(operateResult?.includedDocuments) ? operateResult.includedDocuments : []).map(
+      (document) => document.documentKey,
+    ),
+  );
+}
+
 export function buildWorkspaceBlockLineage(blocks) {
   return (Array.isArray(blocks) ? blocks : []).map((block, index) => ({
     order: index,
@@ -27,7 +35,66 @@ export function buildWorkspaceReceiptPayload({
   logEntries = [],
   mode = "assembly",
   project = null,
+  operateResult = null,
 }) {
+  if (mode === "operate" && operateResult) {
+    const operateDocumentKeys = getOperateDocumentKeys(operateResult);
+    const boxTitle = project?.boxTitle || project?.title || "Untitled Box";
+
+    return {
+      aim: operateResult.aim.sentence,
+      tried: `Operate read ${boxTitle} across ${operateResult.includedSourceCount} source(s)${
+        operateResult.includesAssembly ? " and the current assembly" : ""
+      } inside ${PRODUCT_NAME}.`,
+      outcome: operateResult.ground.sentence,
+      learned: operateResult.bridge.sentence,
+      decision: operateResult.nextMove,
+      owner: profile?.displayName || "Reader",
+      temporal: "retrospective",
+      visibility: "private",
+      tags: unique([
+        "loegos",
+        "operate",
+        project?.projectKey ? "box-scoped" : null,
+        operateResult.trustFloor ? operateResult.trustFloor.toLowerCase() : null,
+        operateResult.convergence || null,
+      ]),
+      metadata: {
+        source_app: "loegos",
+        source_flow: "loegos_operate_v1",
+        loegos_operate: {
+          box_id: project?.id || null,
+          box_key: project?.projectKey || null,
+          box_title: boxTitle,
+          document_key: document?.documentKey || "",
+          document_title: document?.title || "Untitled document",
+          included_document_keys: operateDocumentKeys,
+          included_documents: Array.isArray(operateResult?.includedDocuments)
+            ? operateResult.includedDocuments
+            : [],
+          includes_assembly: Boolean(operateResult.includesAssembly),
+          included_source_count: operateResult.includedSourceCount || 0,
+          gradient: operateResult.gradient,
+          convergence: operateResult.convergence,
+          trust_floor: operateResult.trustFloor,
+          trust_ceiling: operateResult.trustCeiling,
+          levels: {
+            aim: operateResult.aim.level,
+            ground: operateResult.ground.level,
+            bridge: operateResult.bridge.level,
+          },
+          level_rationales: {
+            aim: operateResult.aim.rationale,
+            ground: operateResult.ground.rationale,
+            bridge: operateResult.bridge.rationale,
+          },
+          next_move: operateResult.nextMove,
+          ran_at: operateResult.ranAt || new Date().toISOString(),
+        },
+      },
+    };
+  }
+
   const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
   const normalizedLogEntries = Array.isArray(logEntries) ? logEntries : [];
   const sourceDocumentKeys = unique(
@@ -105,7 +172,31 @@ export function buildWorkspaceReceiptDraftInput({
   remoteReceiptId = null,
   status = "LOCAL_DRAFT",
   mode = "assembly",
+  project = null,
+  operateResult = null,
 }) {
+  if (mode === "operate" && operateResult) {
+    const boxTitle = project?.boxTitle || project?.title || document?.title || "Untitled Box";
+
+    return {
+      documentKey: document?.documentKey || "",
+      getReceiptsReceiptId: remoteReceiptId || null,
+      status,
+      title: `${boxTitle} receipt`,
+      interpretation: operateResult.bridge?.sentence || null,
+      implications: operateResult.nextMove || null,
+      stance: "WORKING",
+      linkedEvidenceItemIds: [],
+      linkedMessageIds: [],
+      sourceSections: getOperateDocumentKeys(operateResult),
+      sourceMarkIds: [],
+      payload: {
+        mode,
+        operateResult,
+      },
+    };
+  }
+
   const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
   const normalizedLogEntries = Array.isArray(logEntries) ? logEntries : [];
   const sourceSections = unique(

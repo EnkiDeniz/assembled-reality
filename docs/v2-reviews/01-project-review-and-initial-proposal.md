@@ -1,5 +1,9 @@
 # Review 1: Project Review and Initial Proposal
 
+**Status:** Historical review from the pre-Box product phase.
+
+This document captures an earlier review of the product before the Loegos branding and Box model migration. Terms like `Document Assembler`, `Assembled Reality`, and `project model` are preserved here as historical context.
+
 **Date:** April 3, 2026
 **Reviewer:** Claude (AI consultant)
 **Branch:** `codex/mobile-reader-overhaul`

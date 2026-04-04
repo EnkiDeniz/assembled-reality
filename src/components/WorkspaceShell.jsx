@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import AiUtilityRail from "@/components/AiUtilityRail";
+import OperateDialog from "@/components/OperateDialog";
 import ProjectHome from "@/components/ProjectHome";
 import SourceRail from "@/components/SourceRail";
 import StagingPanel from "@/components/StagingPanel";
@@ -32,6 +33,11 @@ import {
   isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
+import {
+  buildOperateAuditPrompt,
+  getOperateAssemblyDocument,
+  listOperateIncludedDocuments,
+} from "@/lib/operate";
 import { PRODUCT_MARK, PRODUCT_NAME } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 import { parseSevenAudioHeaders } from "@/lib/seven";
@@ -1231,7 +1237,7 @@ function WorkspaceShelf({
 
           <div className="assembler-sheet__section-actions">
             <button type="button" className="assembler-sheet__close" onClick={onOpenProjectHome}>
-              Box
+              Boxes
             </button>
             <button
               type="button"
@@ -1503,7 +1509,7 @@ function ListenSurface({
             type="button"
             className="assembler-listen__topbar-icon"
             onClick={onOpenProjectHome}
-            aria-label="Back to home"
+            aria-label="Back to boxes"
           >
             <WorkspaceActionIcon kind="back" />
           </button>
@@ -3053,6 +3059,7 @@ export default function WorkspaceShell({
 }) {
   const fileInputRef = useRef(null);
   const aiInputRef = useRef(null);
+  const runAiOperationRef = useRef(null);
   const blockRefs = useRef({});
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
@@ -3134,6 +3141,11 @@ export default function WorkspaceShell({
   }));
   const [sevenThreadLoadingKey, setSevenThreadLoadingKey] = useState("");
   const [sevenThreadError, setSevenThreadError] = useState("");
+  const [operateOpen, setOperateOpen] = useState(false);
+  const [operatePending, setOperatePending] = useState(false);
+  const [operateError, setOperateError] = useState("");
+  const [operateResult, setOperateResult] = useState(null);
+  const [pendingOperateAudit, setPendingOperateAudit] = useState(null);
   const [receiptPending, setReceiptPending] = useState(false);
   const [polishPending, setPolishPending] = useState(false);
   const [cleanupPendingAction, setCleanupPendingAction] = useState("");
@@ -3178,6 +3190,14 @@ export default function WorkspaceShell({
     (document) => document.documentType !== "builtin" && document.sourceType !== "builtin",
   );
   const visibleAssemblyDocuments = projectDocumentGroups.assemblies;
+  const currentAssemblyDocument =
+    getOperateAssemblyDocument(activeProject, projectDocuments, activeDocumentKey) || null;
+  const operateState = listOperateIncludedDocuments(activeProject, projectDocuments, {
+    preferredDocumentKey: activeDocumentKey,
+    includeAssembly: true,
+    includeGuide: false,
+  });
+  const canRunOperate = operateState.canOperate;
   const availableVoiceCatalog = voiceCatalog.filter(
     (entry) =>
       entry.provider !== VOICE_PROVIDERS.device || deviceVoiceSupported,
@@ -3198,6 +3218,8 @@ export default function WorkspaceShell({
   const playbackAvailable = availableVoiceCatalog.length > 0;
   const activeDocumentBase = documentCache[activeDocumentKey] || initialDocument;
   const activeDocument = applyDocumentLogState(activeDocumentBase, documentLogs);
+  const operateAuditDocumentKey =
+    currentAssemblyDocument?.documentKey || activeDocument?.documentKey || "";
   const blocks = activeDocument?.blocks ?? EMPTY_BLOCKS;
   const activeDocumentState = documentStates[activeDocumentKey] || null;
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
@@ -3575,6 +3597,30 @@ export default function WorkspaceShell({
     setSevenThreadError("");
     pendingFocusBlockIdRef.current = null;
   }, [activeDocumentKey, firstBlockId]);
+
+  useEffect(() => {
+    setOperateOpen(false);
+    setOperatePending(false);
+    setOperateError("");
+    setOperateResult(null);
+    setPendingOperateAudit(null);
+  }, [activeProjectKey]);
+
+  useEffect(() => {
+    runAiOperationRef.current = runAiOperation;
+  });
+
+  useEffect(() => {
+    if (!pendingOperateAudit?.documentKey) return;
+    if (pendingOperateAudit.documentKey !== activeDocumentKey) return;
+    if (loadingDocumentKey) return;
+    if (aiPending) return;
+
+    const prompt = pendingOperateAudit.prompt;
+    setPendingOperateAudit(null);
+    setAiOpen(true);
+    void runAiOperationRef.current?.(prompt);
+  }, [activeDocumentKey, aiPending, loadingDocumentKey, pendingOperateAudit]);
 
   useEffect(() => {
     if (!aiOpen) return;
@@ -6171,21 +6217,151 @@ export default function WorkspaceShell({
     }
   }
 
-  async function createReceiptDraft() {
+  async function runOperate() {
+    if (!canRunOperate || operatePending) return;
+
+    setOperateOpen(true);
+    setOperatePending(true);
+    setOperateError("");
+    setOperateResult(null);
+
+    try {
+      const response = await fetch("/api/workspace/operate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: activeProjectKey,
+          documentKey: activeDocument?.documentKey || "",
+          includeAssembly: true,
+          includeGuide: false,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.result) {
+        throw new Error(payload?.error || "Operate could not read this box.");
+      }
+
+      const nextResult = {
+        ...payload.result,
+        auditDocumentKey: payload.auditDocumentKey || operateAuditDocumentKey,
+      };
+
+      setOperateResult(nextResult);
+      appendLog(
+        "OPERATED",
+        `Operate read ${nextResult.boxTitle}: gradient ${nextResult.gradient}, floor ${nextResult.trustFloor}.`,
+        {
+          documentKey: nextResult.auditDocumentKey || activeDocument?.documentKey || "",
+        },
+      );
+      setFeedback("Operate read the box.", "success");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Operate could not read this box.";
+      trackWorkspaceEvent("operate_failed", {
+        box_key: activeProjectKey,
+      });
+      setOperateError(message);
+      setFeedback(message, "error");
+    } finally {
+      setOperatePending(false);
+    }
+  }
+
+  async function askSevenToAuditOperate() {
+    if (!operateResult) return;
+
+    const prompt = buildOperateAuditPrompt(operateResult);
+    const targetDocumentKey =
+      String(
+        operateResult.auditDocumentKey ||
+          operateAuditDocumentKey ||
+          activeDocument?.documentKey ||
+          "",
+      ).trim();
+    if (!targetDocumentKey) {
+      setFeedback("Open a source or assembly before asking Seven to audit this read.", "error");
+      return;
+    }
+    const targetDocumentSummary = projectDocuments.find(
+      (document) => document.documentKey === targetDocumentKey,
+    );
+    const targetMode = targetDocumentSummary?.isAssembly
+      ? WORKSPACE_MODES.assemble
+      : targetDocumentSummary?.documentType === "assembly"
+        ? WORKSPACE_MODES.assemble
+        : workspaceMode;
+
+    setOperateOpen(false);
+
+    if (targetDocumentKey && targetDocumentKey !== activeDocumentKey) {
+      setPendingOperateAudit({
+        documentKey: targetDocumentKey,
+        prompt,
+      });
+      await loadDocument(targetDocumentKey, {
+        mode: targetMode,
+      });
+      return;
+    }
+
+    setAiOpen(true);
+    void runAiOperation(prompt);
+  }
+
+  async function createReceiptDraft({
+    mode = "workspace",
+    operateResult: nextOperateResult = null,
+  } = {}) {
     setReceiptPending(true);
 
     try {
-      const receiptLogEntries = activeDocument.logEntries || [];
+      const isOperateMode = mode === "operate" && nextOperateResult;
+      let receiptDocument = activeDocument || null;
+
+      if (isOperateMode) {
+        const targetDocumentKey = String(
+          nextOperateResult.auditDocumentKey ||
+            operateAuditDocumentKey ||
+            activeDocument?.documentKey ||
+            "",
+        ).trim();
+
+        if (targetDocumentKey && targetDocumentKey !== activeDocument?.documentKey) {
+          const cachedDocument = documentCache[targetDocumentKey];
+          if (cachedDocument?.documentKey && Array.isArray(cachedDocument.blocks)) {
+            receiptDocument = applyDocumentLogState(cachedDocument, documentLogsRef.current);
+          } else {
+            receiptDocument = await fetchLatestDocument(targetDocumentKey);
+            upsertDocument(receiptDocument, { replaceLogs: true });
+          }
+        }
+      }
+
+      if (!receiptDocument?.documentKey) {
+        throw new Error("Open a source or assembly before drafting a receipt.");
+      }
+
+      const receiptLogEntries = receiptDocument.logEntries || [];
       const response = await fetch("/api/workspace/receipt", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          document: activeDocument,
-          blocks: activeDocument.blocks,
+          document: receiptDocument,
+          blocks: receiptDocument.blocks,
           logEntries: receiptLogEntries,
           projectKey: activeProjectKey,
+          ...(isOperateMode
+            ? {
+                mode: "operate",
+                operateResult: nextOperateResult,
+              }
+            : {}),
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -6195,24 +6371,34 @@ export default function WorkspaceShell({
       }
 
       upsertProjectDraft(payload.draft);
+      const receiptLabel = isOperateMode
+        ? nextOperateResult.boxTitle || "this box"
+        : receiptDocument.title;
       appendLog(
         "RECEIPT",
         payload.remoteReceipt
-          ? `Drafted receipt for "${activeDocument.title}" and pushed it to GetReceipts`
-          : `Drafted receipt for "${activeDocument.title}" locally`,
+          ? `Drafted receipt for "${receiptLabel}" and pushed it to GetReceipts`
+          : `Drafted receipt for "${receiptLabel}" locally`,
         {
-          documentKey: activeDocument.documentKey,
+          documentKey: receiptDocument.documentKey,
         },
       );
+      if (isOperateMode) {
+        setOperateOpen(false);
+      }
       setFeedback(
         payload.remoteReceipt
-          ? "Drafted receipt and pushed it to GetReceipts."
-          : "Drafted receipt locally. It has not been pushed to GetReceipts.",
+          ? isOperateMode
+            ? "Drafted Operate receipt and pushed it to GetReceipts."
+            : "Drafted receipt and pushed it to GetReceipts."
+          : isOperateMode
+            ? "Drafted Operate receipt locally. It has not been pushed to GetReceipts."
+            : "Drafted receipt locally. It has not been pushed to GetReceipts.",
         "success",
       );
     } catch (error) {
       trackWorkspaceEvent("receipt_draft_failed", {
-        draft_scope: activeDocument?.documentKey ? "document" : "unknown",
+        draft_scope: mode === "operate" ? "operate" : activeDocument?.documentKey ? "document" : "unknown",
       });
       setFeedback(error instanceof Error ? error.message : "Could not draft the receipt.", "error");
     } finally {
@@ -6283,7 +6469,7 @@ export default function WorkspaceShell({
             {showComposeHeader ? (
               <>
                 <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                  Box
+                  Boxes
                 </button>
                 {activeProject ? (
                   <span className="assembler-header__project">{activeBoxTitle}</span>
@@ -6315,7 +6501,23 @@ export default function WorkspaceShell({
               </button>
             ) : !launchpadOpen ? (
               <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                Home
+                Boxes
+              </button>
+            ) : null}
+
+            {!launchpadOpen ? (
+              <button
+                type="button"
+                className={`assembler-header__start ${operateOpen ? "is-active" : ""}`}
+                onClick={() => void runOperate()}
+                disabled={!canRunOperate || operatePending}
+                title={
+                  canRunOperate
+                    ? "Read this box with Operate"
+                    : "Add a real source or assembly before running Operate"
+                }
+              >
+                {operatePending ? "Operating…" : "Operate"}
               </button>
             ) : null}
 
@@ -6778,6 +6980,25 @@ export default function WorkspaceShell({
             />
           </>
         )}
+
+        <OperateDialog
+          open={operateOpen}
+          pending={operatePending}
+          errorMessage={operateError}
+          result={operateResult}
+          receiptPending={receiptPending}
+          onDraftReceipt={() =>
+            void createReceiptDraft({
+              mode: "operate",
+              operateResult,
+            })
+          }
+          onAskSeven={() => void askSevenToAuditOperate()}
+          onClose={() => {
+            if (operatePending || receiptPending) return;
+            setOperateOpen(false);
+          }}
+        />
 
         <ImageIntakeChooser
           open={Boolean(pendingImageIntake)}

@@ -26,6 +26,11 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   const document = body?.document || null;
   const projectKey = String(body?.projectKey || "").trim();
+  const mode = body?.mode === "operate" ? "operate" : document?.isAssembly ? "assembly" : "workspace";
+  const operateResult =
+    mode === "operate" && body?.operateResult && typeof body.operateResult === "object"
+      ? body.operateResult
+      : null;
   const blocks = normalizeWorkspaceBlocks(body?.blocks, {
     documentKey: document?.documentKey || "",
     defaultSourceDocumentKey: document?.documentKey || "",
@@ -51,7 +56,6 @@ export async function POST(request) {
     return NextResponse.json({ error: "Reader profile not found." }, { status: 404 });
   }
 
-  const mode = document?.isAssembly ? "assembly" : "workspace";
   const payload = buildWorkspaceReceiptPayload({
     profile: readerData.profile,
     project,
@@ -59,6 +63,7 @@ export async function POST(request) {
     blocks,
     logEntries,
     mode,
+    operateResult,
   });
 
   let remoteReceipt = null;
@@ -82,6 +87,8 @@ export async function POST(request) {
       remoteReceiptId: remoteReceipt?.id || null,
       status,
       mode,
+      project,
+      operateResult,
     }),
     projectId: project?.id || null,
     projectKey,

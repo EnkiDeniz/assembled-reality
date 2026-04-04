@@ -79,7 +79,7 @@ export default function SourceRail({
             className="assembler-source-rail__action"
             onClick={onOpenProjectHome}
           >
-            Box
+            Boxes
           </button>
           <button
             type="button"

@@ -1,5 +1,9 @@
 # Review 2: Implementation vs. Vision Assessment
 
+**Status:** Historical review from the pre-Box product phase.
+
+This document reflects the product during the transition out of the older AR/project model. References to `Project`, `Current assembly`, or earlier naming remain here as historical analysis rather than current product language.
+
 **Date:** April 3, 2026
 **Reviewer:** Claude (AI consultant)
 **Branch:** `codex/mobile-reader-overhaul`

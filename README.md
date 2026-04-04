@@ -12,6 +12,7 @@ This `README.md` is the current product source of truth.
 - `README.md`
 - `docs/AR Version 1.0.md`
 - `docs/box-migration-plan.md`
+- `docs/operate-spec-v2.md`
 
 ## Release Posture
 
@@ -24,7 +25,7 @@ This `README.md` is the current product source of truth.
 
 ## Core Loop
 
-`import source → listen / ask Seven → stage blocks → assemble → draft receipt`
+`import source → listen / ask Seven → stage blocks → assemble → operate → draft receipt`
 
 This is the only loop that must feel excellent in `1.0`.
 
@@ -35,6 +36,10 @@ The authenticated product is one workbench with three clear verbs:
 - `7` talks
 - `Staging` collects
 - `Edit` rewrites
+
+And one box-level read:
+
+- `Operate` reads the box
 
 The active hierarchy is:
 
@@ -78,6 +83,7 @@ The live product is the workspace.
 
 ### Main surfaces
 
+- boxes page as the launcher for opening or creating a box
 - box home as a dense launcher
 - source rail for navigation
 - main document surface for read, listen, select, and edit
@@ -91,6 +97,14 @@ The live product is the workspace.
 - replies render as conversation, not hidden operator output
 - useful replies can move into staging with one explicit action
 - deeper `△ □ ○ × 1–7` box analysis is deferred beyond the first Box pass
+
+### Operate
+
+- Operate is the box-read engine
+- it is not chat, not summary, and not rewrite
+- it reads the active box across real sources plus the current assembly
+- it returns `Aim`, `Ground`, `Bridge`, a `Gradient`, a trust floor and ceiling in `L1–L3`, one convergence state, and one next move
+- it can draft a local-first receipt and optionally sync it to GetReceipts
 
 ### Staging
 
@@ -107,12 +121,14 @@ The live product is the workspace.
 ## What 1.0 Must Do
 
 1. Authenticate users with Apple or magic link.
-2. Import supported sources and normalize them into usable source documents.
-3. Let users open a source, listen to it, and ask Seven about it.
-4. Let users stage blocks from the source and from Seven replies.
-5. Assemble a new working document from staged material.
-6. Draft a local receipt for the current document or assembly.
-7. Optionally push that receipt draft to GetReceipts without making GetReceipts required.
+2. Let users open an existing box or create a new box.
+3. Import supported sources into the active box and normalize them into usable source documents.
+4. Let users open a source, listen to it, and ask Seven about it.
+5. Let users stage blocks from the source and from Seven replies.
+6. Assemble a new working document from staged material.
+7. Run Operate on the active box to read the current position honestly.
+8. Draft a local receipt for the current document, assembly, or Operate result.
+9. Optionally push that receipt draft to GetReceipts without making GetReceipts required.
 
 ## Trust And Proof Bar
 
@@ -125,6 +141,7 @@ For launch, these flows need clear status handling:
 - playback
 - Seven replies
 - assembly creation
+- Operate reads
 - receipt drafting
 
 Failure to sync with GetReceipts must never block a local receipt draft.

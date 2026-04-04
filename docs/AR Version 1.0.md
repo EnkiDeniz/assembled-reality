@@ -6,13 +6,14 @@ Loegos `1.0` is an invite-only beta for solo operators.
 
 It is a desktop-first workbench for one reliable loop:
 
-`import source → listen / ask Seven → stage blocks → assemble → draft receipt`
+`import source → listen / ask Seven → stage blocks → assemble → operate → draft receipt`
 
 ## Product Model
 
 - `7` talks
 - `Staging` collects
 - `Edit` rewrites
+- `Operate` reads the box
 
 The active hierarchy is:
 
@@ -20,6 +21,8 @@ The active hierarchy is:
 - sources
 - assembly
 - receipts
+
+The authenticated entry surface is a Boxes launcher where the user can open an existing box or create a new one.
 
 ## Supported Intake
 
@@ -49,6 +52,7 @@ Before signoff, the live product must make these flows feel trustworthy:
 - Seven conversation
 - staging
 - assembly creation
+- Operate reads
 - receipt drafting
 - delete
 - document save and conflict recovery
@@ -57,7 +61,10 @@ Before signoff, the live product must make these flows feel trustworthy:
 
 - The landing page stays minimal and warm-audience oriented.
 - The workspace is the product.
+- The Boxes page is the first launcher surface for authenticated users.
 - The built-in `Lœgos` guide stays inside the box as a pinned source, but never the hero action.
+- Operate is a dedicated result surface inside an opened box, not chat, not summary, and not rewrite.
+- Operate reads real box material, excluding the built-in guide by default.
 - Receipts are proof/history, not a competing editing mode.
 - `△ □ ○ × 1–7` is the analysis model for reading what is in the box, not the primary navigation model.
 - GetReceipts is optional and account-level.

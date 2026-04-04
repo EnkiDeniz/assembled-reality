@@ -1,8 +1,8 @@
-# AR UI Style Lock
+# Loegos UI Style Lock
 
 ## Purpose
 
-This document locks the visual language for the AR application shell.
+This document locks the visual language for the Loegos application shell.
 
 The goal is not "dark mode with tasteful cards." The goal is a calm, native-feeling, desktop-grade tool UI in the same visual family as the Codex/Cursor references:
 
@@ -17,9 +17,9 @@ If a new screen does not look like it belongs beside the reference images, it is
 
 ## Product Rule
 
-AR is a tool for working with source material.
+Loegos is a tool for working with source material.
 
-Assembled Reality is one document inside that tool.
+The built-in `Lœgos` guide is one source inside that tool.
 
 That means:
 
@@ -236,7 +236,7 @@ Use:
 
 - `Import source`
 - `Paste to staging`
-- `Current assembly`
+- `Assembly`
 - `Receipt drafts`
 - `Open source`
 - `Continue working`
@@ -298,10 +298,10 @@ The home screen should feel closer to a launcher than a dashboard.
 
 Correct:
 
-- project name
+- box name
 - next action
 - recent sources
-- current assembly
+- assembly
 - receipts as a secondary status area
 
 Incorrect:
@@ -356,7 +356,7 @@ Before approving a new UI pass, verify:
 1. Does it use system UI fonts for shell chrome?
 2. Is blue the only accent?
 3. Is the workspace mostly open canvas instead of stacked cards?
-4. Is Assembled Reality just one document in the list?
+4. Is the built-in `Lœgos` guide just one source in the list?
 5. Can the screen be understood by scanning labels only?
 6. Does the home feel like a tool launcher?
 7. Would this sit naturally next to the Codex/Cursor screenshots?

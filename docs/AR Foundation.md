@@ -1,272 +1,223 @@
-# AR Foundation
+# Loegos Foundation
 
-**Status:** Definitive product foundation document
+**Status:** Current product foundation document  
 **Date:** April 2026
 
 **Companion documents:**
-- `docs/AR Version 2.md` — V2 product direction
-- `docs/AR Version 2 Build Plan.md` — V2 build sequence
-- `docs/convergence-foundations.md` — theoretical framework
-- `docs/operator-sentences.md` — operator sentence specification
+- `README.md` — current product source of truth
+- `docs/AR Version 1.0.md` — shipped release posture
+- `docs/box-migration-plan.md` — canonical Box model and migration policy
+- `docs/AR Version 2.md` — next-stage direction
+- `docs/AR UI Style Lock.md` — current visual system
 
 ---
 
 ## 1. The Bet
 
-Assembly Theory, developed by Lee Cronin and Sara Imari Walker, makes a precise claim: a complex object that exists in abundance is proof that a selection process with memory produced it. The assembly index of an object is the minimum number of construction steps from basic parts, with reuse of intermediates. Below a threshold, random processes suffice. Above it, something is remembering how to build and repeating the construction. That is what distinguishes noise from life.
+Complex human outcomes are assembled from parts.
 
-The bet is that this applies to human activity.
+A trip that works, a meeting that lands, a proposal that survives contact with reality, a decision that holds, a receipt that seals: none of these appear fully formed. They are built from source material, shaped through selection, tested by reality, and remembered through proof.
 
-A vacation that goes well, a project that ships, a decision that holds — these are assembled outcomes. Constructed from parts, through selection, with memory. The parts were scattered across emails, documents, conversations, and experience. The selection was human. The memory was accumulated over previous attempts. The outcome was real.
+Loegos exists to make that construction legible.
 
-But there is no tool for this. People plan in Google Docs, execute from memory, and reflect in their heads. The construction pathway is lost the moment the outcome occurs. There is no assembly index. There is no receipt.
+The product is not trying to be a generic editor, a note app, or a chat window. It is trying to be a workbench for turning scattered material into a usable assembly and then preserving what actually happened.
 
-That is what we are building.
+That is why the product is built around:
 
----
+- sources
+- staging
+- assembly
+- receipts
+- return
 
-## 2. How It Works
+The output is not just a document. The output is a documented path from source material to an assembled result.
 
-Every core concept maps to Assembly Theory:
+## 2. What The Product Is Today
 
-| Concept | In Assembly Theory | In AR |
-|---|---|---|
-| **Basic parts** | Atoms, molecular fragments | Blocks — a paragraph, heading, quote, or AI output |
-| **Intermediate memory** | Stored substructures reused in later steps | The clipboard — blocks picked from multiple sources, persisted and visible |
-| **The constructed object** | A complex molecule | The assembly — a new document built from selected, ordered blocks |
-| **The assembly pathway** | The minimum construction steps | The receipt — every UPLOADED, LISTENED, SELECTED, EDITED, ASSEMBLED step logged |
-| **Selection** | The process that pushes objects past the complexity threshold | The human — listening, picking, rejecting, editing, ordering |
-| **Evolution** | Accumulated construction memory across generations | Plan → Live → Learn → Repeat — each cycle starts from what was learned |
-| **The measurement** | The gap between random chemistry and living systems | The gap between what was planned and what actually happened |
-| **External verification** | Peer-reviewed publication | GetReceipts — external registry where receipts become sealed, verifiable proof |
+Loegos `1.0` is an invite-only, desktop-first workbench for solo operators.
 
-The receipt is more valuable than the document. The document is the intermediate. The receipt is the construction information — what was inspected, what was selected, what was assembled, what happened when it met reality. The document can be reconstructed from the receipt. The receipt cannot be reconstructed from the document.
+Its reliable loop is:
 
-The receipt schema maps to the convergence foundations: **prior state** (sources before selection), **action** (each log entry), **operator** (the governing rule — left empty by design, derivable later from receipt patterns), **evidence** (block lineage, timestamps, source tracking). The empty operator field is the most important design decision. It makes the system a reader of convergence, not an enforcer of doctrine.
+`import source → listen / ask Seven → stage blocks → assemble → operate → draft receipt`
 
----
+The live product is organized around Boxes.
 
-## 3. The Threshold
+Each Box contains:
 
-Assembly Theory identifies a complexity threshold. Below it, random processes explain the object. Above it, selection with memory is required.
+- sources
+- one active assembly
+- receipts
+- a Seven surface tied to what the user is reading
+- an Operate action that can read the box as it stands
 
-The same threshold exists for human projects.
+This is the current truth of the product. Anything that contradicts it is historical.
 
-**Below:** A grocery list. A quick email. A single-source summary. Ad-hoc methods — your brain, tabs, copy-paste — are sufficient.
+## 3. The Box Model
 
-**Above:** Synthesizing eight research papers. Planning a multi-leg trip from scattered confirmations and recommendations. Preparing for a board meeting from five reports and three conversations. Managing an immigration process across twelve forms.
+### Box
 
-Above the threshold, you need persistent intermediate memory, deliberate selection, construction pathway recording, and feedback from reality. AR exists for projects above the threshold.
+The Box is the native top-level object.
 
----
+It replaces the generic project idea in user-facing language because the user is not opening an abstract project. They are opening the actual container that holds the material, the active build, and the proof layer for one piece of real work.
 
-## 4. The Front Door
+### Sources
 
-**Words are Legos.**
-**Drop anything to build something.**
+Sources are what enter the box.
 
-The input is anything a human can produce: a PDF, a Word doc, a photo, a screenshot, a voice memo, a link, pasted text. The output is always the same: listenable blocks with lineage. Every format collapses into one atom — a block of markdown that can be heard, selected, assembled, and receipted. The intake layer is format-agnostic. The assembly layer doesn't care what the input was. It only cares that there are blocks with source tracking.
+They may begin as:
 
-This is the anything-to-blocks pipeline:
+- PDF
+- DOCX
+- Markdown / TXT
+- paste
+- link import
+- voice memo capture
 
-- **Documents** (PDF, DOCX, MD, TXT) → parsed into sections → blocks
-- **Images and screenshots** → vision describes the content in detail → blocks. A photo of a house becomes "Two-story craftsman, cedar shingle siding, covered front porch with tapered columns, three dormers." A screenshot of a conversation becomes the extracted text with structure preserved.
-- **Voice memos** → transcribed → blocks. A rambling 3-minute voice note becomes structured paragraphs you can listen back to, pick from, and assemble with other material.
-- **Links** → page content extracted → blocks. An article, a product page, a recipe — pulled in and decomposed.
-- **Pasted content** → HTML or text normalized to markdown → blocks
+The product's job is to normalize each of these into blocks that can be listened to, selected, staged, assembled, and receipted.
 
-The output is always the same. Blocks you can hear.
+### Assembly
 
-This changes the front door completely. "Upload a document" requires having a document. "Drop anything" requires having a phone. You see a house you want to build — photograph it. You hear something worth remembering — voice memo. You find a page worth keeping — paste the link. Five seconds later, it's blocks. Press play.
+Assembly is the active built artifact in the box.
 
-The immediate value: whatever is in your camera roll, your downloads folder, your screenshots, your voice memos — you can hear it, block by block, while you watch it flow.
+It is the thing being shaped from sources and selected blocks. The active built artifact is always called `Assembly` in the live product. The older phrase `Current assembly` is retired from the user-facing shell.
 
-But something happens naturally. You're listening. A block hits you. You tap "+". You didn't plan to start assembling. You just saved something that mattered. You keep listening. You tap "+" two more times. The clipboard has three blocks. You see "Assemble." You tap it. A new document appears, made from the three parts that mattered to you. The receipt was created in the background.
+### Receipts
 
-**The loop happened without the user knowing the loop exists.**
+Receipts are the proof layer.
 
-Consider what this enables:
+They preserve the construction pathway: what came in, what was selected, what was assembled, and what was captured afterward. In `1.0`, local receipt drafts are first-class even when GetReceipts is not connected.
 
-An architect photographs five buildings they admire. Each photo becomes a detailed description in blocks. They listen to all five, pick the elements that matter — "cantilevered upper volume" from one, "vertical wood cladding" from another, "recessed ground floor" from a third. They assemble a mood document that describes the building they want to design. The receipt proves which images informed the design direction. That's Assembly Theory: basic parts (photos), intermediate memory (clipboard), selection (picking), construction (assembly), evidence (receipt).
+### Seven
 
-Or: someone plans a trip. They screenshot flight options, photograph a friend's handwritten restaurant list, paste in a hotel link, upload a PDF guide. All different formats. All become blocks. All listenable. They pick across all four sources and assemble a trip plan. Then they go on the trip. They photograph the places they actually visited. Those photos become blocks too — blocks that become part of the *return receipt*. Evidence of what actually happened, captured in the real world, turned into the same atoms as the plan. The gap between intention and outcome is visible because both are made of the same material.
+Seven is the contextual conversation layer.
 
-Then at some point they notice the built-in document on the shelf — "Assembled Reality." They press play out of curiosity. They start hearing operator sentences. "Friction is not failure. Friction is testimony." They tap "+". "Wipe the story. Keep the receipts." Plus. They're assembling the framework document using the framework's own tool.
+Today, Seven is primarily tied to the active document:
 
-That is the product teaching itself. The document explains the tool the user has already been using. The theory arrives after the experience, not before.
+- ask about what you are reading
+- keep the thread tied to that document
+- move useful replies into staging
 
-The product's first priority is making the simple version — drop, listen, pick, build — feel flawless. Everything else is discovered through use.
+Over time, Seven can become the box-reading intelligence layer. But that deeper role only matters when the box has enough material to support a real read.
 
----
+### Operate
 
-## 5. Why This Exists
+Operate is the box-read engine.
 
-### Nobody reads anymore
+Operate is not chat, not summary, and not rewrite. It reads the active box across its non-built-in sources plus the current assembly, then returns the smallest honest structure that still carries what is in the box:
 
-People scan, skim, and ask AI to summarize. They judge documents by whether they sound credible — processing fluency without actual processing. The convergence foundations predicted this: compression increases believability, but believability is not validity.
+- `Aim`
+- `Ground`
+- `Bridge`
+- `Gradient`
+- trust `Floor` and `Ceiling` in `L1–L3`
+- one convergence state
+- one next move
 
-The result: people assemble reality from parts they never touched. In Assembly Theory terms, they claim a high assembly index with a construction pathway of zero steps. The assembly is counterfeit.
+In `1.0`, Operate is `diagnosis + draft`, not an automatic seal. It can draft a local-first receipt and optionally sync it to GetReceipts, but remote sync failure must never block the local draft.
 
-### The tool forces genuine engagement
+## 4. Why Listening Matters
 
-**Blocks force you to see the parts.** A wall of text can be skimmed. Discrete blocks cannot. You engaged with block 7, 12, 15, and 23. The receipt knows. The blocks you skipped are also data.
+Listening is not decoration.
 
-**Listening forces you to stay with the text.** It moves at its own pace. Block by block. The current block lights up. The next one waits. You cannot skip ahead without a deliberate action.
+Loegos is different because it lets a user hear the material block by block while staying inside the same construction environment where they can select, stage, and assemble. This creates a stronger form of engagement than skim-reading a wall of text or pasting everything into an AI prompt.
 
-**Picking forces you to commit.** The "+" is not a bookmark. It is a selection event — "this block is going into my assembly." If you pick 3 out of 40, the receipt shows your ratio. Picking makes the quality of your reading measurable.
+Listening does three things:
 
-**The clipboard makes your gathering visible.** Six blocks from three sources. Is it enough? You can see the answer because the intermediate memory is exposed.
+1. slows the user down enough to actually touch the material
+2. makes selection events meaningful
+3. turns the source into something the user can carry while moving through real life
 
-### The receipt is the anti-slop credential
+If listening becomes weak, the whole product collapses toward a generic editor.
 
-In a world where most text is an unpaid invoice — a claim no one checked against reality — the receipt is the settlement. It proves: these sources were inspected, these blocks were selected, this assembly was built, it was taken into the real world, and here is what happened. A receipt on GetReceipts makes this externally verifiable.
+## 5. Why Staging Exists
 
----
+Staging is the intermediate memory of the box.
 
-## 6. The Anti-Chat Thesis
+The user is not forced to jump directly from source to final output. They can gather fragments, AI replies, and copied material into a visible middle state. That is a real product invention, not a convenience feature.
 
-The entire AI industry builds tools that keep humans in the chair. The loop is human → AI → human → AI, and it never leaves the screen.
+The model is:
 
-AR's thesis is the opposite. **The product succeeds when the user closes the laptop and goes outside.**
+- Seven talks
+- Staging collects
+- Edit rewrites
+- Operate reads the box
 
-The assembly is the setup, not the finish line. The moment of value is not "I produced a document." It is "I took it into the meeting and something real happened." The receipt is proof you left the building.
+Those three verbs are the core mental model of the workbench.
 
-- Notion is for organizing what you know
-- ChatGPT is for generating what you might say
-- AR is for assembling what you will actually do, doing it, and coming back with proof
+## 6. What Seven Is And Is Not
 
-The competition is not other tools. The competition is the chair.
+Seven is not a hidden block generator and not a generic chatbot.
 
-**Leaving should feel like progress.** The transition from Plan to Live should be as designed as the transition from Upload to Assemble. "Your assembly is ready. Go do the thing."
+Seven is:
 
-**Unsettled assemblies are a signal.** An assembly without a receipt is an invoice reality hasn't answered. The product should gently surface this: "You built this plan three weeks ago and haven't returned with what happened. Is it still active?" Not guilt. A reading.
+- a conversation tied to the active document
+- a way to ask focused questions about what is in front of you
+- a source of useful material that can be sent into staging
 
----
+Seven is not yet:
 
-## 7. The AI That Reads Your Receipts
+- the primary navigation model
+- the full `△ □ ○ × 1–7` coordinate system
+- a free-floating chat detached from box context
 
-The current AI sends the document's blocks to an endpoint that summarizes or extracts. That is what every AI tool does.
+The deeper coordinate system is analysis for reading what is in the box. It is not the first-run language of the app.
 
-What makes AR's AI different is what it should eventually read: the user's entire construction history.
+Operate is what turns that future analysis model into a concrete product action without making the coordinate system itself the app's navigation model.
 
-ChatGPT resets between sessions. Claude knows persistent files but not outcomes. Notion AI sees the page, not the gap between plan and reality. None of them know what you planned last time, what happened, where the gap was, or what ghost operators are running in your construction process.
+## 7. Relationship To The Wider Lakin AI System
 
-AR's AI should know all of this. Its context includes: current sources, current clipboard, current assembly, previous assemblies for similar projects, previous receipts and reflections, the gaps from previous cycles, and patterns across receipts.
+### Loegos
 
-With this, the AI can do things no other AI can:
+Loegos is the workbench, language system, and box model.
 
-- **"Your last two projects like this underestimated logistics. Your receipts show transit time was the gap both times."**
-- **"This block has appeared in three assemblies and held up in all three receipts. It's load-bearing."**
-- **"You're building a plan structurally similar to one that had a large gap in stakeholder communication."**
-- **"You've been here 40 minutes and haven't selected anything. You may be square-stalled."**
+### Lakin
 
-The AI gets more useful not because the model improves, but because the receipt history deepens. A user with fifty receipts gets fundamentally better assistance than a user with two, because the AI has fifty cycles of evidence about what this user plans, what happens, and where the delta lives.
+Lakin is the intelligence layer that reads the box.
 
-**The sacred boundary:** AI operates inside Plan and Learn. Reality operates inside Live. The AI cannot go into the meeting. It cannot take the trip. If the AI generates the receipt, the loop is self-sealing. The receipt is counterfeit. The human acts. Reality answers. The AI reads the return.
+### GetReceipts
 
-This conversation is itself an example. We assembled this document together across multiple passes — I proposed, you selected, corrected, and directed. The document got richer because your input carried construction information mine did not have. That is what the AI in AR should feel like: a construction partner working inside the project, not a chat window beside it.
+GetReceipts is the remote proof layer.
 
----
+It is optional in `1.0`, but strategically important because it lets local construction history become portable, external proof.
 
-## 8. Settlement Logic and the Echo Canon
+### PromiseMe
 
-The convergence foundations define settlement as the protocol that separates claims from evidence:
+PromiseMe is another Lakin AI product that can eventually operate alongside the Box model as a commitment layer. It is not required for the current Loegos workbench loop.
 
-- **Invoice** — a declared expectation. The assembly is an invoice: "this is my plan."
-- **Receipt** — evidence that reality answered. The reflection is a receipt: "this is what happened."
-- **Coherence** — the reconciled state where the gap is visible and construction memory is updated.
-- **Seal** — portable, verifiable closure. A receipt on GetReceipts is sealed.
+## 8. What The Product Is Not
 
-The **Echo Canon** maps the healthy process cycle: **Triangle** (Aim) → **Square** (Measure) → **Circle** (Connect) → **Seal** (Closure) → repeat.
+- Not a generic document editor.
+- Not a note-taking app.
+- Not a generic AI chat product.
+- Not project management software.
+- Not a library-first reader.
 
-In AR: upload and orient (Triangle) → listen and inspect (Square) → select and assemble (Circle) → receipt and export (Seal). The Learn phase starts a new Triangle, standing on the previous seal.
+Documents are the medium. The box is the container. The assembly is the active artifact. The receipt is the proof.
 
-**Stall patterns the product should eventually detect:**
+## 9. Development Principles
 
-- **Square-stalled** — listens and reads but never selects. Measurement without integration. The clipboard stays empty.
-- **Triangle-stalled** — uploads repeatedly but never inspects. The shelf grows. Nothing is assembled.
-- **Skip** — assembles from a single source without inspecting. Aim → Seal with no measurement. Low assembly index.
+1. Preserve lineage always.
+2. Keep the user in control of selection.
+3. Favor receipts over decorative output.
+4. Keep the workbench calmer as it becomes more powerful.
+5. Let the live product stay simpler than the doctrine behind it.
+6. Use Box as the native top-level object in the UI.
+7. Treat `△ □ ○ × 1–7` as analysis, not navigation.
+8. Design for return from reality, not endless in-app activity.
 
-The instrument reads. The human decides.
+## 10. What Success Looks Like
 
----
+The product succeeds when a user can:
 
-## 9. The Product Hierarchy
+1. open a box
+2. bring in source material
+3. listen and ask Seven about it
+4. stage what matters
+5. shape an assembly
+6. run Operate to read the box honestly
+7. draft a receipt
+8. return later with a clearer sense of what happened
 
-| Layer | Role | Analogy |
-|---|---|---|
-| **Project** | Container for a real-world assembly — a trip, proposal, research synthesis | The repo |
-| **Sources** | Raw inputs — uploaded files, notes, transcripts, AI material | Source files and dependencies |
-| **Assembly** | The current build — shaped from sources, taken into the world | The app or build output |
-| **Receipts** | The construction pathway — how the assembly was made and what happened after | Commits, deploy history, and postmortems combined |
-| **Reflection** | The Learn phase — captures the gap between plan and outcome | The retrospective that feeds the next sprint |
+The long-term goal is not just better documents. It is better construction memory.
 
----
-
-## 10. Depth, Growth, and Operator Derivation
-
-**Planar growth** — doing more of the same. Same structure, same gaps. The assembly index stays flat.
-
-**Volumetric growth** — incorporating new information that forces the construction process to evolve. The fourth point — something the prior chain could not have generated. The assembly index deepens.
-
-Over time, receipts reveal **operators** — compressed rules governing the user's construction behavior. **Authored operators** are explicit: "I always check reviews before booking." **Ghost operators** are implicit, visible only in the receipt chain: "This user consistently selects for caution but says they want to be bold." The gap between authored and derived operators is the most valuable diagnostic the system can eventually provide.
-
-The data model must support this future: every step logged with context, operator fields left empty by design, receipt chains preservable across projects and time.
-
----
-
-## 11. What We Are Not Building
-
-- **Not a document editor.** Documents are the medium, not the product. The product is the assembled real-world outcome.
-- **Not a note-taking app.** Notes store for retrieval. AR assembles for action. Library vs. workshop.
-- **Not an AI writing tool.** AI proposes staged blocks. The human selects. The human is the assembler.
-- **Not a project management tool.** PM tracks progress. AR tracks construction.
-- **Not a journal.** Journals are unstructured. AR reflections are structured settlements — comparing a specific assembly against a specific outcome.
-
----
-
-## 12. Development Principles
-
-These are constraints from the framework, not preferences.
-
-1. **Preserve lineage always.** Every block carries source, position, author, operation. Severed lineage is a counterfeit receipt.
-2. **Receipt over document.** If forced to choose, enrich the receipt. It carries the construction information.
-3. **Human selects, AI proposes.** Staged, not applied. The receipt must reflect the human's pathway.
-4. **Empty fields are correct.** Do not force articulation. Empty enables future derivation.
-5. **Pebbles over breadcrumbs.** localStorage is perishable. Database records are better. GetReceipts is durable.
-6. **Simplify before extending.** Each layer must be trustworthy before the next is added.
-7. **Measure the gap, don't hide it.** A visible gap is a genuine receipt. An invisible gap is a counterfeit seal.
-8. **Build for return.** The return from reality is the most important moment. If it's friction-heavy, the loop breaks.
-
----
-
-## 13. What Success Looks Like
-
-1. Import scattered source material
-2. Listen to it block by block
-3. Pick the parts that matter
-4. Assemble a plan, brief, or artifact
-5. Take it into the real world
-6. Return with what happened
-7. See the gap, tied to specific blocks and decisions
-8. Preserve the construction pathway as a sealed receipt
-9. Start the next cycle from what was learned
-10. Over many cycles, see patterns in construction behavior
-
-Steps 1–4 exist today. Steps 5–10 are the work ahead.
-
-The product succeeds when the loop is real — when a user has gone through Plan → Live → Learn at least twice and can see their construction process improving. That is the moment the receipt becomes more valuable than the document. That is the moment the user is assembling reality.
-
----
-
-## 14. The Name
-
-Assembled Reality is not a metaphor. It is the thesis.
-
-Reality is assembled. Every complex outcome in life was constructed from parts, through selection, with memory. The construction pathway exists whether or not anyone records it.
-
-What we are building is the instrument that makes the assembly visible, the pathway durable, and the learning transferable.
-
-> *Assembly is the universe's word for life.*
-
-The assembly authored its own manual. We are making it legible.
+That is the foundation the current product sits on.
