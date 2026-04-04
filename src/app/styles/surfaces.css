@@ -52,6 +52,24 @@
   line-height: 1.5;
 }
 
+.assembler-project-home__diagnostic {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  max-width: 42rem;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-project-home__diagnostic-label {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .assembler-project-home__meta,
 .assembler-project-home__project-meta,
 .assembler-project-home__row-meta,

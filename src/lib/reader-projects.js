@@ -4,14 +4,13 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_PROJECT_KEY,
+  DEFAULT_PROJECT_SUBTITLE,
+  DEFAULT_PROJECT_TITLE,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
   buildDefaultProjectFromDocuments,
   buildProjectsFromDocuments,
 } from "@/lib/project-model";
 import { slugify } from "@/lib/text";
-
-const DEFAULT_PROJECT_TITLE = "Main Project";
-const DEFAULT_PROJECT_SUBTITLE = "Start from a source and build toward a working assembly.";
 
 function getReaderProjectModel() {
   return prisma.readerProject || null;
@@ -52,7 +51,7 @@ async function ensureUniqueProjectKey(userId, baseKey) {
     return baseKey;
   }
 
-  const normalizedBaseKey = String(baseKey || "").trim() || "project";
+  const normalizedBaseKey = String(baseKey || "").trim() || "box";
   const existingKeys = new Set(
     (
       await readerProjectModel.findMany({
@@ -314,12 +313,12 @@ export async function createReaderProjectForUser(
   const readerProjectDocumentModel = getReaderProjectDocumentModel();
 
   if (!readerProjectModel || !readerProjectDocumentModel) {
-    throw new Error("Projects are temporarily unavailable.");
+    throw new Error("Boxes are temporarily unavailable.");
   }
 
-  const normalizedTitle = String(title || "").trim() || "New Project";
+  const normalizedTitle = String(title || "").trim() || DEFAULT_PROJECT_TITLE;
   const normalizedSubtitle = String(subtitle || "").trim() || DEFAULT_PROJECT_SUBTITLE;
-  const projectKey = await ensureUniqueProjectKey(userId, slugify(normalizedTitle) || "project");
+  const projectKey = await ensureUniqueProjectKey(userId, slugify(normalizedTitle) || "box");
   const normalizedSourceKeys = [
     ...new Set(
       (Array.isArray(sourceDocumentKeys) ? sourceDocumentKeys : [PRIMARY_WORKSPACE_DOCUMENT_KEY])
@@ -363,7 +362,7 @@ export async function createReaderProjectForUser(
     return project;
   } catch (error) {
     if (isMissingProjectTableError(error)) {
-      throw new Error("Projects are temporarily unavailable.");
+      throw new Error("Boxes are temporarily unavailable.");
     }
 
     throw error;

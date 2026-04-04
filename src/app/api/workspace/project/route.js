@@ -15,7 +15,7 @@ export async function POST(request) {
   const subtitle = String(body?.subtitle || "").trim();
 
   if (!title) {
-    return NextResponse.json({ error: "Project title is required." }, { status: 400 });
+    return NextResponse.json({ error: "Box title is required." }, { status: 400 });
   }
 
   try {
@@ -35,7 +35,7 @@ export async function POST(request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not create the project." },
+      { error: error instanceof Error ? error.message : "Could not create the box." },
       { status: 400 },
     );
   }

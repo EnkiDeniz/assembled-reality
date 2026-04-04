@@ -111,14 +111,27 @@ export default function ProjectHome({
   canDeleteDocument,
   sourceOpenMode,
 }) {
+  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
+  const boxSubtitle =
+    activeProject?.boxSubtitle ||
+    activeProject?.subtitle ||
+    "Import a source, ask Seven, shape the assembly, keep the receipt.";
   const sourceRows = guideDocument
     ? [guideDocument, ...sourceDocuments]
     : sourceDocuments;
+  const nonBuiltInSourceCount = sourceRows.filter(
+    (document) => document?.documentType !== "builtin" && document?.sourceType !== "builtin",
+  ).length;
   const sourceCount = sourceRows.length;
   const assemblyCount = currentAssemblyDocument
     ? 1 + recentAssemblies.length
     : recentAssemblies.length;
   const featuredDrafts = projectDrafts.slice(0, 3);
+  const sevenDiagnostic = projectDrafts.length
+    ? "Seven can read this box now. Sources and receipts are starting to show a pattern."
+    : nonBuiltInSourceCount >= 2
+      ? "Seven can start reading the pattern across the sources in this box."
+      : "Seven needs more in the box to read the pattern.";
   const secondaryActions = [
     {
       title: "Add source",
@@ -132,7 +145,7 @@ export default function ProjectHome({
       title: "Paste to staging",
       description: clipboardCount
         ? `${clipboardCount} block${clipboardCount === 1 ? "" : "s"} ready to place.`
-        : "Move copied material into the working assembly.",
+        : "Move copied material into the assembly.",
       icon: "paste-source",
       onClick: onPasteClipboard,
       disabled: busy,
@@ -152,13 +165,9 @@ export default function ProjectHome({
     <div className="assembler-project-home">
       <section className="assembler-project-home__masthead">
         <div className="assembler-project-home__copy">
-          <span className="assembler-project-home__eyebrow">Workspace</span>
-          <h1 className="assembler-project-home__title">
-            {activeProject?.title || "Main Project"}
-          </h1>
-          <p className="assembler-project-home__subtitle">
-            {activeProject?.subtitle || "Import a source, ask Seven, shape the current assembly, keep the receipt."}
-          </p>
+          <span className="assembler-project-home__eyebrow">What&apos;s in the Box</span>
+          <h1 className="assembler-project-home__title">{boxTitle}</h1>
+          <p className="assembler-project-home__subtitle">{boxSubtitle}</p>
           <div className="assembler-project-home__meta">
             <span>{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
             <span>{assemblyCount} assembl{assemblyCount === 1 ? "y" : "ies"}</span>
@@ -167,19 +176,23 @@ export default function ProjectHome({
               <span>{clipboardCount} staged</span>
             ) : null}
           </div>
+          <p className="assembler-project-home__diagnostic">
+            <span className="assembler-project-home__diagnostic-label">Seven</span>
+            <span>{sevenDiagnostic}</span>
+          </p>
         </div>
 
         {projects.length > 1 ? (
           <div className="assembler-project-home__projects">
             <div className="assembler-project-home__section-head">
-              <span>Projects</span>
+              <span>Boxes</span>
               <button
                 type="button"
                 className="assembler-project-home__section-action"
                 onClick={onCreateProject}
                 disabled={projectActionPending === "__create__"}
               >
-                {projectActionPending === "__create__" ? "Creating…" : "New"}
+                {projectActionPending === "__create__" ? "Creating…" : "New Box"}
               </button>
             </div>
 
@@ -194,7 +207,9 @@ export default function ProjectHome({
                   onClick={() => onOpenProject(project.projectKey)}
                   disabled={projectActionPending === project.projectKey}
                 >
-                  <span className="assembler-project-home__project-title">{project.title}</span>
+                  <span className="assembler-project-home__project-title">
+                    {project.boxTitle || project.title || "Untitled Box"}
+                  </span>
                   <span className="assembler-project-home__project-meta">
                     {projectActionPending === project.projectKey
                       ? "Opening…"
@@ -271,7 +286,7 @@ export default function ProjectHome({
         <div className="assembler-project-home__stack">
           <section className="assembler-project-home__panel">
             <div className="assembler-project-home__section-head">
-              <span>Current assembly</span>
+              <span>Assembly</span>
               <span>{currentAssemblyDocument ? "Active" : "Empty"}</span>
             </div>
 
@@ -293,7 +308,7 @@ export default function ProjectHome({
                 />
               ) : (
                 <p className="assembler-project-home__empty">
-                  No current assembly yet. Start with a source and keep building.
+                  No assembly yet. Start with a source and keep building.
                 </p>
               )}
 
@@ -341,7 +356,7 @@ export default function ProjectHome({
                 ))
               ) : (
                 <p className="assembler-project-home__empty">
-                  No receipts yet. Draft one from the receipt log after you assemble.
+                  No receipts yet. Draft one after you assemble.
                 </p>
               )}
             </div>

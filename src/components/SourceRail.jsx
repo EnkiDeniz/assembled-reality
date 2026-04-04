@@ -60,6 +60,7 @@ export default function SourceRail({
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
 }) {
+  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const sourceRows = guideDocument
     ? [guideDocument, ...sourceDocuments]
     : sourceDocuments;
@@ -68,10 +69,8 @@ export default function SourceRail({
     <aside className="assembler-source-rail">
       <div className="assembler-source-rail__header">
         <div className="assembler-source-rail__copy">
-          <span className="assembler-source-rail__eyebrow">Project</span>
-          <span className="assembler-source-rail__project">
-            {activeProject?.title || "Main Project"}
-          </span>
+          <span className="assembler-source-rail__eyebrow">Box</span>
+          <span className="assembler-source-rail__project">{boxTitle}</span>
         </div>
 
         <div className="assembler-source-rail__actions">
@@ -80,7 +79,7 @@ export default function SourceRail({
             className="assembler-source-rail__action"
             onClick={onOpenProjectHome}
           >
-            Project
+            Box
           </button>
           <button
             type="button"

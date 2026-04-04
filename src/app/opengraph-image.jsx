@@ -229,22 +229,22 @@ export default function OpenGraphImage() {
                   fontWeight: 600,
                 }}
               >
-                Workspace
+                What&apos;s in the Box
               </div>
-              <MetaPill accent>Main Project</MetaPill>
+              <MetaPill accent>Untitled Box</MetaPill>
             </div>
 
             <MockRow
               active
-              title="Seven conversation"
-              meta="Ask about the current document, then send useful answers into staging."
+              title="Seven"
+              meta="Ask about the current document, then move useful answers into staging."
             />
             <MockRow
-              title="Source material"
+              title="Sources"
               meta={ACTION_LINE}
             />
             <MockRow
-              title="Current assembly"
+              title="Assembly"
               meta="Selected blocks gather here, then turn into a working document."
             />
           </div>

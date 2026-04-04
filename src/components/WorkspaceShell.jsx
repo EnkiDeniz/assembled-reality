@@ -1217,6 +1217,7 @@ function WorkspaceShelf({
   lastUsedMode = WORKSPACE_MODES.assemble,
 }) {
   if (!open) return null;
+  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
 
   return (
     <div className={`assembler-sheet assembler-sheet--workspace ${open ? "is-open" : ""}`}>
@@ -1224,13 +1225,13 @@ function WorkspaceShelf({
       <div className="assembler-sheet__panel assembler-sheet__panel--workspace">
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
-            <span className="assembler-sheet__eyebrow">{activeProject?.title || "Project"}</span>
+            <span className="assembler-sheet__eyebrow">{boxTitle}</span>
             <span className="assembler-sheet__title">Sources</span>
           </div>
 
           <div className="assembler-sheet__section-actions">
             <button type="button" className="assembler-sheet__close" onClick={onOpenProjectHome}>
-              Project
+              Box
             </button>
             <button
               type="button"
@@ -1299,6 +1300,7 @@ function WorkspaceLaunchpad({
   resumeSessionSummary = null,
 }) {
   const grouped = groupedDocuments(documents);
+  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const guideDocument = grouped.sources.find(
     (document) => document.documentType === "builtin" || document.sourceType === "builtin",
   ) || null;
@@ -1343,7 +1345,7 @@ function WorkspaceLaunchpad({
       }
     : currentAssemblyDocument
       ? {
-          label: "Open current assembly",
+          label: "Open assembly",
           title: currentAssemblyDocument.title,
           detail: getDocumentBlockCountLabel(currentAssemblyDocument),
           icon: "assemble",
@@ -1370,7 +1372,7 @@ function WorkspaceLaunchpad({
             }
           : {
             label: "Add source",
-            title: activeProject?.title || PRODUCT_NAME,
+            title: boxTitle || PRODUCT_NAME,
             detail: "Start with a supported source for the 1.0 beta.",
             icon: "upload",
             disabled: busy,
@@ -1557,7 +1559,7 @@ function ListenSurface({
                       onOpenLog();
                     }}
                   >
-                    Receipt log
+                    Receipts
                   </button>
                   <button
                     type="button"
@@ -2256,7 +2258,7 @@ function WorkspaceToolbar({
     activeDocument?.isAssembly || activeDocument?.documentType === "assembly"
       ? "Assembly"
       : "Document";
-  const receiptTabLabel = isMobileLayout ? "Receipt" : "Receipt log";
+  const receiptTabLabel = "Receipts";
   const stagingTabLabel = totalClipboardCount
     ? `${isMobileLayout ? "Stage" : "Staging"} ${totalClipboardCount}`
     : isMobileLayout
@@ -3166,6 +3168,7 @@ export default function WorkspaceShell({
     getProjectByKey(hydratedProjects, activeProjectKey) ||
     hydratedProjects[0] ||
     null;
+  const activeBoxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
   const projectDocumentGroups = groupedDocuments(projectDocuments);
   const guideSourceDocument = projectDocumentGroups.sources.find(
@@ -3813,7 +3816,7 @@ export default function WorkspaceShell({
             ? document.documentKey
             : project.currentAssemblyDocumentKey,
           subtitle: setAsCurrentAssembly
-            ? `Current assembly: ${document.title}`
+            ? `Assembly: ${document.title}`
             : project.subtitle,
           updatedAt: document.updatedAt || new Date().toISOString(),
         };
@@ -3843,8 +3846,8 @@ export default function WorkspaceShell({
   }
 
   async function createProject() {
-    const fallbackTitle = `Project ${hydratedProjects.length + 1}`;
-    const title = window.prompt("Name this project", fallbackTitle)?.trim();
+    const fallbackTitle = "Untitled Box";
+    const title = window.prompt("Name this box", fallbackTitle)?.trim();
     if (!title) return;
 
     setProjectActionPending("__create__");
@@ -3860,7 +3863,7 @@ export default function WorkspaceShell({
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload?.project?.projectKey) {
-        throw new Error(payload?.error || "Could not create the project.");
+        throw new Error(payload?.error || "Could not create the box.");
       }
 
       window.location.assign(
@@ -3870,7 +3873,7 @@ export default function WorkspaceShell({
       );
     } catch (error) {
       setProjectActionPending("");
-      setFeedback(error instanceof Error ? error.message : "Could not create the project.", "error");
+      setFeedback(error instanceof Error ? error.message : "Could not create the box.", "error");
     }
   }
 
@@ -6243,7 +6246,7 @@ export default function WorkspaceShell({
       ),
       "application/json;charset=utf-8",
     );
-    setFeedback(`Exported receipt log for ${activeDocument.title}.`, "success");
+    setFeedback(`Exported receipts for ${activeDocument.title}.`, "success");
   }
 
   const showComposeHeader = !launchpadOpen && !isListenMode;
@@ -6280,10 +6283,10 @@ export default function WorkspaceShell({
             {showComposeHeader ? (
               <>
                 <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                  Project
+                  Box
                 </button>
                 {activeProject ? (
-                  <span className="assembler-header__project">{activeProject.title}</span>
+                  <span className="assembler-header__project">{activeBoxTitle}</span>
                 ) : null}
                 <span className="assembler-header__context">
                   {getDocumentKindLabel(activeDocument)}
@@ -6294,7 +6297,7 @@ export default function WorkspaceShell({
                 <span className="assembler-header__name">{PRODUCT_MARK}</span>
                 {activeProject ? (
                   <span className="assembler-header__project">
-                    {activeProject.title}
+                    {activeBoxTitle}
                   </span>
                 ) : null}
               </>

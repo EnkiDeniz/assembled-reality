@@ -90,7 +90,7 @@ export default function AiUtilityRail({
       <div className="assembler-utility-rail__header">
         <div className="assembler-utility-rail__copy">
           <span className="assembler-utility-rail__eyebrow">7</span>
-          <span className="assembler-utility-rail__title">Conversation</span>
+          <span className="assembler-utility-rail__title">Seven</span>
           <span className="assembler-utility-rail__document">{documentTitle || "Current document"}</span>
         </div>
 
@@ -105,7 +105,7 @@ export default function AiUtilityRail({
       </div>
 
       <p className="assembler-utility-rail__hint">
-        Ask about the document you are in. Seven replies here, and useful answers can move into staging.
+        Ask Seven about the document you are in. Replies stay tied to this box, and useful answers can move into staging.
       </p>
 
       {open ? (
@@ -139,7 +139,7 @@ export default function AiUtilityRail({
               </div>
             ) : (
               <p className="assembler-utility-rail__empty">
-                Start a thread about this document. Seven will keep the conversation tied to what you are reading.
+                Start a thread about this document. Seven will keep the conversation tied to what you are reading in this box.
               </p>
             )}
           </div>

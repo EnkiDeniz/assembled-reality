@@ -11,6 +11,7 @@ This `README.md` is the current product source of truth.
 
 - `README.md`
 - `docs/AR Version 1.0.md`
+- `docs/box-migration-plan.md`
 
 ## Release Posture
 
@@ -37,9 +38,9 @@ The authenticated product is one workbench with three clear verbs:
 
 The active hierarchy is:
 
-- project
+- box
 - sources
-- current assembly
+- assembly
 - receipts
 
 The built-in `Lœgos` guide stays pinned in the source list, but it is not the hero of the app.
@@ -77,11 +78,11 @@ The live product is the workspace.
 
 ### Main surfaces
 
-- project home as a dense launcher
+- box home as a dense launcher
 - source rail for navigation
 - main document surface for read, listen, select, and edit
 - right-side context split between Seven conversation and staging
-- receipt log as proof/history, not as a peer editing mode
+- receipts as proof/history, not as a peer editing mode
 - playback always visible
 
 ### Seven
@@ -89,6 +90,7 @@ The live product is the workspace.
 - `7` opens a real thread tied to the active document
 - replies render as conversation, not hidden operator output
 - useful replies can move into staging with one explicit action
+- deeper `△ □ ○ × 1–7` box analysis is deferred beyond the first Box pass
 
 ### Staging
 
@@ -160,6 +162,7 @@ The goal is calm, trustworthy utility, not feature theater.
 
 These are useful inputs, but this README wins when they disagree:
 
+- `docs/box-migration-plan.md`
 - `docs/AR Version 2.md`
 - `docs/AR Version 2 Build Plan.md`
 - `prototype/document-assembler-concept.md`

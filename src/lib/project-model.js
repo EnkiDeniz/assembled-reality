@@ -1,5 +1,11 @@
 export const PRIMARY_WORKSPACE_DOCUMENT_KEY = "assembled-reality-v07-final";
 export const DEFAULT_PROJECT_KEY = "default-project";
+export const DEFAULT_PROJECT_TITLE = "Untitled Box";
+export const DEFAULT_PROJECT_SUBTITLE = "Start with a source and shape the assembly.";
+
+const LEGACY_DEFAULT_PROJECT_TITLE = "Main Project";
+const LEGACY_DEFAULT_PROJECT_SUBTITLE = "Start from a source and build toward a working assembly.";
+const LEGACY_CURRENT_ASSEMBLY_PREFIX = "Current assembly:";
 
 function buildProjectHref(projectKey = DEFAULT_PROJECT_KEY) {
   if (!projectKey || projectKey === DEFAULT_PROJECT_KEY) {
@@ -35,6 +41,60 @@ function getMostRecentDocument(documents = []) {
   return [...documents].sort((left, right) => getDocumentTimestamp(right) - getDocumentTimestamp(left))[0] || null;
 }
 
+function normalizeProjectDisplayTitle(title = "", projectKey = DEFAULT_PROJECT_KEY) {
+  const trimmedTitle = String(title || "").trim();
+  const isLegacyDefaultTitle =
+    projectKey === DEFAULT_PROJECT_KEY &&
+    (!trimmedTitle ||
+      trimmedTitle === LEGACY_DEFAULT_PROJECT_TITLE ||
+      trimmedTitle === DEFAULT_PROJECT_TITLE);
+
+  if (isLegacyDefaultTitle) {
+    return DEFAULT_PROJECT_TITLE;
+  }
+
+  return trimmedTitle || DEFAULT_PROJECT_TITLE;
+}
+
+function normalizeProjectDisplaySubtitle(
+  subtitle = "",
+  {
+    currentAssemblyTitle = "",
+  } = {},
+) {
+  const trimmedSubtitle = String(subtitle || "").trim();
+
+  if (currentAssemblyTitle) {
+    return `Assembly: ${currentAssemblyTitle}`;
+  }
+
+  if (!trimmedSubtitle || trimmedSubtitle === LEGACY_DEFAULT_PROJECT_SUBTITLE) {
+    return DEFAULT_PROJECT_SUBTITLE;
+  }
+
+  if (trimmedSubtitle.startsWith(LEGACY_CURRENT_ASSEMBLY_PREFIX)) {
+    const assemblyTitle = trimmedSubtitle
+      .slice(LEGACY_CURRENT_ASSEMBLY_PREFIX.length)
+      .trim();
+    return assemblyTitle ? `Assembly: ${assemblyTitle}` : DEFAULT_PROJECT_SUBTITLE;
+  }
+
+  return trimmedSubtitle;
+}
+
+export function getProjectDisplayTitle(project = null) {
+  return normalizeProjectDisplayTitle(
+    project?.boxTitle || project?.title || "",
+    project?.projectKey || DEFAULT_PROJECT_KEY,
+  );
+}
+
+export function getProjectDisplaySubtitle(project = null) {
+  return normalizeProjectDisplaySubtitle(project?.boxSubtitle || project?.subtitle || "", {
+    currentAssemblyTitle: project?.currentAssembly?.title || "",
+  });
+}
+
 export function buildDefaultProjectFromDocuments(documents = []) {
   const normalizedDocuments = Array.isArray(documents) ? documents.filter(Boolean) : [];
   const visibleDocuments = normalizedDocuments.filter((document) => isProjectDocumentVisible(document));
@@ -47,18 +107,25 @@ export function buildDefaultProjectFromDocuments(documents = []) {
   return {
     id: null,
     projectKey: DEFAULT_PROJECT_KEY,
-    title: "Main Project",
+    title: DEFAULT_PROJECT_TITLE,
     subtitle: currentAssembly
-      ? `Current assembly: ${currentAssembly.title}`
-      : "Start from a source and build toward a working assembly.",
+      ? `Assembly: ${currentAssembly.title}`
+      : DEFAULT_PROJECT_SUBTITLE,
     href: buildProjectHref(DEFAULT_PROJECT_KEY),
+    boxHref: buildProjectHref(DEFAULT_PROJECT_KEY),
     isDefault: true,
+    isDefaultBox: true,
+    boxTitle: DEFAULT_PROJECT_TITLE,
+    boxSubtitle: currentAssembly
+      ? `Assembly: ${currentAssembly.title}`
+      : DEFAULT_PROJECT_SUBTITLE,
     sourceCount: sources.length,
     assemblyCount: assemblies.length,
     documentCount: visibleDocuments.length,
     documentKeys: normalizedDocuments.map((document) => document.documentKey).filter(Boolean),
     sourceDocumentKeys: sources.map((document) => document.documentKey).filter(Boolean),
     assemblyDocumentKeys: assemblies.map((document) => document.documentKey).filter(Boolean),
+    boxDocuments: visibleDocuments,
     builtInSourceDocumentKey: builtinSource?.documentKey || PRIMARY_WORKSPACE_DOCUMENT_KEY,
     currentAssemblyDocumentKey: currentAssembly?.documentKey || null,
     defaultDocumentKey:
@@ -114,11 +181,27 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
   const assemblyDocumentKeys = Array.isArray(project.assemblyDocumentKeys)
     ? project.assemblyDocumentKeys
     : fallbackProject.assemblyDocumentKeys;
+  const currentAssemblyDocument =
+    projectDocuments.find(
+      (document) => document.documentKey === (project.currentAssemblyDocumentKey ?? fallbackProject.currentAssemblyDocumentKey),
+    ) ||
+    null;
+  const boxTitle = normalizeProjectDisplayTitle(
+    project.title || fallbackProject.title,
+    project.projectKey || fallbackProject.projectKey || DEFAULT_PROJECT_KEY,
+  );
+  const boxSubtitle = normalizeProjectDisplaySubtitle(
+    project.subtitle || fallbackProject.subtitle,
+    {
+      currentAssemblyTitle: currentAssemblyDocument?.title || "",
+    },
+  );
 
   return {
     ...fallbackProject,
     ...project,
     href: buildProjectHref(project.projectKey || fallbackProject.projectKey || DEFAULT_PROJECT_KEY),
+    boxHref: buildProjectHref(project.projectKey || fallbackProject.projectKey || DEFAULT_PROJECT_KEY),
     documentKeys,
     sourceDocumentKeys,
     assemblyDocumentKeys,
@@ -134,6 +217,12 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
       project.defaultDocumentKey ||
       fallbackProject.defaultDocumentKey,
     subtitle: project.subtitle || fallbackProject.subtitle,
+    boxTitle,
+    boxSubtitle,
+    boxDocuments: projectDocuments.filter((document) => isProjectDocumentVisible(document)),
+    isDefaultBox:
+      (project.projectKey || fallbackProject.projectKey || DEFAULT_PROJECT_KEY) === DEFAULT_PROJECT_KEY,
+    currentAssembly: currentAssemblyDocument,
   };
 }
 

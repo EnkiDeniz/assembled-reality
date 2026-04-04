@@ -1,4 +1,4 @@
-# AR Version 1.0
+# Loegos Version 1.0
 
 ## Summary
 
@@ -16,9 +16,9 @@ It is a desktop-first workbench for one reliable loop:
 
 The active hierarchy is:
 
-- project
+- box
 - sources
-- current assembly
+- assembly
 - receipts
 
 ## Supported Intake
@@ -57,7 +57,8 @@ Before signoff, the live product must make these flows feel trustworthy:
 
 - The landing page stays minimal and warm-audience oriented.
 - The workspace is the product.
-- The built-in `Lœgos` guide is pinned, but never the hero action.
-- Receipt log is proof/history, not a competing editing mode.
+- The built-in `Lœgos` guide stays inside the box as a pinned source, but never the hero action.
+- Receipts are proof/history, not a competing editing mode.
+- `△ □ ○ × 1–7` is the analysis model for reading what is in the box, not the primary navigation model.
 - GetReceipts is optional and account-level.
 - Failure to sync remotely must never block a local receipt draft.

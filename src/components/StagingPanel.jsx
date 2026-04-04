@@ -27,7 +27,7 @@ export default function StagingPanel({
       <div className="assembler-staging-panel__header">
         <div>
           <span className="assembler-staging-panel__eyebrow">Staging</span>
-          <h2 className="assembler-staging-panel__title">Current assembly</h2>
+          <h2 className="assembler-staging-panel__title">Assembly</h2>
         </div>
         <span className="assembler-staging-panel__count">
           {clipboard.length} block{clipboard.length === 1 ? "" : "s"}
@@ -146,7 +146,7 @@ export default function StagingPanel({
             </div>
           ) : (
             <p className="assembler-staging-panel__empty">
-              Add blocks from a source to build the current assembly.
+              Add blocks from a source to build the assembly.
             </p>
           )}
         </div>

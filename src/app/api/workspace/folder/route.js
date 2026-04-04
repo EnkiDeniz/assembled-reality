@@ -69,7 +69,7 @@ export async function POST(request) {
     if (projectKey) {
       project = await getReaderProjectForUser(session.user.id, projectKey);
       if (!project) {
-        return NextResponse.json({ error: "Project not found." }, { status: 404 });
+        return NextResponse.json({ error: "Box not found." }, { status: 404 });
       }
     } else {
       project = await createReaderProjectForUser(session.user.id, {
