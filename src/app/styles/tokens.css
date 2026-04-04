@@ -1,16 +1,17 @@
 :root {
-  --surface-0: rgba(7, 8, 8, 0.98);
-  --surface-1: rgba(13, 15, 15, 0.94);
-  --surface-2: rgba(18, 21, 21, 0.96);
-  --surface-3: rgba(24, 28, 28, 0.98);
-  --text-primary: #e7ecea;
-  --text-secondary: #a2adab;
-  --text-meta: #6e7774;
-  --accent-ready: #22c55e;
-  --accent-ai: #a78bfa;
-  --accent-warning: #f59e0b;
-  --accent-danger: #ef4444;
-  --focus-ring: 0 0 0 2px rgba(248, 250, 249, 0.16), 0 0 0 5px rgba(34, 197, 94, 0.18);
+  --surface-0: #181818;
+  --surface-1: #1f1f1f;
+  --surface-2: #242424;
+  --surface-3: #2a2a2a;
+  --surface-4: #303030;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.68);
+  --text-meta: rgba(255, 255, 255, 0.45);
+  --accent-ready: #339cff;
+  --accent-ai: #339cff;
+  --accent-warning: #339cff;
+  --accent-danger: #ff6b6b;
+  --focus-ring: 0 0 0 1px rgba(51, 156, 255, 0.46), 0 0 0 4px rgba(51, 156, 255, 0.14);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -19,4 +20,10 @@
   --space-6: 24px;
   --space-7: 32px;
   --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --shadow-panel: 0 14px 36px rgba(0, 0, 0, 0.22);
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-code: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 }

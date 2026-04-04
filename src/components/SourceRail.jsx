@@ -9,9 +9,11 @@ function SourceRailRow({
   getDocumentKindLabel,
 }) {
   const active = document.documentKey === activeDocumentKey;
+  const isGuide =
+    document?.documentType === "builtin" || document?.sourceType === "builtin";
 
   return (
-    <div className={`assembler-source-rail__row ${active ? "is-active" : ""}`}>
+    <div className={`assembler-source-rail__row ${active ? "is-active" : ""} ${isGuide ? "is-guide" : ""}`}>
       <button
         type="button"
         className="assembler-source-rail__quick"
@@ -58,6 +60,10 @@ export default function SourceRail({
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
 }) {
+  const sourceRows = guideDocument
+    ? [guideDocument, ...sourceDocuments]
+    : sourceDocuments;
+
   return (
     <aside className="assembler-source-rail">
       <div className="assembler-source-rail__header">
@@ -95,42 +101,15 @@ export default function SourceRail({
       </div>
 
       <div className="assembler-source-rail__scroll">
-        {guideDocument ? (
-          <section className="assembler-source-rail__section">
-            <div className="assembler-source-rail__section-head">
-              <span>Built-in guide</span>
-            </div>
-            <div className="assembler-source-rail__guide">
-              <button
-                type="button"
-                className="assembler-source-rail__guide-main"
-                onClick={() => onOpenDocument(guideDocument.documentKey, sourceOpenMode)}
-              >
-                <span className="assembler-source-rail__guide-title">{guideDocument.title}</span>
-                <span className="assembler-source-rail__guide-meta">
-                  {getDocumentBlockCountLabel(guideDocument)}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="assembler-source-rail__guide-listen"
-                onClick={() => onOpenDocument(guideDocument.documentKey, "listen")}
-              >
-                <ActionIcon kind="listen" />
-              </button>
-            </div>
-          </section>
-        ) : null}
-
         <section className="assembler-source-rail__section">
           <div className="assembler-source-rail__section-head">
             <span>Sources</span>
-            <span>{sourceDocuments.length}</span>
+            <span>{sourceRows.length}</span>
           </div>
 
           <div className="assembler-source-rail__list">
-            {sourceDocuments.length ? (
-              sourceDocuments.map((document) => (
+            {sourceRows.length ? (
+              sourceRows.map((document) => (
                 <SourceRailRow
                   key={document.documentKey}
                   document={document}

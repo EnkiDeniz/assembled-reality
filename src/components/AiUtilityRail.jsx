@@ -15,8 +15,8 @@ export default function AiUtilityRail({
     <section className={`assembler-utility-rail ${open ? "is-open" : ""}`}>
       <div className="assembler-utility-rail__header">
         <div className="assembler-utility-rail__copy">
-          <span className="assembler-utility-rail__eyebrow">Utility rail</span>
-          <span className="assembler-utility-rail__title">7</span>
+          <span className="assembler-utility-rail__eyebrow">AI</span>
+          <span className="assembler-utility-rail__title">Assistant</span>
         </div>
 
         <button
@@ -30,7 +30,7 @@ export default function AiUtilityRail({
       </div>
 
       <p className="assembler-utility-rail__hint">
-        Press <kbd>/</kbd> to ask about the current source, block, or staged assembly.
+        Press <kbd>/</kbd> to work on the current source, block, or staged assembly.
       </p>
 
       {open ? (

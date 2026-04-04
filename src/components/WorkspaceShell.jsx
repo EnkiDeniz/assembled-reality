@@ -1159,7 +1159,7 @@ function WorkspaceLaunchpad({
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
   const primaryAction = resumeSessionSummary?.documentKey
     ? {
-        label: "Continue",
+        label: "Continue working",
         title: resumeSessionSummary.title,
         detail: getResumeSessionLabel(resumeSessionSummary),
         icon: "continue",
@@ -1173,7 +1173,7 @@ function WorkspaceLaunchpad({
       }
     : currentAssemblyDocument
       ? {
-          label: "Continue assembly",
+          label: "Open current assembly",
           title: currentAssemblyDocument.title,
           detail: getDocumentBlockCountLabel(currentAssemblyDocument),
           icon: "assemble",
@@ -1182,7 +1182,7 @@ function WorkspaceLaunchpad({
         }
       : shouldFeatureGuide && guideDocument
         ? {
-            label: "Listen guide",
+            label: "Open built-in guide",
             title: guideDocument.title,
             detail: getDocumentBlockCountLabel(guideDocument),
             icon: "listen",
@@ -1191,7 +1191,7 @@ function WorkspaceLaunchpad({
           }
         : listenDocument
           ? {
-              label: "Listen source",
+              label: "Open source",
               title: listenDocument.title,
               detail: getDocumentBlockCountLabel(listenDocument),
               icon: "listen",
@@ -1652,6 +1652,88 @@ function LinkIntakeChooser({
           >
             <span className="assembler-image-chooser__action-label">TEXT</span>
             <span className="assembler-image-chooser__action-title">Keep as text</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteDocumentDialog({
+  open = false,
+  document = null,
+  pending = false,
+  errorMessage = "",
+  onConfirm,
+  onClose,
+}) {
+  if (!open || !document?.documentKey) return null;
+
+  const documentTypeLabel =
+    document.isAssembly || document.documentType === "assembly"
+      ? "assembly"
+      : "source";
+
+  return (
+    <div className="assembler-image-chooser assembler-image-chooser--delete">
+      <button
+        type="button"
+        className="assembler-image-chooser__backdrop"
+        aria-label="Close delete dialog"
+        onClick={pending ? undefined : onClose}
+      />
+
+      <div
+        className="assembler-image-chooser__panel assembler-delete-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-document-title"
+      >
+        <div className="assembler-image-chooser__header">
+          <div className="assembler-image-chooser__copy">
+            <span className="assembler-sheet__eyebrow">Delete {documentTypeLabel}</span>
+            <h2 id="delete-document-title" className="assembler-image-chooser__title">
+              {document.title}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={pending ? undefined : onClose}
+            disabled={pending}
+          >
+            Close
+          </button>
+        </div>
+
+        <p className="assembler-delete-dialog__body">
+          This removes the whole {documentTypeLabel}, including its listening state,
+          staging references, and workspace receipts.
+        </p>
+
+        {errorMessage ? (
+          <p className="assembler-delete-dialog__error" aria-live="polite">
+            {errorMessage}
+          </p>
+        ) : null}
+
+        <div className="assembler-delete-dialog__actions">
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={onClose}
+            disabled={pending}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="terminal-button assembler-delete-dialog__confirm"
+            onClick={onConfirm}
+            disabled={pending}
+          >
+            {pending ? "Deleting…" : `Delete ${documentTypeLabel}`}
           </button>
         </div>
       </div>
@@ -2858,6 +2940,9 @@ export default function WorkspaceShell({
   );
   const [pendingImageIntake, setPendingImageIntake] = useState(null);
   const [pendingLinkIntake, setPendingLinkIntake] = useState(null);
+  const [deleteDialogDocument, setDeleteDialogDocument] = useState(null);
+  const [deletePendingDocumentKey, setDeletePendingDocumentKey] = useState("");
+  const [deleteDialogError, setDeleteDialogError] = useState("");
   const [dropActive, setDropActive] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
@@ -4603,21 +4688,21 @@ export default function WorkspaceShell({
     });
   }
 
-  async function deleteDocument(document) {
+  function requestDeleteDocument(document) {
     if (!canDeleteDocument(document) || !document?.documentKey) return;
 
-    const documentTypeLabel =
-      document.isAssembly || document.documentType === "assembly"
-        ? "assembly"
-        : "source";
-    const confirmed = window.confirm(
-      `Delete "${document.title}"?\n\nThis removes the whole ${documentTypeLabel}.`,
-    );
-    if (!confirmed) return;
+    setDeleteDialogError("");
+    setDeleteDialogDocument(document);
+  }
+
+  async function performDeleteDocument(document) {
+    if (!canDeleteDocument(document) || !document?.documentKey) return;
 
     const documentKey = document.documentKey;
     const documentTitle = document.title;
     const deletingActiveDocument = activeDocumentKey === documentKey;
+    setDeletePendingDocumentKey(documentKey);
+    setDeleteDialogError("");
     setDocumentState(documentKey, {
       status: "saving",
       message: "Deleting…",
@@ -4721,15 +4806,26 @@ export default function WorkspaceShell({
       }
 
       setFeedback(`Deleted ${documentTitle}.`, "success");
+      setDeleteDialogDocument(null);
     } catch (error) {
       setDocumentState(documentKey, null);
+      setDeleteDialogError(
+        error instanceof Error ? error.message : "Could not delete the document.",
+      );
       setFeedback(error instanceof Error ? error.message : "Could not delete the document.", "error");
+    } finally {
+      setDeletePendingDocumentKey("");
     }
+  }
+
+  async function confirmDeleteDocument() {
+    if (!deleteDialogDocument) return;
+    await performDeleteDocument(deleteDialogDocument);
   }
 
   async function deleteActiveDocument() {
     if (!activeDocument) return;
-    await deleteDocument(activeDocument);
+    requestDeleteDocument(activeDocument);
   }
 
   async function polishActiveSource() {
@@ -5869,7 +5965,7 @@ export default function WorkspaceShell({
               onCreateProject={() => void createProject()}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
-              onDeleteDocument={(document) => void deleteDocument(document)}
+              onDeleteDocument={requestDeleteDocument}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onOpenSpeak={openVoiceRecorder}
               onOpenIntake={() => setDropAnythingOpen(true)}
@@ -6363,6 +6459,21 @@ export default function WorkspaceShell({
             }
           }}
           onClose={() => setPendingLinkIntake(null)}
+        />
+        <DeleteDocumentDialog
+          open={Boolean(deleteDialogDocument)}
+          document={deleteDialogDocument}
+          pending={
+            Boolean(deletePendingDocumentKey) &&
+            deletePendingDocumentKey === deleteDialogDocument?.documentKey
+          }
+          errorMessage={deleteDialogError}
+          onConfirm={() => void confirmDeleteDocument()}
+          onClose={() => {
+            if (deletePendingDocumentKey) return;
+            setDeleteDialogError("");
+            setDeleteDialogDocument(null);
+          }}
         />
         <VoiceRecorderDialog
           open={voiceRecorderOpen}
