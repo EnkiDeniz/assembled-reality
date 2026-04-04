@@ -146,7 +146,7 @@ export default function StagingPanel({
             </div>
           ) : (
             <p className="assembler-staging-panel__empty">
-              Add blocks from a source to build the assembly.
+              Add blocks from a source to shape the seed.
             </p>
           )}
         </div>

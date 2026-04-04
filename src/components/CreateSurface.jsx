@@ -17,9 +17,9 @@ export default function CreateSurface({
       <header className="assembler-phase__header">
         <div className="assembler-phase__copy">
           <span className="assembler-phase__eyebrow">Create</span>
-          <h2 className="assembler-phase__title">Shape the assembly.</h2>
+          <h2 className="assembler-phase__title">Shape the seed.</h2>
           <p className="assembler-phase__subtitle">
-            Move selected material into staging, then assemble and rewrite the working position of the box.
+            Move selected material into staging, then shape and rewrite the living working position of the box.
           </p>
         </div>
         <div className="assembler-phase__meta">
@@ -34,21 +34,21 @@ export default function CreateSurface({
       ) : (
         <div className="assembler-phase__empty">
           <div className="assembler-phase__empty-copy">
-            <span className="assembler-phase__empty-label">Assembly</span>
+            <span className="assembler-phase__empty-label">Seed</span>
             <h3 className="assembler-phase__empty-title">
-              {currentAssemblyDocument?.title || "No active assembly yet"}
+              {currentAssemblyDocument?.title || "No active seed yet"}
             </h3>
             <p className="assembler-phase__empty-text">
               {currentAssemblyDocument
-                ? "Open the current assembly to keep shaping it, or keep feeding staging until it is ready for the next draft."
-                : "You can keep collecting blocks in staging and assemble them once the direction is clear."}
+                ? "Open the current seed to keep shaping it, or keep feeding staging until the next revision is ready."
+                : "You can keep collecting blocks in staging and shape the first seed once the direction is clear."}
             </p>
           </div>
 
           <div className="assembler-phase__empty-actions">
             {currentAssemblyDocument ? (
               <button type="button" className="terminal-button" onClick={onOpenAssembly}>
-                Open assembly
+                Open seed
               </button>
             ) : null}
             <button
@@ -57,7 +57,7 @@ export default function CreateSurface({
               onClick={onAssemble}
               disabled={!selectedBlockCount}
             >
-              {selectedBlockCount ? "Assemble from staging" : "Add blocks to staging"}
+              {selectedBlockCount ? "Shape from staging" : "Add blocks to staging"}
             </button>
           </div>
         </div>

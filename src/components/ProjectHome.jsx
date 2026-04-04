@@ -1,3 +1,4 @@
+import BoxObjectVisualization from "@/components/BoxObjectVisualization";
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 
 function ProjectHomeDocumentRow({
@@ -116,7 +117,7 @@ export default function ProjectHome({
     boxViewModel?.boxSubtitle ||
     activeProject?.boxSubtitle ||
     activeProject?.subtitle ||
-    "Start with a source and shape the assembly.";
+    "Start with a source and shape the seed.";
   const sourceRows = guideDocument
     ? [guideDocument, ...sourceDocuments]
     : sourceDocuments;
@@ -138,7 +139,7 @@ export default function ProjectHome({
           <p className="assembler-project-home__subtitle">{boxSubtitle}</p>
           <div className="assembler-project-home__meta">
             <span>{boxViewModel?.realSourceCount || 0} real source{(boxViewModel?.realSourceCount || 0) === 1 ? "" : "s"}</span>
-            <span>{boxViewModel?.assemblyCount || 0} assembl{(boxViewModel?.assemblyCount || 0) === 1 ? "y" : "ies"}</span>
+            <span>{boxViewModel?.hasSeed ? "Seed ready" : "No seed yet"}</span>
             <span>{receiptSummary.draftCount || 0} receipt{(receiptSummary.draftCount || 0) === 1 ? "" : "s"}</span>
           </div>
           <p className="assembler-project-home__diagnostic">
@@ -148,6 +149,12 @@ export default function ProjectHome({
         </div>
 
         <div className="assembler-project-home__masthead-actions">
+          <BoxObjectVisualization
+            state={boxViewModel?.visualizationState}
+            size="compact"
+            title={boxViewModel?.seedTitle || "Seed"}
+            subtitle={boxViewModel?.hasSeed ? "Current working object" : "Dormant until the first real signal"}
+          />
           <button
             type="button"
             className="assembler-project-home__primary-button"
@@ -196,10 +203,10 @@ export default function ProjectHome({
         <SummaryCard
           eyebrow="Current position"
           title={currentContext?.title || "No current position yet"}
-          body={currentContext?.detail || "Add a real source or continue the assembly to create momentum."}
+          body={currentContext?.detail || "Add a real source or continue the seed to create momentum."}
           detail={
             currentAssemblyDocument
-              ? "Assembly is the live working position of this box."
+              ? "Seed is the live working position of this box."
               : "Return and resume should always point somewhere legible."
           }
           actions={
@@ -244,7 +251,7 @@ export default function ProjectHome({
           }
           body={
             sourceRows.length
-              ? "Think reads the box from sources first. Create turns those sources into assembly."
+              ? "Think reads the box from sources first. Create turns those sources into the seed."
               : "Start with a supported 1.0 source or capture a Speak note."
           }
           detail="Supported now: PDF, DOCX, Markdown/TXT, paste, link, and Speak note."
@@ -319,8 +326,8 @@ export default function ProjectHome({
         <div className="assembler-project-home__stack">
           <section className="assembler-project-home__panel">
             <div className="assembler-project-home__section-head">
-              <span>Assembly</span>
-              <span>{currentAssemblyDocument ? "Active" : "Empty"}</span>
+              <span>Seed</span>
+              <span>{currentAssemblyDocument ? "Live" : "Dormant"}</span>
             </div>
 
             <div className="assembler-project-home__list">
@@ -345,7 +352,7 @@ export default function ProjectHome({
                 />
               ) : (
                 <p className="assembler-project-home__empty">
-                  No assembly yet. Start with a source and keep building.
+                  No seed yet. Start with a source and the first seed will appear.
                 </p>
               )}
 
@@ -395,7 +402,7 @@ export default function ProjectHome({
                 ))
               ) : (
                 <p className="assembler-project-home__empty">
-                  No receipts yet. Draft one after you assemble or Operate.
+                  No receipts yet. Draft one after you shape the seed or Operate.
                 </p>
               )}
             </div>

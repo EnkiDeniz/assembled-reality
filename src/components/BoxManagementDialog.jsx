@@ -1,7 +1,7 @@
 function formatBoxMeta(project = null) {
   const sourceCount = Number(project?.sourceCount) || 0;
-  const assemblyCount = Number(project?.assemblyCount) || 0;
-  return `${sourceCount} source${sourceCount === 1 ? "" : "s"} · ${assemblyCount} assembl${assemblyCount === 1 ? "y" : "ies"}`;
+  const seedCount = Number(project?.assemblyCount) || 0;
+  return `${sourceCount} source${sourceCount === 1 ? "" : "s"} · ${seedCount} seed${seedCount === 1 ? "" : "s"}`;
 }
 
 export default function BoxManagementDialog({
@@ -140,7 +140,7 @@ export default function BoxManagementDialog({
                 <div className="assembler-box-management__selected-copy">
                   <strong>{selectedProject.boxTitle || selectedProject.title || "Untitled Box"}</strong>
                   <p>
-                    Rename the box here. Deleting a non-default box moves its sources, assemblies,
+                    Rename the box here. Deleting a non-default box moves its sources, seeds,
                     and receipt drafts into the default box instead of deleting the work.
                   </p>
                 </div>

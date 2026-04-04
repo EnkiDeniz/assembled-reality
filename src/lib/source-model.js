@@ -211,7 +211,7 @@ export function buildSourceTrustProfile(document = null, assets = []) {
       basis: "assembled-position",
       verification: "constructed",
       trustLevelHint: "working",
-      summary: "Current assembled position of the box. Useful for Create and Operate, not independent proof.",
+      summary: "Current seed of the box. Useful for Create and Operate, not independent proof.",
     };
   }
 
@@ -254,7 +254,7 @@ export function getSourceModalityLabel(modality = SOURCE_MODALITIES.text) {
   if (modality === SOURCE_MODALITIES.voice) return "Voice";
   if (modality === SOURCE_MODALITIES.image) return "Image";
   if (modality === SOURCE_MODALITIES.link) return "Link";
-  if (modality === SOURCE_MODALITIES.assembly) return "Assembly";
+  if (modality === SOURCE_MODALITIES.assembly) return "Seed";
   if (modality === SOURCE_MODALITIES.receipt) return "Receipt";
   if (modality === SOURCE_MODALITIES.humanState) return "Human state";
   return "Text";
@@ -329,7 +329,7 @@ export function getBoxSourceMetaLine(source = null) {
 export function getBoxSourceBadge(source = null) {
   if (!source) return "Source";
   if (source.isBuiltIn) return "Guide";
-  if (source.isAssembly) return "Assembly";
+  if (source.isAssembly) return "Seed";
   return source.modalityLabel;
 }
 

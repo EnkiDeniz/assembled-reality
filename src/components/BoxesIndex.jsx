@@ -1,7 +1,10 @@
+import BoxObjectVisualization from "@/components/BoxObjectVisualization";
+import { buildVisualizationState } from "@/lib/seed-model";
+
 function getProjectCountLabel(project = null) {
   const sourceCount = Number(project?.sourceCount) || 0;
-  const assemblyCount = Number(project?.assemblyCount) || 0;
-  return `${sourceCount} source${sourceCount === 1 ? "" : "s"} · ${assemblyCount} assembl${assemblyCount === 1 ? "y" : "ies"}`;
+  const hasSeed = Boolean(project?.currentAssemblyDocumentKey);
+  return `${sourceCount} source${sourceCount === 1 ? "" : "s"} · ${hasSeed ? "seed ready" : "no seed yet"}`;
 }
 
 export default function BoxesIndex({
@@ -75,12 +78,25 @@ export default function BoxesIndex({
             const title = project.boxTitle || project.title || "Untitled Box";
             const subtitle = project.boxSubtitle || project.subtitle || "";
             const pending = projectActionPending === project.projectKey;
+            const hasSeed = Boolean(project?.currentAssemblyDocumentKey);
+            const visualizationState =
+              project?.visualizationState ||
+              buildVisualizationState({
+                realSourceCount: Number(project?.sourceCount) || 0,
+                hasSeed,
+              });
 
             return (
               <div
                 key={project.projectKey}
                 className={`assembler-boxes-index__row ${isActive ? "is-active" : ""}`}
               >
+                <BoxObjectVisualization
+                  state={visualizationState}
+                  size="compact"
+                  title={title}
+                  subtitle={hasSeed ? "Seed ready" : "Waiting for the first seed"}
+                />
                 <button
                   type="button"
                   className="assembler-boxes-index__row-body"

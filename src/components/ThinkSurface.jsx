@@ -10,7 +10,7 @@ export default function ThinkSurface({
           <span className="assembler-phase__eyebrow">Think</span>
           <h2 className="assembler-phase__title">Understand what is in the box.</h2>
           <p className="assembler-phase__subtitle">
-            Read, listen, and ask Seven before you decide what belongs in the assembly.
+            Read, listen, and ask Seven before you decide what belongs in the seed.
           </p>
         </div>
         <div className="assembler-phase__meta">

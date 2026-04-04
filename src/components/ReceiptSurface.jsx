@@ -64,7 +64,7 @@ export default function ReceiptSurface({
             <p className="assembler-receipt-surface__body">
               {hasLatestProof
                 ? summary.latestDraftSummary || "The latest proof is ready to review or push."
-                : "Use Draft receipt to preserve the current source, assembly, or Operate result as local proof."}
+                : "Use Draft receipt to preserve the current source, seed, or Operate result as local proof."}
             </p>
           </div>
 

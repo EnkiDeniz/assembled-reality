@@ -58,7 +58,7 @@ export default function SourceRail({
   onPasteSource,
   onOpenDocument,
   uploading = false,
-  sourceOpenMode = "assemble",
+  sourceOpenMode = "listen",
   ActionIcon,
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
@@ -132,7 +132,7 @@ export default function SourceRail({
 
         <section className="assembler-source-rail__section">
           <div className="assembler-source-rail__section-head">
-            <span>Assemblies</span>
+            <span>Seeds</span>
             <span>{assemblyDocuments.length}</span>
           </div>
 
@@ -152,7 +152,7 @@ export default function SourceRail({
                 />
               ))
             ) : (
-              <p className="assembler-source-rail__empty">No assemblies yet.</p>
+              <p className="assembler-source-rail__empty">No seed yet.</p>
             )}
           </div>
         </section>

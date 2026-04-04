@@ -24,6 +24,32 @@ import { buildResumeSessionSummaryForUser } from "@/lib/reader-workspace";
 
 export const dynamic = "force-dynamic";
 
+function getProjectForDocumentKey(projects = [], documentKey = "") {
+  const normalizedDocumentKey = String(documentKey || "").trim();
+  if (!normalizedDocumentKey) return null;
+
+  return (
+    (Array.isArray(projects) ? projects : []).find((project) =>
+      Array.isArray(project?.documentKeys) && project.documentKeys.includes(normalizedDocumentKey),
+    ) || null
+  );
+}
+
+function getProjectTimestamp(project = null) {
+  const parsed = Date.parse(project?.updatedAt || project?.createdAt || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function listRealDocuments(documents = []) {
+  return (Array.isArray(documents) ? documents : []).filter(
+    (document) =>
+      document?.documentType !== "builtin" &&
+      document?.sourceType !== "builtin" &&
+      !document?.isAssembly &&
+      document?.documentType !== "assembly",
+  );
+}
+
 export default async function WorkspacePage({ searchParams }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -44,9 +70,25 @@ export default async function WorkspacePage({ searchParams }) {
         : "boxes";
 
   const documents = await listReaderDocumentsForUser(session.user.id);
-
   const projects = await listReaderProjectsForUser(session.user.id, documents);
-  const initialProject = getProjectByKey(projects, requestedProjectKey);
+  const realDocuments = listRealDocuments(documents);
+  const hasSeed = documents.some(
+    (document) => document?.isAssembly || document?.documentType === "assembly",
+  );
+  const isFirstTime = realDocuments.length === 0 && !hasSeed;
+  const resumeProject =
+    getProjectForDocumentKey(projects, requestedDocumentKey) ||
+    null;
+  const mostRecentProject =
+    [...projects].sort((left, right) => getProjectTimestamp(right) - getProjectTimestamp(left))[0] ||
+    null;
+  const resolvedProject =
+    getProjectByKey(projects, requestedProjectKey) ||
+    resumeProject ||
+    mostRecentProject ||
+    projects[0] ||
+    null;
+  const initialProject = resolvedProject;
   const initialListenDocumentKey =
     getProjectListenDocumentKey(initialProject, documents) ||
     getProjectEntryDocumentKey(initialProject) ||
@@ -58,15 +100,17 @@ export default async function WorkspacePage({ searchParams }) {
     documents[0]?.documentKey ||
     "";
 
+  const defaultMode =
+    requestedMode === "listen" || requestedMode === "assemble"
+      ? requestedMode
+      : initialProject?.currentAssemblyDocumentKey
+        ? "assemble"
+        : "listen";
   const fallbackDocumentKey =
     requestedDocumentKey ||
-    (requestedMode === "listen"
-      ? initialListenDocumentKey
-      : requestedMode === "assemble"
-        ? initialAssembleDocumentKey
-        : getProjectEntryDocumentKey(initialProject) ||
-          documents[0]?.documentKey ||
-          "");
+    (defaultMode === "assemble"
+      ? initialAssembleDocumentKey
+      : initialListenDocumentKey);
   const [initialDocument, projectDrafts, resumeSessionSummary, readerData] = await Promise.all([
     getReaderDocumentDataForUser(
       session.user.id,
@@ -84,7 +128,7 @@ export default async function WorkspacePage({ searchParams }) {
     getReaderProfileByUserId(session.user.id),
   ]);
 
-  if (!initialDocument) {
+  if (!initialDocument && !isFirstTime) {
     redirect("/");
   }
 
@@ -105,12 +149,13 @@ export default async function WorkspacePage({ searchParams }) {
       getReceiptsConnectionLastError={readerData?.getReceiptsConnection?.lastError || ""}
       initialDocument={initialDocument}
       initialProjectKey={initialProject?.projectKey || null}
-      initialMode={requestedMode === "listen" || requestedMode === "assemble" ? requestedMode : ""}
+      initialMode={defaultMode}
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={voiceCatalog[0] || null}
-      showLaunchpadInitially={requestedLaunchpad || (!requestedDocumentKey && !requestedProjectKey)}
+      showLaunchpadInitially={requestedLaunchpad}
       initialLaunchpadView={initialLaunchpadView}
       resumeSessionSummary={resumeSessionSummary}
+      initialEntryState={isFirstTime ? "first-time" : "returning"}
     />
   );
 }

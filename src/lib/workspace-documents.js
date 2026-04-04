@@ -6,6 +6,7 @@ import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
 import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
 import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { PRODUCT_MARK } from "@/lib/product-language";
+import { normalizeSeedMeta } from "@/lib/seed-model";
 import { slugify } from "@/lib/text";
 import {
   buildWorkspaceBlocksFromDocument,
@@ -208,6 +209,7 @@ function buildStoredWorkspaceMeta({
   sourceAssetIds = [],
   sourceProvenance = null,
   sourceTrustProfile = null,
+  seedMeta = null,
   blocks = [],
   logEntries = [],
   intakeKind = "upload",
@@ -226,6 +228,7 @@ function buildStoredWorkspaceMeta({
       sourceProvenance && typeof sourceProvenance === "object" ? sourceProvenance : null,
     sourceTrustProfile:
       sourceTrustProfile && typeof sourceTrustProfile === "object" ? sourceTrustProfile : null,
+    seedMeta: normalizeSeedMeta(seedMeta),
     intakeKind: String(intakeKind || "upload").trim() || "upload",
     intakeDiagnostics: normalizeIntakeDiagnostics(intakeDiagnostics),
     hiddenFromProjectHome: Boolean(hiddenFromProjectHome),
@@ -264,6 +267,7 @@ export function buildStoredWorkspaceContent({
   sourceAssetIds = [],
   sourceProvenance = null,
   sourceTrustProfile = null,
+  seedMeta = null,
   blocks = [],
   logEntries = [],
   intakeKind = "upload",
@@ -285,6 +289,7 @@ export function buildStoredWorkspaceContent({
     sourceAssetIds,
     sourceProvenance,
     sourceTrustProfile,
+    seedMeta,
     blocks,
     logEntries,
     intakeKind,
@@ -348,6 +353,7 @@ export function parseStoredWorkspaceDocument({
       meta?.sourceTrustProfile && typeof meta.sourceTrustProfile === "object"
         ? meta.sourceTrustProfile
         : null,
+    seedMeta: normalizeSeedMeta(meta?.seedMeta),
     sourceAssets: [],
     derivationKind: String(meta?.derivationKind || "").trim().toLowerCase(),
     derivationModel: String(meta?.derivationModel || "").trim(),
@@ -645,6 +651,9 @@ export async function saveWorkspaceDocumentForUser(
     documentType: current.documentType === "assembly" ? "assembly" : "source",
     sourceFiles: current.sourceFiles,
     sourceAssetIds: current.sourceAssetIds,
+    sourceProvenance: current.sourceProvenance,
+    sourceTrustProfile: current.sourceTrustProfile,
+    seedMeta: current.seedMeta,
     blocks: normalizedBlocks,
     logEntries,
     intakeKind: current.intakeKind,
@@ -680,6 +689,7 @@ export async function createAssemblyDocumentForUser(
     subtitle = "",
     projectKey = DEFAULT_PROJECT_KEY,
     blocks = [],
+    seedMeta = null,
   },
 ) {
   const normalizedTitle = String(title || "").trim() || "Assembly";
@@ -731,6 +741,7 @@ export async function createAssemblyDocumentForUser(
     title: normalizedTitle,
     subtitle: String(subtitle || "").trim(),
     documentType: "assembly",
+    seedMeta,
     sourceFiles,
     blocks: persistedBlocks,
     logEntries: assemblyLogEntries,
@@ -784,6 +795,10 @@ export async function updateWorkspaceDocumentMetadataForUser(
       Array.isArray(updates.sourceAssetIds) && updates.sourceAssetIds.length
         ? updates.sourceAssetIds
         : current.sourceAssetIds,
+    sourceProvenance: current.sourceProvenance,
+    sourceTrustProfile: current.sourceTrustProfile,
+    seedMeta:
+      updates.seedMeta === undefined ? current.seedMeta : normalizeSeedMeta(updates.seedMeta),
     blocks: current.blocks,
     logEntries: current.logEntries,
     intakeKind: current.intakeKind,

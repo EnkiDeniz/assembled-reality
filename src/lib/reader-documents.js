@@ -94,6 +94,10 @@ function serializeDocumentSummary(documentData, record = null, progressPercent =
       documentData?.sourceTrustProfile && typeof documentData.sourceTrustProfile === "object"
         ? documentData.sourceTrustProfile
         : null,
+    seedMeta:
+      documentData?.seedMeta && typeof documentData.seedMeta === "object"
+        ? documentData.seedMeta
+        : null,
     derivationKind: documentData?.derivationKind || "",
     derivationModel: documentData?.derivationModel || "",
     derivationStatus: documentData?.derivationStatus || "",

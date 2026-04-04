@@ -52,7 +52,7 @@ export function buildWorkspaceReceiptPayload({
     return {
       aim: operateResult.aim.sentence,
       tried: `Operate read ${boxTitle} across ${operateResult.includedSourceCount} source(s)${
-        operateResult.includesAssembly ? " and the current assembly" : ""
+        operateResult.includesAssembly ? " and the current seed" : ""
       } inside ${PRODUCT_NAME}.`,
       outcome: operateResult.ground.sentence,
       learned: operateResult.bridge.sentence,
@@ -126,22 +126,22 @@ export function buildWorkspaceReceiptPayload({
   return {
     aim:
       mode === "assembly"
-        ? `Assemble ${document?.title || "a new assembly"}`
+        ? `Shape ${document?.title || "a new seed"}`
         : `Capture a receipt for ${document?.title || "the current workspace state"}`,
     tried:
       mode === "assembly"
-        ? `Curated, ordered, and assembled ${normalizedBlocks.length} block(s) from ${sourceDocumentKeys.length} source(s) inside ${PRODUCT_NAME}.`
-        : `Worked through the current source or assembly inside ${PRODUCT_NAME} with listening, selection, AI, and editing operations recorded in a visible receipt log.`,
+        ? `Curated, ordered, and shaped ${normalizedBlocks.length} block(s) from ${sourceDocumentKeys.length} source(s) inside ${PRODUCT_NAME}.`
+        : `Worked through the current source or seed inside ${PRODUCT_NAME} with listening, selection, AI, and editing operations recorded in a visible receipt log.`,
     outcome: excerpt
       ? `Produced "${document?.title || "Untitled document"}" with content including: "${excerpt}"`
       : `Produced "${document?.title || "Untitled document"}" inside ${PRODUCT_NAME}.`,
     learned:
       mode === "assembly"
-        ? "The assembly preserves source lineage per block so the output can be traced back to the sources and operations that formed it."
-        : "The receipt preserves the visible sequence of listening, selection, AI, editing, and assembly actions that shaped the current workspace state.",
+        ? "The seed preserves source lineage per block so the working position can be traced back to the sources and operations that formed it."
+        : "The receipt preserves the visible sequence of listening, selection, AI, editing, and seed-shaping actions that shaped the current workspace state.",
     decision:
       mode === "assembly"
-        ? "Keep the assembly as a working draft, continue refining it, and preserve its lineage as a receipt."
+        ? "Keep the seed as a working draft, continue refining it, and preserve its lineage as a receipt."
         : "Preserve the current workspace state as a draft receipt for later review and export.",
     owner: profile?.displayName || "Reader",
     temporal: "retrospective",
@@ -220,11 +220,11 @@ export function buildWorkspaceReceiptDraftInput({
     title: `${document?.title || "Untitled document"} receipt`,
     interpretation:
       mode === "assembly"
-        ? "This receipt captures how a new assembly was built from ordered source blocks."
-        : "This receipt captures the visible operations that shaped the current source or assembly.",
+        ? "This receipt captures how a new seed was shaped from ordered source blocks."
+        : "This receipt captures the visible operations that shaped the current source or seed.",
     implications:
       mode === "assembly"
-        ? "The assembled draft can be reopened, refined, exported, and verified against its block lineage."
+        ? "The seed can be reopened, refined, exported, and verified against its block lineage."
         : "The workspace state can be reviewed, exported, and continued later with its receipt history intact.",
     stance: "WORKING",
     linkedEvidenceItemIds: [],

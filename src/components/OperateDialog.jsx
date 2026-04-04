@@ -50,7 +50,7 @@ export default function OperateDialog({
         result.includedSourceCount
           ? `${result.includedSourceCount} source${result.includedSourceCount === 1 ? "" : "s"}`
           : "0 sources",
-        result.includesAssembly ? "assembly included" : "no assembly",
+        result.includesAssembly ? "seed included" : "no seed",
       ].join(" · ")
     : "";
 

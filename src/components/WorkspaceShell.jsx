@@ -5,14 +5,16 @@ import { startTransition, useCallback, useEffect, useRef, useState } from "react
 import AiUtilityRail from "@/components/AiUtilityRail";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
+import FirstBoxComposer from "@/components/FirstBoxComposer";
+import MobileControlDock from "@/components/MobileControlDock";
 import ProjectHome from "@/components/ProjectHome";
-import BoxPhaseBar from "@/components/BoxPhaseBar";
-import CreateSurface from "@/components/CreateSurface";
 import OperateSurface from "@/components/OperateSurface";
 import ReceiptSurface from "@/components/ReceiptSurface";
+import SeedSurface from "@/components/SeedSurface";
 import SourceRail from "@/components/SourceRail";
 import StagingPanel from "@/components/StagingPanel";
 import ThinkSurface from "@/components/ThinkSurface";
+import WorkspaceControlSurface from "@/components/WorkspaceControlSurface";
 import {
   buildWorkspaceMarkdown,
   createWorkspaceLogEntry,
@@ -29,9 +31,12 @@ import {
 import {
   BOX_PHASES,
   buildBoxViewModel,
+  buildControlSurfaceViewModel,
   buildCreateViewModel,
+  buildEntryStateViewModel,
   buildOperateViewModel,
   buildReceiptSummaryViewModel,
+  buildSeedViewModel,
   buildThinkViewModel,
   normalizeBoxPhase,
 } from "@/lib/box-view-models";
@@ -54,6 +59,11 @@ import {
 import { PRODUCT_MARK, PRODUCT_NAME } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 import { parseSevenAudioHeaders } from "@/lib/seven";
+import {
+  buildSeedFingerprint,
+  getSeedDocument,
+  listRealSourceDocuments,
+} from "@/lib/seed-model";
 
 const STORAGE_VERSION = 3;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
@@ -1190,7 +1200,7 @@ function getDocumentKindLabel(document) {
     return "Guide";
   }
   if (document.isAssembly || document.documentType === "assembly") {
-    return "Assembly";
+    return "Seed";
   }
   if (document.derivationKind === "ocr-document") {
     return "Image → Doc";
@@ -1375,7 +1385,7 @@ function WorkspaceLaunchpad({
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
   const primaryAction = currentAssemblyDocument
     ? {
-        label: "Continue Assembly",
+        label: "Continue Seed",
         title: currentAssemblyDocument.title,
         detail: getDocumentBlockCountLabel(currentAssemblyDocument),
         icon: "assemble",
@@ -1437,7 +1447,7 @@ function WorkspaceLaunchpad({
       }
     : currentAssemblyDocument?.documentKey
       ? {
-          label: "Open assembly",
+          label: "Open seed",
           disabled: busy,
           onClick: () =>
             onEnterMode(WORKSPACE_MODES.assemble, currentAssemblyDocument.documentKey, {
@@ -1935,7 +1945,7 @@ function DeleteDocumentDialog({
 
   const documentTypeLabel =
     document.isAssembly || document.documentType === "assembly"
-      ? "assembly"
+      ? "seed"
       : "source";
 
   return (
@@ -2345,41 +2355,31 @@ function SourceCleanupTray({
 }
 
 function WorkspaceToolbar({
-  activeDocument,
-  boxPhase,
-  editMode,
-  aiOpen,
-  documentState,
-  onReloadLatest,
-  status,
-  statusTone,
+  viewModel,
   onSetBoxPhase,
-  onToggleEditMode,
+  onOpenBoxes,
+  onOpenBoxHome,
+  onOpenIntake,
+  onOpenSpeak,
   onToggleAi,
-  clipboardCount = 0,
-  stagedCount = 0,
+  onRunOperate,
+  onOpenReceipts,
+  onManageBox,
   isMobileLayout = false,
-  onOpenClipboard,
-  isClipboardOpen = false,
 }) {
   return (
-    <BoxPhaseBar
-      phase={boxPhase}
-      onSelectPhase={onSetBoxPhase}
-      editMode={editMode}
-      onToggleEditMode={onToggleEditMode}
-      canEdit={Boolean(activeDocument?.isEditable)}
-      aiOpen={aiOpen}
-      onToggleAi={onToggleAi}
-      status={status}
-      statusTone={statusTone}
-      documentState={documentState}
-      onReloadLatest={onReloadLatest}
+    <WorkspaceControlSurface
+      viewModel={viewModel}
       isMobileLayout={isMobileLayout}
-      onOpenClipboard={onOpenClipboard}
-      isClipboardOpen={isClipboardOpen}
-      stagedCount={stagedCount}
-      clipboardCount={clipboardCount}
+      onOpenBoxes={onOpenBoxes}
+      onOpenBoxHome={onOpenBoxHome}
+      onSelectPhase={onSetBoxPhase}
+      onOpenIntake={onOpenIntake}
+      onOpenSpeak={onOpenSpeak}
+      onToggleAi={onToggleAi}
+      onRunOperate={onRunOperate}
+      onOpenReceipts={onOpenReceipts}
+      onManageBox={onManageBox}
     />
   );
 }
@@ -3070,6 +3070,7 @@ export default function WorkspaceShell({
   showLaunchpadInitially = false,
   initialLaunchpadView = LAUNCHPAD_VIEWS.boxes,
   resumeSessionSummary = null,
+  initialEntryState = "returning",
 }) {
   const fileInputRef = useRef(null);
   const aiInputRef = useRef(null);
@@ -3094,6 +3095,13 @@ export default function WorkspaceShell({
   const storageHydratedRef = useRef(false);
   const pasteIntoWorkspaceRef = useRef(null);
   const pendingFocusBlockIdRef = useRef(null);
+  const seedEnsureFingerprintRef = useRef("");
+  const seedSuggestFingerprintRef = useRef("");
+  const pendingSeedFocusRef = useRef(false);
+  const attachDocumentToActiveProjectRef = useRef(() => {});
+  const applyProjectPayloadRef = useRef(() => {});
+  const upsertDocumentRef = useRef(() => {});
+  const loadDocumentRef = useRef(async () => {});
   const activeDocumentRef = useRef(initialDocument);
   const blocksRef = useRef(initialDocument.blocks || []);
   const rateRef = useRef(1);
@@ -3116,13 +3124,19 @@ export default function WorkspaceShell({
   const [documentLogs, setDocumentLogs] = useState(() =>
     createInitialDocumentLogMap([initialDocument]),
   );
-  const [documentStates, setDocumentStates] = useState({});
+  const [, setDocumentStates] = useState({});
   const [deviceVoiceSupported, setDeviceVoiceSupported] = useState(false);
   const [activeDocumentKey, setActiveDocumentKey] = useState(initialDocument.documentKey);
   const [workspaceMode, setWorkspaceMode] = useState(
     normalizeWorkspaceMode(requestedWorkspaceMode, WORKSPACE_MODES.assemble),
   );
-  const [boxPhase, setBoxPhase] = useState(BOX_PHASES.think);
+  const [boxPhase, setBoxPhase] = useState(
+    requestedWorkspaceMode === WORKSPACE_MODES.assemble ||
+      initialDocument?.isAssembly ||
+      initialDocument?.documentType === "assembly"
+      ? BOX_PHASES.create
+      : BOX_PHASES.think,
+  );
   const [editMode, setEditMode] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
@@ -3155,11 +3169,13 @@ export default function WorkspaceShell({
   }));
   const [sevenThreadLoadingKey, setSevenThreadLoadingKey] = useState("");
   const [sevenThreadError, setSevenThreadError] = useState("");
-  const [operateOpen, setOperateOpen] = useState(false);
   const [operatePending, setOperatePending] = useState(false);
   const [operateError, setOperateError] = useState("");
   const [operateResult, setOperateResult] = useState(null);
   const [pendingOperateAudit, setPendingOperateAudit] = useState(null);
+  const [seedSuggestion, setSeedSuggestion] = useState(null);
+  const [seedSuggestionPending, setSeedSuggestionPending] = useState(false);
+  const [seedStatusPending, setSeedStatusPending] = useState(false);
   const [receiptPending, setReceiptPending] = useState(false);
   const [polishPending, setPolishPending] = useState(false);
   const [cleanupPendingAction, setCleanupPendingAction] = useState("");
@@ -3167,7 +3183,7 @@ export default function WorkspaceShell({
   const [cleanupFind, setCleanupFind] = useState("");
   const [cleanupReplace, setCleanupReplace] = useState("");
   const [status, setStatus] = useState("");
-  const [statusTone, setStatusTone] = useState("");
+  const [, setStatusTone] = useState("");
   const [lastModeByProjectKey, setLastModeByProjectKey] = useState({});
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
@@ -3188,6 +3204,7 @@ export default function WorkspaceShell({
   const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
   const [mobileSourceToolsOpen, setMobileSourceToolsOpen] = useState(false);
+  const [mobileControlDockOpen, setMobileControlDockOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [playbackStatus, setPlaybackStatus] = useState("idle");
   const [voiceRecorderOpen, setVoiceRecorderOpen] = useState(false);
@@ -3198,6 +3215,9 @@ export default function WorkspaceShell({
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
+  const [entryStateOverride, setEntryStateOverride] = useState(
+    initialEntryState === "first-time" ? "first-time" : "",
+  );
 
   const hydratedProjects = hydrateProjectsWithDocuments(projectsState, documentsState);
   const activeProject =
@@ -3206,6 +3226,7 @@ export default function WorkspaceShell({
     null;
   const activeBoxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
+  const realProjectSourceDocuments = listRealSourceDocuments(projectDocuments);
   const projectDocumentGroups = groupedDocuments(projectDocuments);
   const guideSourceDocument = projectDocumentGroups.sources.find(
     (document) => document.documentType === "builtin" || document.sourceType === "builtin",
@@ -3215,7 +3236,10 @@ export default function WorkspaceShell({
   );
   const visibleAssemblyDocuments = projectDocumentGroups.assemblies;
   const currentAssemblyDocument =
-    getOperateAssemblyDocument(activeProject, projectDocuments, activeDocumentKey) || null;
+    getSeedDocument(activeProject, projectDocuments, activeDocumentKey) ||
+    getOperateAssemblyDocument(activeProject, projectDocuments, activeDocumentKey) ||
+    null;
+  const currentSeedDocument = currentAssemblyDocument;
   const operateState = listOperateIncludedDocuments(activeProject, projectDocuments, {
     preferredDocumentKey: activeDocumentKey,
     includeAssembly: true,
@@ -3249,8 +3273,12 @@ export default function WorkspaceShell({
   const activeDocument = applyDocumentLogState(activeDocumentBase, documentLogs);
   const operateAuditDocumentKey =
     currentAssemblyDocument?.documentKey || activeDocument?.documentKey || "";
+  const seedSourceFingerprint = buildSeedFingerprint({
+    realSourceDocuments: realProjectSourceDocuments,
+    receiptCount: projectDraftsState.length,
+    latestOperateAt: operateResult?.ranAt || "",
+  });
   const blocks = activeDocument?.blocks ?? EMPTY_BLOCKS;
-  const activeDocumentState = documentStates[activeDocumentKey] || null;
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
     diagnostics: activeDocument?.intakeDiagnostics,
   });
@@ -3278,13 +3306,44 @@ export default function WorkspaceShell({
   });
   const createViewModel = buildCreateViewModel({
     activeProject,
-    currentAssemblyDocument,
+    currentAssemblyDocument: currentSeedDocument,
     clipboard,
     stagedAiBlocks,
   });
+  const seedViewModel = buildSeedViewModel({
+    activeProject,
+    currentAssemblyDocument: currentSeedDocument,
+    projectDocuments,
+    projectDrafts: projectDraftsState,
+    pendingSuggestion: seedSuggestion,
+  });
+  const entryStateViewModel = buildEntryStateViewModel({
+    projects: hydratedProjects,
+    activeProject,
+    projectDocuments,
+    allDocuments: documentsState,
+    projectDrafts: projectDraftsState,
+  });
+  const resolvedEntryMode = entryStateOverride || entryStateViewModel.mode;
+  const currentSeedFingerprint = String(currentSeedDocument?.seedMeta?.sourceFingerprint || "").trim();
+  const controlSurfaceViewModel = buildControlSurfaceViewModel({
+    activeProject,
+    currentAssemblyDocument: currentSeedDocument,
+    boxPhase,
+    canRunOperate,
+    aiOpen,
+    clipboardCount: clipboard.length,
+    stagedCount: stagedAiBlocks.length,
+  });
   const isThinkPhase = boxPhase === BOX_PHASES.think;
   const isCreatePhase = boxPhase === BOX_PHASES.create;
+  const isOperatePhase = boxPhase === BOX_PHASES.operate;
   const isReceiptsPhase = boxPhase === BOX_PHASES.receipts;
+  const isFirstTimeSurface =
+    !launchpadOpen &&
+    resolvedEntryMode === "first-time" &&
+    !currentSeedDocument?.documentKey &&
+    realProjectSourceDocuments.length === 0;
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
@@ -3405,7 +3464,7 @@ export default function WorkspaceShell({
                   kind="delete"
                   label={`Delete ${
                     activeDocument.isAssembly || activeDocument.documentType === "assembly"
-                      ? "assembly"
+                      ? "seed"
                       : "source"
                   }`}
                   danger
@@ -3675,6 +3734,63 @@ export default function WorkspaceShell({
   }, [resumeSessionSummary]);
 
   useEffect(() => {
+    if (!isMobileLayout && mobileControlDockOpen) {
+      setMobileControlDockOpen(false);
+    }
+  }, [isMobileLayout, mobileControlDockOpen]);
+
+  useEffect(() => {
+    if (launchpadOpen) return;
+    if (currentSeedDocument?.documentKey) return;
+    if (!realProjectSourceDocuments.length) return;
+    if (seedStatusPending) return;
+
+    const nextFingerprint = `${activeProjectKey}:${seedSourceFingerprint}`;
+    if (!nextFingerprint.trim()) return;
+    if (seedEnsureFingerprintRef.current === nextFingerprint) return;
+
+    seedEnsureFingerprintRef.current = nextFingerprint;
+    const shouldFocusSeed = resolvedEntryMode !== "first-time" || pendingSeedFocusRef.current;
+    void ensureSeedForActiveProject({ focus: shouldFocusSeed });
+  }, [
+    activeProjectKey,
+    currentSeedDocument?.documentKey,
+    ensureSeedForActiveProject,
+    launchpadOpen,
+    realProjectSourceDocuments.length,
+    resolvedEntryMode,
+    seedSourceFingerprint,
+    seedStatusPending,
+  ]);
+
+  useEffect(() => {
+    if (launchpadOpen) return;
+    if (!currentSeedDocument?.documentKey) return;
+    if (!realProjectSourceDocuments.length) return;
+    if (seedSuggestionPending || seedStatusPending) return;
+    if (seedSuggestion?.sourceFingerprint === seedSourceFingerprint) return;
+    if (currentSeedFingerprint && currentSeedFingerprint === seedSourceFingerprint) return;
+
+    const nextFingerprint = `${activeProjectKey}:${seedSourceFingerprint}`;
+    if (!nextFingerprint.trim()) return;
+    if (seedSuggestFingerprintRef.current === nextFingerprint) return;
+
+    seedSuggestFingerprintRef.current = nextFingerprint;
+    void requestSeedSuggestion();
+  }, [
+    activeProjectKey,
+    currentSeedDocument?.documentKey,
+    currentSeedFingerprint,
+    launchpadOpen,
+    realProjectSourceDocuments.length,
+    requestSeedSuggestion,
+    seedSourceFingerprint,
+    seedStatusPending,
+    seedSuggestion,
+    seedSuggestionPending,
+  ]);
+
+  useEffect(() => {
     const documentKey = activeDocument.documentKey;
     if (!documentKey) return undefined;
 
@@ -3843,7 +3959,6 @@ export default function WorkspaceShell({
   }, [activeDocumentKey, firstBlockId]);
 
   useEffect(() => {
-    setOperateOpen(false);
     setOperatePending(false);
     setOperateError("");
     setOperateResult(null);
@@ -4111,9 +4226,15 @@ export default function WorkspaceShell({
           currentAssemblyDocumentKey: setAsCurrentAssembly
             ? document.documentKey
             : project.currentAssemblyDocumentKey,
+          seedDocumentKey: setAsCurrentAssembly
+            ? document.documentKey
+            : project.seedDocumentKey || project.currentAssemblyDocumentKey,
           subtitle: setAsCurrentAssembly
-            ? `Assembly: ${document.title}`
+            ? `Seed: ${document.title}`
             : project.subtitle,
+          boxSubtitle: setAsCurrentAssembly
+            ? `Seed: ${document.title}`
+            : project.boxSubtitle || project.subtitle,
           updatedAt: document.updatedAt || new Date().toISOString(),
         };
       }),
@@ -4157,18 +4278,34 @@ export default function WorkspaceShell({
     setBoxManagementOpen(true);
   }
 
-  function openProject(projectKey) {
+  function openProjectLaunchpad(projectKey, nextLaunchpadView = LAUNCHPAD_VIEWS.box) {
     if (!projectKey || typeof window === "undefined") return;
 
     if (projectKey === activeProjectKey) {
-      setLaunchpadView(LAUNCHPAD_VIEWS.box);
+      if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
+        void persistListeningSession("paused", {
+          documentKey: activeDocument.documentKey,
+          block: currentBlock,
+        });
+      }
+      stopPlayback();
+      setAiOpen(false);
+      setEditMode(false);
+      setBoxPhase(BOX_PHASES.think);
+      setListenPickerOpen(false);
+      setWorkspacePickerOpen(false);
+      setDropAnythingOpen(false);
+      closeVoiceRecorder();
+      setMobileComposeOpen(false);
+      setMobileControlDockOpen(false);
+      setLaunchpadView(nextLaunchpadView);
       setLaunchpadOpen(true);
       window.history.replaceState(
         {},
         "",
         buildWorkspaceUrl("", projectKey, {
           launchpad: true,
-          launchpadView: LAUNCHPAD_VIEWS.box,
+          launchpadView: nextLaunchpadView,
         }),
       );
       return;
@@ -4178,9 +4315,17 @@ export default function WorkspaceShell({
     window.location.assign(
       buildWorkspaceUrl("", projectKey, {
         launchpad: true,
-        launchpadView: LAUNCHPAD_VIEWS.box,
+        launchpadView: nextLaunchpadView,
       }),
     );
+  }
+
+  function openProject(projectKey) {
+    openProjectLaunchpad(projectKey, LAUNCHPAD_VIEWS.box);
+  }
+
+  function openCurrentBoxHome(projectKey = activeProjectKey) {
+    openProjectLaunchpad(projectKey, LAUNCHPAD_VIEWS.box);
   }
 
   function openBoxesIndex() {
@@ -4199,6 +4344,7 @@ export default function WorkspaceShell({
     setDropAnythingOpen(false);
     closeVoiceRecorder();
     setMobileComposeOpen(false);
+    setMobileControlDockOpen(false);
     setLaunchpadView(LAUNCHPAD_VIEWS.boxes);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
@@ -4359,19 +4505,195 @@ export default function WorkspaceShell({
     }
   }
 
+  function applyProjectPayload(projectPayload = null) {
+    if (!projectPayload?.projectKey) return;
+
+    setProjectsState((previous) =>
+      previous.map((project) =>
+        project.projectKey === projectPayload.projectKey
+          ? {
+              ...project,
+              title: projectPayload.title || project.title,
+              boxTitle: projectPayload.title || project.boxTitle || project.title,
+              subtitle:
+                projectPayload.subtitle === undefined ? project.subtitle : projectPayload.subtitle,
+              boxSubtitle:
+                projectPayload.subtitle === undefined
+                  ? project.boxSubtitle || project.subtitle
+                  : projectPayload.subtitle,
+              currentAssemblyDocumentKey:
+                projectPayload.currentAssemblyDocumentKey ?? project.currentAssemblyDocumentKey,
+            }
+          : project,
+      ),
+    );
+  }
+
+  const requestSeedOperation = useCallback(async (mode = "ensure", nextSuggestion = null) => {
+    const response = await fetch("/api/workspace/seed", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        mode,
+        projectKey: activeProjectKey,
+        suggestion: nextSuggestion,
+        receiptCount: projectDraftsState.length,
+        latestOperateAt: operateResult?.ranAt || "",
+      }),
+    });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || "Seed operation failed.");
+    }
+
+    return payload;
+  }, [
+    activeProjectKey,
+    operateResult?.ranAt,
+    projectDraftsState.length,
+  ]);
+
+  const ensureSeedForActiveProject = useCallback(async ({ focus = false } = {}) => {
+    if (!activeProjectKey || seedStatusPending) return null;
+
+    setSeedStatusPending(true);
+    if (focus) {
+      pendingSeedFocusRef.current = true;
+    }
+
+    try {
+      const payload = await requestSeedOperation("ensure");
+      if (payload?.seed?.documentKey) {
+        upsertDocumentRef.current?.(payload.seed, { replaceLogs: true });
+        attachDocumentToActiveProjectRef.current?.(payload.seed, {
+          role: "ASSEMBLY",
+          setAsCurrentAssembly: true,
+        });
+      }
+      applyProjectPayloadRef.current?.(payload?.project);
+      setEntryStateOverride("");
+      setSeedSuggestion(null);
+      seedSuggestFingerprintRef.current = payload?.seed?.seedMeta?.sourceFingerprint || seedSourceFingerprint;
+
+      if (payload?.seed?.documentKey && pendingSeedFocusRef.current) {
+        pendingSeedFocusRef.current = false;
+        setLaunchpadOpen(false);
+        setAiOpen(false);
+        await loadDocumentRef.current?.(payload.seed.documentKey, {
+          mode: WORKSPACE_MODES.assemble,
+          phase: BOX_PHASES.create,
+        });
+        setFeedback(
+          payload.created ? `Created the first seed for ${activeBoxTitle}.` : "Opened the live seed.",
+          "success",
+        );
+      }
+
+      return payload?.seed || null;
+    } catch (error) {
+      seedEnsureFingerprintRef.current = "";
+      pendingSeedFocusRef.current = false;
+      setFeedback(
+        error instanceof Error ? error.message : "Could not create the seed yet.",
+        "error",
+      );
+      return null;
+    } finally {
+      setSeedStatusPending(false);
+    }
+  }, [
+    activeBoxTitle,
+    activeProjectKey,
+    requestSeedOperation,
+    seedSourceFingerprint,
+    seedStatusPending,
+  ]);
+
+  const requestSeedSuggestion = useCallback(async () => {
+    if (!activeProjectKey || !currentSeedDocument?.documentKey || seedSuggestionPending) return null;
+
+    setSeedSuggestionPending(true);
+
+    try {
+      const payload = await requestSeedOperation("suggest");
+      if (payload?.suggestion) {
+        setSeedSuggestion(payload.suggestion);
+        seedSuggestFingerprintRef.current = payload.suggestion.sourceFingerprint || seedSourceFingerprint;
+      }
+      return payload?.suggestion || null;
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not refresh the seed suggestion.",
+        "error",
+      );
+      return null;
+    } finally {
+      setSeedSuggestionPending(false);
+    }
+  }, [
+    activeProjectKey,
+    currentSeedDocument?.documentKey,
+    requestSeedOperation,
+    seedSourceFingerprint,
+    seedSuggestionPending,
+  ]);
+
+  async function applySeedSuggestion() {
+    if (!seedSuggestion || seedSuggestionPending) return;
+
+    setSeedSuggestionPending(true);
+
+    try {
+      const payload = await requestSeedOperation("apply", seedSuggestion);
+      if (payload?.seed?.documentKey) {
+        upsertDocument(payload.seed, { replaceLogs: true });
+        attachDocumentToActiveProject(payload.seed, {
+          role: "ASSEMBLY",
+          setAsCurrentAssembly: true,
+        });
+        await loadDocument(payload.seed.documentKey, {
+          mode: WORKSPACE_MODES.assemble,
+          phase: BOX_PHASES.create,
+        });
+      }
+      applyProjectPayload(payload?.project);
+      setSeedSuggestion(null);
+      setEntryStateOverride("");
+      seedSuggestFingerprintRef.current = payload?.seed?.seedMeta?.sourceFingerprint || seedSourceFingerprint;
+      setFeedback("Applied the latest seed update.", "success");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not apply the seed update.",
+        "error",
+      );
+    } finally {
+      setSeedSuggestionPending(false);
+    }
+  }
+
   function openLaunchpad() {
     openBoxesIndex();
   }
 
+  function dismissSeedSuggestion() {
+    seedSuggestFingerprintRef.current =
+      seedSuggestion?.sourceFingerprint || seedSourceFingerprint || seedSuggestFingerprintRef.current;
+    setSeedSuggestion(null);
+    setFeedback("Dismissed the current seed suggestion.");
+  }
+
   function openReceiptsSurface() {
     const targetDocumentKey =
-      currentAssemblyDocument?.documentKey ||
+      currentSeedDocument?.documentKey ||
       activeDocument?.documentKey ||
       getProjectEntryDocumentKey(activeProject) ||
       "";
 
     if (!targetDocumentKey) {
-      setFeedback("Open a source or assembly before reviewing receipts.", "error");
+      setFeedback("Open a source or seed before reviewing receipts.", "error");
       return;
     }
 
@@ -4491,30 +4813,6 @@ export default function WorkspaceShell({
     return payload.document;
   }
 
-  async function reloadLatestDocument(documentKey = activeDocumentKey) {
-    if (!documentKey) return;
-
-    try {
-      if (documentKey === activeDocumentKey) {
-        stopPlayback();
-      }
-
-      const latestDocument = await fetchLatestDocument(documentKey);
-      upsertDocument(latestDocument, { replaceLogs: true });
-      setDocumentState(documentKey, {
-        status: "saved",
-        message: "Loaded latest version",
-      });
-      setBlockSaveStates({});
-      setFeedback(`Loaded the latest version of ${latestDocument.title}.`, "success");
-    } catch (error) {
-      setFeedback(
-        error instanceof Error ? error.message : "Could not reload the latest version.",
-        "error",
-      );
-    }
-  }
-
   function applyWorkspaceMode(nextMode) {
     const normalizedMode = normalizeWorkspaceMode(nextMode, WORKSPACE_MODES.assemble);
     setWorkspaceMode(normalizedMode);
@@ -4543,6 +4841,7 @@ export default function WorkspaceShell({
     setDropAnythingOpen(false);
     closeVoiceRecorder();
     setMobileComposeOpen(false);
+    setMobileControlDockOpen(false);
     pendingFocusBlockIdRef.current = options.focusBlockId || null;
     const nextPhase = normalizeBoxPhase(
       options.phase,
@@ -4617,6 +4916,11 @@ export default function WorkspaceShell({
     }
   }
 
+  attachDocumentToActiveProjectRef.current = attachDocumentToActiveProject;
+  applyProjectPayloadRef.current = applyProjectPayload;
+  upsertDocumentRef.current = upsertDocument;
+  loadDocumentRef.current = loadDocument;
+
   async function enterWorkspace(documentKey = activeDocumentKey, mode = workspaceMode, options = {}) {
     openMode(mode, documentKey, options);
   }
@@ -4635,13 +4939,28 @@ export default function WorkspaceShell({
       return;
     }
 
+    if (normalizedPhase === BOX_PHASES.operate) {
+      setAiOpen(false);
+      setEditMode(false);
+      setBoxPhase(BOX_PHASES.operate);
+      if (!operateResult) {
+        void runOperate();
+      }
+      return;
+    }
+
     if (normalizedPhase === BOX_PHASES.create) {
       setAiOpen(false);
+      if (!currentSeedDocument?.documentKey && realProjectSourceDocuments.length) {
+        pendingSeedFocusRef.current = true;
+        void ensureSeedForActiveProject({ focus: true });
+        return;
+      }
       if (
-        currentAssemblyDocument?.documentKey &&
-        currentAssemblyDocument.documentKey !== activeDocumentKey
+        currentSeedDocument?.documentKey &&
+        currentSeedDocument.documentKey !== activeDocumentKey
       ) {
-        void loadDocument(currentAssemblyDocument.documentKey, {
+        void loadDocument(currentSeedDocument.documentKey, {
           mode: WORKSPACE_MODES.assemble,
           phase: BOX_PHASES.create,
         });
@@ -5063,6 +5382,25 @@ export default function WorkspaceShell({
     }
   }
 
+  async function writeFirstSeedDraft(text) {
+    const normalizedText = String(text || "").trim();
+    if (!normalizedText) return;
+
+    pendingSeedFocusRef.current = true;
+    setEntryStateOverride("first-time");
+    await pasteIntoWorkspace(
+      "source",
+      {
+        html: "",
+        text: normalizedText,
+        imageDataUrl: "",
+        imageMimeType: "",
+        imageFilename: "",
+      },
+      { forceRawText: true },
+    );
+  }
+
   async function importFileBatch(files, { bundleName = "" } = {}) {
     const normalizedFiles = Array.from(files || []).filter(Boolean);
     if (!normalizedFiles.length) return;
@@ -5317,7 +5655,7 @@ export default function WorkspaceShell({
         title: activeDocument.title,
         subtitle: activeDocument.subtitle || "",
         blocks: normalizedNextBlocks,
-        sectionTitle: activeDocument.isAssembly ? "Assembly" : "Document",
+        sectionTitle: activeDocument.isAssembly ? "Seed" : "Document",
       }),
     };
 
@@ -5951,7 +6289,7 @@ export default function WorkspaceShell({
         title: activeDocument.title,
         subtitle: activeDocument.subtitle || "",
         blocks: nextBlocks,
-        sectionTitle: activeDocument.isAssembly ? "Assembly" : "Document",
+        sectionTitle: activeDocument.isAssembly ? "Seed" : "Document",
         }),
     };
 
@@ -6644,12 +6982,13 @@ export default function WorkspaceShell({
 
   async function assembleClipboard() {
     if (!clipboard.length) {
-      setFeedback("Select blocks before assembling.", "error");
+      setFeedback("Add blocks to staging before shaping the seed.", "error");
       return;
     }
 
-    const fallbackTitle = `Assembly ${documentsState.filter((document) => document.isAssembly).length + 1}`;
-    const title = window.prompt("Name this assembly", fallbackTitle)?.trim() || fallbackTitle;
+    const fallbackTitle =
+      activeBoxTitle || `Seed ${documentsState.filter((document) => document.isAssembly).length + 1}`;
+    const title = currentSeedDocument?.title || fallbackTitle;
 
     try {
       const response = await fetch("/api/workspace/assemble", {
@@ -6667,7 +7006,7 @@ export default function WorkspaceShell({
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload?.document) {
-        throw new Error(payload?.error || "Could not assemble the document.");
+        throw new Error(payload?.error || "Could not shape the seed.");
       }
 
       upsertDocument(payload.document, { replaceLogs: true });
@@ -6697,26 +7036,26 @@ export default function WorkspaceShell({
       setFeedback(
         payload?.draft?.id
           ? payload.remoteReceipt
-            ? `Assembled ${payload.document.title}. Receipt draft pushed to GetReceipts.`
-            : `Assembled ${payload.document.title}. Receipt draft saved locally.`
-          : `Assembled ${payload.document.title}.`,
+            ? `Updated ${payload.document.title}. Receipt draft pushed to GetReceipts.`
+            : `Updated ${payload.document.title}. Receipt draft saved locally.`
+          : `Updated ${payload.document.title}.`,
         "success",
       );
     } catch (error) {
       trackWorkspaceEvent("assembly_failed", {
         block_count: clipboard.length,
       });
-      setFeedback(error instanceof Error ? error.message : "Could not assemble the document.", "error");
+      setFeedback(error instanceof Error ? error.message : "Could not shape the seed.", "error");
     }
   }
 
   async function runOperate() {
     if (!canRunOperate || operatePending) return;
 
-    setOperateOpen(true);
+    setBoxPhase(BOX_PHASES.operate);
     setOperatePending(true);
     setOperateError("");
-    setOperateResult(null);
+    setOperateResult((previous) => previous);
 
     try {
       const response = await fetch("/api/workspace/operate", {
@@ -6755,7 +7094,7 @@ export default function WorkspaceShell({
       const message =
         error instanceof Error
           ? error.message
-          : "Operate could not read this box. Sources and assembly stayed unchanged.";
+          : "Operate could not read this box. Sources and the seed stayed unchanged.";
       trackWorkspaceEvent("operate_failed", {
         box_key: activeProjectKey,
       });
@@ -6778,7 +7117,7 @@ export default function WorkspaceShell({
           "",
       ).trim();
     if (!targetDocumentKey) {
-      setFeedback("Open a source or assembly before asking Seven to audit this read.", "error");
+      setFeedback("Open a source or seed before asking Seven to audit this read.", "error");
       return;
     }
     const targetDocumentSummary = projectDocuments.find(
@@ -6786,7 +7125,7 @@ export default function WorkspaceShell({
     );
     const auditTargetLabel =
       targetDocumentSummary?.isAssembly || targetDocumentSummary?.documentType === "assembly"
-        ? "current assembly"
+        ? "current seed"
         : targetDocumentSummary?.title || "current document";
     const targetMode = targetDocumentSummary?.isAssembly
       ? WORKSPACE_MODES.assemble
@@ -6794,7 +7133,6 @@ export default function WorkspaceShell({
         ? WORKSPACE_MODES.assemble
         : workspaceMode;
 
-    setOperateOpen(false);
     setFeedback(`Seven is auditing the ${auditTargetLabel}. The Operate read stays unchanged.`);
 
     if (targetDocumentKey && targetDocumentKey !== activeDocumentKey) {
@@ -6844,7 +7182,7 @@ export default function WorkspaceShell({
       }
 
       if (!receiptDocument?.documentKey) {
-        throw new Error("Open a source or assembly before drafting a receipt.");
+        throw new Error("Open a source or seed before drafting a receipt.");
       }
 
       const receiptLogEntries = receiptDocument.logEntries || [];
@@ -6885,9 +7223,6 @@ export default function WorkspaceShell({
           documentKey: receiptDocument.documentKey,
         },
       );
-      if (isOperateMode) {
-        setOperateOpen(false);
-      }
       setFeedback(
         payload.remoteReceipt
           ? isOperateMode
@@ -6913,7 +7248,7 @@ export default function WorkspaceShell({
       title: activeDocument.title,
       subtitle: activeDocument.subtitle || "",
       blocks: activeDocument.blocks,
-      sectionTitle: activeDocument.isAssembly ? "Assembly" : "Document",
+      sectionTitle: activeDocument.isAssembly ? "Seed" : "Document",
     });
     downloadFile(`${activeDocument.documentKey}.md`, markdown, "text/markdown;charset=utf-8");
     setFeedback(`Exported ${activeDocument.title}.`, "success");
@@ -6937,7 +7272,21 @@ export default function WorkspaceShell({
     setFeedback(`Exported receipts for ${activeDocument.title}.`, "success");
   }
 
-  const showComposeHeader = !launchpadOpen && !isListenMode;
+  const headerContextLabel = launchpadOpen
+    ? launchpadView === LAUNCHPAD_VIEWS.boxes
+      ? "Boxes"
+      : "Box Home"
+    : isFirstTimeSurface
+      ? "First Box"
+      : isListenMode
+        ? "Listen"
+        : isReceiptsPhase
+          ? "Receipts"
+          : isOperatePhase
+            ? "Operate"
+            : isCreatePhase
+              ? "Seed"
+              : "Think";
 
   return (
     <main
@@ -6966,40 +7315,17 @@ export default function WorkspaceShell({
       />
 
       <div className="assembler-shell">
-        <header className={`assembler-header ${showComposeHeader ? "is-workspace" : ""}`}>
+        <header className={`assembler-header ${!launchpadOpen && !isListenMode ? "is-workspace" : ""}`}>
           <div className="assembler-header__identity">
-            {showComposeHeader ? (
-              <>
-                <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                  Boxes
-                </button>
-                {activeProject ? (
-                  <span className="assembler-header__project">{activeBoxTitle}</span>
-                ) : null}
-                <span className="assembler-header__context">
-                  {isListenMode
-                    ? "Think"
-                    : isReceiptsPhase
-                      ? "Receipts"
-                      : isCreatePhase
-                        ? "Create"
-                        : "Think"}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="assembler-header__name">{PRODUCT_MARK}</span>
-                {activeProject ? (
-                  <span className="assembler-header__project">
-                    {activeBoxTitle}
-                  </span>
-                ) : null}
-              </>
-            )}
+            <span className="assembler-header__name">{PRODUCT_MARK}</span>
+            {activeProject ? (
+              <span className="assembler-header__project">{activeBoxTitle}</span>
+            ) : null}
+            <span className="assembler-header__context">{headerContextLabel}</span>
           </div>
 
           <div className="assembler-header__actions">
-            {showComposeHeader && isMobileLayout ? (
+            {isListenMode ? (
               <button
                 type="button"
                 className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
@@ -7012,26 +7338,18 @@ export default function WorkspaceShell({
                 <button type="button" className="assembler-header__start" onClick={openBoxesIndex}>
                   All boxes
                 </button>
+              ) : activeProject?.projectKey ? (
+                <button
+                  type="button"
+                  className="assembler-header__start"
+                  onClick={() => openCurrentBoxHome(activeProject.projectKey)}
+                >
+                  Current box
+                </button>
               ) : null
-            ) : (
+            ) : isFirstTimeSurface ? (
               <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
                 Boxes
-              </button>
-            )}
-
-            {!launchpadOpen ? (
-              <button
-                type="button"
-                className={`assembler-header__start ${operateOpen ? "is-active" : ""}`}
-                onClick={() => void runOperate()}
-                disabled={!canRunOperate || operatePending}
-                title={
-                  canRunOperate
-                    ? "Read this box with Operate"
-                    : "Add a real source or assembly before running Operate"
-                }
-              >
-                {operatePending ? "Operating…" : "Operate"}
               </button>
             ) : null}
 
@@ -7072,6 +7390,32 @@ export default function WorkspaceShell({
               resumeSessionSummary={resumeSessionSummaryState}
             />
           </section>
+        ) : isFirstTimeSurface ? (
+          <section className="assembler-surface assembler-surface--launchpad assembler-surface--first-box">
+            <FirstBoxComposer
+              boxTitle={activeBoxTitle}
+              capturePending={uploading || Boolean(pastePendingMode)}
+              writePending={Boolean(pastePendingMode) || uploading || seedStatusPending}
+              onUpload={() => {
+                pendingSeedFocusRef.current = true;
+                fileInputRef.current?.click();
+              }}
+              onPaste={() => {
+                pendingSeedFocusRef.current = true;
+                void pasteIntoWorkspace("source", null, { forceRawText: true });
+              }}
+              onLink={() => {
+                pendingSeedFocusRef.current = true;
+                setDropAnythingOpen(true);
+              }}
+              onSpeak={() => {
+                pendingSeedFocusRef.current = true;
+                openVoiceRecorder();
+              }}
+              onWrite={(text) => void writeFirstSeedDraft(text)}
+              onBrowseBoxes={openBoxesIndex}
+            />
+          </section>
         ) : isListenMode ? (
           <>
             <ListenSurface
@@ -7089,7 +7433,7 @@ export default function WorkspaceShell({
               }
               pickerOpen={listenPickerOpen}
               onTogglePicker={() => setListenPickerOpen((value) => !value)}
-              onOpenProjectHome={openLaunchpad}
+              onOpenProjectHome={() => openCurrentBoxHome(activeProjectKey)}
               onOpenDocument={(documentKey, mode, options = {}) => {
                 setListenPickerOpen(false);
                 void enterWorkspace(documentKey, mode, options);
@@ -7156,7 +7500,7 @@ export default function WorkspaceShell({
               loadingDocumentKey={loadingDocumentKey}
               onOpenProjectHome={() => {
                 setWorkspacePickerOpen(false);
-                openLaunchpad();
+                openCurrentBoxHome(activeProjectKey);
               }}
               uploading={uploading}
               onOpenDocument={(documentKey, mode, options = {}) => {
@@ -7177,14 +7521,14 @@ export default function WorkspaceShell({
                   guideDocument={guideSourceDocument}
                   sourceDocuments={visibleSourceDocuments}
                   assemblyDocuments={visibleAssemblyDocuments}
-                  onOpenProjectHome={openLaunchpad}
+                  onOpenProjectHome={openBoxesIndex}
                   onUpload={() => fileInputRef.current?.click()}
                   onPasteSource={() => void pasteIntoWorkspace("source")}
                   onOpenDocument={(documentKey, mode, options = {}) => {
                     void enterWorkspace(documentKey, mode, options);
                   }}
                   uploading={uploading}
-                  sourceOpenMode={WORKSPACE_MODES.assemble}
+                  sourceOpenMode={WORKSPACE_MODES.listen}
                   ActionIcon={WorkspaceActionIcon}
                   getDocumentBlockCountLabel={getDocumentBlockCountLabel}
                   getDocumentKindLabel={getDocumentKindLabel}
@@ -7192,30 +7536,24 @@ export default function WorkspaceShell({
               ) : null}
 
               <div className="assembler-workbench__main">
-                <WorkspaceToolbar
-                  activeDocument={activeDocument}
-                  boxPhase={boxPhase}
-                  editMode={editMode}
-                  aiOpen={aiOpen}
-                  documentState={activeDocumentState}
-                  onReloadLatest={() => void reloadLatestDocument()}
-                  status={status}
-                  statusTone={statusTone}
-                  onSetBoxPhase={handleSelectBoxPhase}
-                  onToggleEditMode={() => setEditMode((value) => !value)}
-                  onToggleAi={() => {
-                    setBoxPhase(BOX_PHASES.think);
-                    setAiOpen((value) => !value);
-                  }}
-                  clipboardCount={clipboard.length}
-                  stagedCount={stagedAiBlocks.length}
-                  isMobileLayout={isMobileLayout}
-                  onOpenClipboard={() => {
-                    setBoxPhase(BOX_PHASES.create);
-                    setMobileComposeOpen(true);
-                  }}
-                  isClipboardOpen={mobileComposeOpen}
-                />
+                {!isMobileLayout ? (
+                  <WorkspaceToolbar
+                    viewModel={controlSurfaceViewModel}
+                    onSetBoxPhase={handleSelectBoxPhase}
+                    onOpenBoxes={openBoxesIndex}
+                    onOpenBoxHome={() => openCurrentBoxHome(activeProjectKey)}
+                    onOpenIntake={() => setDropAnythingOpen(true)}
+                    onOpenSpeak={openVoiceRecorder}
+                    onToggleAi={() => {
+                      setBoxPhase(BOX_PHASES.think);
+                      setAiOpen((value) => !value);
+                    }}
+                    onRunOperate={() => void runOperate()}
+                    onOpenReceipts={openReceiptsSurface}
+                    onManageBox={() => openProjectManagement(activeProjectKey)}
+                    isMobileLayout={false}
+                  />
+                ) : null}
 
                 <section className="assembler-surface assembler-surface--workbench">
                   {isReceiptsPhase ? (
@@ -7224,7 +7562,7 @@ export default function WorkspaceShell({
                       drafts={projectDraftsState}
                       receiptSummary={receiptSummaryViewModel}
                       receiptPending={receiptPending}
-                      activeDocumentTitle={activeDocument.title}
+                      activeDocumentTitle={currentSeedDocument?.title || activeDocument.title}
                       onCreateReceipt={createReceiptDraft}
                       onExportReceipt={exportReceipt}
                       onExportDocument={exportDocument}
@@ -7234,22 +7572,50 @@ export default function WorkspaceShell({
                         }
                       }}
                     />
+                  ) : isOperatePhase ? (
+                    <OperateSurface
+                      viewModel={operateViewModel}
+                      pending={operatePending}
+                      errorMessage={operateError}
+                      result={operateResult}
+                      receiptPending={receiptPending}
+                      onRunOperate={() => void runOperate()}
+                      onDraftReceipt={() =>
+                        void createReceiptDraft({
+                          mode: "operate",
+                          operateResult,
+                        })
+                      }
+                      onAskSeven={() => void askSevenToAuditOperate()}
+                    />
                   ) : isCreatePhase ? (
-                    <CreateSurface
+                    <SeedSurface
                       viewModel={createViewModel}
+                      seedViewModel={seedViewModel}
                       activeDocument={activeDocument}
-                      currentAssemblyDocument={currentAssemblyDocument}
-                      onOpenAssembly={() => {
-                        if (!currentAssemblyDocument?.documentKey) return;
-                        void loadDocument(currentAssemblyDocument.documentKey, {
+                      currentSeedDocument={currentSeedDocument}
+                      suggestion={seedSuggestion}
+                      suggestionPending={seedSuggestionPending}
+                      onOpenSeed={() => {
+                        if (!currentSeedDocument?.documentKey) return;
+                        void loadDocument(currentSeedDocument.documentKey, {
                           mode: WORKSPACE_MODES.assemble,
                           phase: BOX_PHASES.create,
                         });
                       }}
                       onAssemble={() => void assembleClipboard()}
+                      onApplySuggestion={() => void applySeedSuggestion()}
+                      onEditSuggestion={() => {
+                        if (!currentSeedDocument?.documentKey) return;
+                        void loadDocument(currentSeedDocument.documentKey, {
+                          mode: WORKSPACE_MODES.assemble,
+                          phase: BOX_PHASES.create,
+                        });
+                      }}
+                      onDismissSuggestion={dismissSeedSuggestion}
                     >
                       {documentWorkbench}
-                    </CreateSurface>
+                    </SeedSurface>
                   ) : (
                     <ThinkSurface
                       boxTitle={thinkViewModel.boxTitle}
@@ -7283,6 +7649,40 @@ export default function WorkspaceShell({
                   />
                 ) : null}
               </div>
+
+              {isMobileLayout ? (
+                <MobileControlDock
+                  open={mobileControlDockOpen}
+                  viewModel={controlSurfaceViewModel}
+                  onToggleOpen={() => setMobileControlDockOpen((value) => !value)}
+                  onOpenBoxes={openBoxesIndex}
+                  onSelectPhase={(phase) => {
+                    setMobileControlDockOpen(false);
+                    handleSelectBoxPhase(phase);
+                  }}
+                  onOpenIntake={() => {
+                    setMobileControlDockOpen(false);
+                    setDropAnythingOpen(true);
+                  }}
+                  onOpenSpeak={() => {
+                    setMobileControlDockOpen(false);
+                    openVoiceRecorder();
+                  }}
+                  onToggleAi={() => {
+                    setMobileControlDockOpen(false);
+                    setBoxPhase(BOX_PHASES.think);
+                    setAiOpen((value) => !value);
+                  }}
+                  onRunOperate={() => {
+                    setMobileControlDockOpen(false);
+                    void runOperate();
+                  }}
+                  onOpenReceipts={() => {
+                    setMobileControlDockOpen(false);
+                    openReceiptsSurface();
+                  }}
+                />
+              ) : null}
 
               {!isMobileLayout && (isThinkPhase || isCreatePhase) ? (
                 <aside className="assembler-workbench__context">
@@ -7412,25 +7812,6 @@ export default function WorkspaceShell({
           onOpenProject={() => {
             setBoxManagementOpen(false);
             openProject(selectedManagementProjectKey);
-          }}
-        />
-
-        <OperateSurface
-          open={operateOpen}
-          pending={operatePending}
-          errorMessage={operateError}
-          result={operateResult}
-          receiptPending={receiptPending}
-          onDraftReceipt={() =>
-            void createReceiptDraft({
-              mode: "operate",
-              operateResult,
-            })
-          }
-          onAskSeven={() => void askSevenToAuditOperate()}
-          onClose={() => {
-            if (operatePending || receiptPending) return;
-            setOperateOpen(false);
           }}
         />
 

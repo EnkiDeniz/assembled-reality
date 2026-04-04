@@ -49,7 +49,7 @@ const loop = [
   },
   {
     title: "Create",
-    body: "Stage what matters and shape a working assembly from the material you brought in.",
+    body: "Stage what matters and shape the working seed from the material you brought in.",
   },
   {
     title: "Operate",
@@ -125,7 +125,7 @@ export const publicPages = {
       "Loegos is an invite-only, desktop-first workspace for solo operators. It turns source material into a Box you can think in, create from, and read with Operate.",
     quote: "Meaning is an assembled object.",
     lede:
-      "Loegos is an invite-only, desktop-first web workbench for solo operators. You bring source material into a Box, shape an assembly from it, and run Operate when you need an honest read of where intention and reality meet.",
+      "Loegos is an invite-only, desktop-first web workbench for solo operators. You bring source material into a Box, shape a seed from it, and run Operate when you need an honest read of where intention and reality meet.",
     sections: [
       {
         title: "The live loop",
@@ -168,7 +168,7 @@ export const publicPages = {
         title: "What the product does",
         paragraphs: [
           "You add supported sources to a Box: documents, pasted notes, links, and voice memos in the current beta. Then you work through the live loop: Think, Create, Operate.",
-          "Think helps you orient to the material. Create helps you shape an assembly from it. Operate reads the Box and returns the current position in a form that can be checked.",
+          "Think helps you orient to the material. Create helps you shape a seed from it. Operate reads the Box and returns the current position in a form that can be checked.",
         ],
         items: loop,
       },

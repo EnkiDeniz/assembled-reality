@@ -4,10 +4,16 @@ import {
   getBoxSourceBadge,
   getBoxSourceMetaLine,
 } from "@/lib/source-model";
+import {
+  buildVisualizationState,
+  getSeedSectionsFromDocument,
+  listRealSourceDocuments,
+} from "@/lib/seed-model";
 
 export const BOX_PHASES = Object.freeze({
   think: "think",
   create: "create",
+  operate: "operate",
   receipts: "receipts",
 });
 
@@ -94,6 +100,8 @@ export function buildReceiptSummaryViewModel(
 
   return {
     draftCount: drafts.length,
+    remoteDraftCount: drafts.filter((draft) => String(draft?.status || "").trim().toUpperCase() === "REMOTE_DRAFT").length,
+    sealedDraftCount: drafts.filter((draft) => String(draft?.status || "").trim().toUpperCase() === "SEALED").length,
     latestDraft,
     latestDraftTitle: latestDraft?.title || "",
     latestDraftStatus: latestDraftStatus,
@@ -132,12 +140,14 @@ export function buildBoxViewModel({
   connectionLastError = "",
 } = {}) {
   const documents = Array.isArray(projectDocuments) ? projectDocuments.filter(Boolean) : [];
+  const realSourceDocuments = listRealSourceDocuments(documents);
   const sourceSummaries = documents
     .filter((document) => !document?.isAssembly && document?.documentType !== "assembly")
     .map((document) => buildSourceSummaryViewModel(document))
     .filter(Boolean);
   const guideSource = sourceSummaries.find((source) => source.isBuiltIn) || null;
   const realSources = sourceSummaries.filter((source) => !source.isBuiltIn);
+  const seedDocument = currentAssemblyDocument || null;
   const latestRealSource = getMostRecentItem(realSources);
   const latestTouchedSource = getMostRecentItem(sourceSummaries);
   const receiptSummary = buildReceiptSummaryViewModel(projectDrafts, {
@@ -145,15 +155,23 @@ export function buildBoxViewModel({
     connectionLastError,
   });
   const sevenDiagnostic = receiptSummary.draftCount > 0
-    ? "Seven can compare sources, assembly, and proof from this box."
+    ? "Seven can compare sources, seed, and proof from this box."
     : realSources.length >= 2
       ? "Seven can start reading the pattern across the sources in this box."
       : "Seven needs more in the box to read the pattern.";
-  const strongestNextMove = currentAssemblyDocument
+  const visualizationState = buildVisualizationState({
+    realSourceCount: realSourceDocuments.length,
+    hasSeed: Boolean(seedDocument),
+    localReceiptCount: receiptSummary.draftCount,
+    remoteReceiptCount: receiptSummary.remoteDraftCount + receiptSummary.sealedDraftCount,
+    hasGapSignal: Boolean(seedDocument && !receiptSummary.draftCount),
+    suggestionPending: Boolean(seedDocument?.seedMeta?.suggestionPending),
+  });
+  const strongestNextMove = seedDocument
     ? {
-        label: "Continue Assembly",
-        detail: currentAssemblyDocument.title || "Open the current assembly",
-        supportingDetail: `${currentAssemblyDocument.sectionCount || currentAssemblyDocument.blocks?.length || 0} block${(currentAssemblyDocument.sectionCount || currentAssemblyDocument.blocks?.length || 0) === 1 ? "" : "s"}`,
+        label: "Open Seed",
+        detail: seedDocument.title || "Open the current seed",
+        supportingDetail: `${seedDocument.sectionCount || seedDocument.blocks?.length || 0} block${(seedDocument.sectionCount || seedDocument.blocks?.length || 0) === 1 ? "" : "s"}`,
       }
     : latestRealSource
       ? {
@@ -177,10 +195,10 @@ export function buildBoxViewModel({
             ? `Block ${resumeSessionSummary.blockPosition} of ${resumeSessionSummary.totalBlocks}`
             : "Resume where you left off",
       }
-    : currentAssemblyDocument
+    : seedDocument
       ? {
-          title: currentAssemblyDocument.title || "Current assembly",
-          detail: "Assembly is the current working position of this box.",
+          title: seedDocument.title || "Current seed",
+          detail: "Seed is the current working position of this box.",
         }
       : latestTouchedSource
         ? {
@@ -201,11 +219,15 @@ export function buildBoxViewModel({
     assemblyCount: documents.filter(
       (document) => document?.isAssembly || document?.documentType === "assembly",
     ).length,
+    hasSeed: Boolean(seedDocument),
+    seedDocument,
+    seedTitle: seedDocument?.title || "Seed",
     receiptCount: receiptSummary.draftCount,
     guideSource,
     latestRealSource,
     latestTouchedSource,
-    currentAssemblyDocument,
+    currentAssemblyDocument: seedDocument,
+    visualizationState,
     receiptSummary,
     sevenDiagnostic,
     strongestNextMove,
@@ -243,9 +265,102 @@ export function buildCreateViewModel({
 } = {}) {
   return {
     boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
-    assemblyTitle: currentAssemblyDocument?.title || "Assembly",
-    hasAssembly: Boolean(currentAssemblyDocument),
+    seedTitle: currentAssemblyDocument?.title || "Seed",
+    hasSeed: Boolean(currentAssemblyDocument),
     selectedBlockCount: Array.isArray(clipboard) ? clipboard.length : 0,
     stagedReplyCount: Array.isArray(stagedAiBlocks) ? stagedAiBlocks.length : 0,
+  };
+}
+
+export function buildSeedViewModel({
+  activeProject = null,
+  currentAssemblyDocument = null,
+  projectDocuments = [],
+  projectDrafts = [],
+  pendingSuggestion = null,
+} = {}) {
+  const seedDocument = currentAssemblyDocument || null;
+  const receiptSummary = buildReceiptSummaryViewModel(projectDrafts);
+  const realSourceCount = listRealSourceDocuments(projectDocuments).length;
+  const sections = getSeedSectionsFromDocument(seedDocument);
+  const visualizationState = buildVisualizationState({
+    realSourceCount,
+    hasSeed: Boolean(seedDocument),
+    localReceiptCount: receiptSummary.draftCount,
+    remoteReceiptCount: receiptSummary.remoteDraftCount + receiptSummary.sealedDraftCount,
+    hasGapSignal: Boolean(seedDocument && !receiptSummary.draftCount),
+    suggestionPending: Boolean(pendingSuggestion),
+  });
+
+  return {
+    boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
+    seedDocument,
+    seedTitle: seedDocument?.title || "Seed",
+    sections,
+    receiptSummary,
+    visualizationState,
+    pendingSuggestion,
+  };
+}
+
+export function buildEntryStateViewModel({
+  projects = [],
+  activeProject = null,
+  projectDocuments = [],
+  allDocuments = [],
+  projectDrafts = [],
+} = {}) {
+  const normalizedProjects = Array.isArray(projects) ? projects.filter(Boolean) : [];
+  const normalizedDocuments = Array.isArray(allDocuments) ? allDocuments.filter(Boolean) : [];
+  const realSourceCount = listRealSourceDocuments(normalizedDocuments).length;
+  const seedCount = normalizedDocuments.filter(
+    (document) => document?.isAssembly || document?.documentType === "assembly",
+  ).length;
+  const receiptCount = Array.isArray(projectDrafts) ? projectDrafts.length : 0;
+  const currentBoxRealSourceCount = listRealSourceDocuments(projectDocuments).length;
+  const isFirstTime = realSourceCount === 0 && seedCount === 0 && receiptCount === 0;
+  const isPowerUser =
+    !isFirstTime &&
+    (normalizedProjects.length >= 2 || currentBoxRealSourceCount >= 5 || receiptCount >= 3);
+
+  return {
+    isFirstTime,
+    isReturning: !isFirstTime,
+    isPowerUser,
+    mode: isFirstTime ? "first-time" : isPowerUser ? "power" : "returning",
+    activeBoxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
+  };
+}
+
+export function buildControlSurfaceViewModel({
+  activeProject = null,
+  currentAssemblyDocument = null,
+  boxPhase = BOX_PHASES.think,
+  canRunOperate = false,
+  aiOpen = false,
+  clipboardCount = 0,
+  stagedCount = 0,
+} = {}) {
+  const currentBoxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
+  const currentSeedTitle = currentAssemblyDocument?.title || currentBoxTitle;
+  const stageCount = Math.max(0, Number(clipboardCount) || 0) + Math.max(0, Number(stagedCount) || 0);
+
+  return {
+    currentBoxTitle,
+    currentSeedTitle,
+    boxPhase,
+    canRunOperate: Boolean(canRunOperate),
+    aiOpen: Boolean(aiOpen),
+    stageCount,
+    primaryActionLabel:
+      boxPhase === BOX_PHASES.create
+        ? stageCount > 0
+          ? `Stage ${stageCount}`
+          : "Add source"
+        : boxPhase === BOX_PHASES.operate
+          ? "Operate"
+          : boxPhase === BOX_PHASES.receipts
+            ? "Draft receipt"
+            : "Add source",
   };
 }

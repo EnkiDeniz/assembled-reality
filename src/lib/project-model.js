@@ -1,7 +1,7 @@
 export const PRIMARY_WORKSPACE_DOCUMENT_KEY = "assembled-reality-v07-final";
 export const DEFAULT_PROJECT_KEY = "default-project";
 export const DEFAULT_PROJECT_TITLE = "Untitled Box";
-export const DEFAULT_PROJECT_SUBTITLE = "Start with a source and shape the assembly.";
+export const DEFAULT_PROJECT_SUBTITLE = "Start with a source and shape the seed.";
 
 const LEGACY_DEFAULT_PROJECT_TITLE = "Main Project";
 const LEGACY_DEFAULT_PROJECT_SUBTITLE = "Start from a source and build toward a working assembly.";
@@ -65,7 +65,7 @@ function normalizeProjectDisplaySubtitle(
   const trimmedSubtitle = String(subtitle || "").trim();
 
   if (currentAssemblyTitle) {
-    return `Assembly: ${currentAssemblyTitle}`;
+    return `Seed: ${currentAssemblyTitle}`;
   }
 
   if (!trimmedSubtitle || trimmedSubtitle === LEGACY_DEFAULT_PROJECT_SUBTITLE) {
@@ -76,7 +76,7 @@ function normalizeProjectDisplaySubtitle(
     const assemblyTitle = trimmedSubtitle
       .slice(LEGACY_CURRENT_ASSEMBLY_PREFIX.length)
       .trim();
-    return assemblyTitle ? `Assembly: ${assemblyTitle}` : DEFAULT_PROJECT_SUBTITLE;
+    return assemblyTitle ? `Seed: ${assemblyTitle}` : DEFAULT_PROJECT_SUBTITLE;
   }
 
   return trimmedSubtitle;
@@ -109,7 +109,7 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     projectKey: DEFAULT_PROJECT_KEY,
     title: DEFAULT_PROJECT_TITLE,
     subtitle: currentAssembly
-      ? `Assembly: ${currentAssembly.title}`
+      ? `Seed: ${currentAssembly.title}`
       : DEFAULT_PROJECT_SUBTITLE,
     href: buildProjectHref(DEFAULT_PROJECT_KEY),
     boxHref: buildProjectHref(DEFAULT_PROJECT_KEY),
@@ -117,7 +117,7 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     isDefaultBox: true,
     boxTitle: DEFAULT_PROJECT_TITLE,
     boxSubtitle: currentAssembly
-      ? `Assembly: ${currentAssembly.title}`
+      ? `Seed: ${currentAssembly.title}`
       : DEFAULT_PROJECT_SUBTITLE,
     sourceCount: sources.length,
     assemblyCount: assemblies.length,
@@ -128,6 +128,7 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     boxDocuments: visibleDocuments,
     builtInSourceDocumentKey: builtinSource?.documentKey || PRIMARY_WORKSPACE_DOCUMENT_KEY,
     currentAssemblyDocumentKey: currentAssembly?.documentKey || null,
+    seedDocumentKey: currentAssembly?.documentKey || null,
     defaultDocumentKey:
       currentAssembly?.documentKey ||
       builtinSource?.documentKey ||
@@ -223,6 +224,9 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
     isDefaultBox:
       (project.projectKey || fallbackProject.projectKey || DEFAULT_PROJECT_KEY) === DEFAULT_PROJECT_KEY,
     currentAssembly: currentAssemblyDocument,
+    currentSeed: currentAssemblyDocument,
+    seedDocumentKey:
+      project.currentAssemblyDocumentKey ?? fallbackProject.currentAssemblyDocumentKey ?? null,
   };
 }
 
