@@ -180,7 +180,7 @@ export default function IntroLanding({
     <main className="intro-page">
       <section className="intro-shell">
         <div className="intro-copy">
-          <h1 className="intro-copy__title">Words are Lego.</h1>
+          <h1 className="intro-copy__title">Words are Legos.</h1>
           <p className="intro-copy__body">Drop anything to build something.</p>
         </div>
 
