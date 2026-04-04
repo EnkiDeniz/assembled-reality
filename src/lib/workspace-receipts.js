@@ -1,4 +1,5 @@
 import { buildExcerpt } from "@/lib/text";
+import { PRODUCT_NAME } from "@/lib/product-language";
 
 function unique(values) {
   return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
@@ -49,22 +50,22 @@ export function buildWorkspaceReceiptPayload({
   return {
     aim:
       mode === "assembly"
-        ? `Assemble ${document?.title || "a new document"}`
-        : `Capture a workspace receipt for ${document?.title || "the current document"}`,
+        ? `Assemble ${document?.title || "a new assembly"}`
+        : `Capture a receipt for ${document?.title || "the current workspace state"}`,
     tried:
       mode === "assembly"
-        ? `Curated, ordered, and assembled ${normalizedBlocks.length} block(s) from ${sourceDocumentKeys.length} source document(s) inside Document Assembler.`
-        : `Worked through the document inside Document Assembler with listening, selection, AI, and editing operations recorded in a visible receipt log.`,
+        ? `Curated, ordered, and assembled ${normalizedBlocks.length} block(s) from ${sourceDocumentKeys.length} source(s) inside ${PRODUCT_NAME}.`
+        : `Worked through the current source or assembly inside ${PRODUCT_NAME} with listening, selection, AI, and editing operations recorded in a visible receipt log.`,
     outcome: excerpt
       ? `Produced "${document?.title || "Untitled document"}" with content including: "${excerpt}"`
-      : `Produced "${document?.title || "Untitled document"}" inside Document Assembler.`,
+      : `Produced "${document?.title || "Untitled document"}" inside ${PRODUCT_NAME}.`,
     learned:
       mode === "assembly"
-        ? "The assembled output preserves source lineage per block so the document can be traced back to the documents and operations that formed it."
-        : "The workspace receipt preserves the visible sequence of listening, selection, AI, editing, and assembly actions that shaped the document.",
+        ? "The assembly preserves source lineage per block so the output can be traced back to the sources and operations that formed it."
+        : "The receipt preserves the visible sequence of listening, selection, AI, editing, and assembly actions that shaped the current workspace state.",
     decision:
       mode === "assembly"
-        ? "Keep the assembled document as a working draft, continue refining it, and preserve its lineage as a receipt."
+        ? "Keep the assembly as a working draft, continue refining it, and preserve its lineage as a receipt."
         : "Preserve the current workspace state as a draft receipt for later review and export.",
     owner: profile?.displayName || "Reader",
     temporal: "retrospective",
@@ -118,12 +119,12 @@ export function buildWorkspaceReceiptDraftInput({
     title: `${document?.title || "Untitled document"} receipt`,
     interpretation:
       mode === "assembly"
-        ? "This receipt captures how a new document was assembled from ordered source blocks."
-        : "This receipt captures the visible operations that shaped the current document.",
+        ? "This receipt captures how a new assembly was built from ordered source blocks."
+        : "This receipt captures the visible operations that shaped the current source or assembly.",
     implications:
       mode === "assembly"
         ? "The assembled draft can be reopened, refined, exported, and verified against its block lineage."
-        : "The workspace state can be reviewed, exported, and continued later with its operation history intact.",
+        : "The workspace state can be reviewed, exported, and continued later with its receipt history intact.",
     stance: "WORKING",
     linkedEvidenceItemIds: [],
     linkedMessageIds: [],

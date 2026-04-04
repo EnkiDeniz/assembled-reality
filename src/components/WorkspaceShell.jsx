@@ -28,6 +28,12 @@ import {
   isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
+import {
+  ACTION_LINE,
+  HOME_LOOP,
+  HOME_LOOP_TITLE,
+  PRODUCT_NAME,
+} from "@/lib/product-language";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 
 const STORAGE_VERSION = 3;
@@ -1051,9 +1057,9 @@ function WorkspaceLaunchpad({
     <div className="assembler-home">
       <div className="assembler-home__copy">
         <span className="assembler-home__eyebrow">Home loop</span>
-        <h1 className="assembler-home__title">Speak. Listen. Assemble. Drop anything.</h1>
+        <h1 className="assembler-home__title">{HOME_LOOP_TITLE}</h1>
         <p className="assembler-home__body">
-          Talk a source into existence, return to the current thread of work, or bring in outside material without deciding the format first.
+          {ACTION_LINE} Talk a source into existence, return to the current thread of work, or bring in outside material without deciding the format first.
         </p>
       </div>
 
@@ -1091,7 +1097,7 @@ function WorkspaceLaunchpad({
           <span className="assembler-home__action-icon" aria-hidden="true">
             <WorkspaceActionIcon kind="listen" />
           </span>
-          <span className="assembler-home__action-label">Listen</span>
+          <span className="assembler-home__action-label">{HOME_LOOP.listen}</span>
         </button>
 
         <button
@@ -1103,7 +1109,7 @@ function WorkspaceLaunchpad({
           <span className="assembler-home__action-icon" aria-hidden="true">
             <WorkspaceActionIcon kind="assemble" />
           </span>
-          <span className="assembler-home__action-label">Assemble</span>
+          <span className="assembler-home__action-label">{HOME_LOOP.assemble}</span>
         </button>
 
         <button
@@ -1115,7 +1121,7 @@ function WorkspaceLaunchpad({
           <span className="assembler-home__action-icon" aria-hidden="true">
             <WorkspaceActionIcon kind="speak" />
           </span>
-          <span className="assembler-home__action-label">Speak</span>
+          <span className="assembler-home__action-label">{HOME_LOOP.speak}</span>
         </button>
 
         <button
@@ -1127,7 +1133,7 @@ function WorkspaceLaunchpad({
           <span className="assembler-home__action-icon" aria-hidden="true">
             <WorkspaceActionIcon kind="upload" />
           </span>
-          <span className="assembler-home__action-label">Drop anything</span>
+          <span className="assembler-home__action-label">{HOME_LOOP.drop}</span>
         </button>
       </div>
 
@@ -1694,10 +1700,13 @@ function DropAnythingSheet({
       >
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
-            <span className="assembler-sheet__eyebrow">Import</span>
+            <span className="assembler-sheet__eyebrow">Source intake</span>
             <h2 id="drop-anything-title" className="assembler-image-chooser__title">
-              Add source
+              {HOME_LOOP.drop}
             </h2>
+            <p className="assembler-image-chooser__body">
+              {ACTION_LINE} Files, folders, screenshots, clipboard text, and public links all become sources you can listen to and assemble.
+            </p>
           </div>
 
           <button
@@ -1721,8 +1730,8 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="upload" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Upload</span>
-              <span className="assembler-drop-sheet__action-detail">Files, images, audio</span>
+              <span className="assembler-drop-sheet__action-title">Upload source files</span>
+              <span className="assembler-drop-sheet__action-detail">Documents, images, and voice memos</span>
             </span>
           </button>
 
@@ -1736,8 +1745,8 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="clipboard" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Paste</span>
-              <span className="assembler-drop-sheet__action-detail">Clipboard text or one link</span>
+              <span className="assembler-drop-sheet__action-title">Paste from clipboard</span>
+              <span className="assembler-drop-sheet__action-detail">Text, screenshots, or one public link</span>
             </span>
           </button>
 
@@ -1751,15 +1760,15 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="browse" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Folder</span>
-              <span className="assembler-drop-sheet__action-detail">Import a batch</span>
+              <span className="assembler-drop-sheet__action-title">Import a folder</span>
+              <span className="assembler-drop-sheet__action-detail">Turn a mixed batch into project sources</span>
             </span>
           </button>
         </div>
 
         <div className="assembler-drop-sheet__link">
           <label className="assembler-drop-sheet__label" htmlFor="manual-link-input">
-            Public link
+            Or bring in a public link
           </label>
           <div className="assembler-drop-sheet__link-row">
             <input
@@ -1786,7 +1795,7 @@ function DropAnythingSheet({
                 }
               }}
             >
-              Import
+              Fetch link
             </button>
           </div>
         </div>
@@ -5790,7 +5799,7 @@ export default function WorkspaceShell({
               </>
             ) : (
               <>
-                <span className="assembler-header__name">Assembled Reality</span>
+                <span className="assembler-header__name">{PRODUCT_NAME}</span>
                 {activeProject ? (
                   <span className="assembler-header__project">
                     {activeProject.title}

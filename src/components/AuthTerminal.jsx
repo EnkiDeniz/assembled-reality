@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { ACTION_LINE, HOME_LOOP_TITLE, PRODUCT_NAME } from "@/lib/product-language";
 
 export default function AuthTerminal({ authCapabilities }) {
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ export default function AuthTerminal({ authCapabilities }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace",
+        callbackUrl: "/workspace?mode=listen",
       });
 
       if (result?.error) {
@@ -38,17 +39,17 @@ export default function AuthTerminal({ authCapabilities }) {
     <main className="terminal-page auth-shell">
       <section className="auth-shell__panel">
         <div className="auth-shell__copy">
-          <span className="terminal-kicker">Document Assembler</span>
-          <h1 className="auth-shell__title">Read. Transform. Assemble. Receipt.</h1>
+          <span className="terminal-kicker">{PRODUCT_NAME}</span>
+          <h1 className="auth-shell__title">{HOME_LOOP_TITLE}</h1>
           <p className="terminal-copy">
-            Minimal workspace. Working auth. No old reader chrome.
+            {ACTION_LINE} Sign in to turn scattered material into sources you can hear, shape, and receipt.
           </p>
           <div className="terminal-pill-row">
             <span className={`terminal-pill ${authCapabilities.appleEnabled ? "is-green" : ""}`}>
-              Apple {authCapabilities.appleEnabled ? "enabled" : "unavailable"}
+              Apple sign-in {authCapabilities.appleEnabled ? "available" : "unavailable"}
             </span>
             <span className={`terminal-pill ${authCapabilities.magicLinksEnabled ? "is-green" : ""}`}>
-              Magic link {authCapabilities.magicLinksEnabled ? "enabled" : "unavailable"}
+              Magic link {authCapabilities.magicLinksEnabled ? "available" : "unavailable"}
             </span>
           </div>
         </div>
@@ -59,7 +60,7 @@ export default function AuthTerminal({ authCapabilities }) {
               type="button"
               className="terminal-button is-primary"
               disabled={!authCapabilities.appleEnabled}
-              onClick={() => signIn("apple", { callbackUrl: "/workspace" })}
+              onClick={() => signIn("apple", { callbackUrl: "/workspace?mode=listen" })}
             >
               Continue with Apple
             </button>

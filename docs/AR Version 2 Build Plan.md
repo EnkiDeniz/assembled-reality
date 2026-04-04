@@ -38,7 +38,7 @@ The current backend and working flows should be preserved wherever possible.
 
 ### Status
 
-Implemented on April 3, 2026 as an additive hardening pass over the current `Document Assembler` product.
+Implemented on April 3, 2026 as an additive hardening pass over the current `Assembled Reality` product.
 
 ### Goal
 

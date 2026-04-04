@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { appEnv } from "@/lib/env";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import { PRODUCT_NAME } from "@/lib/product-language";
 
 const DEFAULT_SCOPES = [
   "receipts:read",
@@ -167,10 +168,10 @@ export function buildReadingReceiptPayload({
 
   return {
     aim: title || `Read and internalize ${sectionTitles || "Assembled Reality"}`,
-    tried: `Reviewed evidence inside the Assembled Reality reader and assembled a human interpretation receipt.`,
+    tried: `Reviewed evidence inside ${PRODUCT_NAME} and assembled a human interpretation receipt.`,
     outcome: excerpt
       ? `Reviewed source passages including: "${excerpt}"`
-      : "Reviewed source passages inside the reader.",
+      : `Reviewed source passages inside ${PRODUCT_NAME}.`,
     learned:
       interpretation ||
       "The reading produced a grounded human interpretation tied to reviewed evidence.",

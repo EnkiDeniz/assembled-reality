@@ -62,7 +62,8 @@ Above the threshold, you need persistent intermediate memory, deliberate selecti
 
 ## 4. The Front Door
 
-**Drop in anything. Listen to everything.**
+**Words are Legos.**
+**Drop anything to build something.**
 
 The input is anything a human can produce: a PDF, a Word doc, a photo, a screenshot, a voice memo, a link, pasted text. The output is always the same: listenable blocks with lineage. Every format collapses into one atom — a block of markdown that can be heard, selected, assembled, and receipted. The intake layer is format-agnostic. The assembly layer doesn't care what the input was. It only cares that there are blocks with source tracking.
 
@@ -76,7 +77,7 @@ This is the anything-to-blocks pipeline:
 
 The output is always the same. Blocks you can hear.
 
-This changes the front door completely. "Upload a document" requires having a document. "Drop in anything" requires having a phone. You see a house you want to build — photograph it. You hear something worth remembering — voice memo. You find a page worth keeping — paste the link. Five seconds later, it's blocks. Press play.
+This changes the front door completely. "Upload a document" requires having a document. "Drop anything" requires having a phone. You see a house you want to build — photograph it. You hear something worth remembering — voice memo. You find a page worth keeping — paste the link. Five seconds later, it's blocks. Press play.
 
 The immediate value: whatever is in your camera roll, your downloads folder, your screenshots, your voice memos — you can hear it, block by block, while you watch it flow.
 

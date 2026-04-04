@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { ACTION_LINE, BRAND_TRUTH, PRODUCT_NAME } from "@/lib/product-language";
 
 const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
 const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
@@ -38,7 +38,7 @@ function getIntroSeenServerSnapshot() {
   return null;
 }
 
-function AuthPanel({ authCapabilities, signedIn }) {
+function AuthPanel({ authCapabilities, signedIn, onEnter }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -51,6 +51,7 @@ function AuthPanel({ authCapabilities, signedIn }) {
     setError("");
 
     try {
+      onEnter?.();
       const result = await signIn("email", {
         email,
         redirect: false,
@@ -73,8 +74,12 @@ function AuthPanel({ authCapabilities, signedIn }) {
     return (
       <div className="intro-auth">
         <div className="terminal-actions">
-          <Link href="/workspace" className="terminal-link is-primary">
-            Open workspace
+          <Link
+            href="/workspace?mode=listen"
+            className="terminal-link is-primary"
+            onClick={() => onEnter?.()}
+          >
+            Open {PRODUCT_NAME}
           </Link>
         </div>
       </div>
@@ -88,7 +93,10 @@ function AuthPanel({ authCapabilities, signedIn }) {
           type="button"
           className="terminal-button is-primary"
           disabled={!authCapabilities.appleEnabled}
-          onClick={() => signIn("apple", { callbackUrl: "/workspace?mode=listen" })}
+          onClick={() => {
+            onEnter?.();
+            void signIn("apple", { callbackUrl: "/workspace?mode=listen" });
+          }}
         >
           Continue with Apple
         </button>
@@ -130,7 +138,6 @@ export default function IntroLanding({
   signedIn = false,
   forceIntro = false,
 }) {
-  const router = useRouter();
   const seenIntro = useSyncExternalStore(
     subscribeToIntroState,
     getIntroSeenSnapshot,
@@ -154,14 +161,6 @@ export default function IntroLanding({
     }
   }
 
-  function handleEnter() {
-    markIntroSeen();
-
-    if (signedIn) {
-      router.push("/workspace?mode=listen");
-    }
-  }
-
   if (stage === "loading") {
     return <main className="intro-page" />;
   }
@@ -170,7 +169,7 @@ export default function IntroLanding({
     return (
       <main className="intro-page">
         <section className="intro-auth-shell">
-          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} />
+          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} onEnter={markIntroSeen} />
         </section>
       </main>
     );
@@ -180,12 +179,12 @@ export default function IntroLanding({
     <main className="intro-page">
       <section className="intro-shell">
         <div className="intro-copy">
-          <h1 className="intro-copy__title">Words are Legos.</h1>
-          <p className="intro-copy__body">Drop anything to build something.</p>
+          <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
+          <p className="intro-copy__body">{ACTION_LINE}</p>
         </div>
 
         <div className="intro-auth-inline">
-          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} />
+          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} onEnter={markIntroSeen} />
         </div>
       </section>
     </main>

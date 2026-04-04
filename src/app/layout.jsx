@@ -1,6 +1,7 @@
 import { IBM_Plex_Mono, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/Providers";
+import { METADATA_DESCRIPTION, PRODUCT_NAME } from "@/lib/product-language";
 import "@/app/globals.css";
 
 const mono = IBM_Plex_Mono({
@@ -19,8 +20,8 @@ const editorial = Newsreader({
 });
 
 export const metadata = {
-  title: "Assembled Reality",
-  description: "Drop in anything. Listen to everything. Assemble what matters. Keep the receipt.",
+  title: PRODUCT_NAME,
+  description: METADATA_DESCRIPTION,
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

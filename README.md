@@ -1,6 +1,9 @@
-# Document Assembler
+# Assembled Reality
 
-Document Assembler is a tool for reading, listening to, editing, and assembling documents from multiple sources, with receipts that show what was read, how it was transformed, and what was produced.
+**Words are Legos.**  
+**Drop anything to build something.**
+
+Assembled Reality turns scattered material into sources you can speak, listen to, assemble, and receipt. It accepts supported files, images, voice memos, links, folders, and pasted content, normalizes them into words and blocks, and lets the user build working outputs with visible lineage.
 
 This repository is in the middle of a product pivot. The old reader-first specs have been removed. This `README.md` is now the product source of truth.
 
@@ -22,16 +25,16 @@ These are still useful, but they are reference inputs, not the current source of
 
 ## One-Line Summary
 
-Read it, think about it, build something new from it, and prove that you did.
+Drop anything to build something, then keep the receipt.
 
 ## Product
 
 The product centers on five ideas:
 
-1. Every imported document becomes canonical Markdown.
-2. Every document is made of addressable blocks.
-3. Users can assemble new documents from blocks across many source documents.
-4. AI can propose blocks and operations, but the human composes the final document.
+1. Every imported source becomes canonical Markdown.
+2. Every source is made of addressable blocks.
+3. Users work inside projects that hold sources, assemblies, and receipts.
+4. AI can propose blocks and operations, but the human composes the final assembly.
 5. Every important action can become part of a receipt.
 
 ## Core Objects
@@ -52,11 +55,19 @@ Blocks are the atomic unit of the system. A block can be:
 
 Each block should eventually carry durable identity and lineage.
 
-### Documents
+### Projects
 
-A document is an ordered assembly of blocks.
+A project is the container for a real thing the user is trying to make happen.
 
-Documents can be:
+Projects hold sources, assemblies, and receipts.
+
+### Sources and assemblies
+
+A source is imported material that has been normalized into blocks.
+
+An assembly is the current built artifact shaped from those sources.
+
+These can be:
 
 - imported source documents
 - edited working documents
@@ -79,9 +90,9 @@ Receipts should be exportable and handoff-ready for GetReceipts.
 The MVP should do the following:
 
 1. Authenticate users.
-2. Upload PDF, DOCX, DOC, text, and Markdown files.
-3. Convert every uploaded file into canonical Markdown.
-4. Open documents in a minimal terminal-like workspace.
+2. Ingest supported sources including PDF, DOCX, DOC, text, Markdown, images, voice memos, links, folders, and pasted content.
+3. Convert every imported source into canonical Markdown.
+4. Open projects and sources in a minimal terminal-like workspace.
 5. Let users inspect and select document blocks.
 6. Let users listen to a full document or a scoped selection.
 7. Let users run AI operations on one or more documents:
@@ -90,7 +101,7 @@ The MVP should do the following:
    - synthesize
    - search for evidence
 8. Save AI output as explicit, labeled blocks.
-9. Let users assemble a new document from source blocks and generated blocks.
+9. Let users assemble a new working document from source blocks and generated blocks.
 10. Let users edit assembled documents in place.
 11. Log the important steps that led to the final output.
 12. Create receipt drafts locally and optionally in GetReceipts.

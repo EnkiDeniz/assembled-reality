@@ -5,6 +5,7 @@ import {
   normalizeWorkspaceBlockKind,
   stripMarkdownSyntax,
 } from "@/lib/document-blocks";
+import { PRODUCT_NAME } from "@/lib/product-language";
 import { getRequiredSession } from "@/lib/server-session";
 
 export const runtime = "nodejs";
@@ -184,7 +185,7 @@ async function runOpenAiWorkspaceOperation({
             {
               type: "input_text",
               text: [
-                "You are the document operations engine inside Document Assembler.",
+                `You are the source and assembly operations engine inside ${PRODUCT_NAME}.`,
                 "Return strict JSON only with this shape:",
                 '{"operation":"extracted|summarized|synthesized","title":"short label","blocks":[{"kind":"heading|paragraph|list|quote","text":"markdown text","operation":"extracted|summarized|synthesized"}]}',
                 "Blocks should be concise, useful, and ready to add to a clipboard.",
