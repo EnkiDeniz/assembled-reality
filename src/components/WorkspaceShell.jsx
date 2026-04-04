@@ -231,6 +231,101 @@ function formatRecordingElapsed(totalSeconds = 0) {
   return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
+function mergeRecordingChunks(chunks = []) {
+  const totalLength = chunks.reduce((sum, chunk) => sum + (chunk?.length || 0), 0);
+  const merged = new Float32Array(totalLength);
+  let offset = 0;
+
+  chunks.forEach((chunk) => {
+    if (!chunk?.length) return;
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  });
+
+  return merged;
+}
+
+function downsampleRecording(samples, inputRate, targetRate = 16000) {
+  const normalizedInputRate = Number(inputRate || 0);
+  if (!samples?.length || !Number.isFinite(normalizedInputRate) || normalizedInputRate <= 0) {
+    return {
+      samples: new Float32Array(0),
+      sampleRate: targetRate,
+    };
+  }
+
+  if (normalizedInputRate <= targetRate) {
+    return {
+      samples,
+      sampleRate: normalizedInputRate,
+    };
+  }
+
+  const ratio = normalizedInputRate / targetRate;
+  const outputLength = Math.max(1, Math.round(samples.length / ratio));
+  const output = new Float32Array(outputLength);
+
+  let outputIndex = 0;
+  let inputIndex = 0;
+
+  while (outputIndex < outputLength) {
+    const nextInputIndex = Math.min(samples.length, Math.round((outputIndex + 1) * ratio));
+    let sum = 0;
+    let count = 0;
+
+    for (let index = inputIndex; index < nextInputIndex; index += 1) {
+      sum += samples[index];
+      count += 1;
+    }
+
+    output[outputIndex] = count ? sum / count : samples[Math.min(inputIndex, samples.length - 1)] || 0;
+    outputIndex += 1;
+    inputIndex = nextInputIndex;
+  }
+
+  return {
+    samples: output,
+    sampleRate: targetRate,
+  };
+}
+
+function encodeMonoWaveFile(samples, sampleRate) {
+  const safeSampleRate = Math.max(8000, Math.round(Number(sampleRate || 16000)));
+  const bytesPerSample = 2;
+  const blockAlign = bytesPerSample;
+  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+  const view = new DataView(buffer);
+
+  function writeAscii(offset, value) {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index));
+    }
+  }
+
+  writeAscii(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+  writeAscii(8, "WAVE");
+  writeAscii(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, safeSampleRate, true);
+  view.setUint32(28, safeSampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeAscii(36, "data");
+  view.setUint32(40, samples.length * bytesPerSample, true);
+
+  let offset = 44;
+  for (let index = 0; index < samples.length; index += 1) {
+    const value = Math.max(-1, Math.min(1, samples[index] || 0));
+    view.setInt16(offset, value < 0 ? value * 0x8000 : value * 0x7fff, true);
+    offset += bytesPerSample;
+  }
+
+  return buffer;
+}
+
 function getSourceAssetLabel(asset) {
   if (!asset) return "";
   if (asset.kind === "link") {
@@ -1821,37 +1916,53 @@ function VoiceRecorderDialog({
   const recording = phase === "recording";
   const paused = phase === "paused";
   const busy = phase === "requesting" || phase === "finishing" || phase === "transcribing";
-  const meterLevel = Math.max(0, Math.min(1, Number(level || 0)));
+  const meterLevel = Math.max(0.06, Math.min(1, Number(level || 0)));
+  const headline =
+    phase === "requesting"
+      ? "Getting the mic"
+      : phase === "recording"
+        ? "Listening"
+        : phase === "paused"
+          ? "Paused"
+          : phase === "finishing"
+            ? "Wrapping up"
+            : phase === "transcribing"
+              ? "Turning it into a source"
+              : "Start talking";
+  const detail =
+    errorMessage ||
+    (phase === "idle"
+      ? "Stop when you are ready."
+      : phase === "requesting"
+        ? "Allow microphone access."
+        : phase === "recording"
+          ? "This becomes a source when you stop."
+          : phase === "paused"
+            ? "Resume or stop."
+            : phase === "transcribing"
+              ? "Opening the source."
+              : "Finishing the memo.");
 
   return (
-    <div className="assembler-image-chooser assembler-image-chooser--recorder">
+    <div className="assembler-image-chooser assembler-image-chooser--recorder assembler-voice-screen">
       <button
         type="button"
-        className="assembler-image-chooser__backdrop"
+        className="assembler-image-chooser__backdrop assembler-voice-screen__backdrop"
         aria-label="Close recorder"
         onClick={busy ? undefined : onClose}
       />
 
       <div
-        className="assembler-image-chooser__panel assembler-recorder"
+        className="assembler-image-chooser__panel assembler-recorder assembler-voice-screen__panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby="voice-recorder-title"
       >
-        <div className="assembler-image-chooser__header">
-          <div className="assembler-image-chooser__copy">
-            <span className="assembler-sheet__eyebrow">Speak</span>
-            <h2 id="voice-recorder-title" className="assembler-image-chooser__title">
-              Talk a document into existence
-            </h2>
-            <p className="assembler-image-chooser__body">
-              Record a voice memo and we will turn it into a transcript source you can listen to, edit, and assemble.
-            </p>
-          </div>
-
+        <div className="assembler-voice-screen__top">
+          <span className="assembler-sheet__eyebrow">Speak</span>
           <button
             type="button"
-            className="assembler-sheet__close"
+            className="assembler-sheet__close assembler-voice-screen__close"
             onClick={busy ? undefined : onClose}
             disabled={busy}
           >
@@ -1859,78 +1970,78 @@ function VoiceRecorderDialog({
           </button>
         </div>
 
-        <div className="assembler-recorder__status">
-          <span className={`assembler-recorder__dot ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`} />
-          <span className="assembler-recorder__status-label">
-            {phase === "requesting"
-              ? "Requesting microphone..."
-              : phase === "recording"
-                ? "Recording"
-                : phase === "paused"
-                  ? "Paused"
-                  : phase === "finishing"
-                    ? "Finishing recording..."
-                    : phase === "transcribing"
-                      ? "Transcribing..."
-                      : "Ready to record"}
-          </span>
-          <span className="assembler-recorder__time">{formatRecordingElapsed(elapsedSeconds)}</span>
-        </div>
-
-        <div className="assembler-recorder__meter" aria-hidden="true">
+        <div className="assembler-voice-screen__center">
           <div
-            className={`assembler-recorder__meter-fill ${recording ? "is-live" : ""}`}
-            style={{ width: `${Math.max(6, Math.round(meterLevel * 100))}%` }}
+            className={`assembler-voice-screen__pulse ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`}
+            style={{ "--voice-level": meterLevel }}
+            aria-hidden="true"
           />
+          <h2 id="voice-recorder-title" className="assembler-voice-screen__title">
+            {headline}
+          </h2>
+          <p className="assembler-voice-screen__time">{formatRecordingElapsed(elapsedSeconds)}</p>
+          <p className={`assembler-voice-screen__detail ${errorMessage ? "is-error" : ""}`}>
+            {detail}
+          </p>
         </div>
 
-        {errorMessage ? (
-          <p className="assembler-recorder__error">{errorMessage}</p>
-        ) : null}
-
-        <div className="assembler-recorder__actions">
+        <div className="assembler-voice-screen__controls">
           {phase === "idle" ? (
-            <button
-              type="button"
-              className="assembler-image-chooser__action is-primary"
-              onClick={onStart}
-            >
-              <span className="assembler-image-chooser__action-label">VOICE → DOC</span>
-              <span className="assembler-image-chooser__action-title">Start recording</span>
-              <span className="assembler-image-chooser__action-detail">
-                Capture a voice memo and turn it into a source document immediately after you stop.
-              </span>
-            </button>
+            <>
+              <button
+                type="button"
+                className="assembler-voice-screen__secondary"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="assembler-voice-screen__mic"
+                onClick={onStart}
+                disabled={busy}
+                aria-label="Start recording"
+              >
+                <WorkspaceActionIcon kind="speak" />
+              </button>
+              <span className="assembler-voice-screen__stop-placeholder" aria-hidden="true" />
+            </>
           ) : (
             <>
               <button
                 type="button"
-                className="assembler-image-chooser__action"
+                className="assembler-voice-screen__secondary"
+                onClick={onClose}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`assembler-voice-screen__mic ${recording ? "is-live" : ""} ${paused ? "is-paused" : ""}`}
                 onClick={paused ? onResume : onPause}
                 disabled={busy || (!recording && !paused)}
+                aria-label={paused ? "Resume recording" : "Pause recording"}
               >
-                <span className="assembler-image-chooser__action-label">{paused ? "RESUME" : "PAUSE"}</span>
-                <span className="assembler-image-chooser__action-title">
-                  {paused ? "Resume recording" : "Pause recording"}
-                </span>
-                <span className="assembler-image-chooser__action-detail">
-                  Keep the current memo and continue when you are ready.
-                </span>
+                {paused ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+                    <path d="m9 7 8 5-8 5z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+                    <path d="M9 7.5v9" />
+                    <path d="M15 7.5v9" />
+                  </svg>
+                )}
               </button>
 
               <button
                 type="button"
-                className="assembler-image-chooser__action is-primary"
+                className="assembler-voice-screen__stop"
                 onClick={onStop}
                 disabled={busy || (!recording && !paused)}
               >
-                <span className="assembler-image-chooser__action-label">STOP</span>
-                <span className="assembler-image-chooser__action-title">
-                  {phase === "transcribing" ? "Creating document..." : "Stop and create document"}
-                </span>
-                <span className="assembler-image-chooser__action-detail">
-                  Turn this memo into a transcript source and open it in the workspace.
-                </span>
+                {busy && phase === "transcribing" ? "Creating…" : "Stop"}
               </button>
             </>
           )}
@@ -2912,13 +3023,16 @@ export default function WorkspaceShell({
   const blockRefs = useRef({});
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const recordingChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const recordingAnimationFrameRef = useRef(null);
   const recordingAnalyserRef = useRef(null);
   const recordingAudioContextRef = useRef(null);
+  const recordingProcessorRef = useRef(null);
+  const recordingSilenceRef = useRef(null);
+  const recordingSampleRateRef = useRef(16000);
+  const recordingEnabledRef = useRef(false);
   const closeVoiceRecorderRef = useRef(() => {});
   const speechUtteranceRef = useRef(null);
   const speechRunIdRef = useRef(0);
@@ -3205,19 +3319,28 @@ export default function WorkspaceShell({
         recordingAnimationFrameRef.current = null;
       }
 
-      if (mediaRecorderRef.current?.state && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
+      }
+
+      if (recordingProcessorRef.current) {
+        recordingProcessorRef.current.disconnect();
+        recordingProcessorRef.current.onaudioprocess = null;
+        recordingProcessorRef.current = null;
+      }
+
+      if (recordingSilenceRef.current) {
+        recordingSilenceRef.current.disconnect();
+        recordingSilenceRef.current = null;
       }
 
       if (recordingAudioContextRef.current) {
         recordingAudioContextRef.current.close().catch(() => {});
         recordingAudioContextRef.current = null;
       }
+
+      recordingEnabledRef.current = false;
     };
   }, []);
 
@@ -4009,17 +4132,12 @@ export default function WorkspaceShell({
       window.cancelAnimationFrame(recordingAnimationFrameRef.current);
       recordingAnimationFrameRef.current = null;
     }
-
-    if (recordingAudioContextRef.current) {
-      recordingAudioContextRef.current.close().catch(() => {});
-      recordingAudioContextRef.current = null;
-    }
-
-    recordingAnalyserRef.current = null;
     setVoiceRecorderLevel(0);
   }
 
   function stopVoiceRecorderTracks() {
+    recordingEnabledRef.current = false;
+
     if (recordingTimerRef.current) {
       window.clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
@@ -4030,6 +4148,23 @@ export default function WorkspaceShell({
       mediaStreamRef.current = null;
     }
 
+    if (recordingProcessorRef.current) {
+      recordingProcessorRef.current.disconnect();
+      recordingProcessorRef.current.onaudioprocess = null;
+      recordingProcessorRef.current = null;
+    }
+
+    if (recordingSilenceRef.current) {
+      recordingSilenceRef.current.disconnect();
+      recordingSilenceRef.current = null;
+    }
+
+    if (recordingAudioContextRef.current) {
+      recordingAudioContextRef.current.close().catch(() => {});
+      recordingAudioContextRef.current = null;
+    }
+
+    recordingAnalyserRef.current = null;
     stopVoiceRecorderMeter();
   }
 
@@ -4043,30 +4178,27 @@ export default function WorkspaceShell({
     }, 1000);
   }
 
-  function startVoiceRecorderMeter(stream) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) {
+  function startVoiceRecorderMeter() {
+    if (!recordingAnalyserRef.current) {
       setVoiceRecorderLevel(0);
       return;
     }
 
     try {
-      const audioContext = new AudioContextClass();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      recordingAudioContextRef.current = audioContext;
-      recordingAnalyserRef.current = analyser;
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      const analyser = recordingAnalyserRef.current;
+      const data = new Uint8Array(analyser.fftSize);
 
       const tick = () => {
         const activeAnalyser = recordingAnalyserRef.current;
         if (!activeAnalyser) return;
 
-        activeAnalyser.getByteFrequencyData(data);
-        const average = data.reduce((sum, value) => sum + value, 0) / data.length;
-        setVoiceRecorderLevel(Math.max(0.05, average / 255));
+        activeAnalyser.getByteTimeDomainData(data);
+        const squareSum = data.reduce((sum, value) => {
+          const normalized = (value - 128) / 128;
+          return sum + normalized * normalized;
+        }, 0);
+        const rms = Math.sqrt(squareSum / data.length);
+        setVoiceRecorderLevel(Math.max(0.08, Math.min(1, rms * 4.5)));
         recordingAnimationFrameRef.current = window.requestAnimationFrame(tick);
       };
 
@@ -4074,25 +4206,6 @@ export default function WorkspaceShell({
     } catch {
       setVoiceRecorderLevel(0);
     }
-  }
-
-  function getVoiceRecorderMimeType() {
-    if (typeof window === "undefined" || typeof window.MediaRecorder === "undefined") {
-      return "";
-    }
-
-    const candidates = [
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/mp4",
-      "video/mp4",
-    ];
-
-    if (typeof window.MediaRecorder.isTypeSupported !== "function") {
-      return candidates[0];
-    }
-
-    return candidates.find((candidate) => window.MediaRecorder.isTypeSupported(candidate)) || "";
   }
 
   function openVoiceRecorder() {
@@ -4107,8 +4220,7 @@ export default function WorkspaceShell({
   async function startVoiceRecorder() {
     if (
       typeof window === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia ||
-      typeof window.MediaRecorder === "undefined"
+      !navigator.mediaDevices?.getUserMedia
     ) {
       setVoiceRecorderError("Voice recording is not available in this browser.");
       return;
@@ -4118,30 +4230,47 @@ export default function WorkspaceShell({
       setVoiceRecorderError("");
       setVoiceRecorderPhase("requesting");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = getVoiceRecorderMimeType();
-      const recorder = mimeType
-        ? new window.MediaRecorder(stream, { mimeType })
-        : new window.MediaRecorder(stream);
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error("Voice recording is not available in this browser.");
+      }
+
+      const audioContext = new AudioContextClass();
+      await audioContext.resume().catch(() => {});
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      const silence = audioContext.createGain();
+      silence.gain.value = 0;
+
+      processor.onaudioprocess = (event) => {
+        if (!recordingEnabledRef.current) return;
+
+        const input = event.inputBuffer.getChannelData(0);
+        recordingChunksRef.current.push(new Float32Array(input));
+      };
+
+      source.connect(analyser);
+      source.connect(processor);
+      processor.connect(silence);
+      silence.connect(audioContext.destination);
 
       mediaStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
+      recordingAudioContextRef.current = audioContext;
+      recordingAnalyserRef.current = analyser;
+      recordingProcessorRef.current = processor;
+      recordingSilenceRef.current = silence;
       recordingChunksRef.current = [];
+      recordingSampleRateRef.current = audioContext.sampleRate;
+      recordingEnabledRef.current = true;
       setVoiceRecorderElapsed(0);
       setVoiceRecorderLevel(0.08);
-
-      recorder.addEventListener("dataavailable", (event) => {
-        if (event.data && event.data.size > 0) {
-          recordingChunksRef.current.push(event.data);
-        }
-      });
-
-      recorder.start(1000);
       startVoiceRecorderTimer();
-      startVoiceRecorderMeter(stream);
+      startVoiceRecorderMeter();
       setVoiceRecorderPhase("recording");
     } catch (error) {
       stopVoiceRecorderTracks();
-      mediaRecorderRef.current = null;
       setVoiceRecorderPhase("idle");
       setVoiceRecorderError(
         error instanceof Error && /notallowed|permission|denied/i.test(error.message)
@@ -4154,15 +4283,11 @@ export default function WorkspaceShell({
   }
 
   function pauseVoiceRecorder() {
-    if (!mediaRecorderRef.current || typeof mediaRecorderRef.current.pause !== "function") {
+    if (voiceRecorderPhase !== "recording") {
       return;
     }
 
-    if (mediaRecorderRef.current.state !== "recording") {
-      return;
-    }
-
-    mediaRecorderRef.current.pause();
+    recordingEnabledRef.current = false;
     if (recordingTimerRef.current) {
       window.clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
@@ -4172,86 +4297,76 @@ export default function WorkspaceShell({
   }
 
   function resumeVoiceRecorder() {
-    if (!mediaRecorderRef.current || typeof mediaRecorderRef.current.resume !== "function") {
+    if (voiceRecorderPhase !== "paused") {
       return;
     }
 
-    if (mediaRecorderRef.current.state !== "paused") {
-      return;
-    }
-
-    mediaRecorderRef.current.resume();
-    if (mediaStreamRef.current) {
-      startVoiceRecorderMeter(mediaStreamRef.current);
-    }
+    recordingEnabledRef.current = true;
+    startVoiceRecorderMeter();
     startVoiceRecorderTimer();
     setVoiceRecorderPhase("recording");
   }
 
   async function stopVoiceRecorder({ discard = false } = {}) {
-    const recorder = mediaRecorderRef.current;
-
-    if (!recorder) {
+    if (!mediaStreamRef.current && !recordingChunksRef.current.length) {
       setVoiceRecorderOpen(false);
       setVoiceRecorderPhase("idle");
       return;
     }
 
     setVoiceRecorderPhase(discard ? "idle" : "finishing");
-    const recordedMimeType = recorder.mimeType || getVoiceRecorderMimeType() || "audio/webm";
+    recordingEnabledRef.current = false;
 
-    recorder.onstop = async () => {
-      const chunks = recordingChunksRef.current;
-      recordingChunksRef.current = [];
-      mediaRecorderRef.current = null;
-      stopVoiceRecorderTracks();
+    const chunks = recordingChunksRef.current;
+    recordingChunksRef.current = [];
+    stopVoiceRecorderTracks();
 
-      if (discard) {
-        setVoiceRecorderOpen(false);
-        setVoiceRecorderPhase("idle");
-        setVoiceRecorderElapsed(0);
-        setVoiceRecorderError("");
-        return;
-      }
-
-      const blob = new Blob(chunks, { type: recordedMimeType });
-      if (!blob.size) {
-        setVoiceRecorderPhase("idle");
-        setVoiceRecorderError("The recording was empty. Try again.");
-        return;
-      }
-
-      const extension = recordedMimeType.includes("mp4") ? "mp4" : "webm";
-      const file = new File(
-        [blob],
-        `voice-memo-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
-        { type: recordedMimeType },
-      );
-
-      setVoiceRecorderPhase("transcribing");
-      const result = await handleUpload(file, { sourceKind: "voice" });
-      if (result?.document?.documentKey) {
-        setVoiceRecorderOpen(false);
-        setVoiceRecorderPhase("idle");
-        setVoiceRecorderElapsed(0);
-        setVoiceRecorderLevel(0);
-        setVoiceRecorderError("");
-        return;
-      }
-
+    if (discard) {
+      setVoiceRecorderOpen(false);
       setVoiceRecorderPhase("idle");
-      setVoiceRecorderError("Could not turn that voice memo into a document. Try again.");
-    };
+      setVoiceRecorderElapsed(0);
+      setVoiceRecorderError("");
+      return;
+    }
 
-    recorder.stop();
+    const merged = mergeRecordingChunks(chunks);
+    if (!merged.length) {
+      setVoiceRecorderPhase("idle");
+      setVoiceRecorderError("The recording was empty. Try again.");
+      return;
+    }
+
+    const normalized = downsampleRecording(
+      merged,
+      recordingSampleRateRef.current,
+      16000,
+    );
+    const waveBuffer = encodeMonoWaveFile(normalized.samples, normalized.sampleRate);
+    const file = new File(
+      [waveBuffer],
+      `voice-memo-${new Date().toISOString().replace(/[:.]/g, "-")}.wav`,
+      { type: "audio/wav" },
+    );
+
+    setVoiceRecorderPhase("transcribing");
+    const result = await handleUpload(file, { sourceKind: "voice" });
+    if (result?.document?.documentKey) {
+      setVoiceRecorderOpen(false);
+      setVoiceRecorderPhase("idle");
+      setVoiceRecorderElapsed(0);
+      setVoiceRecorderLevel(0);
+      setVoiceRecorderError("");
+      return;
+    }
+
+    setVoiceRecorderPhase("idle");
+    setVoiceRecorderError("Could not turn that voice memo into a document. Try again.");
   }
 
   const closeVoiceRecorder = useCallback(() => {
-    const recorder = mediaRecorderRef.current;
-
     const resetRecorderState = () => {
       recordingChunksRef.current = [];
-      mediaRecorderRef.current = null;
+      recordingEnabledRef.current = false;
 
       if (recordingTimerRef.current) {
         window.clearInterval(recordingTimerRef.current);
@@ -4268,6 +4383,17 @@ export default function WorkspaceShell({
         mediaStreamRef.current = null;
       }
 
+      if (recordingProcessorRef.current) {
+        recordingProcessorRef.current.disconnect();
+        recordingProcessorRef.current.onaudioprocess = null;
+        recordingProcessorRef.current = null;
+      }
+
+      if (recordingSilenceRef.current) {
+        recordingSilenceRef.current.disconnect();
+        recordingSilenceRef.current = null;
+      }
+
       if (recordingAudioContextRef.current) {
         recordingAudioContextRef.current.close().catch(() => {});
         recordingAudioContextRef.current = null;
@@ -4280,14 +4406,6 @@ export default function WorkspaceShell({
       setVoiceRecorderLevel(0);
       setVoiceRecorderError("");
     };
-
-    if (recorder?.state && recorder.state !== "inactive") {
-      recorder.onstop = () => {
-        resetRecorderState();
-      };
-      recorder.stop();
-      return;
-    }
 
     resetRecorderState();
   }, []);

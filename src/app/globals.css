@@ -3417,70 +3417,175 @@ main {
   gap: 18px;
 }
 
-.assembler-recorder__status {
+.assembler-voice-screen__backdrop {
+  background:
+    radial-gradient(circle at 50% 100%, rgba(245, 158, 11, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(15, 16, 18, 0.95), rgba(15, 16, 18, 0.98));
+}
+
+.assembler-voice-screen__panel {
+  width: min(560px, calc(100vw - 24px));
+  min-height: min(780px, calc(100vh - 24px));
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 24px;
+  padding: 22px 22px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 50% 100%, rgba(249, 115, 22, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(28, 28, 26, 0.96), rgba(19, 19, 18, 0.98));
+  overflow: hidden;
+}
+
+.assembler-voice-screen__top {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--soft);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.assembler-recorder__dot {
-  width: 9px;
-  height: 9px;
+.assembler-voice-screen__close {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.assembler-voice-screen__center {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.assembler-voice-screen__pulse {
+  width: clamp(112px, 22vw, 164px);
+  height: clamp(112px, 22vw, 164px);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 56%, transparent 66%),
+    radial-gradient(circle, rgba(249, 115, 22, 0.16), transparent 72%);
+  box-shadow:
+    0 0 0 calc(10px + (var(--voice-level, 0.08) * 36px)) rgba(249, 115, 22, 0.08),
+    0 18px 80px rgba(0, 0, 0, 0.28);
+  transition: box-shadow 120ms linear, transform 120ms linear, opacity 120ms linear;
 }
 
-.assembler-recorder__dot.is-live {
-  background: var(--red);
-  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.12);
+.assembler-voice-screen__pulse.is-live {
+  transform: scale(calc(1 + (var(--voice-level, 0.08) * 0.08)));
+  box-shadow:
+    0 0 0 calc(14px + (var(--voice-level, 0.12) * 52px)) rgba(249, 115, 22, 0.11),
+    0 20px 90px rgba(0, 0, 0, 0.34);
 }
 
-.assembler-recorder__dot.is-paused {
-  background: var(--amber);
-  box-shadow: none;
+.assembler-voice-screen__pulse.is-paused {
+  opacity: 0.66;
+  box-shadow:
+    0 0 0 16px rgba(255, 255, 255, 0.04),
+    0 18px 70px rgba(0, 0, 0, 0.24);
 }
 
-.assembler-recorder__status-label {
-  color: var(--white);
-}
-
-.assembler-recorder__time {
-  margin-left: auto;
-  color: var(--soft);
-}
-
-.assembler-recorder__meter {
-  width: 100%;
-  height: 12px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.assembler-recorder__meter-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.5), rgba(34, 197, 94, 1));
-  transition: width 80ms linear;
-}
-
-.assembler-recorder__meter-fill.is-live {
-  box-shadow: 0 0 18px rgba(34, 197, 94, 0.22);
-}
-
-.assembler-recorder__error {
+.assembler-voice-screen__title {
   margin: 0;
-  color: var(--amber);
-  font-size: 12px;
-  line-height: 1.55;
+  color: var(--white);
+  font-size: clamp(2.2rem, 6vw, 3.35rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.96;
 }
 
-.assembler-recorder__actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.assembler-voice-screen__time {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
+  letter-spacing: -0.02em;
+}
+
+.assembler-voice-screen__detail {
+  max-width: 24rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.assembler-voice-screen__detail.is-error {
+  color: var(--amber);
+}
+
+.assembler-voice-screen__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.assembler-voice-screen__secondary {
+  justify-self: start;
+  min-height: 52px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--white);
+  font-size: 15px;
+}
+
+.assembler-voice-screen__mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(72px, 14vw, 92px);
+  height: clamp(72px, 14vw, 92px);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.assembler-voice-screen__mic svg {
+  width: 28px;
+  height: 28px;
+}
+
+.assembler-voice-screen__mic.is-live {
+  background: rgba(249, 115, 22, 0.18);
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.assembler-voice-screen__mic.is-paused {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.assembler-voice-screen__stop {
+  justify-self: end;
+  min-width: 108px;
+  min-height: 56px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: rgba(18, 18, 18, 0.96);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.assembler-voice-screen__stop-placeholder {
+  justify-self: end;
+  width: 108px;
+  min-height: 56px;
+}
+
+.assembler-voice-screen__secondary:disabled,
+.assembler-voice-screen__mic:disabled,
+.assembler-voice-screen__stop:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .assembler-drop-overlay {
@@ -4029,8 +4134,41 @@ main {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .assembler-recorder__actions {
-    grid-template-columns: minmax(0, 1fr);
+  .assembler-voice-screen__panel {
+    min-height: calc(100vh - 16px);
+    padding: 18px 16px 22px;
+    border-radius: 26px;
+  }
+
+  .assembler-voice-screen__title {
+    font-size: clamp(2.05rem, 8vw, 2.8rem);
+  }
+
+  .assembler-voice-screen__detail {
+    max-width: 18rem;
+    font-size: 14px;
+  }
+
+  .assembler-voice-screen__controls {
+    gap: 10px;
+  }
+
+  .assembler-voice-screen__secondary {
+    min-height: 48px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  .assembler-voice-screen__stop {
+    min-width: 92px;
+    min-height: 52px;
+    padding: 0 18px;
+    font-size: 17px;
+  }
+
+  .assembler-voice-screen__stop-placeholder {
+    width: 92px;
+    min-height: 52px;
   }
 
   .assembler-drop-sheet__link-row {
