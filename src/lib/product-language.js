@@ -2,7 +2,7 @@ export const COMPANY_NAME = "Lakin AI Inc.";
 export const PRODUCT_NAME = "Loegos";
 export const PRODUCT_MARK = "Lœgos";
 export const BRAND_TRUTH = "Meaning is an assembled object.";
-export const ACTION_LINE = "Close the gap between what was said and what is true.";
+export const ACTION_LINE = "Close the gap between what you think and what you do.";
 export const PRODUCT_DESCRIPTOR = "Source to assembly to receipt.";
 
 export const HOME_LOOP = Object.freeze({
