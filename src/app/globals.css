@@ -2876,6 +2876,36 @@ main {
   text-transform: uppercase;
 }
 
+.assembler-document-row__aside {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.assembler-document-row__delete {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--soft);
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-document-row__delete:hover {
+  color: var(--red);
+}
+
+.assembler-document-row__delete:focus-visible {
+  color: var(--white);
+}
+
+.assembler-document-row__delete:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .assembler-document-row.is-active {
   padding: 0 12px;
   border-radius: 14px;

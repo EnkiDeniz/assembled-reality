@@ -994,6 +994,14 @@ function getDocumentKindLabel(document) {
   return document.formatLabel || "Document";
 }
 
+function canDeleteDocument(document) {
+  return (
+    Boolean(document?.documentKey) &&
+    document?.documentType !== "builtin" &&
+    document?.sourceType !== "builtin"
+  );
+}
+
 function getPrimarySourceAsset(document, kind = "") {
   const assets = Array.isArray(document?.sourceAssets) ? document.sourceAssets : [];
   const normalizedKind = String(kind || "").trim().toLowerCase();
@@ -1107,6 +1115,7 @@ function WorkspaceLaunchpad({
   onCreateProject,
   onOpenDocument,
   onOpenProject,
+  onDeleteDocument,
   onPasteClipboard,
   onOpenSpeak,
   onOpenIntake,
@@ -1185,6 +1194,8 @@ function WorkspaceLaunchpad({
           };
 
   function renderDocumentRow(document, { active = false } = {}) {
+    const deletable = canDeleteDocument(document);
+
     return (
       <div
         key={document.documentKey}
@@ -1210,11 +1221,27 @@ function WorkspaceLaunchpad({
           </span>
         </button>
 
-        <span className="assembler-document-row__badge">
-          {loadingDocumentKey === document.documentKey
-            ? "Loading…"
-            : getDocumentKindLabel(document)}
-        </span>
+        <div className="assembler-document-row__aside">
+          <span className="assembler-document-row__badge">
+            {loadingDocumentKey === document.documentKey
+              ? "Loading…"
+              : getDocumentKindLabel(document)}
+          </span>
+          {deletable && onDeleteDocument ? (
+            <button
+              type="button"
+              className="assembler-document-row__delete"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteDocument(document);
+              }}
+              disabled={busy}
+              aria-label={`Delete ${document.title}`}
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -3173,10 +3200,7 @@ export default function WorkspaceShell({
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
     activeDocument?.documentType !== "assembly";
-  const canDeleteActiveDocument =
-    Boolean(activeDocument?.documentKey) &&
-    activeDocument?.documentType !== "builtin" &&
-    activeDocument?.sourceType !== "builtin";
+  const canDeleteActiveDocument = canDeleteDocument(activeDocument);
   const canManageActiveSource =
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
@@ -4841,20 +4865,21 @@ export default function WorkspaceShell({
     });
   }
 
-  async function deleteActiveDocument() {
-    if (!canDeleteActiveDocument || !activeDocument?.documentKey) return;
+  async function deleteDocument(document) {
+    if (!canDeleteDocument(document) || !document?.documentKey) return;
 
     const documentTypeLabel =
-      activeDocument.isAssembly || activeDocument.documentType === "assembly"
+      document.isAssembly || document.documentType === "assembly"
         ? "assembly"
         : "source";
     const confirmed = window.confirm(
-      `Delete "${activeDocument.title}"?\n\nThis removes the whole ${documentTypeLabel}.`,
+      `Delete "${document.title}"?\n\nThis removes the whole ${documentTypeLabel}.`,
     );
     if (!confirmed) return;
 
-    const documentKey = activeDocument.documentKey;
-    const documentTitle = activeDocument.title;
+    const documentKey = document.documentKey;
+    const documentTitle = document.title;
+    const deletingActiveDocument = activeDocumentKey === documentKey;
     setDocumentState(documentKey, {
       status: "saving",
       message: "Deleting…",
@@ -4882,10 +4907,19 @@ export default function WorkspaceShell({
         nextHydratedProjects[0] ||
         null;
       const nextProjectKey = nextProject?.projectKey || activeProjectKey || DEFAULT_PROJECT_KEY;
+      const preservedActiveDocument =
+        activeDocumentKey !== documentKey &&
+        nextDocuments.find((entry) => entry.documentKey === activeDocumentKey)
+          ? activeDocumentKey
+          : "";
       const nextDocumentKey =
-        getProjectEntryDocumentKey(nextProject) || PRIMARY_WORKSPACE_DOCUMENT_KEY;
+        preservedActiveDocument ||
+        getProjectEntryDocumentKey(nextProject) ||
+        PRIMARY_WORKSPACE_DOCUMENT_KEY;
 
-      stopPlayback({ keepPlayhead: false });
+      if (deletingActiveDocument) {
+        stopPlayback({ keepPlayhead: false });
+      }
       setDocumentsState(nextDocuments);
       setProjectsState(nextProjects);
       setDocumentCache((previous) => {
@@ -4920,19 +4954,22 @@ export default function WorkspaceShell({
       setResumeSessionSummaryState((previous) =>
         previous?.documentKey === documentKey ? null : previous,
       );
-      setBlockSaveStates({});
-      setCleanupOpen(false);
-      setCleanupFind("");
-      setCleanupReplace("");
-      setCleanupPendingAction("");
-      setEditMode(false);
-      setAiOpen(false);
-      setViewMode("doc");
-      setListenPickerOpen(false);
-      setWorkspacePickerOpen(false);
-      setDropAnythingOpen(false);
-      setMobileComposeOpen(false);
-      setMobileSourceToolsOpen(false);
+      if (deletingActiveDocument) {
+        setBlockSaveStates({});
+        setCleanupOpen(false);
+        setCleanupFind("");
+        setCleanupReplace("");
+        setCleanupPendingAction("");
+        setEditMode(false);
+        setAiOpen(false);
+        setViewMode("doc");
+        setListenPickerOpen(false);
+        setWorkspacePickerOpen(false);
+        setDropAnythingOpen(false);
+        setMobileComposeOpen(false);
+        setMobileSourceToolsOpen(false);
+      }
+
       setActiveProjectKey(nextProjectKey);
       setActiveDocumentKey(nextDocumentKey);
       setLaunchpadOpen(true);
@@ -4950,6 +4987,11 @@ export default function WorkspaceShell({
       setDocumentState(documentKey, null);
       setFeedback(error instanceof Error ? error.message : "Could not delete the document.", "error");
     }
+  }
+
+  async function deleteActiveDocument() {
+    if (!activeDocument) return;
+    await deleteDocument(activeDocument);
   }
 
   async function polishActiveSource() {
@@ -6090,6 +6132,7 @@ export default function WorkspaceShell({
               onCreateProject={() => void createProject()}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
+              onDeleteDocument={(document) => void deleteDocument(document)}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onOpenSpeak={openVoiceRecorder}
               onOpenIntake={() => setDropAnythingOpen(true)}
