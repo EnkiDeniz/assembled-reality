@@ -24,7 +24,7 @@ export default function AccountProfileForm({
 
     setPending(true);
     setTone("");
-    setMessage("Saving...");
+    setMessage("Saving…");
 
     try {
       const response = await fetch("/api/reader/profile", {
@@ -80,11 +80,14 @@ export default function AccountProfileForm({
       </dl>
 
       <div className="account-profile-form__footer">
-        <span className={`account-profile-form__status ${tone ? `is-${tone}` : ""}`}>
+        <span
+          className={`account-profile-form__status ${tone ? `is-${tone}` : ""}`}
+          aria-live="polite"
+        >
           {message || "Used for receipts and ownership labels."}
         </span>
         <button type="submit" className="terminal-button" disabled={pending}>
-          {pending ? "Saving..." : "Save name"}
+          {pending ? "Saving…" : "Save name"}
         </button>
       </div>
     </form>

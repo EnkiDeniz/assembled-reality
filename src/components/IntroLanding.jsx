@@ -112,6 +112,8 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
           id="landing-email"
           className="terminal-input"
           type="email"
+          name="email"
+          autoComplete="email"
           placeholder="you@example.com"
           value={email}
           disabled={!authCapabilities.magicLinksEnabled || submitting}
@@ -123,11 +125,11 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
             className="terminal-button"
             disabled={!authCapabilities.magicLinksEnabled || !email.trim() || submitting}
           >
-            {submitting ? "Sending..." : "Send magic link"}
+            {submitting ? "Sending…" : "Send magic link"}
           </button>
         </div>
-        {status ? <p className="terminal-status is-success">{status}</p> : null}
-        {error ? <p className="terminal-status is-error">{error}</p> : null}
+        {status ? <p className="terminal-status is-success" aria-live="polite">{status}</p> : null}
+        {error ? <p className="terminal-status is-error" aria-live="polite">{error}</p> : null}
       </form>
     </div>
   );
@@ -168,11 +170,21 @@ export default function IntroLanding({
   if (stage === "auth") {
     return (
       <main className="intro-page">
-        <section className="intro-auth-shell">
-          <div className="intro-copy intro-copy--auth">
-            <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
+        <section className="intro-shell intro-shell--operator">
+          <div className="intro-shell__stage intro-shell__stage--auth">
+            <div className="intro-copy intro-copy--auth">
+              <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
+              <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
+              <p className="intro-copy__support">Drop anything to build something.</p>
+            </div>
+            <div className="intro-auth-inline intro-auth-inline--stacked">
+              <AuthPanel
+                authCapabilities={authCapabilities}
+                signedIn={signedIn}
+                onEnter={markIntroSeen}
+              />
+            </div>
           </div>
-          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} onEnter={markIntroSeen} />
         </section>
       </main>
     );
@@ -180,14 +192,21 @@ export default function IntroLanding({
 
   return (
     <main className="intro-page">
-      <section className="intro-shell">
-        <div className="intro-copy">
-          <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
-          <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
-        </div>
+      <section className="intro-shell intro-shell--operator">
+        <div className="intro-shell__stage">
+          <div className="intro-copy">
+            <span className="intro-copy__eyebrow">{PRODUCT_NAME}</span>
+            <h1 className="intro-copy__title">{BRAND_TRUTH}</h1>
+            <p className="intro-copy__support">Drop anything to build something.</p>
+          </div>
 
-        <div className="intro-auth-inline">
-          <AuthPanel authCapabilities={authCapabilities} signedIn={signedIn} onEnter={markIntroSeen} />
+          <div className="intro-auth-inline">
+            <AuthPanel
+              authCapabilities={authCapabilities}
+              signedIn={signedIn}
+              onEnter={markIntroSeen}
+            />
+          </div>
         </div>
       </section>
     </main>

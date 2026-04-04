@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import AiUtilityRail from "@/components/AiUtilityRail";
+import ProjectHome from "@/components/ProjectHome";
+import SourceRail from "@/components/SourceRail";
+import StagingPanel from "@/components/StagingPanel";
 import {
   buildWorkspaceMarkdown,
   createWorkspaceLogEntry,
@@ -157,9 +161,9 @@ function isTypingTarget(target) {
 }
 
 function getAiPlaceholder(scope) {
-  if (scope === "block") return "ask about this block...";
-  if (scope === "clipboard") return "ask about the clipboard...";
-  return "ask about this document...";
+  if (scope === "block") return "ask about this block…";
+  if (scope === "clipboard") return "ask about the clipboard…";
+  return "ask about this document…";
 }
 
 function getImageDerivationLabel(value = "") {
@@ -974,7 +978,7 @@ function buildWorkspaceUrl(
 function getDocumentKindLabel(document) {
   if (!document) return "Document";
   if (document.documentType === "builtin" || document.sourceType === "builtin") {
-    return "Sample";
+    return "Guide";
   }
   if (document.isAssembly || document.documentType === "assembly") {
     return "Assembly";
@@ -1052,7 +1056,7 @@ function WorkspaceShelf({
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">{activeProject?.title || "Project"}</span>
-            <span className="assembler-sheet__title">Browse sources</span>
+            <span className="assembler-sheet__title">Sources</span>
           </div>
 
           <div className="assembler-sheet__section-actions">
@@ -1065,7 +1069,7 @@ function WorkspaceShelf({
               onClick={onUpload}
               disabled={uploading}
             >
-              {uploading ? "Importing..." : "Upload"}
+              {uploading ? "Importing…" : "Upload"}
             </button>
             <button type="button" className="assembler-sheet__close" onClick={onClose}>
               Done
@@ -1123,10 +1127,15 @@ function WorkspaceLaunchpad({
   pastePendingMode = "",
   recordingVoice = false,
   clipboardCount = 0,
-  lastUsedMode = WORKSPACE_MODES.assemble,
   resumeSessionSummary = null,
 }) {
   const grouped = groupedDocuments(documents);
+  const guideDocument = grouped.sources.find(
+    (document) => document.documentType === "builtin" || document.sourceType === "builtin",
+  ) || null;
+  const userSourceDocuments = grouped.sources.filter(
+    (document) => document.documentType !== "builtin" && document.sourceType !== "builtin",
+  );
   const listenDocument =
     resolveProjectModeDocument(
       activeProject,
@@ -1134,24 +1143,20 @@ function WorkspaceLaunchpad({
       WORKSPACE_MODES.listen,
       null,
     );
-  const assembleDocument =
-    resolveProjectModeDocument(
-      activeProject,
-      documents,
-      WORKSPACE_MODES.assemble,
-      null,
-    );
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
     grouped.assemblies[0] ||
     null;
-  const sourceDocuments = grouped.sources;
+  const shouldFeatureGuide = Boolean(guideDocument) && (
+    userSourceDocuments.length <= 2 || !currentAssemblyDocument
+  );
+  const sourceDocuments = shouldFeatureGuide ? userSourceDocuments : grouped.sources;
   const assemblyDocuments = grouped.assemblies;
-  const sourceCount = sourceDocuments.length;
-  const assemblyCount = assemblyDocuments.length;
+  const recentAssemblies = assemblyDocuments
+    .filter((document) => document.documentKey !== currentAssemblyDocument?.documentKey)
+    .slice(0, 3);
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
-  const openMode = normalizeWorkspaceMode(lastUsedMode, WORKSPACE_MODES.assemble);
   const primaryAction = resumeSessionSummary?.documentKey
     ? {
         label: "Continue",
@@ -1166,245 +1171,69 @@ function WorkspaceLaunchpad({
             { focusBlockId: resumeSessionSummary.blockId || null },
           ),
       }
-    : listenDocument
+    : currentAssemblyDocument
       ? {
-          label: HOME_LOOP.listen,
-          title: listenDocument.title,
-          detail: getDocumentBlockCountLabel(listenDocument),
-          icon: "listen",
+          label: "Continue assembly",
+          title: currentAssemblyDocument.title,
+          detail: getDocumentBlockCountLabel(currentAssemblyDocument),
+          icon: "assemble",
           disabled: busy,
-          onClick: () => onEnterMode(WORKSPACE_MODES.listen, listenDocument.documentKey),
+          onClick: () => onEnterMode(WORKSPACE_MODES.assemble, currentAssemblyDocument.documentKey),
         }
-      : assembleDocument
+      : shouldFeatureGuide && guideDocument
         ? {
-            label: HOME_LOOP.assemble,
-            title: assembleDocument.title,
-            detail: getDocumentBlockCountLabel(assembleDocument),
-            icon: "assemble",
+            label: "Listen guide",
+            title: guideDocument.title,
+            detail: getDocumentBlockCountLabel(guideDocument),
+            icon: "listen",
             disabled: busy,
-            onClick: () => onEnterMode(WORKSPACE_MODES.assemble, assembleDocument.documentKey),
+            onClick: () => onEnterMode(WORKSPACE_MODES.listen, guideDocument.documentKey),
           }
-        : {
-            label: HOME_LOOP.drop,
+        : listenDocument
+          ? {
+              label: "Listen source",
+              title: listenDocument.title,
+              detail: getDocumentBlockCountLabel(listenDocument),
+              icon: "listen",
+              disabled: busy,
+              onClick: () => onEnterMode(WORKSPACE_MODES.listen, listenDocument.documentKey),
+            }
+          : {
+            label: "Import source",
             title: activeProject?.title || PRODUCT_NAME,
-            detail: "Start here.",
+            detail: "Start with material you can actually work with.",
             icon: "upload",
             disabled: busy,
             onClick: onOpenIntake,
           };
-
-  function renderDocumentRow(document, { active = false } = {}) {
-    const deletable = canDeleteDocument(document);
-
-    return (
-      <div
-        key={document.documentKey}
-        className={`assembler-document-row ${active ? "is-active" : ""}`}
-      >
-        <button
-          type="button"
-          className="assembler-document-row__quick"
-          onClick={() => onOpenDocument(document.documentKey, WORKSPACE_MODES.listen)}
-          aria-label={`Listen to ${document.title}`}
-        >
-          <WorkspaceActionIcon kind="listen" />
-        </button>
-
-        <button
-          type="button"
-          className="assembler-document-row__body"
-          onClick={() => onOpenDocument(document.documentKey, openMode)}
-        >
-          <span className="assembler-document-row__title">{document.title}</span>
-          <span className="assembler-document-row__meta">
-            {getDocumentBlockCountLabel(document)}
-          </span>
-        </button>
-
-        <div className="assembler-document-row__aside">
-          <span className="assembler-document-row__badge">
-            {loadingDocumentKey === document.documentKey
-              ? "Loading…"
-              : getDocumentKindLabel(document)}
-          </span>
-          {deletable && onDeleteDocument ? (
-            <button
-              type="button"
-              className="assembler-document-row__delete"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDeleteDocument(document);
-              }}
-              disabled={busy}
-              aria-label={`Delete ${document.title}`}
-            >
-              Delete
-            </button>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="assembler-home">
-      <button
-        type="button"
-        className="assembler-home__resume"
-        onClick={primaryAction.onClick}
-        disabled={primaryAction.disabled}
-      >
-        <div className="assembler-home__resume-copy">
-          <span className="assembler-home__resume-label">{primaryAction.label}</span>
-          <span className="assembler-home__resume-title">{primaryAction.title}</span>
-          <span className="assembler-home__resume-detail">{primaryAction.detail}</span>
-        </div>
-        <span className="assembler-home__resume-icon" aria-hidden="true">
-          <WorkspaceActionIcon kind={primaryAction.icon} />
-        </span>
-      </button>
-
-      <div className="assembler-home__actions">
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={onOpenSpeak}
-          disabled={uploading || Boolean(pastePendingMode)}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="speak" />
-          </span>
-          <span className="assembler-home__action-label">{HOME_LOOP.speak}</span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={() => onEnterMode(WORKSPACE_MODES.listen, listenDocument?.documentKey || "")}
-          disabled={!listenDocument || busy}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="listen" />
-          </span>
-          <span className="assembler-home__action-label">{HOME_LOOP.listen}</span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={() => onEnterMode(WORKSPACE_MODES.assemble, assembleDocument?.documentKey || "")}
-          disabled={!assembleDocument || busy}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="assemble" />
-          </span>
-          <span className="assembler-home__action-label">{HOME_LOOP.assemble}</span>
-        </button>
-
-        <button
-          type="button"
-          className="assembler-home__action"
-          onClick={onOpenIntake}
-          disabled={busy}
-        >
-          <span className="assembler-home__action-icon" aria-hidden="true">
-            <WorkspaceActionIcon kind="upload" />
-          </span>
-          <span className="assembler-home__action-label">{HOME_LOOP.drop}</span>
-        </button>
-      </div>
-
-      {projects.length > 1 ? (
-        <div className="assembler-home__section">
-          <div className="assembler-home__section-head">
-            <span>Projects</span>
-            <button
-              type="button"
-              className="assembler-home__section-action"
-              onClick={onCreateProject}
-              disabled={projectActionPending === "__create__"}
-            >
-              {projectActionPending === "__create__" ? "Creating…" : "New"}
-            </button>
-          </div>
-
-          <div className="assembler-home__section-list">
-            {projects.map((project) => (
-              <button
-                key={project.projectKey}
-                type="button"
-                className={`assembler-home__project-row ${
-                  project.projectKey === activeProjectKey ? "is-active" : ""
-                }`}
-                onClick={() => onOpenProject(project.projectKey)}
-                disabled={projectActionPending === project.projectKey}
-              >
-                <span className="assembler-home__project-title">{project.title}</span>
-                <span className="assembler-home__project-meta">
-                  {projectActionPending === project.projectKey
-                    ? "Opening…"
-                    : `${project.sourceCount} sources`}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="assembler-home__section">
-        <div className="assembler-home__section-head">
-          <span>Sources</span>
-          <span>{sourceCount}</span>
-        </div>
-
-        <div className="assembler-home__section-list">
-          {sourceDocuments.length ? (
-            sourceDocuments.slice(0, 6).map((document) => renderDocumentRow(document))
-          ) : (
-            <p className="assembler-home__empty">No sources yet.</p>
-          )}
-        </div>
-      </div>
-
-      <div className="assembler-home__section">
-        <div className="assembler-home__section-head">
-          <span>Assemblies</span>
-          <span>{assemblyCount}</span>
-        </div>
-
-        <div className="assembler-home__section-list">
-          {assemblyDocuments.length ? (
-            assemblyDocuments.slice(0, 6).map((document) =>
-              renderDocumentRow(document, {
-                active: document.documentKey === currentAssemblyDocument?.documentKey,
-              }))
-          ) : (
-            <p className="assembler-home__empty">Nothing assembled yet.</p>
-          )}
-        </div>
-      </div>
-
-      {clipboardCount || projectDrafts.length ? (
-        <div className="assembler-home__footer">
-          {clipboardCount ? <span>{clipboardCount} staged for assembly</span> : null}
-          {projectDrafts.length ? (
-            <Link href="/account" className="assembler-home__footer-link">
-              {projectDrafts.length} receipt{projectDrafts.length === 1 ? "" : "s"}
-            </Link>
-          ) : null}
-          {!projectDrafts.length && clipboardCount ? (
-            <button
-              type="button"
-              className="assembler-home__footer-link"
-              onClick={onPasteClipboard}
-              disabled={pastePendingMode === "clipboard" || busy}
-            >
-              {pastePendingMode === "clipboard" ? "Pasting…" : "Paste"}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <ProjectHome
+      activeProject={activeProject}
+      activeProjectKey={activeProjectKey}
+      projects={projects}
+      projectDrafts={projectDrafts}
+      projectActionPending={projectActionPending}
+      loadingDocumentKey={loadingDocumentKey}
+      busy={busy}
+      clipboardCount={clipboardCount}
+      primaryAction={primaryAction}
+      guideDocument={shouldFeatureGuide ? guideDocument : null}
+      sourceDocuments={sourceDocuments}
+      currentAssemblyDocument={currentAssemblyDocument}
+      recentAssemblies={recentAssemblies}
+      onCreateProject={onCreateProject}
+      onOpenDocument={onOpenDocument}
+      onOpenProject={onOpenProject}
+      onDeleteDocument={onDeleteDocument}
+      onPasteClipboard={onPasteClipboard}
+      onOpenSpeak={onOpenSpeak}
+      onOpenIntake={onOpenIntake}
+      ActionIcon={WorkspaceActionIcon}
+      getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+      getDocumentKindLabel={getDocumentKindLabel}
+      canDeleteDocument={canDeleteDocument}
+      sourceOpenMode={WORKSPACE_MODES.assemble}
+    />
   );
 }
 
@@ -1515,7 +1344,7 @@ function ListenSurface({
               className={`assembler-listen__topbar-button ${pickerOpen ? "is-active" : ""}`}
               onClick={onTogglePicker}
             >
-              Browse
+              Sources
             </button>
 
             <div className="assembler-listen__menu">
@@ -1538,7 +1367,7 @@ function ListenSurface({
                       onTogglePicker();
                     }}
                   >
-                    Browse
+                    Sources
                   </button>
                   <button
                     type="button"
@@ -1558,7 +1387,7 @@ function ListenSurface({
                       onOpenLog();
                     }}
                   >
-                    View Log
+                    Receipt log
                   </button>
                   <button
                     type="button"
@@ -1656,7 +1485,7 @@ function ListenSurface({
           <div className="assembler-sheet__backdrop" onClick={onTogglePicker} aria-hidden="true" />
           <div className="assembler-sheet__panel">
             <div className="assembler-sheet__header">
-              <span className="assembler-sheet__title">Browse</span>
+              <span className="assembler-sheet__title">Sources</span>
               <button
                 type="button"
                 className="assembler-sheet__close"
@@ -2147,13 +1976,13 @@ function SourceCleanupTray({
       <div className="assembler-cleanup__actions">
         <SourceActionButton
           kind="replace"
-          label={pendingAction === "replace" ? "Replacing..." : "Replace all"}
+          label={pendingAction === "replace" ? "Replacing…" : "Replace all"}
           disabled={replaceDisabled}
           onClick={onReplaceAll}
         />
         <SourceActionButton
           kind="delete"
-          label={pendingAction === "deleteMatches" ? "Deleting..." : "Delete matching blocks"}
+          label={pendingAction === "deleteMatches" ? "Deleting…" : "Delete matching blocks"}
           disabled={deleteDisabled}
           danger
           onClick={onDeleteMatches}
@@ -2181,6 +2010,7 @@ function WorkspaceToolbar({
   isMobileLayout = false,
   onOpenClipboard,
   isClipboardOpen = false,
+  showAiToggle = true,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const totalClipboardCount = clipboardCount + stagedCount;
@@ -2201,7 +2031,7 @@ function WorkspaceToolbar({
           className={`assembler-tab ${viewMode === "log" ? "is-active is-log" : ""}`}
           onClick={() => onSetViewMode("log")}
         >
-          Log
+          Receipt
         </button>
 
         {isMobileLayout ? (
@@ -2210,7 +2040,7 @@ function WorkspaceToolbar({
             className={`assembler-tab ${isClipboardOpen ? "is-active" : ""}`}
             onClick={onOpenClipboard}
           >
-            {totalClipboardCount ? `Clipboard ${totalClipboardCount}` : "Clipboard"}
+            {totalClipboardCount ? `Staging ${totalClipboardCount}` : "Staging"}
           </button>
         ) : viewMode === "doc" ? (
           <button
@@ -2236,14 +2066,16 @@ function WorkspaceToolbar({
           </div>
         ) : null}
 
-        <button
-          type="button"
-          className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
-          onClick={onToggleAi}
-          aria-label={aiOpen ? "Close 7 prompt" : "Open 7 prompt"}
-        >
-          7
-        </button>
+        {showAiToggle ? (
+          <button
+            type="button"
+            className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
+            onClick={onToggleAi}
+            aria-label={aiOpen ? "Close 7 prompt" : "Open 7 prompt"}
+          >
+            7
+          </button>
+        ) : null}
 
         {isMobileLayout ? (
           canShowEditAction ? (
@@ -2424,7 +2256,7 @@ function BlockEditor({ block, saveState, onEdit }) {
 
       <div className={`assembler-block__editor-status is-${saveState || "idle"}`}>
         {saveState === "saving"
-          ? "Saving..."
+          ? "Saving…"
           : saveState === "saved"
             ? "Saved"
             : saveState === "conflict"
@@ -2452,7 +2284,7 @@ function LogView({
         </div>
         <div className="assembler-log__actions">
           <button type="button" className="assembler-tiny-button" onClick={onCreateReceipt}>
-            {receiptPending ? "Drafting..." : "Draft receipt"}
+            {receiptPending ? "Drafting…" : "Draft receipt"}
           </button>
           <button type="button" className="assembler-tiny-button" onClick={onExportReceipt}>
             Export log
@@ -2539,7 +2371,7 @@ function AiBar({
               onSubmit();
             }
           }}
-          placeholder={pending ? "thinking..." : getAiPlaceholder(scope)}
+          placeholder={pending ? "thinking…" : getAiPlaceholder(scope)}
           disabled={pending}
         />
         <button
@@ -2548,7 +2380,7 @@ function AiBar({
           disabled={!value.trim() || pending}
           onClick={onSubmit}
         >
-          {pending ? "..." : "RUN"}
+          {pending ? "Running…" : "Run"}
         </button>
         <button type="button" className="assembler-ai__close" onClick={onClose}>
           CLOSE
@@ -2591,11 +2423,9 @@ function AiBar({
 }
 
 function ClipboardTray({
-  expanded,
   stagedBlocks,
   clipboard,
   documents,
-  onToggleExpanded,
   onAcceptStagedBlock,
   onAcceptAllStagedBlocks,
   onClearStagedBlocks,
@@ -2604,118 +2434,19 @@ function ClipboardTray({
   onClearClipboard,
   onAssemble,
 }) {
-  const sourceCount = new Set(
-    clipboard.map((block) => block.sourceDocumentKey || block.documentKey).filter(Boolean),
-  ).size;
-
-  function getDocumentTitle(documentKey) {
-    return (
-      documents.find((document) => document.documentKey === documentKey)?.title ||
-      documentKey ||
-      "document"
-    );
-  }
-
   return (
-    <div className="assembler-clipboard">
-      <div className="assembler-clipboard__header" onClick={onToggleExpanded}>
-        <span>
-          Clipboard
-          {stagedBlocks.length
-            ? ` · ${stagedBlocks.length} AI`
-            : ""}
-          {` · ${clipboard.length} block${clipboard.length === 1 ? "" : "s"} from ${sourceCount} doc${sourceCount === 1 ? "" : "s"}`}
-        </span>
-        <span>{expanded ? "▼" : "▶"}</span>
-      </div>
-
-      {expanded ? (
-        <div className="assembler-clipboard__body">
-          {stagedBlocks.length ? (
-            <div className="assembler-clipboard__section">
-              <div className="assembler-clipboard__section-head">
-                <span>AI staging · {stagedBlocks.length}</span>
-                <div className="assembler-clipboard__section-actions">
-                  <button type="button" className="assembler-tiny-button" onClick={onAcceptAllStagedBlocks}>
-                    Add all
-                  </button>
-                  <button type="button" className="assembler-tiny-button" onClick={onClearStagedBlocks}>
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              {stagedBlocks.map((block, index) => (
-                <div key={block.id} className="assembler-clipboard__row is-staged">
-                  <span className="assembler-clipboard__index">AI</span>
-                  <span className="assembler-clipboard__text">{block.plainText || block.text}</span>
-                  <button
-                    type="button"
-                    className="assembler-tiny-button"
-                    onClick={() => onAcceptStagedBlock(index)}
-                  >
-                    +
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="assembler-clipboard__section">
-            <div className="assembler-clipboard__section-head">
-              <span>Selected blocks</span>
-              <div className="assembler-clipboard__section-actions">
-                <button type="button" className="assembler-tiny-button" onClick={onAssemble}>
-                  Assemble
-                </button>
-                <button type="button" className="assembler-tiny-button" onClick={onClearClipboard}>
-                  Clear
-                </button>
-              </div>
-            </div>
-
-            {clipboard.length ? (
-              clipboard.map((block, index) => (
-                <div key={`${block.id}-${index}`} className="assembler-clipboard__row">
-                  <span className="assembler-clipboard__index">{index + 1}</span>
-                  <span className="assembler-clipboard__source">
-                    [{getDocumentTitle(block.sourceDocumentKey || block.documentKey)}]
-                  </span>
-                  <span className="assembler-clipboard__text">{block.plainText || block.text}</span>
-                  <button
-                    type="button"
-                    className="assembler-tiny-button"
-                    disabled={index === 0}
-                    onClick={() => onReorderClipboard(index, -1)}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="assembler-tiny-button"
-                    disabled={index === clipboard.length - 1}
-                    onClick={() => onReorderClipboard(index, 1)}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    className="assembler-tiny-button is-danger"
-                    onClick={() => onRemoveClipboardIndex(index)}
-                  >
-                    −
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p className="assembler-clipboard__empty">
-                Add blocks here to build a new document.
-              </p>
-            )}
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <StagingPanel
+      stagedBlocks={stagedBlocks}
+      clipboard={clipboard}
+      documents={documents}
+      onAcceptStagedBlock={onAcceptStagedBlock}
+      onAcceptAllStagedBlocks={onAcceptAllStagedBlocks}
+      onClearStagedBlocks={onClearStagedBlocks}
+      onRemoveClipboardIndex={onRemoveClipboardIndex}
+      onReorderClipboard={onReorderClipboard}
+      onClearClipboard={onClearClipboard}
+      onAssemble={onAssemble}
+    />
   );
 }
 
@@ -2908,7 +2639,7 @@ function PlayerBar({
               onClick={onTogglePlayback}
               disabled={!playbackAvailable}
             >
-              {loadingAudio ? "..." : isPlaying ? "PAUSE" : "PLAY"}
+              {loadingAudio ? "…" : isPlaying ? "PAUSE" : "PLAY"}
             </button>
             <button
               type="button"
@@ -2935,7 +2666,7 @@ function PlayerBar({
               onClick={onTogglePlayback}
               disabled={!playbackAvailable}
             >
-              {loadingAudio ? "..." : isPlaying ? "PAUSE" : "PLAY"}
+              {loadingAudio ? "…" : isPlaying ? "PAUSE" : "PLAY"}
             </button>
             <button
               type="button"
@@ -3109,7 +2840,6 @@ export default function WorkspaceShell({
   const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
   const [stagedAiBlocks, setStagedAiBlocks] = useState([]);
-  const [clipboardExpanded, setClipboardExpanded] = useState(true);
   const [aiScope, setAiScope] = useState("document");
   const [focusBlockId, setFocusBlockId] = useState(initialDocument.blocks[0]?.id || null);
   const [playheadBlockId, setPlayheadBlockId] = useState(null);
@@ -3166,6 +2896,14 @@ export default function WorkspaceShell({
     hydratedProjects[0] ||
     null;
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
+  const projectDocumentGroups = groupedDocuments(projectDocuments);
+  const guideSourceDocument = projectDocumentGroups.sources.find(
+    (document) => document.documentType === "builtin" || document.sourceType === "builtin",
+  ) || null;
+  const visibleSourceDocuments = projectDocumentGroups.sources.filter(
+    (document) => document.documentType !== "builtin" && document.sourceType !== "builtin",
+  );
+  const visibleAssemblyDocuments = projectDocumentGroups.assemblies;
   const availableVoiceCatalog = voiceCatalog.filter(
     (entry) =>
       entry.provider !== VOICE_PROVIDERS.device || deviceVoiceSupported,
@@ -4453,7 +4191,7 @@ export default function WorkspaceShell({
   async function importLinkFromIntake(url) {
     setDropAnythingOpen(false);
     setPastePendingMode("source");
-    setFeedback("Fetching page from link...");
+    setFeedback("Fetching page from link…");
 
     try {
       await createLinkSource(url);
@@ -4478,7 +4216,7 @@ export default function WorkspaceShell({
 
     setUploading(true);
     setFeedback(
-      `Importing ${normalizedFiles.length} source${normalizedFiles.length === 1 ? "" : "s"}...`,
+      `Importing ${normalizedFiles.length} source${normalizedFiles.length === 1 ? "" : "s"}…`,
     );
 
     try {
@@ -4552,10 +4290,10 @@ export default function WorkspaceShell({
     setUploading(true);
     setFeedback(
       imageLike
-        ? `Importing ${file.name} as ${getImageDerivationLabel(normalizedImageMode).toLowerCase()}...`
+        ? `Importing ${file.name} as ${getImageDerivationLabel(normalizedImageMode).toLowerCase()}…`
         : audioLike || sourceKind === "voice"
-          ? `Transcribing ${file.name || "voice memo"}...`
-          : `Importing ${file.name}...`,
+          ? `Transcribing ${file.name || "voice memo"}…`
+          : `Importing ${file.name}…`,
     );
 
     try {
@@ -4694,7 +4432,7 @@ export default function WorkspaceShell({
     setBlockSaveStates({});
     setDocumentState(activeDocument.documentKey, {
       status: "saving",
-      message: "Saving changes...",
+      message: "Saving changes…",
     });
     upsertDocument(nextDocument);
     appendLog(logAction || "EDITED", logDetail || `${activeDocument.title} updated`, {
@@ -4999,7 +4737,7 @@ export default function WorkspaceShell({
 
     const sourceTitle = activeDocument.title;
     setPolishPending(true);
-    setFeedback(`Cleaning ${sourceTitle}...`);
+    setFeedback(`Cleaning ${sourceTitle}…`);
 
     try {
       const response = await fetch("/api/workspace/polish", {
@@ -5079,7 +4817,7 @@ export default function WorkspaceShell({
 
       if (mode === "source" && urlFromClipboard && !options.forceRawText) {
         setPastePendingMode("source");
-        setFeedback("Fetching page from link...");
+        setFeedback("Fetching page from link…");
 
         try {
           await createLinkSource(urlFromClipboard);
@@ -5121,10 +4859,10 @@ export default function WorkspaceShell({
       setPastePendingMode(mode);
       setFeedback(
         hasImagePayload
-          ? `Creating ${getImageDerivationLabel(normalizedImageMode).toLowerCase()} from image...`
+          ? `Creating ${getImageDerivationLabel(normalizedImageMode).toLowerCase()} from image…`
           : mode === "source"
-            ? "Pasting source..."
-            : "Pasting to clipboard...",
+            ? "Pasting source…"
+            : "Pasting to staging…",
       );
 
       const response = await fetch("/api/workspace/paste", {
@@ -5295,7 +5033,7 @@ export default function WorkspaceShell({
     }));
     setDocumentState(activeDocument.documentKey, {
       status: "saving",
-      message: "Saving changes...",
+      message: "Saving changes…",
     });
     upsertDocument(nextDocument);
     appendLog("EDITED", `${activeDocument.title} — block ${originalBlock.sourcePosition + 1} edited`, {
@@ -5844,7 +5582,6 @@ export default function WorkspaceShell({
       }
 
       setStagedAiBlocks(payload.blocks);
-      setClipboardExpanded(true);
       appendLog(
         "AI_RESULT",
         `${payload.blocks.length} block${payload.blocks.length === 1 ? "" : "s"} produced (${payload.operation || "operation"})`,
@@ -6073,7 +5810,7 @@ export default function WorkspaceShell({
             {showComposeHeader ? (
               <>
                 <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                  Home
+                  Project
                 </button>
                 {activeProject ? (
                   <span className="assembler-header__project">{activeProject.title}</span>
@@ -6095,7 +5832,7 @@ export default function WorkspaceShell({
           </div>
 
           <div className="assembler-header__actions">
-            {showComposeHeader ? (
+            {showComposeHeader && isMobileLayout ? (
               <button
                 type="button"
                 className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
@@ -6137,7 +5874,6 @@ export default function WorkspaceShell({
               onOpenSpeak={openVoiceRecorder}
               onOpenIntake={() => setDropAnythingOpen(true)}
               recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
-              lastUsedMode={lastUsedMode}
               resumeSessionSummary={resumeSessionSummaryState}
             />
           </section>
@@ -6231,212 +5967,271 @@ export default function WorkspaceShell({
               lastUsedMode={lastUsedMode}
             />
 
-            <WorkspaceToolbar
-              activeDocument={activeDocument}
-              viewMode={viewMode}
-              editMode={editMode}
-              aiOpen={aiOpen}
-              documentState={activeDocumentState}
-              onReloadLatest={() => void reloadLatestDocument()}
-              status={status}
-              statusTone={statusTone}
-              onSetViewMode={setViewMode}
-              onToggleEditMode={() => setEditMode((value) => !value)}
-              onToggleAi={() => setAiOpen((value) => !value)}
-              clipboardCount={clipboard.length}
-              stagedCount={stagedAiBlocks.length}
-              isMobileLayout={isMobileLayout}
-              onOpenClipboard={() => setMobileComposeOpen(true)}
-              isClipboardOpen={mobileComposeOpen}
-            />
-
-            <section className="assembler-surface">
-              {viewMode === "log" ? (
-                <LogView
-                  logEntries={activeDocument.logEntries || []}
-                  receiptPending={receiptPending}
-                  onCreateReceipt={createReceiptDraft}
-                  onExportReceipt={exportReceipt}
-                  onExportDocument={exportDocument}
+            <div className={`assembler-workbench ${isMobileLayout ? "is-mobile" : ""}`}>
+              {!isMobileLayout ? (
+                <SourceRail
+                  activeProject={activeProject}
+                  activeDocumentKey={activeDocumentKey}
+                  loadingDocumentKey={loadingDocumentKey}
+                  guideDocument={guideSourceDocument}
+                  sourceDocuments={visibleSourceDocuments}
+                  assemblyDocuments={visibleAssemblyDocuments}
+                  onOpenProjectHome={openLaunchpad}
+                  onUpload={() => fileInputRef.current?.click()}
+                  onPasteSource={() => void pasteIntoWorkspace("source")}
+                  onOpenDocument={(documentKey, mode, options = {}) => {
+                    void enterWorkspace(documentKey, mode, options);
+                  }}
+                  uploading={uploading}
+                  sourceOpenMode={WORKSPACE_MODES.assemble}
+                  ActionIcon={WorkspaceActionIcon}
+                  getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+                  getDocumentKindLabel={getDocumentKindLabel}
                 />
-              ) : (
-                <div className="assembler-document">
-                  <div className="assembler-document__header">
-                    <div>
-                      <h2 className="assembler-document__title">{activeDocument.title}</h2>
-                      {activeDocument.subtitle ? (
-                        <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
-                      ) : null}
-                    </div>
+              ) : null}
 
-                    <div className="assembler-document__side">
-                      <div className="assembler-document__meta">
-                        <span>{getDocumentKindLabel(activeDocument)}</span>
-                        <span>{getDocumentBlockCountLabel(activeDocument)}</span>
-                        {activeDocument.sourceFiles?.length ? (
-                          <span>{activeDocument.sourceFiles.join(", ")}</span>
-                        ) : null}
-                        {activeDocument.derivationModel ? (
-                          <span>{activeDocument.derivationModel}</span>
-                        ) : null}
-                      </div>
-                      {activeDocumentAsset ? (
-                        <div className="assembler-document__asset">
-                          {activeDocumentAsset.kind === "image" ? (
-                            <img
-                              className="assembler-document__asset-thumb"
-                              src={activeDocumentAsset.url}
-                              alt={`Original image for ${activeDocument.title}`}
-                            />
-                          ) : (
-                            <div className="assembler-document__asset-thumb assembler-document__asset-thumb--icon">
-                              {activeDocumentAsset.kind === "audio" ? "AUDIO" : "LINK"}
-                            </div>
-                          )}
-                          <div className="assembler-document__asset-copy">
-                            <span className="assembler-document__asset-badge">
-                              {getDocumentKindLabel(activeDocument).toUpperCase()}
-                            </span>
-                            <span className="assembler-document__asset-label">
-                              {getSourceAssetLabel(activeDocumentAsset)}
-                            </span>
-                            {activeDocumentAsset.kind === "audio" && activeDocumentAsset.durationMs ? (
-                              <span className="assembler-document__asset-detail">
-                                {formatAssetDuration(activeDocumentAsset.durationMs)}
-                              </span>
-                            ) : null}
-                            <a
-                              className="assembler-document__asset-link"
-                              href={activeDocumentAsset.url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {activeDocumentAsset.kind === "image"
-                                ? "Open original image"
-                                : activeDocumentAsset.kind === "audio"
-                                  ? "Open original audio"
-                                  : "Open original link"}
-                            </a>
-                          </div>
-                        </div>
-                      ) : null}
-                      {isMobileLayout && showActiveDocumentTools ? (
-                        <button
-                          type="button"
-                          className="assembler-document__tools-toggle"
-                          onClick={() => setMobileSourceToolsOpen((value) => !value)}
-                        >
-                          {mobileSourceToolsOpen || cleanupOpen ? "Hide Tools" : "Tools"}
-                        </button>
-                      ) : null}
-                      {showActiveDocumentTools ? (
-                        <div
-                          className={`assembler-document__actions ${
-                            !isMobileLayout || mobileSourceToolsOpen || cleanupOpen ? "is-visible" : ""
-                          }`}
-                        >
-                          {canManageActiveSource ? (
-                            <>
-                              <SourceActionButton
-                                kind="replace"
-                                label={cleanupOpen ? "Hide find and replace" : "Show find and replace"}
-                                active={cleanupOpen}
-                                disabled={Boolean(cleanupPendingAction) || polishPending}
-                                onClick={() => setCleanupOpen((value) => !value)}
-                              />
-                              <SourceActionButton
-                                kind="unescape"
-                                label={cleanupPendingAction === "unescape" ? "Unescaping markdown..." : "Unescape markdown"}
-                                disabled={Boolean(cleanupPendingAction) || polishPending}
-                                onClick={() => void unescapeActiveSource()}
-                              />
-                              <SourceActionButton
-                                kind="clean"
-                                label={polishPending ? "Cleaning formatting..." : "Clean formatting"}
-                                disabled={Boolean(cleanupPendingAction) || polishPending}
-                                onClick={() => void polishActiveSource()}
-                              />
-                            </>
-                          ) : null}
-                          {canDeleteActiveDocument ? (
-                            <SourceActionButton
-                              kind="delete"
-                              label={`Delete ${
-                                activeDocument.isAssembly || activeDocument.documentType === "assembly"
-                                  ? "assembly"
-                                  : "source"
-                              }`}
-                              danger
-                              disabled={Boolean(cleanupPendingAction) || polishPending}
-                              onClick={() => void deleteActiveDocument()}
-                            />
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {activeDocumentWarning ? (
-                        <div className="assembler-document__note">{activeDocumentWarning}</div>
-                      ) : null}
-                    </div>
-                  </div>
+              <div className="assembler-workbench__main">
+                <WorkspaceToolbar
+                  activeDocument={activeDocument}
+                  viewMode={viewMode}
+                  editMode={editMode}
+                  aiOpen={aiOpen}
+                  documentState={activeDocumentState}
+                  onReloadLatest={() => void reloadLatestDocument()}
+                  status={status}
+                  statusTone={statusTone}
+                  onSetViewMode={setViewMode}
+                  onToggleEditMode={() => setEditMode((value) => !value)}
+                  onToggleAi={() => setAiOpen((value) => !value)}
+                  clipboardCount={clipboard.length}
+                  stagedCount={stagedAiBlocks.length}
+                  isMobileLayout={isMobileLayout}
+                  onOpenClipboard={() => setMobileComposeOpen(true)}
+                  isClipboardOpen={mobileComposeOpen}
+                  showAiToggle={isMobileLayout}
+                />
 
-                  {cleanupOpen && canManageActiveSource ? (
-                    <SourceCleanupTray
-                      findValue={cleanupFind}
-                      replaceValue={cleanupReplace}
-                      pendingAction={cleanupPendingAction}
-                      onFindChange={setCleanupFind}
-                      onReplaceChange={setCleanupReplace}
-                      onReplaceAll={() => void replaceAcrossSource()}
-                      onDeleteMatches={() => void deleteMatchingBlocks()}
-                      onClose={() => setCleanupOpen(false)}
+                <section className="assembler-surface assembler-surface--workbench">
+                  {viewMode === "log" ? (
+                    <LogView
+                      logEntries={activeDocument.logEntries || []}
+                      receiptPending={receiptPending}
+                      onCreateReceipt={createReceiptDraft}
+                      onExportReceipt={exportReceipt}
+                      onExportDocument={exportDocument}
                     />
-                  ) : null}
+                  ) : (
+                    <div className="assembler-document">
+                      <div className="assembler-document__header">
+                        <div>
+                          <h2 className="assembler-document__title">{activeDocument.title}</h2>
+                          {activeDocument.subtitle ? (
+                            <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
+                          ) : null}
+                        </div>
 
-                  <div className="assembler-document__blocks">
-                    {blocks.map((block) => (
-                      <BlockRow
-                        key={block.id}
-                        block={block}
-                        blockRef={(element) => {
-                          blockRefs.current[block.id] = element;
-                        }}
-                        isFocused={block.id === focusBlockId}
-                        isPlaying={block.id === currentBlock?.id && isPlaying}
-                        isNext={block.id === nextBlock?.id}
-                        isSelected={clipboard.some((item) => item.id === block.id)}
-                        editMode={editMode}
-                        canDelete={editMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
-                        saveState={blockSaveStates[block.id] || ""}
-                        onFocus={focusBlock}
-                        onAdd={addBlockToClipboard}
-                        onDelete={(blockId) => void deleteBlock(blockId)}
-                        onRemove={removeBlockFromClipboard}
-                        onEdit={editBlock}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
+                        <div className="assembler-document__side">
+                          <div className="assembler-document__meta">
+                            <span>{getDocumentKindLabel(activeDocument)}</span>
+                            <span>{getDocumentBlockCountLabel(activeDocument)}</span>
+                            {activeDocument.sourceFiles?.length ? (
+                              <span>{activeDocument.sourceFiles.join(", ")}</span>
+                            ) : null}
+                            {activeDocument.derivationModel ? (
+                              <span>{activeDocument.derivationModel}</span>
+                            ) : null}
+                          </div>
+                          {activeDocumentAsset ? (
+                            <div className="assembler-document__asset">
+                              {activeDocumentAsset.kind === "image" ? (
+                                <img
+                                  className="assembler-document__asset-thumb"
+                                  src={activeDocumentAsset.url}
+                                  alt={`Original image for ${activeDocument.title}`}
+                                />
+                              ) : (
+                                <div className="assembler-document__asset-thumb assembler-document__asset-thumb--icon">
+                                  {activeDocumentAsset.kind === "audio" ? "AUDIO" : "LINK"}
+                                </div>
+                              )}
+                              <div className="assembler-document__asset-copy">
+                                <span className="assembler-document__asset-badge">
+                                  {getDocumentKindLabel(activeDocument).toUpperCase()}
+                                </span>
+                                <span className="assembler-document__asset-label">
+                                  {getSourceAssetLabel(activeDocumentAsset)}
+                                </span>
+                                {activeDocumentAsset.kind === "audio" && activeDocumentAsset.durationMs ? (
+                                  <span className="assembler-document__asset-detail">
+                                    {formatAssetDuration(activeDocumentAsset.durationMs)}
+                                  </span>
+                                ) : null}
+                                <a
+                                  className="assembler-document__asset-link"
+                                  href={activeDocumentAsset.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {activeDocumentAsset.kind === "image"
+                                    ? "Open original image"
+                                    : activeDocumentAsset.kind === "audio"
+                                      ? "Open original audio"
+                                      : "Open original link"}
+                                </a>
+                              </div>
+                            </div>
+                          ) : null}
+                          {isMobileLayout && showActiveDocumentTools ? (
+                            <button
+                              type="button"
+                              className="assembler-document__tools-toggle"
+                              onClick={() => setMobileSourceToolsOpen((value) => !value)}
+                            >
+                              {mobileSourceToolsOpen || cleanupOpen ? "Hide tools" : "Tools"}
+                            </button>
+                          ) : null}
+                          {showActiveDocumentTools ? (
+                            <div
+                              className={`assembler-document__actions ${
+                                !isMobileLayout || mobileSourceToolsOpen || cleanupOpen ? "is-visible" : ""
+                              }`}
+                            >
+                              {canManageActiveSource ? (
+                                <>
+                                  <SourceActionButton
+                                    kind="replace"
+                                    label={cleanupOpen ? "Hide find and replace" : "Show find and replace"}
+                                    active={cleanupOpen}
+                                    disabled={Boolean(cleanupPendingAction) || polishPending}
+                                    onClick={() => setCleanupOpen((value) => !value)}
+                                  />
+                                  <SourceActionButton
+                                    kind="unescape"
+                                    label={cleanupPendingAction === "unescape" ? "Unescaping markdown…" : "Unescape markdown"}
+                                    disabled={Boolean(cleanupPendingAction) || polishPending}
+                                    onClick={() => void unescapeActiveSource()}
+                                  />
+                                  <SourceActionButton
+                                    kind="clean"
+                                    label={polishPending ? "Cleaning formatting…" : "Clean formatting"}
+                                    disabled={Boolean(cleanupPendingAction) || polishPending}
+                                    onClick={() => void polishActiveSource()}
+                                  />
+                                </>
+                              ) : null}
+                              {canDeleteActiveDocument ? (
+                                <SourceActionButton
+                                  kind="delete"
+                                  label={`Delete ${
+                                    activeDocument.isAssembly || activeDocument.documentType === "assembly"
+                                      ? "assembly"
+                                      : "source"
+                                  }`}
+                                  danger
+                                  disabled={Boolean(cleanupPendingAction) || polishPending}
+                                  onClick={() => void deleteActiveDocument()}
+                                />
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {activeDocumentWarning ? (
+                            <div className="assembler-document__note">{activeDocumentWarning}</div>
+                          ) : null}
+                        </div>
+                      </div>
 
-            {(clipboard.length || stagedAiBlocks.length) && !isMobileLayout ? (
-              <ClipboardTray
-                expanded={clipboardExpanded}
-                stagedBlocks={stagedAiBlocks}
-                clipboard={clipboard}
-                documents={projectDocuments}
-                onToggleExpanded={() => setClipboardExpanded((value) => !value)}
-                onAcceptStagedBlock={acceptStagedBlock}
-                onAcceptAllStagedBlocks={acceptAllStagedBlocks}
-                onClearStagedBlocks={() => setStagedAiBlocks([])}
-                onRemoveClipboardIndex={removeClipboardIndex}
-                onReorderClipboard={(index, delta) =>
-                  setClipboard((previous) => moveListItem(previous, index, delta))
-                }
-                onClearClipboard={() => setClipboard([])}
-                onAssemble={assembleClipboard}
-              />
-            ) : null}
+                      {cleanupOpen && canManageActiveSource ? (
+                        <SourceCleanupTray
+                          findValue={cleanupFind}
+                          replaceValue={cleanupReplace}
+                          pendingAction={cleanupPendingAction}
+                          onFindChange={setCleanupFind}
+                          onReplaceChange={setCleanupReplace}
+                          onReplaceAll={() => void replaceAcrossSource()}
+                          onDeleteMatches={() => void deleteMatchingBlocks()}
+                          onClose={() => setCleanupOpen(false)}
+                        />
+                      ) : null}
+
+                      <div className="assembler-document__blocks">
+                        {blocks.map((block) => (
+                          <BlockRow
+                            key={block.id}
+                            block={block}
+                            blockRef={(element) => {
+                              blockRefs.current[block.id] = element;
+                            }}
+                            isFocused={block.id === focusBlockId}
+                            isPlaying={block.id === currentBlock?.id && isPlaying}
+                            isNext={block.id === nextBlock?.id}
+                            isSelected={clipboard.some((item) => item.id === block.id)}
+                            editMode={editMode}
+                            canDelete={editMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
+                            saveState={blockSaveStates[block.id] || ""}
+                            onFocus={focusBlock}
+                            onAdd={addBlockToClipboard}
+                            onDelete={(blockId) => void deleteBlock(blockId)}
+                            onRemove={removeBlockFromClipboard}
+                            onEdit={editBlock}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                {isMobileLayout && aiOpen ? (
+                  <AiBar
+                    inputRef={aiInputRef}
+                    value={aiInput}
+                    scope={aiScope}
+                    pending={aiPending}
+                    stagedBlocks={stagedAiBlocks}
+                    onChange={setAiInput}
+                    onScopeChange={setAiScope}
+                    onSubmit={runAiOperation}
+                    onPreset={(preset) => setAiInput(`${preset} `)}
+                    onAcceptStagedBlock={acceptStagedBlock}
+                    onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+                    onClearStagedBlocks={() => setStagedAiBlocks([])}
+                    onClose={() => setAiOpen(false)}
+                  />
+                ) : null}
+              </div>
+
+              {!isMobileLayout ? (
+                <aside className="assembler-workbench__context">
+                  <AiUtilityRail
+                    open={aiOpen}
+                    inputRef={aiInputRef}
+                    value={aiInput}
+                    scope={aiScope}
+                    pending={aiPending}
+                    scopeOptions={AI_SCOPE_OPTIONS}
+                    onToggleOpen={() => setAiOpen((value) => !value)}
+                    onChange={setAiInput}
+                    onScopeChange={setAiScope}
+                    onSubmit={runAiOperation}
+                    onPreset={(preset) => setAiInput(`${preset} `)}
+                  />
+
+                  <ClipboardTray
+                    stagedBlocks={stagedAiBlocks}
+                    clipboard={clipboard}
+                    documents={projectDocuments}
+                    onAcceptStagedBlock={acceptStagedBlock}
+                    onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+                    onClearStagedBlocks={() => setStagedAiBlocks([])}
+                    onRemoveClipboardIndex={removeClipboardIndex}
+                    onReorderClipboard={(index, delta) =>
+                      setClipboard((previous) => moveListItem(previous, index, delta))
+                    }
+                    onClearClipboard={() => setClipboard([])}
+                    onAssemble={assembleClipboard}
+                  />
+                </aside>
+              ) : null}
+            </div>
 
             {isMobileLayout ? (
               <MobileComposeSheet
@@ -6454,24 +6249,6 @@ export default function WorkspaceShell({
                 }
                 onClearClipboard={() => setClipboard([])}
                 onAssemble={assembleClipboard}
-              />
-            ) : null}
-
-            {aiOpen ? (
-              <AiBar
-                inputRef={aiInputRef}
-                value={aiInput}
-                scope={aiScope}
-                pending={aiPending}
-                stagedBlocks={stagedAiBlocks}
-                onChange={setAiInput}
-                onScopeChange={setAiScope}
-                onSubmit={runAiOperation}
-                onPreset={(preset) => setAiInput(`${preset} `)}
-                onAcceptStagedBlock={acceptStagedBlock}
-                onAcceptAllStagedBlocks={acceptAllStagedBlocks}
-                onClearStagedBlocks={() => setStagedAiBlocks([])}
-                onClose={() => setAiOpen(false)}
               />
             ) : null}
 
@@ -6566,7 +6343,7 @@ export default function WorkspaceShell({
             const pendingUrl = pendingLinkIntake?.url || "";
             setPendingLinkIntake(null);
             setPastePendingMode("source");
-            setFeedback("Fetching page from link...");
+            setFeedback("Fetching page from link…");
             void createLinkSource(pendingUrl)
               .catch((error) => {
                 setFeedback(

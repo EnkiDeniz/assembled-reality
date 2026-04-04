@@ -64,6 +64,8 @@ export default function AuthTerminal({ authCapabilities }) {
               id="email"
               className="terminal-input"
               type="email"
+              name="email"
+              autoComplete="email"
               placeholder="you@example.com"
               value={email}
               disabled={!authCapabilities.magicLinksEnabled || submitting}
@@ -75,11 +77,11 @@ export default function AuthTerminal({ authCapabilities }) {
                 className="terminal-button"
                 disabled={!authCapabilities.magicLinksEnabled || !email.trim() || submitting}
               >
-                {submitting ? "Sending..." : "Send magic link"}
+                {submitting ? "Sending…" : "Send magic link"}
               </button>
             </div>
-            {status ? <p className="terminal-status is-success">{status}</p> : null}
-            {error ? <p className="terminal-status is-error">{error}</p> : null}
+            {status ? <p className="terminal-status is-success" aria-live="polite">{status}</p> : null}
+            {error ? <p className="terminal-status is-error" aria-live="polite">{error}</p> : null}
           </form>
         </div>
       </section>

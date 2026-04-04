@@ -1,3 +1,8 @@
+@import "./styles/tokens.css";
+@import "./styles/base.css";
+@import "./styles/layout.css";
+@import "./styles/surfaces.css";
+
 :root {
   --bg: #070808;
   --panel: #0e0f0f;
@@ -2386,7 +2391,6 @@ main {
   border: 0;
   background: transparent;
   color: var(--text);
-  outline: none;
 }
 
 .assembler-ai__run {
