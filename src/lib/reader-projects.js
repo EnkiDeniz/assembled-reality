@@ -28,6 +28,20 @@ function isMissingProjectTableError(error) {
   return false;
 }
 
+function isMissingReceiptProjectIdColumnError(error) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2022") {
+    return false;
+  }
+
+  return String(error.meta?.column || "")
+    .toLowerCase()
+    .includes("projectid");
+}
+
 function toProjectDocumentRole(document) {
   return document?.isAssembly || document?.documentType === "assembly" ? "ASSEMBLY" : "SOURCE";
 }
@@ -84,6 +98,17 @@ function sortProjectDocumentsForPersistence(documents = []) {
     }
 
     return getDocumentTimestamp(left) - getDocumentTimestamp(right);
+  });
+}
+
+function sortMembershipsForMove(memberships = []) {
+  return [...memberships].sort((left, right) => {
+    const roleWeight = (left?.role === "ASSEMBLY" ? 1 : 0) - (right?.role === "ASSEMBLY" ? 1 : 0);
+    if (roleWeight !== 0) {
+      return roleWeight;
+    }
+
+    return (left?.position || 0) - (right?.position || 0);
   });
 }
 
@@ -360,6 +385,225 @@ export async function createReaderProjectForUser(
     });
 
     return project;
+  } catch (error) {
+    if (isMissingProjectTableError(error)) {
+      throw new Error("Boxes are temporarily unavailable.");
+    }
+
+    throw error;
+  }
+}
+
+export async function updateReaderProjectForUser(
+  userId,
+  projectKey,
+  {
+    title,
+    subtitle,
+  } = {},
+) {
+  const readerProjectModel = getReaderProjectModel();
+
+  if (!readerProjectModel) {
+    throw new Error("Boxes are temporarily unavailable.");
+  }
+
+  const normalizedProjectKey = String(projectKey || "").trim() || DEFAULT_PROJECT_KEY;
+  const normalizedTitle = String(title || "").trim();
+
+  if (!normalizedTitle) {
+    throw new Error("Box title is required.");
+  }
+
+  try {
+    const project = await readerProjectModel.findFirst({
+      where: {
+        userId,
+        projectKey: normalizedProjectKey,
+      },
+    });
+
+    if (!project) {
+      throw new Error("Box not found.");
+    }
+
+    return await readerProjectModel.update({
+      where: {
+        id: project.id,
+      },
+      data: {
+        title: normalizedTitle,
+        ...(subtitle === undefined
+          ? {}
+          : {
+              subtitle: String(subtitle || "").trim() || null,
+            }),
+      },
+      include: {
+        documents: {
+          orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+        },
+      },
+    });
+  } catch (error) {
+    if (isMissingProjectTableError(error)) {
+      throw new Error("Boxes are temporarily unavailable.");
+    }
+
+    throw error;
+  }
+}
+
+export async function deleteReaderProjectForUser(userId, projectKey) {
+  const readerProjectModel = getReaderProjectModel();
+  const readerProjectDocumentModel = getReaderProjectDocumentModel();
+
+  if (!readerProjectModel || !readerProjectDocumentModel) {
+    throw new Error("Boxes are temporarily unavailable.");
+  }
+
+  const normalizedProjectKey = String(projectKey || "").trim() || DEFAULT_PROJECT_KEY;
+
+  if (normalizedProjectKey === DEFAULT_PROJECT_KEY) {
+    throw new Error("The default box cannot be deleted.");
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const project = await tx.readerProject.findFirst({
+        where: {
+          userId,
+          projectKey: normalizedProjectKey,
+        },
+        include: {
+          documents: {
+            orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+          },
+        },
+      });
+
+      if (!project) {
+        throw new Error("Box not found.");
+      }
+
+      let defaultProject = await tx.readerProject.findFirst({
+        where: {
+          userId,
+          projectKey: DEFAULT_PROJECT_KEY,
+        },
+        include: {
+          documents: {
+            orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+          },
+        },
+      });
+
+      if (!defaultProject) {
+        defaultProject = await tx.readerProject.create({
+          data: {
+            userId,
+            projectKey: DEFAULT_PROJECT_KEY,
+            ...getDefaultProjectSeed(null),
+          },
+          include: {
+            documents: {
+              orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+            },
+          },
+        });
+      }
+
+      const existingMemberships = new Map(
+        defaultProject.documents.map((membership) => [membership.documentKey, membership]),
+      );
+      const membershipsToCreate = [];
+      const membershipsToPromote = [];
+      const orderedMemberships = sortMembershipsForMove(project.documents);
+
+      orderedMemberships.forEach((membership) => {
+        const existingMembership = existingMemberships.get(membership.documentKey);
+
+        if (!existingMembership) {
+          membershipsToCreate.push(membership);
+          return;
+        }
+
+        if (membership.role === "ASSEMBLY" && existingMembership.role !== "ASSEMBLY") {
+          membershipsToPromote.push(existingMembership.id);
+        }
+      });
+
+      const startingPosition = defaultProject.documents.length;
+
+      for (const [index, membership] of membershipsToCreate.entries()) {
+        await tx.readerProjectDocument.create({
+          data: {
+            projectId: defaultProject.id,
+            documentKey: membership.documentKey,
+            role: membership.role,
+            position: startingPosition + index,
+          },
+        });
+      }
+
+      for (const membershipId of membershipsToPromote) {
+        await tx.readerProjectDocument.update({
+          where: {
+            id: membershipId,
+          },
+          data: {
+            role: "ASSEMBLY",
+          },
+        });
+      }
+
+      const nextDefaultAssemblyDocumentKey =
+        defaultProject.currentAssemblyDocumentKey || project.currentAssemblyDocumentKey || null;
+
+      if (nextDefaultAssemblyDocumentKey !== defaultProject.currentAssemblyDocumentKey) {
+        await tx.readerProject.update({
+          where: {
+            id: defaultProject.id,
+          },
+          data: {
+            currentAssemblyDocumentKey: nextDefaultAssemblyDocumentKey,
+          },
+        });
+      }
+
+      let movedDraftCount = 0;
+      try {
+        const draftMove = await tx.readingReceiptDraft.updateMany({
+          where: {
+            userId,
+            projectId: project.id,
+          },
+          data: {
+            projectId: defaultProject.id,
+          },
+        });
+        movedDraftCount = draftMove?.count || 0;
+      } catch (error) {
+        if (!isMissingReceiptProjectIdColumnError(error)) {
+          throw error;
+        }
+      }
+
+      await tx.readerProject.delete({
+        where: {
+          id: project.id,
+        },
+      });
+
+      return {
+        deletedProjectKey: project.projectKey,
+        deletedProjectTitle: project.title,
+        fallbackProjectKey: defaultProject.projectKey,
+        fallbackProjectTitle: defaultProject.title,
+        movedDocumentCount: orderedMemberships.length,
+        movedDraftCount,
+      };
+    });
   } catch (error) {
     if (isMissingProjectTableError(error)) {
       throw new Error("Boxes are temporarily unavailable.");

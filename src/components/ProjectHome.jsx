@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 
 function ProjectHomeDocumentRow({
@@ -59,34 +58,34 @@ function ProjectHomeDocumentRow({
   );
 }
 
-function ProjectHomeAction({
-  title,
-  description,
-  icon,
-  onClick,
-  disabled = false,
-  _ActionIcon,
-  tone = "",
-}) {
+function SummaryCard({ eyebrow, title, body, detail, actions = [], tone = "" }) {
   return (
-    <button
-      type="button"
-      className={`assembler-project-home__action ${tone ? `is-${tone}` : ""}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <span className="assembler-project-home__action-icon" aria-hidden="true">
-        <_ActionIcon kind={icon} />
-      </span>
-      <span className="assembler-project-home__action-copy">
-        <span className="assembler-project-home__action-title">{title}</span>
-        <span className="assembler-project-home__action-detail">{description}</span>
-      </span>
-    </button>
+    <article className={`assembler-project-home__summary ${tone ? `is-${tone}` : ""}`}>
+      <span className="assembler-project-home__summary-eyebrow">{eyebrow}</span>
+      <h2 className="assembler-project-home__summary-title">{title}</h2>
+      {body ? <p className="assembler-project-home__summary-body">{body}</p> : null}
+      {detail ? <p className="assembler-project-home__summary-detail">{detail}</p> : null}
+      {actions.length ? (
+        <div className="assembler-project-home__summary-actions">
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              className={`assembler-project-home__summary-action ${action.primary ? "is-primary" : ""}`}
+              onClick={action.onClick}
+              disabled={action.disabled}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </article>
   );
 }
 
 export default function ProjectHome({
+  boxViewModel,
   activeProject,
   activeProjectKey,
   projects,
@@ -94,15 +93,16 @@ export default function ProjectHome({
   projectActionPending = "",
   loadingDocumentKey = "",
   busy = false,
-  clipboardCount = 0,
-  primaryAction,
   guideDocument = null,
   sourceDocuments = [],
   currentAssemblyDocument = null,
   recentAssemblies = [],
+  primaryAction,
   onCreateProject,
-  onOpenDocument,
+  onManageProjects,
   onOpenProject,
+  onOpenReceipts,
+  onOpenDocument,
   onDeleteDocument,
   onPasteClipboard,
   onOpenSpeak,
@@ -113,153 +113,176 @@ export default function ProjectHome({
   canDeleteDocument,
   sourceOpenMode,
 }) {
-  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
-  const boxRows =
-    projects.length > 0
-      ? projects
-      : activeProject
-        ? [activeProject]
-        : [];
+  const boxTitle = boxViewModel?.boxTitle || activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const boxSubtitle =
-    boxRows.length > 1
-      ? `Select a box, create a new one, or keep shaping the assembly in ${boxTitle}.`
-      : "This is your only box right now. Create another one or keep shaping the assembly here.";
+    boxViewModel?.boxSubtitle ||
+    activeProject?.boxSubtitle ||
+    activeProject?.subtitle ||
+    "Start with a source and shape the assembly.";
   const sourceRows = guideDocument
     ? [guideDocument, ...sourceDocuments]
     : sourceDocuments;
-  const nonBuiltInSourceCount = sourceRows.filter(
-    (document) => document?.documentType !== "builtin" && document?.sourceType !== "builtin",
-  ).length;
-  const sourceCount = sourceRows.length;
-  const assemblyCount = currentAssemblyDocument
-    ? 1 + recentAssemblies.length
-    : recentAssemblies.length;
-  const featuredDrafts = projectDrafts.slice(0, 3);
-  const sevenDiagnostic = projectDrafts.length
-    ? "Seven can read this box now. Sources and receipts are starting to show a pattern."
-    : nonBuiltInSourceCount >= 2
-      ? "Seven can start reading the pattern across the sources in this box."
-      : "Seven needs more in the box to read the pattern.";
-  const secondaryActions = [
-    {
-      title: "Add source",
-      description: "PDF, DOCX, Markdown, TXT, or link.",
-      icon: "upload",
-      onClick: onOpenIntake,
-      disabled: busy,
-      tone: "source",
-    },
-    {
-      title: "Paste to staging",
-      description: clipboardCount
-        ? `${clipboardCount} block${clipboardCount === 1 ? "" : "s"} ready to place.`
-        : "Move copied material into the assembly.",
-      icon: "paste-source",
-      onClick: onPasteClipboard,
-      disabled: busy,
-      tone: "staging",
-    },
-    {
-      title: "Speak note",
-      description: "Capture a voice memo as source material.",
-      icon: "speak",
-      onClick: onOpenSpeak,
-      disabled: busy,
-      tone: "note",
-    },
-  ];
+  const receiptSummary = boxViewModel?.receiptSummary || {
+    draftCount: projectDrafts.length,
+    latestDraftTitle: "",
+    latestDraftStatusLabel: "Local only",
+    syncLine: "Draft a local receipt when the box is ready.",
+    recentDrafts: projectDrafts.slice(0, 4),
+  };
+  const boxes = projects.length
+    ? projects
+    : activeProject
+      ? [activeProject]
+      : [];
+  const boxCount = boxes.length;
+  const currentContext = boxViewModel?.resumeTarget || null;
 
   return (
     <div className="assembler-project-home">
       <section className="assembler-project-home__masthead">
         <div className="assembler-project-home__copy">
-          <span className="assembler-project-home__eyebrow">Boxes</span>
+          <span className="assembler-project-home__eyebrow">What&apos;s in the Box</span>
           <h1 className="assembler-project-home__title">{boxTitle}</h1>
           <p className="assembler-project-home__subtitle">{boxSubtitle}</p>
           <div className="assembler-project-home__meta">
-            <span>{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
-            <span>{assemblyCount} assembl{assemblyCount === 1 ? "y" : "ies"}</span>
-            <span>{projectDrafts.length} receipt{projectDrafts.length === 1 ? "" : "s"}</span>
-            {clipboardCount ? (
-              <span>{clipboardCount} staged</span>
-            ) : null}
+            <span>{boxViewModel?.realSourceCount || 0} real source{(boxViewModel?.realSourceCount || 0) === 1 ? "" : "s"}</span>
+            <span>{boxViewModel?.assemblyCount || 0} assembl{(boxViewModel?.assemblyCount || 0) === 1 ? "y" : "ies"}</span>
+            <span>{receiptSummary.draftCount || 0} receipt{(receiptSummary.draftCount || 0) === 1 ? "" : "s"}</span>
           </div>
           <p className="assembler-project-home__diagnostic">
             <span className="assembler-project-home__diagnostic-label">Seven</span>
-            <span>{sevenDiagnostic}</span>
+            <span>{boxViewModel?.sevenDiagnostic}</span>
           </p>
         </div>
 
-        <div className="assembler-project-home__projects">
-          <div className="assembler-project-home__section-head">
-            <span>{`Boxes ${boxRows.length ? `· ${boxRows.length}` : ""}`}</span>
+        <div className="assembler-project-home__masthead-actions">
+          <button
+            type="button"
+            className="assembler-project-home__primary-button"
+            onClick={primaryAction.onClick}
+            disabled={primaryAction.disabled}
+          >
+            {primaryAction.label}
+          </button>
+          <div className="assembler-project-home__masthead-secondary">
             <button
               type="button"
-              className="assembler-project-home__section-action"
+              className="assembler-project-home__secondary-button"
               onClick={onCreateProject}
               disabled={projectActionPending === "__create__"}
             >
               {projectActionPending === "__create__" ? "Creating…" : "New Box"}
             </button>
-          </div>
-
-          <div className="assembler-project-home__project-list">
-            {boxRows.map((project) => (
-              <button
-                key={project.projectKey}
-                type="button"
-                className={`assembler-project-home__project-row ${
-                  project.projectKey === activeProjectKey ? "is-active" : ""
-                }`}
-                onClick={() => onOpenProject(project.projectKey)}
-                disabled={projectActionPending === project.projectKey}
-              >
-                <span className="assembler-project-home__project-title">
-                  {project.boxTitle || project.title || "Untitled Box"}
-                </span>
-                <span className="assembler-project-home__project-meta">
-                  {projectActionPending === project.projectKey
-                    ? "Opening…"
-                    : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
-                </span>
-              </button>
-            ))}
+            <button
+              type="button"
+              className="assembler-project-home__secondary-button"
+              onClick={onManageProjects}
+              disabled={Boolean(projectActionPending)}
+            >
+              Box management
+            </button>
           </div>
         </div>
       </section>
 
-      <section className="assembler-project-home__control-strip">
-        <ProjectHomeAction
+      <section className="assembler-project-home__summary-grid">
+        <SummaryCard
+          eyebrow="Next move"
           title={primaryAction.label}
-          description={`${primaryAction.title}${primaryAction.detail ? ` · ${primaryAction.detail}` : ""}`}
-          icon={primaryAction.icon}
-          onClick={primaryAction.onClick}
-          disabled={primaryAction.disabled}
-          _ActionIcon={ActionIcon}
+          body={primaryAction.title}
+          detail={primaryAction.detail || boxViewModel?.strongestNextMove?.supportingDetail || ""}
+          actions={[
+            {
+              label: primaryAction.label,
+              onClick: primaryAction.onClick,
+              disabled: primaryAction.disabled,
+              primary: true,
+            },
+          ]}
           tone="primary"
         />
 
-        <div className="assembler-project-home__actions">
-          {secondaryActions.map((action) => (
-            <ProjectHomeAction
-              key={action.title}
-              title={action.title}
-              description={action.description}
-              icon={action.icon}
-              onClick={action.onClick}
-              disabled={action.disabled}
-              _ActionIcon={ActionIcon}
-              tone={action.tone}
-            />
-          ))}
-        </div>
+        <SummaryCard
+          eyebrow="Current position"
+          title={currentContext?.title || "No current position yet"}
+          body={currentContext?.detail || "Add a real source or continue the assembly to create momentum."}
+          detail={
+            currentAssemblyDocument
+              ? "Assembly is the live working position of this box."
+              : "Return and resume should always point somewhere legible."
+          }
+        />
+
+        <SummaryCard
+          eyebrow="Proof"
+          title={receiptSummary.latestDraftTitle || "No proof drafted yet"}
+          body={
+            receiptSummary.latestDraftTitle
+              ? `${receiptSummary.latestDraftStatusLabel} · ${receiptSummary.connectionStatusLabel || "Local proof"}`
+              : receiptSummary.connectionStatusLabel === "Connected"
+                ? "GetReceipts is connected. Local drafts can push when ready."
+                : "Local proof is ready even without a GetReceipts connection."
+          }
+          detail={receiptSummary.syncLine}
+          actions={[
+            {
+              label: "Open Receipts",
+              onClick: onOpenReceipts,
+              disabled: false,
+            },
+          ]}
+        />
+
+        <SummaryCard
+          eyebrow="Source inventory"
+          title={
+            sourceRows.length
+              ? `${sourceRows.length} source${sourceRows.length === 1 ? "" : "s"} in this box`
+              : "No imported sources yet"
+          }
+          body={
+            sourceRows.length
+              ? "Think reads the box from sources first. Create turns those sources into assembly."
+              : "Start with a supported 1.0 source or capture a Speak note."
+          }
+          detail="Supported now: PDF, DOCX, Markdown/TXT, paste, link, and Speak note."
+          actions={[
+            {
+              label: "Add source",
+              onClick: onOpenIntake,
+              disabled: busy,
+            },
+            {
+              label: "Speak note",
+              onClick: onOpenSpeak,
+              disabled: busy,
+            },
+          ]}
+        />
       </section>
 
       <div className="assembler-project-home__layout">
         <section className="assembler-project-home__panel assembler-project-home__panel--materials">
           <div className="assembler-project-home__section-head">
             <span>Sources</span>
-            <span>{sourceCount}</span>
+            <div className="assembler-project-home__section-actions">
+              <button
+                type="button"
+                className="assembler-project-home__section-action"
+                onClick={onOpenIntake}
+                disabled={busy}
+              >
+                Add source
+              </button>
+              <button
+                type="button"
+                className="assembler-project-home__section-action"
+                onClick={onPasteClipboard}
+                disabled={busy}
+              >
+                Paste to staging
+              </button>
+            </div>
           </div>
 
           <div className="assembler-project-home__list">
@@ -346,31 +369,63 @@ export default function ProjectHome({
 
           <section className="assembler-project-home__panel">
             <div className="assembler-project-home__section-head">
-              <span>Receipts</span>
-              {projectDrafts.length ? (
-                <Link href="/account" className="assembler-project-home__section-link">
-                  Review
-                </Link>
-              ) : null}
+              <span>Recent proof</span>
+              <button
+                type="button"
+                className="assembler-project-home__section-action"
+                onClick={onOpenReceipts}
+              >
+                Open Receipts
+              </button>
             </div>
 
             <div className="assembler-project-home__receipt-panel">
-              {featuredDrafts.length ? (
-                featuredDrafts.map((draft) => (
+              {receiptSummary.recentDrafts?.length ? (
+                receiptSummary.recentDrafts.map((draft) => (
                   <div key={draft.id} className="assembler-project-home__receipt-row">
                     <span className="assembler-project-home__receipt-title">
                       {draft.title || "Untitled receipt"}
                     </span>
                     <span className="assembler-project-home__receipt-meta">
-                      {String(draft.status || "local_draft").toLowerCase().replace(/_/g, " ")}
+                      {draft.statusLabel}
                     </span>
                   </div>
                 ))
               ) : (
                 <p className="assembler-project-home__empty">
-                  No receipts yet. Draft one after you assemble.
+                  No receipts yet. Draft one after you assemble or Operate.
                 </p>
               )}
+            </div>
+          </section>
+
+          <section className="assembler-project-home__panel assembler-project-home__panel--boxes">
+            <div className="assembler-project-home__section-head">
+              <span>Boxes</span>
+              <span>{boxCount}</span>
+            </div>
+
+            <div className="assembler-project-home__project-list">
+              {boxes.map((project) => (
+                <button
+                  key={project.projectKey}
+                  type="button"
+                  className={`assembler-project-home__project-row ${
+                    project.projectKey === activeProjectKey ? "is-active" : ""
+                  }`}
+                  onClick={() => onOpenProject(project.projectKey)}
+                  disabled={projectActionPending === project.projectKey}
+                >
+                  <span className="assembler-project-home__project-title">
+                    {project.boxTitle || project.title || "Untitled Box"}
+                  </span>
+                  <span className="assembler-project-home__project-meta">
+                    {projectActionPending === project.projectKey
+                      ? "Opening…"
+                      : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
+                  </span>
+                </button>
+              ))}
             </div>
           </section>
         </div>

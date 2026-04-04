@@ -17,6 +17,12 @@ export default function BoxPhaseBar({
   clipboardCount = 0,
 }) {
   const totalClipboardCount = clipboardCount + stagedCount;
+  const phaseLabel =
+    phase === "create"
+      ? "Create phase"
+      : phase === "receipts"
+        ? "Receipts phase"
+        : "Think phase";
 
   function renderPhaseButton(nextPhase, label) {
     return (
@@ -35,7 +41,7 @@ export default function BoxPhaseBar({
       <div className="assembler-toolbar__left">
         {renderPhaseButton("think", "Think")}
         {renderPhaseButton("create", "Create")}
-        {isMobileLayout ? (
+        {isMobileLayout && phase === "create" ? (
           <button
             type="button"
             className={`assembler-tab ${isClipboardOpen ? "is-active" : ""}`}
@@ -77,15 +83,21 @@ export default function BoxPhaseBar({
           </button>
         ) : null}
 
-        <button
-          type="button"
-          className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
-          onClick={onToggleAi}
-          aria-label={aiOpen ? "Close Seven conversation" : "Open Seven conversation"}
-        >
-          7
-        </button>
+        {!isMobileLayout || phase === "think" ? (
+          <button
+            type="button"
+            className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
+            onClick={onToggleAi}
+            aria-label={aiOpen ? "Close Seven conversation" : "Open Seven conversation"}
+          >
+            7
+          </button>
+        ) : null}
       </div>
+
+      {isMobileLayout ? (
+        <div className="assembler-toolbar__phase-label">{phaseLabel}</div>
+      ) : null}
 
       {status ? (
         <div className={`assembler-toolbar__status ${statusTone ? `is-${statusTone}` : ""}`}>

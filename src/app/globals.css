@@ -3894,7 +3894,386 @@ main {
   gap: 8px;
 }
 
+.assembler-project-home {
+  width: min(1180px, 100%);
+  display: grid;
+  gap: 18px;
+}
+
+.assembler-project-home__masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(51, 156, 255, 0.05), transparent 65%),
+    rgba(15, 17, 17, 0.92);
+}
+
+.assembler-project-home__copy {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-project-home__eyebrow,
+.assembler-project-home__summary-eyebrow,
+.assembler-project-home__diagnostic-label {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-project-home__title {
+  margin: 0;
+  color: var(--white);
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.assembler-project-home__subtitle,
+.assembler-project-home__diagnostic,
+.assembler-project-home__summary-detail,
+.assembler-project-home__empty,
+.assembler-project-home__receipt-meta,
+.assembler-project-home__project-meta,
+.assembler-project-home__row-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-project-home__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-project-home__diagnostic {
+  display: grid;
+  gap: 4px;
+  max-width: 52ch;
+}
+
+.assembler-project-home__masthead-actions {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.assembler-project-home__primary-button,
+.assembler-project-home__secondary-button,
+.assembler-project-home__section-action,
+.assembler-project-home__summary-action {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--white);
+  font-size: 12px;
+}
+
+.assembler-project-home__primary-button:disabled,
+.assembler-project-home__secondary-button:disabled,
+.assembler-project-home__section-action:disabled,
+.assembler-project-home__summary-action:disabled,
+.assembler-box-management__primary:disabled,
+.assembler-box-management__secondary:disabled,
+.assembler-box-management__danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.assembler-project-home__primary-button,
+.assembler-project-home__summary-action.is-primary {
+  border-color: rgba(51, 156, 255, 0.26);
+  background: rgba(51, 156, 255, 0.1);
+}
+
+.assembler-project-home__masthead-secondary,
+.assembler-project-home__section-actions,
+.assembler-project-home__summary-actions,
+.assembler-receipt-surface__hero-actions,
+.assembler-box-management__form,
+.assembler-box-management__selected-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assembler-project-home__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.assembler-project-home__summary,
+.assembler-project-home__panel,
+.assembler-receipt-surface__hero,
+.assembler-receipt-surface__status-card,
+.assembler-receipt-surface__panel,
+.assembler-box-management__section {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background: rgba(15, 17, 17, 0.92);
+}
+
+.assembler-project-home__summary.is-primary {
+  background:
+    linear-gradient(180deg, rgba(51, 156, 255, 0.05), transparent 70%),
+    rgba(15, 17, 17, 0.94);
+}
+
+.assembler-project-home__summary-title,
+.assembler-receipt-surface__title {
+  margin: 0;
+  color: var(--white);
+  font-size: 20px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.assembler-receipt-surface__hero-copy,
+.assembler-box-management__selected {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-project-home__summary-body,
+.assembler-receipt-surface__body,
+.assembler-receipt-surface__status-detail,
+.assembler-receipt-surface__draft-body,
+.assembler-box-management__selected-copy p {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.assembler-project-home__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+  gap: 16px;
+}
+
+.assembler-project-home__stack,
+.assembler-project-home__list,
+.assembler-project-home__project-list,
+.assembler-project-home__receipt-panel,
+.assembler-box-management__body,
+.assembler-box-management__list,
+.assembler-receipt-surface,
+.assembler-receipt-surface__drafts {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-project-home__section-head,
+.assembler-receipt-surface__panel-head,
+.assembler-box-management__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-project-home__row,
+.assembler-project-home__project-row,
+.assembler-box-management__row,
+.assembler-receipt-surface__draft {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.assembler-project-home__row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.assembler-project-home__row:last-child,
+.assembler-project-home__project-row:last-child,
+.assembler-box-management__row:last-child,
+.assembler-receipt-surface__draft:last-child {
+  border-bottom: 0;
+}
+
+.assembler-project-home__row-quick,
+.assembler-project-home__row-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--soft);
+}
+
+.assembler-project-home__row-delete {
+  color: var(--red);
+}
+
+.assembler-project-home__row-body,
+.assembler-project-home__project-row,
+.assembler-box-management__row {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.assembler-project-home__row-title,
+.assembler-project-home__project-title,
+.assembler-project-home__receipt-title,
+.assembler-receipt-surface__status-value,
+.assembler-box-management__row-title {
+  color: var(--white);
+  font-size: 14px;
+}
+
+.assembler-project-home__row-aside,
+.assembler-receipt-surface__draft-head,
+.assembler-receipt-surface__hero-meta,
+.assembler-receipt-surface__hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assembler-project-home__row-badge,
+.assembler-box-management__row-action,
+.assembler-receipt-surface__status-label {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-project-home__project-row,
+.assembler-box-management__row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 56px;
+}
+
+.assembler-project-home__project-row.is-active,
+.assembler-box-management__row.is-active {
+  padding-left: 10px;
+  border-left: 2px solid rgba(51, 156, 255, 0.44);
+}
+
+.assembler-receipt-surface__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.assembler-receipt-surface__pill.is-success {
+  color: var(--green);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.assembler-receipt-surface__pill.is-error {
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.assembler-receipt-surface__status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.assembler-box-management {
+  width: min(760px, calc(100vw - 24px));
+}
+
+.assembler-box-management__input {
+  flex: 1;
+  min-height: 42px;
+  min-width: 220px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(12, 14, 14, 0.88);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.assembler-box-management__primary,
+.assembler-box-management__secondary,
+.assembler-box-management__danger {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--white);
+  font-size: 12px;
+}
+
+.assembler-box-management__primary {
+  border-color: rgba(51, 156, 255, 0.26);
+  background: rgba(51, 156, 255, 0.08);
+}
+
+.assembler-box-management__danger {
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.26);
+}
+
+.assembler-toolbar__phase-label {
+  grid-column: 1 / -1;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.assembler-drop-sheet__note--beta {
+  margin-top: 4px;
+  color: var(--soft);
+}
+
 @media (max-width: 1100px) {
+  .assembler-project-home__summary-grid,
+  .assembler-project-home__layout,
+  .assembler-receipt-surface__status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assembler-project-home__masthead {
+    grid-template-columns: 1fr;
+  }
+
   .assembler-header {
     padding: 10px 14px;
   }
@@ -4034,6 +4413,58 @@ main {
 }
 
 @media (max-width: 820px) {
+  .assembler-project-home {
+    gap: 14px;
+  }
+
+  .assembler-project-home__masthead,
+  .assembler-project-home__summary,
+  .assembler-project-home__panel,
+  .assembler-receipt-surface__hero,
+  .assembler-receipt-surface__status-card,
+  .assembler-receipt-surface__panel,
+  .assembler-box-management__section {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .assembler-project-home__masthead-actions {
+    min-width: 0;
+  }
+
+  .assembler-project-home__meta,
+  .assembler-project-home__masthead-secondary,
+  .assembler-project-home__summary-actions,
+  .assembler-project-home__section-actions,
+  .assembler-receipt-surface__hero-actions,
+  .assembler-box-management__form,
+  .assembler-box-management__selected-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .assembler-project-home__primary-button,
+  .assembler-project-home__secondary-button,
+  .assembler-project-home__section-action,
+  .assembler-project-home__summary-action,
+  .assembler-box-management__primary,
+  .assembler-box-management__secondary,
+  .assembler-box-management__danger {
+    width: 100%;
+  }
+
+  .assembler-project-home__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .assembler-project-home__row-aside {
+    grid-column: 2;
+  }
+
+  .assembler-box-management {
+    width: auto;
+  }
+
   .intro-page {
     padding: 18px;
   }

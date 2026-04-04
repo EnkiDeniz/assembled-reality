@@ -17,6 +17,7 @@ const readingReceiptDraftSelection = {
   id: true,
   userId: true,
   readerProfileId: true,
+  projectId: true,
   documentKey: true,
   conversationThreadId: true,
   getReceiptsReceiptId: true,
@@ -460,6 +461,44 @@ export async function listReadingReceiptDraftsForProjectForUser(
       take,
       select: readingReceiptDraftSelection,
     });
+  }
+}
+
+export async function reassignReadingReceiptDraftsForProjectForUser(
+  userId,
+  {
+    fromProjectId = null,
+    toProjectId = null,
+  } = {},
+) {
+  if (!userId || !fromProjectId || !toProjectId || fromProjectId === toProjectId) {
+    return { count: 0, legacyFallback: false };
+  }
+
+  try {
+    const result = await prisma.readingReceiptDraft.updateMany({
+      where: {
+        userId,
+        projectId: fromProjectId,
+      },
+      data: {
+        projectId: toProjectId,
+      },
+    });
+
+    return {
+      count: result?.count || 0,
+      legacyFallback: false,
+    };
+  } catch (error) {
+    if (!isMissingReceiptProjectIdColumnError(error)) {
+      throw error;
+    }
+
+    return {
+      count: 0,
+      legacyFallback: true,
+    };
   }
 }
 

@@ -17,6 +17,7 @@ import {
 } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import {
+  getReaderProfileByUserId,
   listReadingReceiptDraftsForProjectForUser,
 } from "@/lib/reader-db";
 import { buildResumeSessionSummaryForUser } from "@/lib/reader-workspace";
@@ -59,7 +60,7 @@ export default async function WorkspacePage({ searchParams }) {
         : getProjectEntryDocumentKey(initialProject) ||
           documents[0]?.documentKey ||
           "");
-  const [initialDocument, projectDrafts, resumeSessionSummary] = await Promise.all([
+  const [initialDocument, projectDrafts, resumeSessionSummary, readerData] = await Promise.all([
     getReaderDocumentDataForUser(
       session.user.id,
       fallbackDocumentKey,
@@ -73,6 +74,7 @@ export default async function WorkspacePage({ searchParams }) {
       session.user.id,
       initialProject?.documentKeys || documents.map((document) => document.documentKey),
     ),
+    getReaderProfileByUserId(session.user.id),
   ]);
 
   if (!initialDocument) {
@@ -92,6 +94,8 @@ export default async function WorkspacePage({ searchParams }) {
       documents={documents}
       projects={projects}
       projectDrafts={projectDrafts}
+      getReceiptsConnectionStatus={readerData?.getReceiptsConnection?.status || "DISCONNECTED"}
+      getReceiptsConnectionLastError={readerData?.getReceiptsConnection?.lastError || ""}
       initialDocument={initialDocument}
       initialProjectKey={initialProject?.projectKey || null}
       initialMode={requestedMode === "listen" || requestedMode === "assemble" ? requestedMode : ""}

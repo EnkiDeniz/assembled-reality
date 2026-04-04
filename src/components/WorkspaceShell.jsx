@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import AiUtilityRail from "@/components/AiUtilityRail";
+import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesLauncher from "@/components/BoxesLauncher";
 import BoxPhaseBar from "@/components/BoxPhaseBar";
 import CreateSurface from "@/components/CreateSurface";
@@ -26,8 +27,10 @@ import {
 } from "@/lib/listening";
 import {
   BOX_PHASES,
+  buildBoxViewModel,
   buildCreateViewModel,
   buildOperateViewModel,
+  buildReceiptSummaryViewModel,
   buildThinkViewModel,
   normalizeBoxPhase,
 } from "@/lib/box-view-models";
@@ -1218,13 +1221,6 @@ function getDocumentBlockCountLabel(document) {
   return `${blockCount} block${blockCount === 1 ? "" : "s"}`;
 }
 
-function getResumeSessionLabel(summary) {
-  if (!summary?.documentKey) return "";
-  const current = summary.blockPosition || 1;
-  const total = summary.totalBlocks || 0;
-  return total ? `Block ${current} of ${total}` : `Block ${current}`;
-}
-
 function WorkspaceShelf({
   open = false,
   activeProject,
@@ -1306,10 +1302,14 @@ function WorkspaceLaunchpad({
   projects,
   documents,
   projectDrafts = [],
+  getReceiptsConnectionStatus = "DISCONNECTED",
+  getReceiptsConnectionLastError = "",
   projectActionPending = "",
   loadingDocumentKey,
   onEnterMode,
   onCreateProject,
+  onManageProjects,
+  onOpenReceipts,
   onOpenDocument,
   onOpenProject,
   onDeleteDocument,
@@ -1347,29 +1347,20 @@ function WorkspaceLaunchpad({
   );
   const sourceDocuments = shouldFeatureGuide ? userSourceDocuments : grouped.sources;
   const assemblyDocuments = grouped.assemblies;
-  const primarySourceDocument = userSourceDocuments[0] || null;
+  const latestSourceDocument =
+    [...userSourceDocuments].sort((left, right) => {
+      const rightTimestamp = Date.parse(right?.updatedAt || right?.createdAt || "");
+      const leftTimestamp = Date.parse(left?.updatedAt || left?.createdAt || "");
+      return (Number.isNaN(rightTimestamp) ? 0 : rightTimestamp) - (Number.isNaN(leftTimestamp) ? 0 : leftTimestamp);
+    })[0] || null;
   const recentAssemblies = assemblyDocuments
     .filter((document) => document.documentKey !== currentAssemblyDocument?.documentKey)
     .slice(0, 3);
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
-  const primaryAction = resumeSessionSummary?.documentKey
+  const primaryAction = currentAssemblyDocument
     ? {
-        label: "Continue working",
-        title: resumeSessionSummary.title,
-        detail: getResumeSessionLabel(resumeSessionSummary),
-        icon: "continue",
-        disabled: false,
-        onClick: () =>
-          onOpenDocument(
-            resumeSessionSummary.documentKey,
-            WORKSPACE_MODES.listen,
-            { focusBlockId: resumeSessionSummary.blockId || null, phase: BOX_PHASES.think },
-          ),
-      }
-    : currentAssemblyDocument
-      ? {
-          label: "Open assembly",
-          title: currentAssemblyDocument.title,
+        label: "Continue Assembly",
+        title: currentAssemblyDocument.title,
         detail: getDocumentBlockCountLabel(currentAssemblyDocument),
         icon: "assemble",
         disabled: busy,
@@ -1378,15 +1369,15 @@ function WorkspaceLaunchpad({
             phase: BOX_PHASES.create,
           }),
       }
-      : primarySourceDocument
+      : latestSourceDocument
         ? {
-            label: "Open source",
-            title: primarySourceDocument.title,
-        detail: getDocumentBlockCountLabel(primarySourceDocument),
+            label: "Open latest source",
+            title: latestSourceDocument.title,
+        detail: getDocumentBlockCountLabel(latestSourceDocument),
         icon: "listen",
         disabled: busy,
         onClick: () =>
-          onEnterMode(WORKSPACE_MODES.listen, primarySourceDocument.documentKey, {
+          onEnterMode(WORKSPACE_MODES.listen, latestSourceDocument.documentKey, {
             phase: BOX_PHASES.think,
           }),
       }
@@ -1410,8 +1401,18 @@ function WorkspaceLaunchpad({
             disabled: busy,
             onClick: onOpenIntake,
           };
+  const boxViewModel = buildBoxViewModel({
+    activeProject,
+    projectDocuments: documents,
+    currentAssemblyDocument,
+    projectDrafts,
+    resumeSessionSummary,
+    connectionStatus: getReceiptsConnectionStatus,
+    connectionLastError: getReceiptsConnectionLastError,
+  });
   return (
     <BoxesLauncher
+      boxViewModel={boxViewModel}
       activeProject={activeProject}
       activeProjectKey={activeProjectKey}
       projects={projects}
@@ -1426,6 +1427,8 @@ function WorkspaceLaunchpad({
       currentAssemblyDocument={currentAssemblyDocument}
       recentAssemblies={recentAssemblies}
       onCreateProject={onCreateProject}
+      onManageProjects={onManageProjects}
+      onOpenReceipts={onOpenReceipts}
       onOpenDocument={onOpenDocument}
       onOpenProject={onOpenProject}
       onDeleteDocument={onDeleteDocument}
@@ -1951,6 +1954,7 @@ function DropAnythingSheet({
   onClose,
   onUpload,
   onPaste,
+  onSpeak,
   onImportLink,
 }) {
   const [manualLink, setManualLink] = useState("");
@@ -2020,6 +2024,20 @@ function DropAnythingSheet({
               <span className="assembler-drop-sheet__action-title">Paste text</span>
             </span>
           </button>
+
+          <button
+            type="button"
+            className="assembler-drop-sheet__action"
+            onClick={onSpeak}
+            disabled={pending}
+          >
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="speak" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Speak note</span>
+            </span>
+          </button>
         </div>
 
         <div className="assembler-drop-sheet__link">
@@ -2055,6 +2073,10 @@ function DropAnythingSheet({
             </button>
           </div>
         </div>
+
+        <p className="assembler-drop-sheet__note assembler-drop-sheet__note--beta">
+          Beta or future paths stay secondary here: image conversion, folder import, and arbitrary audio uploads.
+        </p>
       </div>
     </div>
   );
@@ -2458,18 +2480,26 @@ function BlockEditor({ block, saveState, onEdit }) {
 
 function LogView({
   logEntries,
+  drafts,
+  receiptSummary,
   receiptPending,
+  activeDocumentTitle,
   onCreateReceipt,
   onExportReceipt,
   onExportDocument,
+  onOpenGetReceipts,
 }) {
   return (
     <ReceiptSurface
       logEntries={logEntries}
+      drafts={drafts}
+      receiptSummary={receiptSummary}
       receiptPending={receiptPending}
+      activeDocumentTitle={activeDocumentTitle}
       onCreateReceipt={onCreateReceipt}
       onExportReceipt={onExportReceipt}
       onExportDocument={onExportDocument}
+      onOpenGetReceipts={onOpenGetReceipts}
     />
   );
 }
@@ -2950,22 +2980,22 @@ function formatAudioErrorMessage(message) {
   const normalized = String(message || "").trim().toLowerCase();
 
   if (!normalized) {
-    return "Couldn't play this section. Try again.";
+    return "Playback could not start. Your place is preserved. Try again or switch voices.";
   }
 
   if (normalized.includes("disturbed or locked")) {
-    return "Couldn't play this section. Try again.";
+    return "Playback was interrupted. Your place is preserved. Try again.";
   }
 
   if (normalized.includes("quota")) {
-    return "Voice is unavailable right now. Try again in a moment.";
+    return "Voice is unavailable right now. Your place is preserved. Try again in a moment.";
   }
 
   if (normalized.includes("rate limit")) {
-    return "Voice is busy right now. Try again in a moment.";
+    return "Voice is busy right now. Your place is preserved. Try again in a moment.";
   }
 
-  return "Couldn't play this section. Try again.";
+  return "Playback could not start. Your place is preserved. Try again.";
 }
 
 export default function WorkspaceShell({
@@ -2973,6 +3003,8 @@ export default function WorkspaceShell({
   documents,
   projects,
   projectDrafts = [],
+  getReceiptsConnectionStatus = "DISCONNECTED",
+  getReceiptsConnectionLastError = "",
   initialDocument,
   initialProjectKey = DEFAULT_PROJECT_KEY,
   initialMode = "",
@@ -3082,6 +3114,13 @@ export default function WorkspaceShell({
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
   const [projectActionPending, setProjectActionPending] = useState("");
+  const [boxManagementOpen, setBoxManagementOpen] = useState(false);
+  const [selectedManagementProjectKey, setSelectedManagementProjectKey] = useState(
+    initialProjectKey || DEFAULT_PROJECT_KEY,
+  );
+  const [createProjectTitle, setCreateProjectTitle] = useState("Untitled Box");
+  const [renameProjectTitle, setRenameProjectTitle] = useState("");
+  const [boxManagementError, setBoxManagementError] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
@@ -3122,6 +3161,10 @@ export default function WorkspaceShell({
     includeGuide: false,
   });
   const operateViewModel = buildOperateViewModel(operateState, activeProject);
+  const receiptSummaryViewModel = buildReceiptSummaryViewModel(projectDraftsState, {
+    connectionStatus: getReceiptsConnectionStatus,
+    connectionLastError: getReceiptsConnectionLastError,
+  });
   const canRunOperate = operateViewModel.canRunOperate;
   const availableVoiceCatalog = voiceCatalog.filter(
     (entry) =>
@@ -3478,6 +3521,44 @@ export default function WorkspaceShell({
   useEffect(() => {
     setDeviceVoiceSupported(browserSupportsDeviceVoice());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedNotice = window.sessionStorage.getItem("loegos-workspace-notice");
+    if (!storedNotice) return;
+
+    window.sessionStorage.removeItem("loegos-workspace-notice");
+
+    try {
+      const payload = JSON.parse(storedNotice);
+      if (payload?.message) {
+        setFeedback(payload.message, payload.tone || "");
+      }
+    } catch {
+      // Ignore invalid stored notices.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!boxManagementOpen) return;
+
+    const managedProject =
+      hydratedProjects.find((project) => project.projectKey === selectedManagementProjectKey) ||
+      activeProject ||
+      hydratedProjects[0] ||
+      null;
+
+    if (!managedProject) return;
+
+    setSelectedManagementProjectKey(managedProject.projectKey);
+    setRenameProjectTitle(managedProject.boxTitle || managedProject.title || "Untitled Box");
+  }, [
+    activeProject,
+    boxManagementOpen,
+    hydratedProjects,
+    selectedManagementProjectKey,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -3987,6 +4068,34 @@ export default function WorkspaceShell({
     });
   }
 
+  function persistWorkspaceNotice(message, tone = "success") {
+    if (typeof window === "undefined" || !message) return;
+
+    window.sessionStorage.setItem(
+      "loegos-workspace-notice",
+      JSON.stringify({ message, tone }),
+    );
+  }
+
+  function selectProjectForManagement(projectKey) {
+    const nextProject =
+      hydratedProjects.find((project) => project.projectKey === projectKey) ||
+      activeProject ||
+      hydratedProjects[0] ||
+      null;
+    const nextTitle = nextProject?.boxTitle || nextProject?.title || "Untitled Box";
+
+    setSelectedManagementProjectKey(nextProject?.projectKey || DEFAULT_PROJECT_KEY);
+    setRenameProjectTitle(nextTitle);
+    setBoxManagementError("");
+  }
+
+  function openProjectManagement(projectKey = activeProjectKey) {
+    selectProjectForManagement(projectKey);
+    setCreateProjectTitle("Untitled Box");
+    setBoxManagementOpen(true);
+  }
+
   function openProject(projectKey) {
     if (!projectKey || typeof window === "undefined") return;
 
@@ -4000,11 +4109,10 @@ export default function WorkspaceShell({
   }
 
   async function createProject() {
-    const fallbackTitle = "Untitled Box";
-    const title = window.prompt("Name this box", fallbackTitle)?.trim();
-    if (!title) return;
+    const title = String(createProjectTitle || "").trim() || "Untitled Box";
 
     setProjectActionPending("__create__");
+    setBoxManagementError("");
 
     try {
       const response = await fetch("/api/workspace/project", {
@@ -4020,6 +4128,7 @@ export default function WorkspaceShell({
         throw new Error(payload?.error || "Could not create the box.");
       }
 
+      setBoxManagementOpen(false);
       window.location.assign(
         buildWorkspaceUrl("", payload.project.projectKey, {
           launchpad: true,
@@ -4027,7 +4136,119 @@ export default function WorkspaceShell({
       );
     } catch (error) {
       setProjectActionPending("");
-      setFeedback(error instanceof Error ? error.message : "Could not create the box.", "error");
+      const message = error instanceof Error ? error.message : "Could not create the box.";
+      setBoxManagementError(message);
+      setFeedback(message, "error");
+    }
+  }
+
+  async function renameProject() {
+    const targetProject =
+      hydratedProjects.find((project) => project.projectKey === selectedManagementProjectKey) ||
+      null;
+    const title = String(renameProjectTitle || "").trim();
+
+    if (!targetProject?.projectKey || !title) {
+      setBoxManagementError("Box title is required.");
+      return;
+    }
+
+    setProjectActionPending("__rename__");
+    setBoxManagementError("");
+
+    try {
+      const response = await fetch("/api/workspace/project", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: targetProject.projectKey,
+          title,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.project?.projectKey) {
+        throw new Error(payload?.error || "Could not rename the box.");
+      }
+
+      setProjectsState((previous) =>
+        previous.map((project) =>
+          project.projectKey === payload.project.projectKey
+            ? {
+                ...project,
+                title: payload.project.title,
+                boxTitle: payload.project.title,
+                subtitle: payload.project.subtitle || project.subtitle,
+              }
+            : project,
+        ),
+      );
+      setRenameProjectTitle(payload.project.title);
+      setProjectActionPending("");
+      setFeedback(`Renamed the box to ${payload.project.title}.`, "success");
+    } catch (error) {
+      setProjectActionPending("");
+      const message = error instanceof Error ? error.message : "Could not rename the box.";
+      setBoxManagementError(message);
+      setFeedback(message, "error");
+    }
+  }
+
+  async function deleteProject() {
+    const targetProject =
+      hydratedProjects.find((project) => project.projectKey === selectedManagementProjectKey) ||
+      null;
+
+    if (!targetProject?.projectKey) {
+      setBoxManagementError("Choose a Box to delete.");
+      return;
+    }
+
+    setProjectActionPending("__delete__");
+    setBoxManagementError("");
+
+    try {
+      const response = await fetch("/api/workspace/project", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: targetProject.projectKey,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.result?.fallbackProjectKey) {
+        throw new Error(payload?.error || "Could not delete the box.");
+      }
+
+      const successMessage = `Deleted ${targetProject.boxTitle || targetProject.title || "the box"}. Everything moved into ${payload.result.fallbackProjectTitle || "Untitled Box"}.`;
+      persistWorkspaceNotice(successMessage, "success");
+
+      if (targetProject.projectKey === activeProjectKey) {
+        window.location.assign(
+          buildWorkspaceUrl("", payload.result.fallbackProjectKey, {
+            launchpad: true,
+          }),
+        );
+        return;
+      }
+
+      setProjectsState((previous) =>
+        previous.filter((project) => project.projectKey !== targetProject.projectKey),
+      );
+      setSelectedManagementProjectKey(payload.result.fallbackProjectKey);
+      setBoxManagementOpen(false);
+      setProjectActionPending("");
+      setFeedback(successMessage, "success");
+    } catch (error) {
+      setProjectActionPending("");
+      const message = error instanceof Error ? error.message : "Could not delete the box.";
+      setBoxManagementError(message);
+      setFeedback(message, "error");
     }
   }
 
@@ -4057,6 +4278,23 @@ export default function WorkspaceShell({
         }),
       );
     }
+  }
+
+  function openReceiptsSurface() {
+    const targetDocumentKey =
+      currentAssemblyDocument?.documentKey ||
+      activeDocument?.documentKey ||
+      getProjectEntryDocumentKey(activeProject) ||
+      "";
+
+    if (!targetDocumentKey) {
+      setFeedback("Open a source or assembly before reviewing receipts.", "error");
+      return;
+    }
+
+    void enterWorkspace(targetDocumentKey, WORKSPACE_MODES.assemble, {
+      phase: BOX_PHASES.receipts,
+    });
   }
 
   function cancelDeviceSpeech({ incrementRunId = true } = {}) {
@@ -4303,6 +4541,10 @@ export default function WorkspaceShell({
   function handleSelectBoxPhase(nextPhase) {
     const normalizedPhase = normalizeBoxPhase(nextPhase, BOX_PHASES.think);
 
+    if (normalizedPhase !== BOX_PHASES.create) {
+      setMobileComposeOpen(false);
+    }
+
     if (normalizedPhase === BOX_PHASES.receipts) {
       setAiOpen(false);
       setEditMode(false);
@@ -4322,6 +4564,10 @@ export default function WorkspaceShell({
         });
         return;
       }
+    }
+
+    if (normalizedPhase !== BOX_PHASES.think) {
+      setAiOpen(false);
     }
 
     setBoxPhase(normalizedPhase);
@@ -4574,10 +4820,10 @@ export default function WorkspaceShell({
       setVoiceRecorderPhase("idle");
       setVoiceRecorderError(
         error instanceof Error && /notallowed|permission|denied/i.test(error.message)
-          ? "Microphone access was denied. Allow microphone access and try again."
+          ? "Microphone access was denied. No recording was saved. Allow microphone access and try again."
           : error instanceof Error
             ? error.message
-            : "Could not start recording.",
+            : "Could not start recording. No audio was saved.",
       );
     }
   }
@@ -4660,7 +4906,7 @@ export default function WorkspaceShell({
     }
 
     setVoiceRecorderPhase("idle");
-    setVoiceRecorderError("Could not turn that voice memo into a document. Try again.");
+    setVoiceRecorderError("Could not turn that voice memo into a source. The recording was preserved locally until this step failed.");
   }
 
   const closeVoiceRecorder = useCallback(() => {
@@ -4724,7 +4970,9 @@ export default function WorkspaceShell({
         source_kind: "link",
       });
       setFeedback(
-        error instanceof Error ? error.message : "Could not create a source from that link.",
+        error instanceof Error
+          ? error.message
+          : "Could not create a source from that link. Nothing new was added to the box.",
         "error",
       );
     } finally {
@@ -4807,7 +5055,12 @@ export default function WorkspaceShell({
         source_kind: "batch",
         file_count: supportedFiles.length,
       });
-      setFeedback(error instanceof Error ? error.message : "Could not import those sources.", "error");
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Could not import those sources. Existing box contents stayed unchanged.",
+        "error",
+      );
     } finally {
       setUploading(false);
       setDropActive(false);
@@ -5021,7 +5274,7 @@ export default function WorkspaceShell({
           message: "Newer version saved elsewhere",
           serverDocument: error.currentDocument || null,
         });
-        setFeedback("A newer version exists. Load latest before saving again.", "error");
+        setFeedback("A newer version exists. Your cleanup changes are still local. Load latest before saving again.", "error");
         return false;
       }
 
@@ -5654,7 +5907,7 @@ export default function WorkspaceShell({
           message: "Newer version saved elsewhere",
           serverDocument: error.currentDocument || null,
         });
-        setFeedback("A newer version exists. Load latest before saving again.", "error");
+        setFeedback("A newer version exists. Your edit is still here locally. Load latest before saving again.", "error");
         return;
       }
 
@@ -5693,7 +5946,7 @@ export default function WorkspaceShell({
 
   async function requestAudioForBlock(block) {
     if (!resolvedVoiceChoice || !playbackAvailable) {
-      throw new Error("Voice is unavailable right now.");
+      throw new Error("Voice is unavailable right now. Your place is preserved. Try again in a moment.");
     }
 
     const response = await fetch("/api/seven/audio", {
@@ -5825,7 +6078,10 @@ export default function WorkspaceShell({
         provider: voiceChoiceRef.current?.provider || "cloud",
       });
       stopPlayback();
-      setFeedback(error instanceof Error ? error.message : "Could not start playback.", "error");
+      setFeedback(
+        error instanceof Error ? formatAudioErrorMessage(error.message) : "Playback could not start. Your place is preserved. Try again.",
+        "error",
+      );
     } finally {
       setLoadingAudio(false);
     }
@@ -5921,7 +6177,7 @@ export default function WorkspaceShell({
 
         speechUtteranceRef.current = null;
         stopPlayback();
-        setFeedback("Couldn't play this section. Try again.", "error");
+        setFeedback("Playback could not continue. Your place is preserved. Try again.", "error");
       };
 
       utterance.onend = () => {
@@ -5974,7 +6230,7 @@ export default function WorkspaceShell({
 
   async function togglePlayback() {
     if (!blocks.length || !playbackAvailable) {
-      setFeedback("Voice is unavailable right now.", "error");
+      setFeedback("Playback is unavailable right now. Your place is preserved. Try another voice or browser.", "error");
       return;
     }
 
@@ -6410,7 +6666,9 @@ export default function WorkspaceShell({
       setFeedback("Operate read the box.", "success");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Operate could not read this box.";
+        error instanceof Error
+          ? error.message
+          : "Operate could not read this box. Sources and assembly stayed unchanged.";
       trackWorkspaceEvent("operate_failed", {
         box_key: activeProjectKey,
       });
@@ -6439,6 +6697,10 @@ export default function WorkspaceShell({
     const targetDocumentSummary = projectDocuments.find(
       (document) => document.documentKey === targetDocumentKey,
     );
+    const auditTargetLabel =
+      targetDocumentSummary?.isAssembly || targetDocumentSummary?.documentType === "assembly"
+        ? "current assembly"
+        : targetDocumentSummary?.title || "current document";
     const targetMode = targetDocumentSummary?.isAssembly
       ? WORKSPACE_MODES.assemble
       : targetDocumentSummary?.documentType === "assembly"
@@ -6446,6 +6708,7 @@ export default function WorkspaceShell({
         : workspaceMode;
 
     setOperateOpen(false);
+    setFeedback(`Seven is auditing the ${auditTargetLabel}. The Operate read stays unchanged.`);
 
     if (targetDocumentKey && targetDocumentKey !== activeDocumentKey) {
       setPendingOperateAudit({
@@ -6693,13 +6956,17 @@ export default function WorkspaceShell({
               projects={hydratedProjects}
               documents={projectDocuments}
               projectDrafts={projectDraftsState}
+              getReceiptsConnectionStatus={getReceiptsConnectionStatus}
+              getReceiptsConnectionLastError={getReceiptsConnectionLastError}
               projectActionPending={projectActionPending}
               loadingDocumentKey={loadingDocumentKey}
               uploading={uploading}
               pastePendingMode={pastePendingMode}
               clipboardCount={clipboard.length}
               onEnterMode={openMode}
-              onCreateProject={() => void createProject()}
+              onCreateProject={() => openProjectManagement(activeProjectKey)}
+              onManageProjects={() => openProjectManagement(activeProjectKey)}
+              onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
               onDeleteDocument={requestDeleteDocument}
@@ -6859,10 +7126,18 @@ export default function WorkspaceShell({
                   {isReceiptsPhase ? (
                     <LogView
                       logEntries={activeDocument.logEntries || []}
+                      drafts={projectDraftsState}
+                      receiptSummary={receiptSummaryViewModel}
                       receiptPending={receiptPending}
+                      activeDocumentTitle={activeDocument.title}
                       onCreateReceipt={createReceiptDraft}
                       onExportReceipt={exportReceipt}
                       onExportDocument={exportDocument}
+                      onOpenGetReceipts={() => {
+                        if (typeof window !== "undefined") {
+                          window.location.assign("/account");
+                        }
+                      }}
                     />
                   ) : isCreatePhase ? (
                     <CreateSurface
@@ -7020,6 +7295,31 @@ export default function WorkspaceShell({
           </>
         )}
 
+        <BoxManagementDialog
+          open={boxManagementOpen}
+          projects={hydratedProjects}
+          selectedProjectKey={selectedManagementProjectKey}
+          createTitle={createProjectTitle}
+          renameTitle={renameProjectTitle}
+          pendingAction={projectActionPending}
+          errorMessage={boxManagementError}
+          onClose={() => {
+            if (projectActionPending) return;
+            setBoxManagementOpen(false);
+            setBoxManagementError("");
+          }}
+          onSelectProject={selectProjectForManagement}
+          onCreateTitleChange={setCreateProjectTitle}
+          onRenameTitleChange={setRenameProjectTitle}
+          onCreate={() => void createProject()}
+          onRename={() => void renameProject()}
+          onDelete={() => void deleteProject()}
+          onOpenProject={() => {
+            setBoxManagementOpen(false);
+            openProject(selectedManagementProjectKey);
+          }}
+        />
+
         <OperateSurface
           open={operateOpen}
           pending={operatePending}
@@ -7072,6 +7372,10 @@ export default function WorkspaceShell({
           onPaste={() => {
             setDropAnythingOpen(false);
             void pasteIntoWorkspace("source");
+          }}
+          onSpeak={() => {
+            setDropAnythingOpen(false);
+            openVoiceRecorder();
           }}
           onImportLink={(url) => {
             void importLinkFromIntake(url);
