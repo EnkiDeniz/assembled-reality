@@ -5,6 +5,7 @@ import {
 } from "@/lib/document-blocks";
 import { getRequiredSession } from "@/lib/server-session";
 import {
+  deleteWorkspaceDocumentForUser,
   getWorkspaceDocumentForUser,
   saveWorkspaceDocumentForUser,
 } from "@/lib/workspace-documents";
@@ -73,6 +74,30 @@ export async function PUT(request) {
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not save the document." },
+      { status: 400 },
+    );
+  }
+}
+
+export async function DELETE(request) {
+  const session = await getRequiredSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const documentKey = String(body?.documentKey || "").trim();
+
+  if (!documentKey) {
+    return NextResponse.json({ error: "Document key is required." }, { status: 400 });
+  }
+
+  try {
+    const deleted = await deleteWorkspaceDocumentForUser(session.user.id, documentKey);
+    return NextResponse.json({ ok: true, deleted });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not delete the document." },
       { status: 400 },
     );
   }

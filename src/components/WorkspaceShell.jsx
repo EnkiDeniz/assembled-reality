@@ -814,6 +814,47 @@ function sortDocuments(documents) {
   return [...builtin, ...sources, ...assemblies];
 }
 
+function removeDocumentSummary(documents, documentKey) {
+  return sortDocuments(
+    (Array.isArray(documents) ? documents : []).filter(
+      (document) => document.documentKey !== documentKey,
+    ),
+  );
+}
+
+function removeDocumentFromProjects(projects, documentKey) {
+  const nextUpdatedAt = new Date().toISOString();
+
+  return (Array.isArray(projects) ? projects : []).map((project) => {
+    const nextDocumentKeys = (Array.isArray(project.documentKeys) ? project.documentKeys : []).filter(
+      (key) => key !== documentKey,
+    );
+    const nextSourceDocumentKeys = (
+      Array.isArray(project.sourceDocumentKeys) ? project.sourceDocumentKeys : []
+    ).filter((key) => key !== documentKey);
+    const nextAssemblyDocumentKeys = (
+      Array.isArray(project.assemblyDocumentKeys) ? project.assemblyDocumentKeys : []
+    ).filter((key) => key !== documentKey);
+    const nextCurrentAssemblyDocumentKey =
+      project.currentAssemblyDocumentKey === documentKey
+        ? nextAssemblyDocumentKeys[0] || null
+        : project.currentAssemblyDocumentKey;
+
+    return {
+      ...project,
+      documentKeys: nextDocumentKeys,
+      sourceDocumentKeys: nextSourceDocumentKeys,
+      assemblyDocumentKeys: nextAssemblyDocumentKeys,
+      currentAssemblyDocumentKey: nextCurrentAssemblyDocumentKey,
+      subtitle:
+        nextCurrentAssemblyDocumentKey !== project.currentAssemblyDocumentKey
+          ? ""
+          : project.subtitle,
+      updatedAt: nextUpdatedAt,
+    };
+  });
+}
+
 function mergeLogs(existing, incoming) {
   const map = new Map();
 
@@ -3132,11 +3173,16 @@ export default function WorkspaceShell({
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
     activeDocument?.documentType !== "assembly";
+  const canDeleteActiveDocument =
+    Boolean(activeDocument?.documentKey) &&
+    activeDocument?.documentType !== "builtin" &&
+    activeDocument?.sourceType !== "builtin";
   const canManageActiveSource =
     Boolean(activeDocument?.documentKey) &&
     !activeDocument?.isAssembly &&
     activeDocument?.documentType !== "assembly" &&
     Boolean(activeDocument?.isEditable);
+  const showActiveDocumentTools = canManageActiveSource || canDeleteActiveDocument;
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
@@ -4795,6 +4841,117 @@ export default function WorkspaceShell({
     });
   }
 
+  async function deleteActiveDocument() {
+    if (!canDeleteActiveDocument || !activeDocument?.documentKey) return;
+
+    const documentTypeLabel =
+      activeDocument.isAssembly || activeDocument.documentType === "assembly"
+        ? "assembly"
+        : "source";
+    const confirmed = window.confirm(
+      `Delete "${activeDocument.title}"?\n\nThis removes the whole ${documentTypeLabel}.`,
+    );
+    if (!confirmed) return;
+
+    const documentKey = activeDocument.documentKey;
+    const documentTitle = activeDocument.title;
+    setDocumentState(documentKey, {
+      status: "saving",
+      message: "Deleting…",
+    });
+
+    try {
+      const response = await fetch("/api/workspace/document", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ documentKey }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Could not delete the document.");
+      }
+
+      const nextDocuments = removeDocumentSummary(documentsState, documentKey);
+      const nextProjects = removeDocumentFromProjects(projectsState, documentKey);
+      const nextHydratedProjects = hydrateProjectsWithDocuments(nextProjects, nextDocuments);
+      const nextProject =
+        getProjectByKey(nextHydratedProjects, activeProjectKey) ||
+        nextHydratedProjects[0] ||
+        null;
+      const nextProjectKey = nextProject?.projectKey || activeProjectKey || DEFAULT_PROJECT_KEY;
+      const nextDocumentKey =
+        getProjectEntryDocumentKey(nextProject) || PRIMARY_WORKSPACE_DOCUMENT_KEY;
+
+      stopPlayback({ keepPlayhead: false });
+      setDocumentsState(nextDocuments);
+      setProjectsState(nextProjects);
+      setDocumentCache((previous) => {
+        const next = { ...previous };
+        delete next[documentKey];
+        return next;
+      });
+      setDocumentLogs((previous) => {
+        const next = { ...previous };
+        delete next[documentKey];
+        return next;
+      });
+      setDocumentStates((previous) => {
+        const next = { ...previous };
+        delete next[documentKey];
+        return next;
+      });
+      setClipboard((previous) =>
+        previous.filter(
+          (block) =>
+            block.documentKey !== documentKey &&
+            block.sourceDocumentKey !== documentKey,
+        ),
+      );
+      setStagedAiBlocks((previous) =>
+        previous.filter(
+          (block) =>
+            block.documentKey !== documentKey &&
+            block.sourceDocumentKey !== documentKey,
+        ),
+      );
+      setResumeSessionSummaryState((previous) =>
+        previous?.documentKey === documentKey ? null : previous,
+      );
+      setBlockSaveStates({});
+      setCleanupOpen(false);
+      setCleanupFind("");
+      setCleanupReplace("");
+      setCleanupPendingAction("");
+      setEditMode(false);
+      setAiOpen(false);
+      setViewMode("doc");
+      setListenPickerOpen(false);
+      setWorkspacePickerOpen(false);
+      setDropAnythingOpen(false);
+      setMobileComposeOpen(false);
+      setMobileSourceToolsOpen(false);
+      setActiveProjectKey(nextProjectKey);
+      setActiveDocumentKey(nextDocumentKey);
+      setLaunchpadOpen(true);
+
+      if (typeof window !== "undefined") {
+        window.history.replaceState(
+          {},
+          "",
+          buildWorkspaceUrl("", nextProjectKey, { launchpad: true }),
+        );
+      }
+
+      setFeedback(`Deleted ${documentTitle}.`, "success");
+    } catch (error) {
+      setDocumentState(documentKey, null);
+      setFeedback(error instanceof Error ? error.message : "Could not delete the document.", "error");
+    }
+  }
+
   async function polishActiveSource() {
     if (!canPolishActiveDocument || polishPending) return;
 
@@ -6120,7 +6277,7 @@ export default function WorkspaceShell({
                           </div>
                         </div>
                       ) : null}
-                      {isMobileLayout && canManageActiveSource ? (
+                      {isMobileLayout && showActiveDocumentTools ? (
                         <button
                           type="button"
                           className="assembler-document__tools-toggle"
@@ -6129,31 +6286,48 @@ export default function WorkspaceShell({
                           {mobileSourceToolsOpen || cleanupOpen ? "Hide Tools" : "Tools"}
                         </button>
                       ) : null}
-                      {canManageActiveSource ? (
+                      {showActiveDocumentTools ? (
                         <div
                           className={`assembler-document__actions ${
                             !isMobileLayout || mobileSourceToolsOpen || cleanupOpen ? "is-visible" : ""
                           }`}
                         >
-                          <SourceActionButton
-                            kind="replace"
-                            label={cleanupOpen ? "Hide find and replace" : "Show find and replace"}
-                            active={cleanupOpen}
-                            disabled={Boolean(cleanupPendingAction) || polishPending}
-                            onClick={() => setCleanupOpen((value) => !value)}
-                          />
-                          <SourceActionButton
-                            kind="unescape"
-                            label={cleanupPendingAction === "unescape" ? "Unescaping markdown..." : "Unescape markdown"}
-                            disabled={Boolean(cleanupPendingAction) || polishPending}
-                            onClick={() => void unescapeActiveSource()}
-                          />
-                          <SourceActionButton
-                            kind="clean"
-                            label={polishPending ? "Cleaning formatting..." : "Clean formatting"}
-                            disabled={Boolean(cleanupPendingAction) || polishPending}
-                            onClick={() => void polishActiveSource()}
-                          />
+                          {canManageActiveSource ? (
+                            <>
+                              <SourceActionButton
+                                kind="replace"
+                                label={cleanupOpen ? "Hide find and replace" : "Show find and replace"}
+                                active={cleanupOpen}
+                                disabled={Boolean(cleanupPendingAction) || polishPending}
+                                onClick={() => setCleanupOpen((value) => !value)}
+                              />
+                              <SourceActionButton
+                                kind="unescape"
+                                label={cleanupPendingAction === "unescape" ? "Unescaping markdown..." : "Unescape markdown"}
+                                disabled={Boolean(cleanupPendingAction) || polishPending}
+                                onClick={() => void unescapeActiveSource()}
+                              />
+                              <SourceActionButton
+                                kind="clean"
+                                label={polishPending ? "Cleaning formatting..." : "Clean formatting"}
+                                disabled={Boolean(cleanupPendingAction) || polishPending}
+                                onClick={() => void polishActiveSource()}
+                              />
+                            </>
+                          ) : null}
+                          {canDeleteActiveDocument ? (
+                            <SourceActionButton
+                              kind="delete"
+                              label={`Delete ${
+                                activeDocument.isAssembly || activeDocument.documentType === "assembly"
+                                  ? "assembly"
+                                  : "source"
+                              }`}
+                              danger
+                              disabled={Boolean(cleanupPendingAction) || polishPending}
+                              onClick={() => void deleteActiveDocument()}
+                            />
+                          ) : null}
                         </div>
                       ) : null}
                       {activeDocumentWarning ? (

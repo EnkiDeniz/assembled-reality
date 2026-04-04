@@ -698,3 +698,152 @@ export async function updateWorkspaceDocumentMetadataForUser(
 
   return getWorkspaceDocumentForUser(userId, documentKey);
 }
+
+export async function deleteWorkspaceDocumentForUser(userId, documentKey) {
+  const normalizedDocumentKey = String(documentKey || "").trim();
+
+  if (!normalizedDocumentKey) {
+    throw new Error("Document key is required.");
+  }
+
+  if (
+    normalizedDocumentKey === PRIMARY_DOCUMENT_KEY ||
+    normalizedDocumentKey.startsWith(BUILTIN_OVERRIDE_PREFIX)
+  ) {
+    throw new Error("Built-in documents cannot be deleted.");
+  }
+
+  const existing = await prisma.readerDocument.findFirst({
+    where: {
+      userId,
+      documentKey: normalizedDocumentKey,
+    },
+    select: {
+      documentKey: true,
+      title: true,
+    },
+  });
+
+  if (!existing) {
+    throw new Error("Document not found.");
+  }
+
+  const readerProfile = await prisma.readerProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    const affectedProjects = await tx.readerProject.findMany({
+      where: {
+        userId,
+        OR: [
+          { currentAssemblyDocumentKey: normalizedDocumentKey },
+          { documents: { some: { documentKey: normalizedDocumentKey } } },
+        ],
+      },
+      include: {
+        documents: {
+          orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+        },
+      },
+    });
+
+    if (affectedProjects.length > 0) {
+      for (const project of affectedProjects) {
+        const remainingDocuments = project.documents.filter(
+          (membership) => membership.documentKey !== normalizedDocumentKey,
+        );
+        const nextCurrentAssemblyDocumentKey =
+          project.currentAssemblyDocumentKey === normalizedDocumentKey
+            ? remainingDocuments.find((membership) => membership.role === "ASSEMBLY")?.documentKey || null
+            : project.currentAssemblyDocumentKey;
+
+        if (nextCurrentAssemblyDocumentKey !== project.currentAssemblyDocumentKey) {
+          await tx.readerProject.update({
+            where: { id: project.id },
+            data: {
+              currentAssemblyDocumentKey: nextCurrentAssemblyDocumentKey,
+            },
+          });
+        }
+      }
+
+      await tx.readerProjectDocument.deleteMany({
+        where: {
+          projectId: {
+            in: affectedProjects.map((project) => project.id),
+          },
+          documentKey: normalizedDocumentKey,
+        },
+      });
+    }
+
+    if (readerProfile?.id) {
+      await Promise.all([
+        tx.bookmark.deleteMany({
+          where: {
+            readerProfileId: readerProfile.id,
+            documentKey: normalizedDocumentKey,
+          },
+        }),
+        tx.highlight.deleteMany({
+          where: {
+            readerProfileId: readerProfile.id,
+            documentKey: normalizedDocumentKey,
+          },
+        }),
+        tx.note.deleteMany({
+          where: {
+            readerProfileId: readerProfile.id,
+            documentKey: normalizedDocumentKey,
+          },
+        }),
+        tx.readingProgress.deleteMany({
+          where: {
+            readerProfileId: readerProfile.id,
+            documentKey: normalizedDocumentKey,
+          },
+        }),
+      ]);
+    }
+
+    await Promise.all([
+      tx.readingReceiptDraft.deleteMany({
+        where: {
+          userId,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+      tx.readerConversationThread.deleteMany({
+        where: {
+          userId,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+      tx.readerEvidenceSet.deleteMany({
+        where: {
+          userId,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+      tx.readerListeningSession.deleteMany({
+        where: {
+          userId,
+          documentKey: normalizedDocumentKey,
+        },
+      }),
+    ]);
+
+    await tx.readerDocument.delete({
+      where: {
+        documentKey: normalizedDocumentKey,
+      },
+    });
+  });
+
+  return {
+    documentKey: existing.documentKey,
+    title: existing.title,
+  };
+}
