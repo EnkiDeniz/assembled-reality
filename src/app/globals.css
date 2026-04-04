@@ -781,6 +781,169 @@ main {
   line-height: 1.14;
 }
 
+.intro-auth-inline__footer {
+  margin-top: 10px;
+}
+
+.public-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 16px;
+}
+
+.public-footer-links.is-start {
+  justify-content: flex-start;
+}
+
+.public-footer-links__link {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  transition: color 180ms ease;
+}
+
+.public-footer-links__link:hover,
+.public-footer-links__link:focus-visible {
+  color: var(--text-secondary);
+}
+
+.public-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 20px;
+}
+
+.public-page__shell {
+  width: min(920px, 100%);
+  display: grid;
+  gap: 28px;
+  padding: clamp(28px, 4vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-panel);
+}
+
+.public-page__topbar {
+  display: flex;
+  align-items: center;
+}
+
+.public-page__home-link {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-page__hero {
+  display: grid;
+  gap: 14px;
+  max-width: 68ch;
+}
+
+.public-page__eyebrow {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-page__title {
+  margin: 0;
+  color: var(--white);
+  font-family: var(--font-editorial);
+  font-size: clamp(2.5rem, 4.8vw, 4.6rem);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+}
+
+.public-page__lede,
+.public-page__section p,
+.public-page__item p,
+.public-page__bullets {
+  margin: 0;
+  color: var(--block-paragraph);
+  line-height: 1.75;
+}
+
+.public-page__lede {
+  font-size: 1.08rem;
+}
+
+.public-page__notice {
+  margin: 0;
+  color: var(--accent-ready);
+  font-family: var(--font-code);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.public-page__body {
+  display: grid;
+  gap: 24px;
+}
+
+.public-page__section {
+  display: grid;
+  gap: 14px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.public-page__section h2 {
+  margin: 0;
+  color: var(--white);
+  font-family: var(--font-editorial);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.public-page__items,
+.public-page__bullets {
+  display: grid;
+  gap: 12px;
+  padding-left: 18px;
+}
+
+.public-page__item {
+  display: grid;
+  gap: 4px;
+}
+
+.public-page__item-title {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.public-page__callout {
+  color: var(--text-secondary);
+  font-family: var(--font-code);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.public-page__footer {
+  display: grid;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.public-page__footer-line {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
 .account-card {
   display: grid;
   gap: 12px;
@@ -4954,6 +5117,15 @@ main {
 
   .assembler-sheet__panel {
     inset: calc(var(--safe-top) + 8px) 0 0 0;
+  }
+
+  .public-page__shell {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+
+  .public-page__title {
+    font-size: clamp(2rem, 9vw, 3rem);
   }
 }
 

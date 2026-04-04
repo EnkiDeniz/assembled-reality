@@ -13,11 +13,10 @@ import { getReaderProjectForUser } from "@/lib/reader-projects";
 import { buildExcerpt, slugify } from "@/lib/text";
 import { prisma } from "@/lib/prisma";
 
-const readingReceiptDraftSelection = {
+const readingReceiptDraftSelectionBase = {
   id: true,
   userId: true,
   readerProfileId: true,
-  projectId: true,
   documentKey: true,
   conversationThreadId: true,
   getReceiptsReceiptId: true,
@@ -34,6 +33,28 @@ const readingReceiptDraftSelection = {
   createdAt: true,
   updatedAt: true,
 };
+
+const readingReceiptDraftSelection = {
+  ...readingReceiptDraftSelectionBase,
+  projectId: true,
+};
+
+function normalizeReadingReceiptDraft(record, { includeProjectId = true } = {}) {
+  if (!record) {
+    return null;
+  }
+
+  return {
+    ...record,
+    projectId: includeProjectId ? record.projectId ?? null : null,
+  };
+}
+
+function normalizeReadingReceiptDraftList(records, { includeProjectId = true } = {}) {
+  return Array.isArray(records)
+    ? records.map((record) => normalizeReadingReceiptDraft(record, { includeProjectId }))
+    : [];
+}
 
 function isMissingReceiptProjectIdColumnError(error) {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
@@ -365,32 +386,55 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
   };
 
   try {
-    return await prisma.readingReceiptDraft.create({
+    const created = await prisma.readingReceiptDraft.create({
       data,
       select: readingReceiptDraftSelection,
     });
+
+    return normalizeReadingReceiptDraft(created);
   } catch (error) {
     if (!isMissingReceiptProjectIdColumnError(error)) {
       throw error;
     }
 
     const { projectId: _projectId, ...legacyData } = data;
-    return prisma.readingReceiptDraft.create({
+    const created = await prisma.readingReceiptDraft.create({
       data: legacyData,
-      select: readingReceiptDraftSelection,
+      select: readingReceiptDraftSelectionBase,
     });
+
+    return normalizeReadingReceiptDraft(created, { includeProjectId: false });
   }
 }
 
 export async function listReadingReceiptDraftsForUser(userId) {
-  return prisma.readingReceiptDraft.findMany({
-    where: {
-      userId,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 12,
-    select: readingReceiptDraftSelection,
-  });
+  try {
+    const drafts = await prisma.readingReceiptDraft.findMany({
+      where: {
+        userId,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: readingReceiptDraftSelection,
+    });
+
+    return normalizeReadingReceiptDraftList(drafts);
+  } catch (error) {
+    if (!isMissingReceiptProjectIdColumnError(error)) {
+      throw error;
+    }
+
+    const drafts = await prisma.readingReceiptDraft.findMany({
+      where: {
+        userId,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: readingReceiptDraftSelectionBase,
+    });
+
+    return normalizeReadingReceiptDraftList(drafts, { includeProjectId: false });
+  }
 }
 
 export async function listReadingReceiptDraftsForProjectForUser(
@@ -432,7 +476,7 @@ export async function listReadingReceiptDraftsForProjectForUser(
   }
 
   try {
-    return await prisma.readingReceiptDraft.findMany({
+    const drafts = await prisma.readingReceiptDraft.findMany({
       where: {
         userId,
         ...(orFilters.length > 0 ? { OR: orFilters } : {}),
@@ -441,12 +485,14 @@ export async function listReadingReceiptDraftsForProjectForUser(
       take,
       select: readingReceiptDraftSelection,
     });
+
+    return normalizeReadingReceiptDraftList(drafts);
   } catch (error) {
     if (!isMissingReceiptProjectIdColumnError(error)) {
       throw error;
     }
 
-    return prisma.readingReceiptDraft.findMany({
+    const drafts = await prisma.readingReceiptDraft.findMany({
       where: {
         userId,
         ...(normalizedDocumentKeys.length > 0
@@ -459,8 +505,10 @@ export async function listReadingReceiptDraftsForProjectForUser(
       },
       orderBy: { createdAt: "desc" },
       take,
-      select: readingReceiptDraftSelection,
+      select: readingReceiptDraftSelectionBase,
     });
+
+    return normalizeReadingReceiptDraftList(drafts, { includeProjectId: false });
   }
 }
 

@@ -22,7 +22,7 @@
 .intro-copy__support {
   width: min(18ch, 100%);
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--accent-ready);
   font-family: var(--font-ui);
   font-size: clamp(1rem, 1.8vw, 1.28rem);
   line-height: 1.4;

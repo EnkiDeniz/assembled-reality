@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
+import PublicFooterLinks from "@/components/PublicFooterLinks";
 import { ACTION_LINE, BRAND_TRUTH, PRODUCT_MARK } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 
@@ -36,7 +37,7 @@ function getIntroSeenSnapshot() {
 }
 
 function getIntroSeenServerSnapshot() {
-  return null;
+  return false;
 }
 
 function AuthPanel({ authCapabilities, signedIn, onEnter }) {
@@ -188,6 +189,7 @@ export default function IntroLanding({
                 signedIn={signedIn}
                 onEnter={markIntroSeen}
               />
+              <PublicFooterLinks className="intro-auth-inline__footer" />
             </div>
           </div>
         </section>
@@ -211,6 +213,7 @@ export default function IntroLanding({
               signedIn={signedIn}
               onEnter={markIntroSeen}
             />
+            <PublicFooterLinks className="intro-auth-inline__footer" />
           </div>
         </div>
       </section>

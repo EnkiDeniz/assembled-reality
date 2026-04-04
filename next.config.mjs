@@ -7,6 +7,18 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   typedRoutes: false,
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
+  async rewrites() {
+    return [
+      {
+        source: "/index.md",
+        destination: "/api/content-md/index",
+      },
+      {
+        source: "/:path*.md",
+        destination: "/api/content-md/:path*",
+      },
+    ];
+  },
   turbopack: {
     root: projectRoot,
   },

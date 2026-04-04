@@ -1,7 +1,9 @@
 import { IBM_Plex_Mono, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/Providers";
-import { METADATA_DESCRIPTION, PRODUCT_NAME } from "@/lib/product-language";
+import { metadataBase } from "@/lib/public-metadata";
+import { publicPages } from "@/lib/public-site";
+import { PRODUCT_NAME } from "@/lib/product-language";
 import "@/app/globals.css";
 
 const mono = IBM_Plex_Mono({
@@ -19,21 +21,6 @@ const editorial = Newsreader({
   style: ["normal", "italic"],
 });
 
-function resolveMetadataBase() {
-  const raw =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXTAUTH_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
-    "https://loegos.com";
-
-  try {
-    return new URL(raw);
-  } catch {
-    return new URL("https://loegos.com");
-  }
-}
-
-const metadataBase = resolveMetadataBase();
 const ogImage = {
   url: "/opengraph-image",
   width: 1200,
@@ -47,13 +34,10 @@ export const metadata = {
     default: PRODUCT_NAME,
     template: `%s · ${PRODUCT_NAME}`,
   },
-  description: METADATA_DESCRIPTION,
-  alternates: {
-    canonical: "/",
-  },
+  description: publicPages.home.description,
   openGraph: {
     title: PRODUCT_NAME,
-    description: METADATA_DESCRIPTION,
+    description: publicPages.home.description,
     url: metadataBase,
     siteName: PRODUCT_NAME,
     type: "website",
@@ -62,7 +46,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: PRODUCT_NAME,
-    description: METADATA_DESCRIPTION,
+    description: publicPages.home.description,
     images: [ogImage.url],
   },
   icons: {
@@ -73,6 +57,13 @@ export const metadata = {
   robots: {
     index: false,
     follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      "max-image-preview": "none",
+      "max-snippet": 0,
+      "max-video-preview": 0,
+    },
     nocache: true,
   },
 };
