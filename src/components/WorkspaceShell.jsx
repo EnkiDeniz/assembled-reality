@@ -4,7 +4,7 @@ import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import AiUtilityRail from "@/components/AiUtilityRail";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
-import BoxesLauncher from "@/components/BoxesLauncher";
+import ProjectHome from "@/components/ProjectHome";
 import BoxPhaseBar from "@/components/BoxPhaseBar";
 import CreateSurface from "@/components/CreateSurface";
 import OperateSurface from "@/components/OperateSurface";
@@ -1410,8 +1410,36 @@ function WorkspaceLaunchpad({
     connectionStatus: getReceiptsConnectionStatus,
     connectionLastError: getReceiptsConnectionLastError,
   });
+  const currentPositionAction = resumeSessionSummary?.documentKey
+    ? {
+        label: "Resume",
+        disabled: busy,
+        onClick: () =>
+          onEnterMode(WORKSPACE_MODES.listen, resumeSessionSummary.documentKey, {
+            phase: BOX_PHASES.think,
+          }),
+      }
+    : currentAssemblyDocument?.documentKey
+      ? {
+          label: "Open assembly",
+          disabled: busy,
+          onClick: () =>
+            onEnterMode(WORKSPACE_MODES.assemble, currentAssemblyDocument.documentKey, {
+              phase: BOX_PHASES.create,
+            }),
+        }
+      : boxViewModel?.latestTouchedSource?.documentKey
+        ? {
+            label: "Open source",
+            disabled: busy,
+            onClick: () =>
+              onEnterMode(WORKSPACE_MODES.listen, boxViewModel.latestTouchedSource.documentKey, {
+                phase: BOX_PHASES.think,
+              }),
+          }
+        : null;
   return (
-    <BoxesLauncher
+    <ProjectHome
       boxViewModel={boxViewModel}
       activeProject={activeProject}
       activeProjectKey={activeProjectKey}
@@ -1422,6 +1450,7 @@ function WorkspaceLaunchpad({
       busy={busy}
       clipboardCount={clipboardCount}
       primaryAction={primaryAction}
+      currentPositionAction={currentPositionAction}
       guideDocument={shouldFeatureGuide ? guideDocument : null}
       sourceDocuments={sourceDocuments}
       currentAssemblyDocument={currentAssemblyDocument}
@@ -1439,7 +1468,7 @@ function WorkspaceLaunchpad({
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
       getDocumentKindLabel={getDocumentKindLabel}
       canDeleteDocument={canDeleteDocument}
-      sourceOpenMode={WORKSPACE_MODES.assemble}
+      sourceOpenMode={WORKSPACE_MODES.listen}
     />
   );
 }

@@ -1454,15 +1454,16 @@ main {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 18px 20px;
   background: var(--bg);
 }
 
 .assembler-surface--launchpad {
-  display: grid;
-  place-items: center;
+  display: block;
   padding: 28px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--bg);
 }
 
@@ -4059,6 +4060,7 @@ main {
 
 .assembler-project-home {
   width: min(1180px, 100%);
+  margin: 0 auto;
   display: grid;
   gap: 18px;
 }
@@ -4232,6 +4234,10 @@ main {
   gap: 16px;
 }
 
+.assembler-project-home__footer-panel {
+  margin-top: 2px;
+}
+
 .assembler-project-home__stack,
 .assembler-project-home__list,
 .assembler-project-home__project-list,
@@ -4322,6 +4328,13 @@ main {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.assembler-project-home__footer-note {
+  margin: 0;
+  color: var(--soft);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .assembler-project-home__row-badge,

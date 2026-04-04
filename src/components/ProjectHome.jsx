@@ -98,6 +98,7 @@ export default function ProjectHome({
   currentAssemblyDocument = null,
   recentAssemblies = [],
   primaryAction,
+  currentPositionAction = null,
   onCreateProject,
   onManageProjects,
   onOpenProject,
@@ -135,6 +136,7 @@ export default function ProjectHome({
       ? [activeProject]
       : [];
   const boxCount = boxes.length;
+  const otherBoxes = boxes.filter((project) => project.projectKey !== activeProjectKey);
   const currentContext = boxViewModel?.resumeTarget || null;
 
   return (
@@ -210,6 +212,17 @@ export default function ProjectHome({
             currentAssemblyDocument
               ? "Assembly is the live working position of this box."
               : "Return and resume should always point somewhere legible."
+          }
+          actions={
+            currentPositionAction
+              ? [
+                  {
+                    label: currentPositionAction.label,
+                    onClick: currentPositionAction.onClick,
+                    disabled: currentPositionAction.disabled,
+                  },
+                ]
+              : []
           }
         />
 
@@ -399,37 +412,56 @@ export default function ProjectHome({
             </div>
           </section>
 
-          <section className="assembler-project-home__panel assembler-project-home__panel--boxes">
-            <div className="assembler-project-home__section-head">
-              <span>Boxes</span>
-              <span>{boxCount}</span>
-            </div>
-
-            <div className="assembler-project-home__project-list">
-              {boxes.map((project) => (
-                <button
-                  key={project.projectKey}
-                  type="button"
-                  className={`assembler-project-home__project-row ${
-                    project.projectKey === activeProjectKey ? "is-active" : ""
-                  }`}
-                  onClick={() => onOpenProject(project.projectKey)}
-                  disabled={projectActionPending === project.projectKey}
-                >
-                  <span className="assembler-project-home__project-title">
-                    {project.boxTitle || project.title || "Untitled Box"}
-                  </span>
-                  <span className="assembler-project-home__project-meta">
-                    {projectActionPending === project.projectKey
-                      ? "Opening…"
-                      : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
         </div>
       </div>
+
+      <section className="assembler-project-home__panel assembler-project-home__footer-panel">
+        <div className="assembler-project-home__section-head">
+          <span>Other boxes</span>
+          <div className="assembler-project-home__section-actions">
+            <span>{Math.max(boxCount - 1, 0)}</span>
+            <button
+              type="button"
+              className="assembler-project-home__section-action"
+              onClick={onManageProjects}
+              disabled={Boolean(projectActionPending)}
+            >
+              Manage boxes
+            </button>
+          </div>
+        </div>
+
+        <p className="assembler-project-home__footer-note">
+          This box is the working surface. Other boxes stay available here as a secondary launcher.
+        </p>
+
+        <div className="assembler-project-home__project-list">
+          {otherBoxes.length ? (
+            otherBoxes.map((project) => (
+              <button
+                key={project.projectKey}
+                type="button"
+                className="assembler-project-home__project-row"
+                onClick={() => onOpenProject(project.projectKey)}
+                disabled={projectActionPending === project.projectKey}
+              >
+                <span className="assembler-project-home__project-title">
+                  {project.boxTitle || project.title || "Untitled Box"}
+                </span>
+                <span className="assembler-project-home__project-meta">
+                  {projectActionPending === project.projectKey
+                    ? "Opening…"
+                    : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
+                </span>
+              </button>
+            ))
+          ) : (
+            <p className="assembler-project-home__empty">
+              No other boxes yet. Create another box when this work needs a separate container.
+            </p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
