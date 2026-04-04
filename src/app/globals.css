@@ -2313,142 +2313,174 @@ main {
   background: rgba(8, 9, 9, 0.96);
 }
 
-.assembler-ai__presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.assembler-seven-sheet {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 10, 10, 0.97);
 }
 
-.assembler-ai__scope {
+.assembler-seven-sheet__header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.assembler-ai__scope-button {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: rgba(12, 13, 13, 0.9);
+.assembler-seven-sheet__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.assembler-seven-sheet__eyebrow,
+.assembler-seven-sheet__message-role,
+.assembler-seven-sheet__citation-label {
   color: var(--soft);
+  font-family: var(--font-code);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.assembler-ai__scope-button.is-active {
+.assembler-seven-sheet__title {
   color: var(--white);
-  border-color: rgba(167, 139, 250, 0.28);
-  background: rgba(38, 22, 61, 0.36);
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.assembler-ai__preset {
-  min-height: 28px;
-  padding: 0 8px;
-  color: var(--purple);
-  border-color: rgba(167, 139, 250, 0.28);
-  font-size: 11px;
+.assembler-seven-sheet__document {
+  color: var(--muted);
+  font-size: 12px;
 }
 
-.assembler-ai__field {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 12px;
+.assembler-seven-sheet__close {
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.assembler-seven-sheet__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assembler-seven-sheet__suggestion,
+.assembler-seven-sheet__message-action,
+.assembler-seven-sheet__run {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(51, 156, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(51, 156, 255, 0.08);
+  color: var(--blue);
+  font-size: 12px;
+}
+
+.assembler-seven-sheet__messages {
+  max-height: 44vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-seven-sheet__message {
+  display: grid;
+  gap: 6px;
+}
+
+.assembler-seven-sheet__message-body {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(18, 18, 18, 0.96);
+}
+
+.assembler-seven-sheet__message.is-user .assembler-seven-sheet__message-body {
+  border-color: rgba(51, 156, 255, 0.2);
+  background: rgba(51, 156, 255, 0.08);
+}
+
+.assembler-seven-sheet__message.is-error .assembler-seven-sheet__message-body {
+  border-color: rgba(255, 107, 107, 0.24);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.assembler-seven-sheet__message-text {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.assembler-seven-sheet__citations {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-seven-sheet__citation {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.assembler-seven-sheet__citation-excerpt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.assembler-seven-sheet__empty,
+.assembler-seven-sheet__error {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-seven-sheet__error {
+  color: var(--red);
+}
+
+.assembler-seven-sheet__field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
   background: rgba(11, 12, 12, 0.96);
 }
 
-.assembler-ai__prompt {
-  color: var(--purple);
+.assembler-seven-sheet__prompt {
+  color: var(--blue);
   font-size: 18px;
+  line-height: 1.4;
 }
 
-.assembler-ai__input {
+.assembler-seven-sheet__input {
   width: 100%;
-  min-height: 24px;
+  min-height: 72px;
+  resize: vertical;
   border: 0;
   background: transparent;
   color: var(--text);
+  font: inherit;
+  line-height: 1.45;
 }
 
-.assembler-ai__run {
-  min-height: 28px;
-  color: var(--purple);
-  border-color: rgba(167, 139, 250, 0.28);
-}
-
-.assembler-ai__close {
-  min-height: 28px;
-  padding: 0 8px;
-  border: 0;
-  background: transparent;
-  color: var(--soft);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.assembler-ai__results {
-  display: grid;
-  gap: 8px;
-  padding: 10px 12px 12px;
-  border: 1px solid rgba(167, 139, 250, 0.16);
-  border-radius: 12px;
-  background: rgba(17, 14, 24, 0.48);
-}
-
-.assembler-ai__results-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--purple);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.assembler-ai__results-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.assembler-ai__results-list {
-  display: grid;
-  gap: 8px;
-}
-
-.assembler-ai__result-row {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.assembler-ai__result-row:last-child {
-  border-bottom: 0;
-}
-
-.assembler-ai__result-index {
-  color: var(--purple);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.assembler-ai__result-text {
-  min-width: 0;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.assembler-seven-sheet__run {
+  justify-self: end;
 }
 
 .assembler-clipboard {
@@ -4059,21 +4091,12 @@ main {
     align-items: flex-start;
   }
 
-  .assembler-ai__field {
+  .assembler-seven-sheet__field {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .assembler-ai__run,
-  .assembler-ai__close {
+  .assembler-seven-sheet__run {
     justify-self: flex-start;
-  }
-
-  .assembler-ai__result-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .assembler-ai__result-index {
-    display: none;
   }
 
   .assembler-player.is-listen {

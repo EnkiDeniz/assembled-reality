@@ -430,7 +430,8 @@
 .assembler-source-rail__action,
 .assembler-utility-rail__preset,
 .assembler-utility-rail__scope-button,
-.assembler-utility-rail__run {
+.assembler-utility-rail__run,
+.assembler-utility-rail__message-action {
   min-height: 32px;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -443,7 +444,8 @@
 .assembler-source-rail__action:hover,
 .assembler-utility-rail__preset:hover,
 .assembler-utility-rail__scope-button:hover,
-.assembler-utility-rail__run:hover {
+.assembler-utility-rail__run:hover,
+.assembler-utility-rail__message-action:hover {
   background: var(--surface-4);
   color: var(--text-primary);
 }
@@ -494,6 +496,12 @@
   font-weight: 600;
 }
 
+.assembler-utility-rail__document {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
 .assembler-utility-rail__toggle {
   width: auto;
   min-width: 64px;
@@ -513,11 +521,119 @@
   gap: 12px;
 }
 
+.assembler-utility-rail__conversation {
+  min-height: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+.assembler-utility-rail__messages {
+  display: grid;
+  gap: 12px;
+}
+
+.assembler-utility-rail__message {
+  display: grid;
+  gap: 6px;
+}
+
+.assembler-utility-rail__message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.assembler-utility-rail__message-role {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-utility-rail__message-bubble {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.assembler-utility-rail__message.is-user .assembler-utility-rail__message-bubble {
+  border-color: rgba(51, 156, 255, 0.18);
+  background: rgba(51, 156, 255, 0.08);
+}
+
+.assembler-utility-rail__message.is-error .assembler-utility-rail__message-bubble {
+  border-color: rgba(255, 107, 107, 0.2);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.assembler-utility-rail__message-text {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.assembler-utility-rail__message-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.assembler-utility-rail__message-action {
+  color: var(--text-primary);
+}
+
+.assembler-utility-rail__citations {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-utility-rail__citation {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.assembler-utility-rail__citation-label {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assembler-utility-rail__citation-excerpt {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.assembler-utility-rail__empty,
+.assembler-utility-rail__error {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-utility-rail__error {
+  color: var(--accent-danger);
+}
+
 .assembler-utility-rail__field {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
-  align-items: center;
+  align-items: start;
   padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
@@ -531,12 +647,17 @@
 
 .assembler-utility-rail__input {
   width: 100%;
+  min-height: 72px;
+  resize: vertical;
   border: 0;
   background: transparent;
   color: var(--text-primary);
+  font: inherit;
+  line-height: 1.45;
 }
 
 .assembler-utility-rail__run {
+  justify-self: end;
   color: var(--text-primary);
 }
 

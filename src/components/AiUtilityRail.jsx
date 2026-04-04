@@ -1,83 +1,171 @@
+import { useEffect, useRef } from "react";
+
+function SevenMessage({
+  message,
+  onStageMessage,
+}) {
+  const citations = Array.isArray(message?.citations) ? message.citations : [];
+  const isAssistant = message?.role === "assistant";
+  const isPending = Boolean(message?.pending);
+  const isError = Boolean(message?.error);
+
+  return (
+    <article
+      className={`assembler-utility-rail__message ${
+        isAssistant ? "is-assistant" : "is-user"
+      } ${isError ? "is-error" : ""}`}
+    >
+      <div className="assembler-utility-rail__message-meta">
+        <span className="assembler-utility-rail__message-role">
+          {isAssistant ? "7" : "You"}
+        </span>
+      </div>
+
+      <div className="assembler-utility-rail__message-bubble">
+        <p className="assembler-utility-rail__message-text">
+          {isPending ? "Thinking…" : message?.content || ""}
+        </p>
+
+        {citations.length ? (
+          <div className="assembler-utility-rail__citations">
+            {citations.map((citation) => (
+              <div key={citation.id || `${citation.sectionSlug}-${citation.sectionLabel}`} className="assembler-utility-rail__citation">
+                <span className="assembler-utility-rail__citation-label">
+                  {citation.sectionLabel || citation.sectionTitle || "Context"}
+                </span>
+                {citation.excerpt ? (
+                  <span className="assembler-utility-rail__citation-excerpt">
+                    {citation.excerpt}
+                  </span>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {isAssistant && !isPending && !isError && onStageMessage ? (
+        <div className="assembler-utility-rail__message-actions">
+          <button
+            type="button"
+            className="assembler-utility-rail__message-action"
+            onClick={() => onStageMessage(message)}
+          >
+            Add to staging
+          </button>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 export default function AiUtilityRail({
   open = false,
+  documentTitle = "",
+  thread = null,
   inputRef,
   value,
-  scope,
   pending = false,
-  scopeOptions = [],
+  loading = false,
+  errorMessage = "",
+  suggestions = [],
   onToggleOpen,
   onChange,
-  onScopeChange,
   onSubmit,
-  onPreset,
+  onSuggestion,
+  onStageMessage,
 }) {
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+  const scrollRef = useRef(null);
+  const lastMessageContent = messages[messages.length - 1]?.content;
+
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node || !open) return;
+    node.scrollTop = node.scrollHeight;
+  }, [lastMessageContent, messages.length, open]);
+
   return (
     <section className={`assembler-utility-rail ${open ? "is-open" : ""}`}>
       <div className="assembler-utility-rail__header">
         <div className="assembler-utility-rail__copy">
-          <span className="assembler-utility-rail__eyebrow">AI</span>
-          <span className="assembler-utility-rail__title">Assistant</span>
+          <span className="assembler-utility-rail__eyebrow">7</span>
+          <span className="assembler-utility-rail__title">Conversation</span>
+          <span className="assembler-utility-rail__document">{documentTitle || "Current document"}</span>
         </div>
 
         <button
           type="button"
           className={`assembler-utility-rail__toggle ${open ? "is-active" : ""}`}
           onClick={onToggleOpen}
-          aria-label={open ? "Close 7 utility rail" : "Open 7 utility rail"}
+          aria-label={open ? "Close Seven conversation" : "Open Seven conversation"}
         >
           {open ? "Close" : "Open"}
         </button>
       </div>
 
       <p className="assembler-utility-rail__hint">
-        Press <kbd>/</kbd> to work on the current source, block, or staged assembly.
+        Ask about the document you are in. Seven replies here, and useful answers can move into staging.
       </p>
 
       {open ? (
         <div className="assembler-utility-rail__body">
           <div className="assembler-utility-rail__presets">
-            {["extract", "summarize", "synthesize", "evidence search"].map((label) => (
+            {suggestions.map((label) => (
               <button
                 key={label}
                 type="button"
                 className="assembler-utility-rail__preset"
-                onClick={() => onPreset(label)}
+                onClick={() => onSuggestion(label)}
+                disabled={pending}
               >
                 {label}
               </button>
             ))}
           </div>
 
-          <div className="assembler-utility-rail__scope" role="tablist" aria-label="AI scope">
-            {scopeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`assembler-utility-rail__scope-button ${
-                  scope === option.value ? "is-active" : ""
-                }`}
-                onClick={() => onScopeChange(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="assembler-utility-rail__conversation" ref={scrollRef}>
+            {loading && messages.length === 0 ? (
+              <p className="assembler-utility-rail__empty">Loading conversation…</p>
+            ) : messages.length ? (
+              <div className="assembler-utility-rail__messages">
+                {messages.map((message) => (
+                  <SevenMessage
+                    key={message.id}
+                    message={message}
+                    onStageMessage={onStageMessage}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="assembler-utility-rail__empty">
+                Start a thread about this document. Seven will keep the conversation tied to what you are reading.
+              </p>
+            )}
           </div>
 
+          {errorMessage ? (
+            <p className="assembler-utility-rail__error" aria-live="polite">
+              {errorMessage}
+            </p>
+          ) : null}
+
           <div className="assembler-utility-rail__field">
-            <span className="assembler-utility-rail__prompt">&gt;</span>
-            <input
+            <span className="assembler-utility-rail__prompt">7</span>
+            <textarea
               ref={inputRef}
               className="assembler-utility-rail__input"
               value={value}
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
+                if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
                   onSubmit();
                 }
               }}
-              placeholder={pending ? "thinking…" : "ask about the working surface…"}
+              placeholder={pending ? "Seven is thinking…" : "Ask about this document…"}
               disabled={pending}
+              rows={3}
             />
             <button
               type="button"
@@ -85,7 +173,7 @@ export default function AiUtilityRail({
               disabled={!value.trim() || pending}
               onClick={onSubmit}
             >
-              {pending ? "Running…" : "Run"}
+              {pending ? "Thinking…" : "Ask"}
             </button>
           </div>
         </div>

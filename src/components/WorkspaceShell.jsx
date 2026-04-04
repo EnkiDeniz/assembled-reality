@@ -46,11 +46,6 @@ const WORKSPACE_MODES = {
   listen: "listen",
   assemble: "assemble",
 };
-const AI_SCOPE_OPTIONS = [
-  { value: "document", label: "DOC" },
-  { value: "block", label: "BLOCK" },
-  { value: "clipboard", label: "CLIP" },
-];
 const IMAGE_DERIVATION_OPTIONS = [
   { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
   { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
@@ -160,10 +155,109 @@ function isTypingTarget(target) {
   );
 }
 
-function getAiPlaceholder(scope) {
-  if (scope === "block") return "ask about this block…";
-  if (scope === "clipboard") return "ask about the clipboard…";
-  return "ask about this document…";
+function buildEmptySevenThread(documentKey = "") {
+  return {
+    id: "",
+    documentKey,
+    createdAt: null,
+    updatedAt: null,
+    messages: [],
+  };
+}
+
+function formatSevenContextBlock(block) {
+  const sourcePosition =
+    typeof block?.sourcePosition === "number" ? block.sourcePosition + 1 : null;
+  const label = block?.sectionLabel || block?.sourceTitle || (sourcePosition ? `Block ${sourcePosition}` : "Block");
+  const text = stripMarkdownSyntax(block?.text || block?.plainText || "").trim();
+  return [`${label}${sourcePosition ? ` · ${sourcePosition}` : ""}`, text].filter(Boolean).join("\n");
+}
+
+function buildSevenContextOutline(blocks = []) {
+  return blocks
+    .filter((block) => block?.kind === "heading")
+    .slice(0, 8)
+    .map((block) => {
+      const sourcePosition =
+        typeof block?.sourcePosition === "number" ? block.sourcePosition + 1 : null;
+      return `${sourcePosition ? `${sourcePosition}. ` : ""}${stripMarkdownSyntax(block?.text || "").trim()}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildSevenRequestContext(document, focusedBlock = null) {
+  const blocks = Array.isArray(document?.blocks) ? document.blocks : [];
+  const focusIndex = focusedBlock
+    ? Math.max(
+        0,
+        blocks.findIndex((block) => block.id === focusedBlock.id),
+      )
+    : 0;
+  const start = Math.max(0, focusIndex - 2);
+  const end = Math.min(blocks.length, focusIndex + 4);
+  const focusBlocks = (blocks.slice(start, end).length ? blocks.slice(start, end) : blocks.slice(0, 6))
+    .filter(Boolean);
+
+  return {
+    introMarkdown: String(document?.subtitle || "").trim(),
+    sectionOutline: buildSevenContextOutline(blocks),
+    currentLabel:
+      focusedBlock && typeof focusedBlock.sourcePosition === "number"
+        ? `Block ${focusedBlock.sourcePosition + 1}`
+        : `Document context · ${blocks.length} block${blocks.length === 1 ? "" : "s"}`,
+    currentSectionTitle: focusedBlock?.sectionLabel || document?.title || "Current document",
+    currentSectionMarkdown: focusBlocks.map(formatSevenContextBlock).join("\n\n"),
+  };
+}
+
+function buildSevenSuggestions(focusedBlock = null) {
+  if (focusedBlock) {
+    return [
+      "What matters in this block?",
+      "Rewrite this more clearly.",
+      "What evidence supports this?",
+      "What should change here?",
+    ];
+  }
+
+  return [
+    "Summarize this document.",
+    "What matters most here?",
+    "Where is the strongest evidence?",
+    "What should I change first?",
+  ];
+}
+
+function buildStagedBlocksFromSevenMessage(document, message) {
+  const text = String(message?.content || "").trim();
+  if (!text || !document?.documentKey) {
+    return [];
+  }
+
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const blocks = (paragraphs.length ? paragraphs : [text]).map((part, index) => ({
+    id: `seven-${message?.id || Date.now()}-${index + 1}`,
+    documentKey: document.documentKey,
+    sourceDocumentKey: document.documentKey,
+    sourcePosition: index,
+    kind: normalizeWorkspaceBlockKind("", part),
+    text: part,
+    plainText: stripMarkdownSyntax(part),
+    author: "ai",
+    operation: "synthesized",
+    isEditable: true,
+    isPlayable: true,
+  }));
+
+  return normalizeWorkspaceBlocks(blocks, {
+    documentKey: document.documentKey,
+    defaultSourceDocumentKey: document.documentKey,
+    defaultIsEditable: true,
+  });
 }
 
 function getImageDerivationLabel(value = "") {
@@ -2104,7 +2198,6 @@ function WorkspaceToolbar({
   isClipboardOpen = false,
   showAiToggle = true,
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const totalClipboardCount = clipboardCount + stagedCount;
   const canShowEditAction = viewMode === "doc";
 
@@ -2158,46 +2251,26 @@ function WorkspaceToolbar({
           </div>
         ) : null}
 
+        {isMobileLayout && canShowEditAction ? (
+          <button
+            type="button"
+            className={`assembler-tab ${editMode ? "is-active is-edit" : ""}`}
+            onClick={onToggleEditMode}
+            disabled={!activeDocument?.isEditable}
+          >
+            {editMode ? "Editing" : "Edit"}
+          </button>
+        ) : null}
+
         {showAiToggle ? (
           <button
             type="button"
             className={`assembler-ai-toggle ${aiOpen ? "is-active" : ""}`}
             onClick={onToggleAi}
-            aria-label={aiOpen ? "Close 7 prompt" : "Open 7 prompt"}
+            aria-label={aiOpen ? "Close Seven conversation" : "Open Seven conversation"}
           >
             7
           </button>
-        ) : null}
-
-        {isMobileLayout ? (
-          canShowEditAction ? (
-            <div className="assembler-toolbar__menu">
-              <button
-                type="button"
-                className="assembler-toolbar__menu-button"
-                onClick={() => setMenuOpen((value) => !value)}
-                aria-label="More document actions"
-              >
-                <WorkspaceActionIcon kind="menu" />
-              </button>
-
-              {menuOpen ? (
-                <div className="assembler-toolbar__menu-panel">
-                  <button
-                    type="button"
-                    className="assembler-toolbar__menu-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onToggleEditMode();
-                    }}
-                    disabled={!activeDocument?.isEditable}
-                  >
-                    {editMode ? "Stop Editing" : "Edit"}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          ) : null
         ) : null}
       </div>
 
@@ -2410,106 +2483,144 @@ function LogView({
 function AiBar({
   inputRef,
   value,
-  scope,
   pending,
-  stagedBlocks,
+  loading = false,
+  errorMessage = "",
+  documentTitle = "",
+  thread = null,
+  suggestions = [],
   onChange,
-  onScopeChange,
   onSubmit,
-  onPreset,
-  onAcceptStagedBlock,
-  onAcceptAllStagedBlocks,
-  onClearStagedBlocks,
+  onSuggestion,
+  onStageMessage,
   onClose,
 }) {
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+
   return (
-    <div className="assembler-ai">
-      <div className="assembler-ai__presets">
-        {["extract", "summarize", "synthesize", "evidence search"].map((label) => (
+    <div className="assembler-seven-sheet">
+      <div className="assembler-seven-sheet__header">
+        <div className="assembler-seven-sheet__copy">
+          <span className="assembler-seven-sheet__eyebrow">7</span>
+          <span className="assembler-seven-sheet__title">Conversation</span>
+          <span className="assembler-seven-sheet__document">
+            {documentTitle || "Current document"}
+          </span>
+        </div>
+        <button type="button" className="assembler-seven-sheet__close" onClick={onClose}>
+          Close
+        </button>
+      </div>
+
+      <div className="assembler-seven-sheet__suggestions">
+        {suggestions.map((label) => (
           <button
             key={label}
             type="button"
-            className="assembler-ai__preset"
-            onClick={() => onPreset(label)}
+            className="assembler-seven-sheet__suggestion"
+            onClick={() => onSuggestion(label)}
+            disabled={pending}
           >
             {label}
           </button>
         ))}
       </div>
 
-      <div className="assembler-ai__scope" role="tablist" aria-label="AI scope">
-        {AI_SCOPE_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className={`assembler-ai__scope-button ${scope === option.value ? "is-active" : ""}`}
-            onClick={() => onScopeChange(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="assembler-seven-sheet__messages">
+        {loading && messages.length === 0 ? (
+          <p className="assembler-seven-sheet__empty">Loading conversation…</p>
+        ) : messages.length ? (
+          messages.map((message) => {
+            const citations = Array.isArray(message?.citations) ? message.citations : [];
+            const isAssistant = message?.role === "assistant";
+            const isPending = Boolean(message?.pending);
+            const isError = Boolean(message?.error);
+
+            return (
+              <article
+                key={message.id}
+                className={`assembler-seven-sheet__message ${
+                  isAssistant ? "is-assistant" : "is-user"
+                } ${isError ? "is-error" : ""}`}
+              >
+                <span className="assembler-seven-sheet__message-role">
+                  {isAssistant ? "7" : "You"}
+                </span>
+                <div className="assembler-seven-sheet__message-body">
+                  <p className="assembler-seven-sheet__message-text">
+                    {isPending ? "Thinking…" : message?.content || ""}
+                  </p>
+                  {citations.length ? (
+                    <div className="assembler-seven-sheet__citations">
+                      {citations.map((citation) => (
+                        <div
+                          key={citation.id || `${citation.sectionSlug}-${citation.sectionLabel}`}
+                          className="assembler-seven-sheet__citation"
+                        >
+                          <span className="assembler-seven-sheet__citation-label">
+                            {citation.sectionLabel || citation.sectionTitle || "Context"}
+                          </span>
+                          {citation.excerpt ? (
+                            <span className="assembler-seven-sheet__citation-excerpt">
+                              {citation.excerpt}
+                            </span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {isAssistant && !isPending && !isError ? (
+                    <button
+                      type="button"
+                      className="assembler-seven-sheet__message-action"
+                      onClick={() => onStageMessage(message)}
+                    >
+                      Add to staging
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <p className="assembler-seven-sheet__empty">
+            Start a thread about this document. Seven keeps the conversation tied to what you are reading.
+          </p>
+        )}
       </div>
 
-      <div className="assembler-ai__field">
-        <span className="assembler-ai__prompt">&gt;</span>
-        <input
+      {errorMessage ? (
+        <p className="assembler-seven-sheet__error" aria-live="polite">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      <div className="assembler-seven-sheet__field">
+        <span className="assembler-seven-sheet__prompt">7</span>
+        <textarea
           ref={inputRef}
-          className="assembler-ai__input"
+          className="assembler-seven-sheet__input"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
               onSubmit();
             }
           }}
-          placeholder={pending ? "thinking…" : getAiPlaceholder(scope)}
+          placeholder={pending ? "Seven is thinking…" : "Ask about this document…"}
+          rows={3}
           disabled={pending}
         />
         <button
           type="button"
-          className="assembler-ai__run"
+          className="assembler-seven-sheet__run"
           disabled={!value.trim() || pending}
           onClick={onSubmit}
         >
-          {pending ? "Running…" : "Run"}
-        </button>
-        <button type="button" className="assembler-ai__close" onClick={onClose}>
-          CLOSE
+          {pending ? "Thinking…" : "Ask"}
         </button>
       </div>
-
-      {stagedBlocks.length ? (
-        <div className="assembler-ai__results" aria-live="polite">
-          <div className="assembler-ai__results-head">
-            <span>RESULT · {stagedBlocks.length}</span>
-            <div className="assembler-ai__results-actions">
-              <button type="button" className="assembler-tiny-button" onClick={onAcceptAllStagedBlocks}>
-                Add all
-              </button>
-              <button type="button" className="assembler-tiny-button" onClick={onClearStagedBlocks}>
-                Clear
-              </button>
-            </div>
-          </div>
-
-          <div className="assembler-ai__results-list">
-            {stagedBlocks.map((block, index) => (
-              <div key={block.id} className="assembler-ai__result-row">
-                <span className="assembler-ai__result-index">AI</span>
-                <span className="assembler-ai__result-text">{block.plainText || block.text}</span>
-                <button
-                  type="button"
-                  className="assembler-tiny-button"
-                  onClick={() => onAcceptStagedBlock(index)}
-                >
-                  +
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -2932,7 +3043,6 @@ export default function WorkspaceShell({
   const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
   const [stagedAiBlocks, setStagedAiBlocks] = useState([]);
-  const [aiScope, setAiScope] = useState("document");
   const [focusBlockId, setFocusBlockId] = useState(initialDocument.blocks[0]?.id || null);
   const [playheadBlockId, setPlayheadBlockId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -2956,6 +3066,11 @@ export default function WorkspaceShell({
   const [dropActive, setDropActive] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiPending, setAiPending] = useState(false);
+  const [sevenThreads, setSevenThreads] = useState(() => ({
+    [initialDocument.documentKey]: buildEmptySevenThread(initialDocument.documentKey),
+  }));
+  const [sevenThreadLoadingKey, setSevenThreadLoadingKey] = useState("");
+  const [sevenThreadError, setSevenThreadError] = useState("");
   const [receiptPending, setReceiptPending] = useState(false);
   const [polishPending, setPolishPending] = useState(false);
   const [cleanupPendingAction, setCleanupPendingAction] = useState("");
@@ -3055,6 +3170,11 @@ export default function WorkspaceShell({
   const lastUsedMode =
     normalizeWorkspaceMode(lastModeByProjectKey[activeProjectKey], workspaceMode) ||
     workspaceMode;
+  const activeSevenThread =
+    sevenThreads[activeDocument.documentKey] ||
+    buildEmptySevenThread(activeDocument.documentKey);
+  const sevenSuggestions = buildSevenSuggestions(focusedBlock);
+  const sevenThreadLoading = sevenThreadLoadingKey === activeDocument.documentKey;
 
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
@@ -3232,6 +3352,45 @@ export default function WorkspaceShell({
   }, [resumeSessionSummary]);
 
   useEffect(() => {
+    const documentKey = activeDocument.documentKey;
+    if (!documentKey) return undefined;
+
+    let cancelled = false;
+    setSevenThreadError("");
+    setSevenThreadLoadingKey(documentKey);
+
+    fetch(`/api/reader/seven/thread?documentKey=${encodeURIComponent(documentKey)}`)
+      .then((response) => response.json().catch(() => null).then((payload) => ({ response, payload })))
+      .then(({ response, payload }) => {
+        if (cancelled) return;
+        if (!response.ok) {
+          throw new Error(payload?.error || "Could not load the Seven conversation.");
+        }
+
+        setSevenThreads((previous) => ({
+          ...previous,
+          [documentKey]: payload?.thread || buildEmptySevenThread(documentKey),
+        }));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setSevenThreadError(
+          error instanceof Error ? error.message : "Could not load the Seven conversation.",
+        );
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setSevenThreadLoadingKey((previous) => (
+          previous === documentKey ? "" : previous
+        ));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDocument.documentKey]);
+
+  useEffect(() => {
     if (!resolvedVoiceChoice && voiceChoice) {
       setVoiceChoice(null);
       setProviderLabel("Voice");
@@ -3349,6 +3508,8 @@ export default function WorkspaceShell({
     setVoiceRecorderError("");
     setMobileComposeOpen(false);
     setMobileSourceToolsOpen(false);
+    setAiInput("");
+    setSevenThreadError("");
     pendingFocusBlockIdRef.current = null;
   }, [activeDocumentKey, firstBlockId]);
 
@@ -4765,6 +4926,12 @@ export default function WorkspaceShell({
         delete next[documentKey];
         return next;
       });
+      setSevenThreads((previous) => {
+        if (!(documentKey in previous)) return previous;
+        const next = { ...previous };
+        delete next[documentKey];
+        return next;
+      });
       setDocumentStates((previous) => {
         const next = { ...previous };
         delete next[documentKey];
@@ -5627,91 +5794,167 @@ export default function WorkspaceShell({
     setFeedback(`Playback rate ${nextRate.toFixed(2)}x.`);
   }
 
-  async function runAiOperation() {
-    const prompt = aiInput.trim();
-    if (!prompt) return;
+  async function runAiOperation(explicitPrompt = "") {
+    const prompt = String(explicitPrompt || aiInput || "").trim();
+    if (!prompt || !activeDocument?.documentKey) return;
 
-    if (aiScope === "clipboard" && !clipboard.length) {
-      setFeedback("Add blocks to the clipboard first.", "error");
-      return;
-    }
-
-    if (aiScope === "block" && !focusedBlock) {
-      setFeedback("Focus a block first.", "error");
-      return;
-    }
-
-    const requestBlocks =
-      aiScope === "clipboard" ? clipboard : activeDocument.blocks;
-    const requestSelectedBlocks =
-      aiScope === "block"
-        ? focusedBlock
-          ? [focusedBlock]
-          : []
-        : aiScope === "clipboard"
-          ? clipboard
-          : [];
+    const documentKey = activeDocument.documentKey;
+    const sentAt = new Date().toISOString();
+    const optimisticUserId = `seven-user-${Date.now()}`;
+    const optimisticAssistantId = `seven-assistant-${Date.now()}`;
+    const requestContext = buildSevenRequestContext(activeDocument, focusedBlock);
 
     setAiPending(true);
-    appendLog("AI_QUERY", `"${prompt}"`, {
-      documentKey: activeDocument.documentKey,
-      blockIds:
-        aiScope === "block"
-          ? focusedBlock
-            ? [focusedBlock.id]
-            : []
-          : aiScope === "clipboard"
-            ? clipboard.map((block) => block.id)
-            : [],
+    setAiInput("");
+    setAiOpen(true);
+    setSevenThreadError("");
+    setSevenThreads((previous) => {
+      const currentThread =
+        previous[documentKey] || buildEmptySevenThread(documentKey);
+
+      return {
+        ...previous,
+        [documentKey]: {
+          ...currentThread,
+          documentKey,
+          updatedAt: sentAt,
+          messages: [
+            ...currentThread.messages,
+            {
+              id: optimisticUserId,
+              role: "user",
+              content: prompt,
+              citations: [],
+              createdAt: sentAt,
+            },
+            {
+              id: optimisticAssistantId,
+              role: "assistant",
+              content: "",
+              citations: [],
+              createdAt: sentAt,
+              pending: true,
+            },
+          ],
+        },
+      };
+    });
+    appendLog("SEVEN_QUESTION", `"${prompt}"`, {
+      documentKey,
+      blockIds: focusedBlock?.id ? [focusedBlock.id] : [],
     });
 
     try {
-      const response = await fetch("/api/workspace/ai", {
+      const response = await fetch("/api/seven", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt,
-          scope: aiScope,
-          documentKey: activeDocument.documentKey,
-          title: activeDocument.title,
-          blocks: requestBlocks,
-          selectedBlocks: requestSelectedBlocks,
-          clipboardBlocks: clipboard,
+          mode: "question",
+          question: prompt,
+          documentKey,
+          documentTitle: activeDocument.title,
+          documentSubtitle: activeDocument.subtitle || "",
+          ...requestContext,
         }),
       });
       const payload = await response.json().catch(() => null);
 
-      if (!response.ok || !Array.isArray(payload?.blocks)) {
-        throw new Error(payload?.error || "The workspace AI operation failed.");
+      if (!response.ok || !payload?.ok || !payload?.answer) {
+        throw new Error(payload?.error || "Seven couldn't answer right now.");
       }
 
-      setStagedAiBlocks(payload.blocks);
-      appendLog(
-        "AI_RESULT",
-        `${payload.blocks.length} block${payload.blocks.length === 1 ? "" : "s"} produced (${payload.operation || "operation"})`,
-        {
-          documentKey: activeDocument.documentKey,
-          blockIds: payload.blocks.map((block) => block.id),
-        },
-      );
-      setAiInput("");
-      setAiOpen(true);
-      setFeedback(
-        payload.fallback
-          ? "AI staging ready using the workspace fallback."
-          : "AI staging ready.",
-        payload.fallback ? "" : "success",
-      );
+      const repliedAt = new Date().toISOString();
+      setSevenThreads((previous) => {
+        const currentThread =
+          previous[documentKey] || buildEmptySevenThread(documentKey);
+        const nextMessages = currentThread.messages.filter(
+          (message) =>
+            message.id !== optimisticUserId &&
+            message.id !== optimisticAssistantId,
+        );
+
+        return {
+          ...previous,
+          [documentKey]: {
+            ...currentThread,
+            id: payload.threadId || currentThread.id || "",
+            documentKey,
+            updatedAt: repliedAt,
+            messages: [
+              ...nextMessages,
+              {
+                id: payload.userMessageId || optimisticUserId,
+                role: "user",
+                content: prompt,
+                citations: [],
+                createdAt: sentAt,
+              },
+              {
+                id: payload.messageId || `seven-answer-${Date.now()}`,
+                role: "assistant",
+                content: payload.answer,
+                citations: Array.isArray(payload.citations) ? payload.citations : [],
+                createdAt: repliedAt,
+              },
+            ],
+          },
+        };
+      });
+      appendLog("SEVEN_ANSWER", `Seven replied in ${activeDocument.title}.`, {
+        documentKey,
+      });
     } catch (error) {
-      setFeedback(
-        error instanceof Error ? error.message : "The workspace AI operation failed.",
-        "error",
-      );
+      const message =
+        error instanceof Error ? error.message : "Seven couldn't answer right now.";
+      const failedAt = new Date().toISOString();
+
+      setSevenThreadError(message);
+      setSevenThreads((previous) => {
+        const currentThread =
+          previous[documentKey] || buildEmptySevenThread(documentKey);
+        const nextMessages = currentThread.messages.filter(
+          (entry) => entry.id !== optimisticAssistantId,
+        );
+
+        return {
+          ...previous,
+          [documentKey]: {
+            ...currentThread,
+            updatedAt: failedAt,
+            messages: [
+              ...nextMessages,
+              {
+                id: `seven-error-${Date.now()}`,
+                role: "assistant",
+                content: message,
+                citations: [],
+                createdAt: failedAt,
+                error: true,
+              },
+            ],
+          },
+        };
+      });
+      setFeedback(message, "error");
+      return;
     } finally {
       setAiPending(false);
     }
+
+    setFeedback("Seven replied.", "success");
+  }
+
+  function stageSevenMessage(message) {
+    const nextBlocks = buildStagedBlocksFromSevenMessage(activeDocument, message);
+    if (!nextBlocks.length) {
+      setFeedback("Seven didn't return anything you can stage.", "error");
+      return;
+    }
+
+    setStagedAiBlocks((previous) => mergeClipboard(previous, nextBlocks));
+    setFeedback("Seven reply added to staging.", "success");
   }
 
   function acceptStagedBlock(index) {
@@ -6290,16 +6533,21 @@ export default function WorkspaceShell({
                   <AiBar
                     inputRef={aiInputRef}
                     value={aiInput}
-                    scope={aiScope}
                     pending={aiPending}
-                    stagedBlocks={stagedAiBlocks}
-                    onChange={setAiInput}
-                    onScopeChange={setAiScope}
+                    loading={sevenThreadLoading}
+                    errorMessage={sevenThreadError}
+                    documentTitle={activeDocument.title}
+                    thread={activeSevenThread}
+                    suggestions={sevenSuggestions}
+                    onChange={(nextValue) => {
+                      setAiInput(nextValue);
+                      if (sevenThreadError) {
+                        setSevenThreadError("");
+                      }
+                    }}
                     onSubmit={runAiOperation}
-                    onPreset={(preset) => setAiInput(`${preset} `)}
-                    onAcceptStagedBlock={acceptStagedBlock}
-                    onAcceptAllStagedBlocks={acceptAllStagedBlocks}
-                    onClearStagedBlocks={() => setStagedAiBlocks([])}
+                    onSuggestion={(prompt) => void runAiOperation(prompt)}
+                    onStageMessage={stageSevenMessage}
                     onClose={() => setAiOpen(false)}
                   />
                 ) : null}
@@ -6309,16 +6557,24 @@ export default function WorkspaceShell({
                 <aside className="assembler-workbench__context">
                   <AiUtilityRail
                     open={aiOpen}
+                    documentTitle={activeDocument.title}
+                    thread={activeSevenThread}
                     inputRef={aiInputRef}
                     value={aiInput}
-                    scope={aiScope}
                     pending={aiPending}
-                    scopeOptions={AI_SCOPE_OPTIONS}
+                    loading={sevenThreadLoading}
+                    errorMessage={sevenThreadError}
+                    suggestions={sevenSuggestions}
                     onToggleOpen={() => setAiOpen((value) => !value)}
-                    onChange={setAiInput}
-                    onScopeChange={setAiScope}
+                    onChange={(nextValue) => {
+                      setAiInput(nextValue);
+                      if (sevenThreadError) {
+                        setSevenThreadError("");
+                      }
+                    }}
                     onSubmit={runAiOperation}
-                    onPreset={(preset) => setAiInput(`${preset} `)}
+                    onSuggestion={(prompt) => void runAiOperation(prompt)}
+                    onStageMessage={stageSevenMessage}
                   />
 
                   <ClipboardTray
