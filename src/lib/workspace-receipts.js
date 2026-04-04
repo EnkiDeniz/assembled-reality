@@ -1,5 +1,6 @@
 import { buildExcerpt } from "@/lib/text";
 import { PRODUCT_NAME } from "@/lib/product-language";
+import { buildBoxSource } from "@/lib/source-model";
 
 function unique(values) {
   return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
@@ -11,6 +12,12 @@ function getOperateDocumentKeys(operateResult = null) {
       (document) => document.documentKey,
     ),
   );
+}
+
+function buildOperateSourceSnapshots(operateResult = null) {
+  return (Array.isArray(operateResult?.includedDocuments) ? operateResult.includedDocuments : [])
+    .map((document) => buildBoxSource(document))
+    .filter(Boolean);
 }
 
 export function buildWorkspaceBlockLineage(blocks) {
@@ -39,6 +46,7 @@ export function buildWorkspaceReceiptPayload({
 }) {
   if (mode === "operate" && operateResult) {
     const operateDocumentKeys = getOperateDocumentKeys(operateResult);
+    const operateSources = buildOperateSourceSnapshots(operateResult);
     const boxTitle = project?.boxTitle || project?.title || "Untitled Box";
 
     return {
@@ -72,6 +80,7 @@ export function buildWorkspaceReceiptPayload({
           included_documents: Array.isArray(operateResult?.includedDocuments)
             ? operateResult.includedDocuments
             : [],
+          included_sources: operateSources,
           includes_assembly: Boolean(operateResult.includesAssembly),
           included_source_count: operateResult.includedSourceCount || 0,
           gradient: operateResult.gradient,
@@ -156,6 +165,7 @@ export function buildWorkspaceReceiptPayload({
         document_type: document?.documentType || "source",
         block_count: normalizedBlocks.length,
         source_document_keys: sourceDocumentKeys,
+        source_document_count: sourceDocumentKeys.length,
         source_titles: sourceTitles,
         block_lineage: blockLineage,
         log_entry_ids: normalizedLogEntries.map((entry) => entry.id),

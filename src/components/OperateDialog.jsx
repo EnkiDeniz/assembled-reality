@@ -147,7 +147,7 @@ export default function OperateDialog({
                         {document.title || "Untitled document"}
                       </span>
                       <span className="assembler-operate__included-meta">
-                        {document.role}
+                        {document.sourceSummary || document.role}
                         {document.blockCount ? ` · ${document.blockCount} blocks` : ""}
                         {document.truncated ? " · partial read" : ""}
                       </span>

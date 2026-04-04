@@ -1,3 +1,5 @@
+import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
+
 function SourceRailRow({
   document,
   activeDocumentKey,
@@ -8,6 +10,7 @@ function SourceRailRow({
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
 }) {
+  const sourceSummary = buildSourceSummaryViewModel(document);
   const active = document.documentKey === activeDocumentKey;
   const isGuide =
     document?.documentType === "builtin" || document?.sourceType === "builtin";
@@ -30,14 +33,14 @@ function SourceRailRow({
       >
         <span className="assembler-source-rail__title">{document.title}</span>
         <span className="assembler-source-rail__meta">
-          {getDocumentBlockCountLabel(document)}
+          {sourceSummary?.metaLine || getDocumentBlockCountLabel(document)}
         </span>
       </button>
 
       <span className="assembler-source-rail__badge">
         {loadingDocumentKey === document.documentKey
           ? "Loading…"
-          : getDocumentKindLabel(document)}
+          : sourceSummary?.badge || getDocumentKindLabel(document)}
       </span>
     </div>
   );
@@ -114,8 +117,8 @@ export default function SourceRail({
                   document={document}
                   activeDocumentKey={activeDocumentKey}
                   loadingDocumentKey={loadingDocumentKey}
-                  onListen={() => onOpenDocument(document.documentKey, "listen")}
-                  onOpen={() => onOpenDocument(document.documentKey, sourceOpenMode)}
+                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
+                  onOpen={() => onOpenDocument(document.documentKey, sourceOpenMode, { phase: "think" })}
                   _ActionIcon={ActionIcon}
                   getDocumentBlockCountLabel={getDocumentBlockCountLabel}
                   getDocumentKindLabel={getDocumentKindLabel}
@@ -141,8 +144,8 @@ export default function SourceRail({
                   document={document}
                   activeDocumentKey={activeDocumentKey}
                   loadingDocumentKey={loadingDocumentKey}
-                  onListen={() => onOpenDocument(document.documentKey, "listen")}
-                  onOpen={() => onOpenDocument(document.documentKey, "assemble")}
+                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
+                  onOpen={() => onOpenDocument(document.documentKey, "assemble", { phase: "create" })}
                   _ActionIcon={ActionIcon}
                   getDocumentBlockCountLabel={getDocumentBlockCountLabel}
                   getDocumentKindLabel={getDocumentKindLabel}

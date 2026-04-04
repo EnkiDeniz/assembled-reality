@@ -6,9 +6,19 @@
 **Companion documents:**
 - `README.md` — current product source of truth
 - `docs/AR Version 1.0.md` — shipped release posture
+- `docs/current-state-audit.md` — repo-grounded truth of what is live now
+- `docs/loegos-product-spec.md` — canonical end-to-end product model
 - `docs/box-migration-plan.md` — canonical Box model and migration policy
+- `docs/think-create-operate-spec.md` — canonical workflow framing
+- `docs/source-model-spec.md` — canonical source and provenance model
+- `docs/information-architecture.md` — canonical product IA
+- `docs/user-flows.md` — canonical end-to-end behavior
+- `docs/seven-operate-receipt-contract.md` — engine and proof boundary contract
+- `docs/component-architecture-plan.md` — canonical extraction path from the current shell
 - `docs/AR Version 2.md` — next-stage direction
 - `docs/AR UI Style Lock.md` — current visual system
+
+This document is conceptual truth. For implementation truth, use the canonical docs above before older review or vision materials.
 
 ---
 

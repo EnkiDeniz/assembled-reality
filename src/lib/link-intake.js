@@ -183,6 +183,9 @@ export async function deriveSourceFromLink(urlValue) {
           pathname: finalUrl.pathname,
           fetchedUrl: finalUrl.toString(),
           contentType,
+          modality: "link",
+          origin: "linked",
+          capturedAt: new Date().toISOString(),
         },
       },
       diagnostics: [
@@ -225,6 +228,9 @@ export async function deriveSourceFromLink(urlValue) {
           pathname: finalUrl.pathname,
           fetchedUrl: finalUrl.toString(),
           contentType,
+          modality: "link",
+          origin: "linked",
+          capturedAt: new Date().toISOString(),
         },
       },
       diagnostics: [

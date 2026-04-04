@@ -75,6 +75,8 @@ export async function POST(request) {
       sectionCount: polished.sectionCount,
       sourceFiles: sourceDocument.sourceFiles,
       intakeKind: `${sourceDocument.intakeKind || "upload"}-polished`,
+      sourceProvenance: sourceDocument.sourceProvenance || null,
+      sourceTrustProfile: sourceDocument.sourceTrustProfile || null,
       intakeDiagnostics: [
         ...(Array.isArray(sourceDocument.intakeDiagnostics) ? sourceDocument.intakeDiagnostics : []),
         ...(Array.isArray(polished.diagnostics) ? polished.diagnostics : []),

@@ -1,4 +1,5 @@
 import { PRIMARY_WORKSPACE_DOCUMENT_KEY } from "@/lib/project-model";
+import { buildBoxSource, getBoxSourceBadge, getBoxSourceMetaLine } from "@/lib/source-model";
 
 export const OPERATE_TRUST_LEVELS = Object.freeze(["L1", "L2", "L3"]);
 export const OPERATE_CONVERGENCE_STATES = Object.freeze([
@@ -139,9 +140,12 @@ export function listOperateIncludedDocuments(
   const includedDocuments = [];
 
   if (currentAssemblyDocument) {
+    const source = buildBoxSource(currentAssemblyDocument);
     includedDocuments.push({
       ...currentAssemblyDocument,
       operateRole: "assembly",
+      sourceBadge: getBoxSourceBadge(source),
+      sourceSummary: getBoxSourceMetaLine(source),
     });
   }
 
@@ -151,9 +155,12 @@ export function listOperateIncludedDocuments(
     if (isAssemblyDocument(document)) return;
     if (isBuiltInGuideDocument(document) && !includeGuide) return;
 
+    const source = buildBoxSource(document);
     includedDocuments.push({
       ...document,
       operateRole: isBuiltInGuideDocument(document) ? "guide" : "source",
+      sourceBadge: getBoxSourceBadge(source),
+      sourceSummary: getBoxSourceMetaLine(source),
     });
   });
 

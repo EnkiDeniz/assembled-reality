@@ -25,6 +25,12 @@ import {
   validateImageInput,
 } from "@/lib/image-intake";
 import {
+  createSourceProvenanceSeed,
+  createSourceTrustProfileSeed,
+  SOURCE_MODALITIES,
+  SOURCE_ORIGINS,
+} from "@/lib/source-model";
+import {
   getImportedDocumentFormat,
   ingestUploadedDocument,
   MAX_DOCUMENT_UPLOAD_BYTES,
@@ -172,6 +178,25 @@ export async function ingestUploadedSourceForUser(
       derivationModel: derived.derivationModel,
       derivationStatus: derived.derivationStatus,
       sourceAsset,
+      sourceProvenance: createSourceProvenanceSeed({
+        modality: SOURCE_MODALITIES.image,
+        origin: SOURCE_ORIGINS.uploaded,
+        captureMethod: `image:${normalizedMode}`,
+        capturedAt: new Date().toISOString(),
+        sourceLabel: derived.title,
+        transformationHistory: [
+          `image:${normalizedMode}`,
+          derived.derivationKind,
+          derived.derivationModel ? `model:${derived.derivationModel}` : "",
+        ],
+      }),
+      sourceTrustProfile: createSourceTrustProfileSeed({
+        basis: "visual-signal",
+        verification: "captured",
+        trustLevelHint: "L2",
+        summary:
+          "Visual signal captured into the box. Derived description is normalized from the image, not automatic truth.",
+      }),
     });
 
     return {
@@ -241,6 +266,25 @@ export async function ingestUploadedSourceForUser(
       derivationModel: derived.derivationModel,
       derivationStatus: derived.derivationStatus,
       sourceAsset,
+      sourceProvenance: createSourceProvenanceSeed({
+        modality: SOURCE_MODALITIES.voice,
+        origin: SOURCE_ORIGINS.spoken,
+        captureMethod: "voice-transcript",
+        capturedAt: new Date().toISOString(),
+        sourceLabel: derived.title,
+        transformationHistory: [
+          "voice-recording",
+          derived.derivationKind,
+          derived.derivationModel ? `model:${derived.derivationModel}` : "",
+        ],
+      }),
+      sourceTrustProfile: createSourceTrustProfileSeed({
+        basis: "recorded-voice",
+        verification: "captured",
+        trustLevelHint: "L2",
+        summary:
+          "Recorded voice in the box. The transcript is a normalized reading of the recording, not verification by itself.",
+      }),
     });
 
     return {
@@ -277,6 +321,23 @@ export async function ingestUploadedSourceForUser(
     sectionCount: imported.sectionCount,
     intakeKind: "upload",
     intakeDiagnostics: imported.diagnostics || [],
+    sourceProvenance: createSourceProvenanceSeed({
+      modality: SOURCE_MODALITIES.text,
+      origin: SOURCE_ORIGINS.uploaded,
+      captureMethod: "file-upload",
+      capturedAt: new Date().toISOString(),
+      sourceLabel: imported.title || filename,
+      transformationHistory: [
+        `uploaded:${imported.format || "markdown"}`,
+      ],
+    }),
+    sourceTrustProfile: createSourceTrustProfileSeed({
+      basis: "uploaded-text",
+      verification: "normalized",
+      trustLevelHint: "L2",
+      summary:
+        "Uploaded source text preserved in the box. It can be read and cited, but verification remains separate.",
+    }),
   });
   const document = await getReaderDocumentDataForUser(userId, documentSummary.documentKey);
 
@@ -329,6 +390,25 @@ export async function ingestLinkSourceForUser(
     derivationModel: derived.derivationModel,
     derivationStatus: derived.derivationStatus,
     sourceAsset,
+    sourceProvenance: createSourceProvenanceSeed({
+      modality: SOURCE_MODALITIES.link,
+      origin: SOURCE_ORIGINS.linked,
+      captureMethod: "public-link",
+      capturedAt: new Date().toISOString(),
+      sourceUrl: derived.canonicalUrl || derived.sourceUrl,
+      sourceLabel: derived.title,
+      transformationHistory: [
+        "link-fetch",
+        derived.derivationKind,
+      ],
+    }),
+    sourceTrustProfile: createSourceTrustProfileSeed({
+      basis: "captured-link",
+      verification: "captured",
+      trustLevelHint: "L2",
+      summary:
+        "Linked material captured into the box. Provenance is explicit, while external verification remains separate.",
+    }),
   });
 
   return {

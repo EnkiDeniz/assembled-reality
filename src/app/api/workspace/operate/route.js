@@ -10,6 +10,7 @@ import {
 import { getProjectByKey, getProjectDocuments } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import { getRequiredSession } from "@/lib/server-session";
+import { buildBoxSource, buildOperateSourceSummary } from "@/lib/source-model";
 
 export const runtime = "nodejs";
 
@@ -119,6 +120,7 @@ function buildOperatePromptDocuments(documents = []) {
 
   return documents.map((document) => {
     const source = normalizeDocumentSource(document);
+    const boxSource = buildBoxSource(document);
     const nextBudget = Math.max(1200, Math.min(MAX_DOCUMENT_CHARS, remainingChars));
     const { text, truncated } = truncateDocumentSource(source, nextBudget);
     remainingChars = Math.max(0, remainingChars - text.length);
@@ -128,6 +130,7 @@ function buildOperatePromptDocuments(documents = []) {
       title: document.title || "Untitled document",
       role: document.operateRole || "source",
       blockCount: Array.isArray(document.blocks) ? document.blocks.length : 0,
+      sourceSummary: buildOperateSourceSummary(boxSource),
       truncated,
       content: text,
     };
@@ -171,6 +174,7 @@ function buildOperatePrompt({
         `Title: ${document.title}`,
         `Role: ${document.role}`,
         `Blocks: ${document.blockCount}`,
+        document.sourceSummary ? `Source summary: ${document.sourceSummary}` : "",
         document.truncated ? "Coverage: truncated for Operate v1" : "Coverage: full",
         `Content:\n${document.content}`,
       ].join("\n"),

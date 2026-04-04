@@ -105,7 +105,7 @@ export default function AiUtilityRail({
       </div>
 
       <p className="assembler-utility-rail__hint">
-        Ask Seven about the document you are in. Replies stay tied to this box, and useful answers can move into staging.
+        Think with the current document. Seven stays tied to this box, and useful answers can move into Create.
       </p>
 
       {open ? (

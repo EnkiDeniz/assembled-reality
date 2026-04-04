@@ -11,8 +11,18 @@ This `README.md` is the current product source of truth.
 
 - `README.md`
 - `docs/AR Version 1.0.md`
+- `docs/loegos-product-spec.md`
+- `docs/current-state-audit.md`
 - `docs/box-migration-plan.md`
 - `docs/operate-spec-v2.md`
+- `docs/think-create-operate-spec.md`
+- `docs/source-model-spec.md`
+- `docs/source-normalization-table.md`
+- `docs/provenance-trust-policy.md`
+- `docs/information-architecture.md`
+- `docs/user-flows.md`
+- `docs/seven-operate-receipt-contract.md`
+- `docs/component-architecture-plan.md`
 
 ## Release Posture
 
@@ -179,7 +189,17 @@ The goal is calm, trustworthy utility, not feature theater.
 
 These are useful inputs, but this README wins when they disagree:
 
+- `docs/current-state-audit.md`
 - `docs/box-migration-plan.md`
+- `docs/loegos-product-spec.md`
+- `docs/think-create-operate-spec.md`
+- `docs/source-model-spec.md`
+- `docs/source-normalization-table.md`
+- `docs/provenance-trust-policy.md`
+- `docs/information-architecture.md`
+- `docs/user-flows.md`
+- `docs/seven-operate-receipt-contract.md`
+- `docs/component-architecture-plan.md`
 - `docs/AR Version 2.md`
 - `docs/AR Version 2 Build Plan.md`
 - `prototype/document-assembler-concept.md`

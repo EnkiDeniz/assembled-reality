@@ -86,6 +86,14 @@ function serializeDocumentSummary(documentData, record = null, progressPercent =
     sourceFiles: Array.isArray(documentData?.sourceFiles) ? documentData.sourceFiles : [],
     sourceAssetIds: Array.isArray(documentData?.sourceAssetIds) ? documentData.sourceAssetIds : [],
     sourceAssets: Array.isArray(sourceAssets) ? sourceAssets : Array.isArray(documentData?.sourceAssets) ? documentData.sourceAssets : [],
+    sourceProvenance:
+      documentData?.sourceProvenance && typeof documentData.sourceProvenance === "object"
+        ? documentData.sourceProvenance
+        : null,
+    sourceTrustProfile:
+      documentData?.sourceTrustProfile && typeof documentData.sourceTrustProfile === "object"
+        ? documentData.sourceTrustProfile
+        : null,
     derivationKind: documentData?.derivationKind || "",
     derivationModel: documentData?.derivationModel || "",
     derivationStatus: documentData?.derivationStatus || "",
@@ -206,6 +214,8 @@ export async function createReaderDocumentForUser(
     logEntries = [],
     sourceFiles = [],
     sourceAssetIds = [],
+    sourceProvenance = null,
+    sourceTrustProfile = null,
     intakeKind = "upload",
     intakeDiagnostics = [],
     hiddenFromProjectHome = false,
@@ -256,6 +266,8 @@ export async function createReaderDocumentForUser(
     documentType: "source",
     sourceFiles: sourceFiles.length ? sourceFiles : originalFilename ? [originalFilename] : [],
     sourceAssetIds,
+    sourceProvenance,
+    sourceTrustProfile,
     blocks: persistedBlocks,
     logEntries: persistedLogEntries,
     intakeKind,
@@ -313,6 +325,8 @@ export async function createImageDerivedDocumentForUser(
     derivationModel = "",
     derivationStatus = "succeeded",
     sourceAsset,
+    sourceProvenance = null,
+    sourceTrustProfile = null,
   },
 ) {
   return createAssetDerivedDocumentForUser(userId, {
@@ -330,6 +344,8 @@ export async function createImageDerivedDocumentForUser(
     derivationModel,
     derivationStatus,
     sourceAsset,
+    sourceProvenance,
+    sourceTrustProfile,
     assetKind: "IMAGE",
     defaultOperation:
       derivationKind === "image-notes" ? "summarized" : "extracted",
@@ -362,6 +378,8 @@ export async function createLinkDerivedDocumentForUser(
     derivationModel = "",
     derivationStatus = "succeeded",
     sourceAsset,
+    sourceProvenance = null,
+    sourceTrustProfile = null,
   },
 ) {
   return createAssetDerivedDocumentForUser(userId, {
@@ -378,6 +396,8 @@ export async function createLinkDerivedDocumentForUser(
     derivationModel,
     derivationStatus,
     sourceAsset,
+    sourceProvenance,
+    sourceTrustProfile,
     assetKind: "LINK",
     defaultOperation: "extracted",
     sourceAction: "LINK_ADDED",
@@ -406,6 +426,8 @@ export async function createAudioDerivedDocumentForUser(
     derivationModel = "",
     derivationStatus = "succeeded",
     sourceAsset,
+    sourceProvenance = null,
+    sourceTrustProfile = null,
   },
 ) {
   return createAssetDerivedDocumentForUser(userId, {
@@ -423,6 +445,8 @@ export async function createAudioDerivedDocumentForUser(
     derivationModel,
     derivationStatus,
     sourceAsset,
+    sourceProvenance,
+    sourceTrustProfile,
     assetKind: "AUDIO",
     defaultOperation: "extracted",
     sourceAction: "UPLOADED_AUDIO",
@@ -451,6 +475,8 @@ async function createAssetDerivedDocumentForUser(
     derivationModel = "",
     derivationStatus = "succeeded",
     sourceAsset,
+    sourceProvenance = null,
+    sourceTrustProfile = null,
     assetKind = "IMAGE",
     defaultOperation = "extracted",
     sourceAction = "UPLOADED",
@@ -510,6 +536,8 @@ async function createAssetDerivedDocumentForUser(
       logEntries: persistedLogEntries,
       sourceFiles,
       sourceAssetIds: [assetId],
+      sourceProvenance,
+      sourceTrustProfile,
       intakeKind,
       intakeDiagnostics,
       derivationKind,

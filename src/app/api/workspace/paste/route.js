@@ -13,6 +13,12 @@ import {
   getReaderDocumentDataForUser,
 } from "@/lib/reader-documents";
 import { getRequiredSession } from "@/lib/server-session";
+import {
+  createSourceProvenanceSeed,
+  createSourceTrustProfileSeed,
+  SOURCE_MODALITIES,
+  SOURCE_ORIGINS,
+} from "@/lib/source-model";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +112,25 @@ export async function POST(request) {
           ...sourceAsset,
           originalFilename: imageFilename || null,
         },
+        sourceProvenance: createSourceProvenanceSeed({
+          modality: SOURCE_MODALITIES.image,
+          origin: SOURCE_ORIGINS.pasted,
+          captureMethod: `clipboard-image:${derivationMode}`,
+          capturedAt: new Date().toISOString(),
+          sourceLabel: derived.title,
+          transformationHistory: [
+            `pasted-image:${derivationMode}`,
+            derived.derivationKind,
+            derived.derivationModel ? `model:${derived.derivationModel}` : "",
+          ],
+        }),
+        sourceTrustProfile: createSourceTrustProfileSeed({
+          basis: "visual-signal",
+          verification: "captured",
+          trustLevelHint: "L2",
+          summary:
+            "Visual signal pasted into the box. Derived description is normalized from the image, not automatic truth.",
+        }),
       });
 
       return NextResponse.json({
@@ -143,6 +168,23 @@ export async function POST(request) {
       intakeKind: parsedMode.target === "clipboard" ? "paste-clipboard" : "paste-source",
       intakeDiagnostics: imported.diagnostics || [],
       hiddenFromProjectHome: parsedMode.target === "clipboard",
+      sourceProvenance: createSourceProvenanceSeed({
+        modality: SOURCE_MODALITIES.text,
+        origin: SOURCE_ORIGINS.pasted,
+        captureMethod: parsedMode.target === "clipboard" ? "clipboard-selection" : "clipboard-source",
+        capturedAt: new Date().toISOString(),
+        sourceLabel: imported.title,
+        transformationHistory: [
+          parsedMode.target === "clipboard" ? "paste:clipboard" : "paste:source",
+        ],
+      }),
+      sourceTrustProfile: createSourceTrustProfileSeed({
+        basis: "pasted-text",
+        verification: "normalized",
+        trustLevelHint: "L2",
+        summary:
+          "Pasted text preserved in the box. It is readable and attributable to a paste event, but not independently verified.",
+      }),
     });
     const document = await getReaderDocumentDataForUser(session.user.id, summary.documentKey);
 

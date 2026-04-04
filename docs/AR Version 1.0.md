@@ -8,6 +8,26 @@ It is a desktop-first workbench for one reliable loop:
 
 `import source → listen / ask Seven → stage blocks → assemble → operate → draft receipt`
 
+## Canonical Docs
+
+The live release should stay aligned with this canonical set:
+
+- `README.md`
+- `docs/current-state-audit.md`
+- `docs/loegos-product-spec.md`
+- `docs/box-migration-plan.md`
+- `docs/think-create-operate-spec.md`
+- `docs/operate-spec-v2.md`
+- `docs/source-model-spec.md`
+- `docs/source-normalization-table.md`
+- `docs/provenance-trust-policy.md`
+- `docs/information-architecture.md`
+- `docs/user-flows.md`
+- `docs/seven-operate-receipt-contract.md`
+- `docs/component-architecture-plan.md`
+
+If older review or roadmap docs disagree with this set, this set wins.
+
 ## Product Model
 
 - `7` talks

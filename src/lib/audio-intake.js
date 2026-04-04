@@ -200,6 +200,12 @@ export async function buildAudioAssetDraft({
     blobPath: pathname,
     documentKey,
     label: buildTitleHint(originalFilename),
+    metadataJson: {
+      modality: "voice",
+      origin: "spoken",
+      capturedAt: new Date().toISOString(),
+      durationMs,
+    },
   };
 }
 

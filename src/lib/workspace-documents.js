@@ -206,6 +206,8 @@ function buildStoredWorkspaceMeta({
   documentType = "source",
   sourceFiles = [],
   sourceAssetIds = [],
+  sourceProvenance = null,
+  sourceTrustProfile = null,
   blocks = [],
   logEntries = [],
   intakeKind = "upload",
@@ -220,6 +222,10 @@ function buildStoredWorkspaceMeta({
     documentType,
     sourceFiles: Array.isArray(sourceFiles) ? sourceFiles.filter(Boolean) : [],
     sourceAssetIds: Array.isArray(sourceAssetIds) ? sourceAssetIds.filter(Boolean) : [],
+    sourceProvenance:
+      sourceProvenance && typeof sourceProvenance === "object" ? sourceProvenance : null,
+    sourceTrustProfile:
+      sourceTrustProfile && typeof sourceTrustProfile === "object" ? sourceTrustProfile : null,
     intakeKind: String(intakeKind || "upload").trim() || "upload",
     intakeDiagnostics: normalizeIntakeDiagnostics(intakeDiagnostics),
     hiddenFromProjectHome: Boolean(hiddenFromProjectHome),
@@ -256,6 +262,8 @@ export function buildStoredWorkspaceContent({
   documentType = "source",
   sourceFiles = [],
   sourceAssetIds = [],
+  sourceProvenance = null,
+  sourceTrustProfile = null,
   blocks = [],
   logEntries = [],
   intakeKind = "upload",
@@ -275,6 +283,8 @@ export function buildStoredWorkspaceContent({
     documentType,
     sourceFiles,
     sourceAssetIds,
+    sourceProvenance,
+    sourceTrustProfile,
     blocks,
     logEntries,
     intakeKind,
@@ -330,6 +340,14 @@ export function parseStoredWorkspaceDocument({
     hiddenFromProjectHome: Boolean(meta?.hiddenFromProjectHome),
     sourceFiles: buildSourceFiles(meta, originalFilename),
     sourceAssetIds: Array.isArray(meta?.sourceAssetIds) ? meta.sourceAssetIds.filter(Boolean) : [],
+    sourceProvenance:
+      meta?.sourceProvenance && typeof meta.sourceProvenance === "object"
+        ? meta.sourceProvenance
+        : null,
+    sourceTrustProfile:
+      meta?.sourceTrustProfile && typeof meta.sourceTrustProfile === "object"
+        ? meta.sourceTrustProfile
+        : null,
     sourceAssets: [],
     derivationKind: String(meta?.derivationKind || "").trim().toLowerCase(),
     derivationModel: String(meta?.derivationModel || "").trim(),

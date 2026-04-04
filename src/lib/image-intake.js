@@ -238,6 +238,13 @@ export function buildImageAssetDraft({
     sha256,
     blobPath: pathname,
     documentKey,
+    metadataJson: {
+      modality: "image",
+      origin: originalFilename ? "uploaded" : "pasted",
+      capturedAt: new Date().toISOString(),
+      width: Number.isFinite(dimensions?.width) ? dimensions.width : null,
+      height: Number.isFinite(dimensions?.height) ? dimensions.height : null,
+    },
   };
 }
 

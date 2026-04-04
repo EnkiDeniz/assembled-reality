@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 
 function ProjectHomeDocumentRow({
   document,
@@ -10,6 +11,7 @@ function ProjectHomeDocumentRow({
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
 }) {
+  const sourceSummary = buildSourceSummaryViewModel(document);
   const isGuide =
     document?.documentType === "builtin" || document?.sourceType === "builtin";
 
@@ -31,7 +33,7 @@ function ProjectHomeDocumentRow({
       >
         <span className="assembler-project-home__row-title">{document.title}</span>
         <span className="assembler-project-home__row-meta">
-          {getDocumentBlockCountLabel(document)}
+          {sourceSummary?.metaLine || getDocumentBlockCountLabel(document)}
         </span>
       </button>
 
@@ -39,7 +41,7 @@ function ProjectHomeDocumentRow({
         <span className="assembler-project-home__row-badge">
           {loadingDocumentKey === document.documentKey
             ? "Loading…"
-            : getDocumentKindLabel(document)}
+            : sourceSummary?.badge || getDocumentKindLabel(document)}
         </span>
         {onDelete ? (
           <button
@@ -267,8 +269,10 @@ export default function ProjectHome({
                   key={document.documentKey}
                   document={document}
                   loadingDocumentKey={loadingDocumentKey}
-                  onListen={() => onOpenDocument(document.documentKey, "listen")}
-                  onOpen={() => onOpenDocument(document.documentKey, sourceOpenMode)}
+                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
+                  onOpen={() =>
+                    onOpenDocument(document.documentKey, sourceOpenMode, { phase: "think" })
+                  }
                   onDelete={
                     canDeleteDocument(document) && onDeleteDocument
                       ? () => onDeleteDocument(document)
@@ -299,8 +303,12 @@ export default function ProjectHome({
                 <ProjectHomeDocumentRow
                   document={currentAssemblyDocument}
                   loadingDocumentKey={loadingDocumentKey}
-                  onListen={() => onOpenDocument(currentAssemblyDocument.documentKey, "listen")}
-                  onOpen={() => onOpenDocument(currentAssemblyDocument.documentKey, "assemble")}
+                  onListen={() =>
+                    onOpenDocument(currentAssemblyDocument.documentKey, "listen", { phase: "think" })
+                  }
+                  onOpen={() =>
+                    onOpenDocument(currentAssemblyDocument.documentKey, "assemble", { phase: "create" })
+                  }
                   onDelete={
                     canDeleteDocument(currentAssemblyDocument) && onDeleteDocument
                       ? () => onDeleteDocument(currentAssemblyDocument)
@@ -321,8 +329,8 @@ export default function ProjectHome({
                   key={document.documentKey}
                   document={document}
                   loadingDocumentKey={loadingDocumentKey}
-                  onListen={() => onOpenDocument(document.documentKey, "listen")}
-                  onOpen={() => onOpenDocument(document.documentKey, "assemble")}
+                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
+                  onOpen={() => onOpenDocument(document.documentKey, "assemble", { phase: "create" })}
                   onDelete={
                     canDeleteDocument(document) && onDeleteDocument
                       ? () => onDeleteDocument(document)

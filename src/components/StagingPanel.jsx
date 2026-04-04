@@ -26,8 +26,8 @@ export default function StagingPanel({
     <section className="assembler-staging-panel">
       <div className="assembler-staging-panel__header">
         <div>
-          <span className="assembler-staging-panel__eyebrow">Staging</span>
-          <h2 className="assembler-staging-panel__title">Assembly</h2>
+          <span className="assembler-staging-panel__eyebrow">Create</span>
+          <h2 className="assembler-staging-panel__title">Staging</h2>
         </div>
         <span className="assembler-staging-panel__count">
           {clipboard.length} block{clipboard.length === 1 ? "" : "s"}
@@ -38,7 +38,7 @@ export default function StagingPanel({
         {stagedBlocks.length ? (
           <div className="assembler-staging-panel__section">
             <div className="assembler-staging-panel__section-head">
-              <span>Seven replies</span>
+              <span>Seven findings</span>
               <div className="assembler-staging-panel__section-actions">
                 <button
                   type="button"
@@ -78,9 +78,9 @@ export default function StagingPanel({
         ) : null}
 
         <div className="assembler-staging-panel__section">
-          <div className="assembler-staging-panel__section-head">
-            <span>
-              Selected blocks
+            <div className="assembler-staging-panel__section-head">
+              <span>
+              Create queue
               {sourceCount ? ` · ${sourceCount} source${sourceCount === 1 ? "" : "s"}` : ""}
             </span>
             <div className="assembler-staging-panel__section-actions">

@@ -24,6 +24,82 @@
   gap: 10px;
 }
 
+.assembler-phase {
+  display: grid;
+  gap: 18px;
+}
+
+.assembler-phase__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.assembler-phase__copy {
+  display: grid;
+  gap: 6px;
+  max-width: 42rem;
+}
+
+.assembler-phase__eyebrow,
+.assembler-phase__empty-label {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-phase__title,
+.assembler-phase__empty-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.assembler-phase__subtitle,
+.assembler-phase__empty-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.assembler-phase__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.assembler-phase__empty {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.assembler-phase__empty-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-phase__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .assembler-project-home__eyebrow,
 .assembler-source-rail__eyebrow,
 .assembler-utility-rail__eyebrow,
