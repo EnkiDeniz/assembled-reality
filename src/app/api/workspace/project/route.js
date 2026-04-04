@@ -35,6 +35,8 @@ export async function POST(request) {
         projectKey: project.projectKey,
         title: project.title,
         subtitle: project.subtitle,
+        isPinned: Boolean(project.isPinned),
+        isArchived: Boolean(project.isArchived),
       },
     });
   } catch (error) {
@@ -53,21 +55,33 @@ export async function PUT(request) {
 
   const body = await request.json().catch(() => null);
   const projectKey = String(body?.projectKey || "").trim();
+  const hasTitle = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "title");
+  const hasSubtitle = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "subtitle");
+  const hasPinned = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "isPinned");
+  const hasArchived = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "isArchived");
   const title = String(body?.title || "").trim();
-  const subtitle = body?.subtitle;
+  const subtitle = hasSubtitle ? body?.subtitle : undefined;
+  const isPinned = hasPinned ? Boolean(body?.isPinned) : undefined;
+  const isArchived = hasArchived ? Boolean(body?.isArchived) : undefined;
 
   if (!projectKey) {
     return NextResponse.json({ error: "Box key is required." }, { status: 400 });
   }
 
-  if (!title) {
+  if (hasTitle && !title) {
     return NextResponse.json({ error: "Box title is required." }, { status: 400 });
+  }
+
+  if (!hasTitle && !hasSubtitle && !hasPinned && !hasArchived) {
+    return NextResponse.json({ error: "No box changes were provided." }, { status: 400 });
   }
 
   try {
     const project = await updateReaderProjectForUser(session.user.id, projectKey, {
-      title,
-      subtitle,
+      ...(hasTitle ? { title } : {}),
+      ...(hasSubtitle ? { subtitle } : {}),
+      ...(hasPinned ? { isPinned } : {}),
+      ...(hasArchived ? { isArchived } : {}),
     });
 
     return NextResponse.json({
@@ -78,6 +92,8 @@ export async function PUT(request) {
         title: project.title,
         subtitle: project.subtitle,
         currentAssemblyDocumentKey: project.currentAssemblyDocumentKey || null,
+        isPinned: Boolean(project.isPinned),
+        isArchived: Boolean(project.isArchived),
       },
     });
   } catch (error) {

@@ -19,7 +19,7 @@ export default function BoxPhaseBar({
   const totalClipboardCount = clipboardCount + stagedCount;
   const phaseLabel =
     phase === "create"
-      ? "Create phase"
+      ? "Seed phase"
       : phase === "receipts"
         ? "Receipts phase"
         : "Think phase";
@@ -40,7 +40,7 @@ export default function BoxPhaseBar({
     <div className={`assembler-toolbar ${isMobileLayout ? "is-mobile" : ""}`}>
       <div className="assembler-toolbar__left">
         {renderPhaseButton("think", "Think")}
-        {renderPhaseButton("create", "Create")}
+        {renderPhaseButton("create", "Seed")}
         {isMobileLayout && phase === "create" ? (
           <button
             type="button"

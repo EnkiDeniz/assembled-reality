@@ -16,7 +16,7 @@ export default function CreateSurface({
     <section className="assembler-phase assembler-phase--create">
       <header className="assembler-phase__header">
         <div className="assembler-phase__copy">
-          <span className="assembler-phase__eyebrow">Create</span>
+          <span className="assembler-phase__eyebrow">Seed</span>
           <h2 className="assembler-phase__title">Shape the seed.</h2>
           <p className="assembler-phase__subtitle">
             Move selected material into staging, then shape and rewrite the living working position of the box.

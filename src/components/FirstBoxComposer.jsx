@@ -17,6 +17,7 @@ export default function FirstBoxComposer({
   capturePending = false,
   writePending = false,
   onUpload,
+  onPhoto,
   onPaste,
   onLink,
   onSpeak,
@@ -54,6 +55,10 @@ export default function FirstBoxComposer({
             >
               <span>Upload file</span>
               <small>PDF, DOCX, Markdown, or TXT</small>
+            </button>
+            <button type="button" className="assembler-first-box__action" onClick={onPhoto} disabled={pending}>
+              <span>Add photo</span>
+              <small>Use camera or library and turn it into a source</small>
             </button>
             <button type="button" className="assembler-first-box__action" onClick={onPaste} disabled={pending}>
               <span>Paste text</span>

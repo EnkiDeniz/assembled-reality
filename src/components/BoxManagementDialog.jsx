@@ -1,7 +1,13 @@
 function formatBoxMeta(project = null) {
   const sourceCount = Number(project?.sourceCount) || 0;
   const seedCount = Number(project?.assemblyCount) || 0;
-  return `${sourceCount} source${sourceCount === 1 ? "" : "s"} · ${seedCount} seed${seedCount === 1 ? "" : "s"}`;
+  const parts = [
+    `${sourceCount} source${sourceCount === 1 ? "" : "s"}`,
+    `${seedCount} seed${seedCount === 1 ? "" : "s"}`,
+  ];
+  if (project?.isPinned) parts.push("pinned");
+  if (project?.isArchived) parts.push("archived");
+  return parts.join(" · ");
 }
 
 export default function BoxManagementDialog({
@@ -20,6 +26,8 @@ export default function BoxManagementDialog({
   onRename,
   onDelete,
   onOpenProject,
+  onTogglePin,
+  onToggleArchive,
 }) {
   if (!open) return null;
 
@@ -30,6 +38,7 @@ export default function BoxManagementDialog({
   const creating = pendingAction === "__create__";
   const renaming = pendingAction === "__rename__";
   const deleting = pendingAction === "__delete__";
+  const mutating = Boolean(pendingAction);
 
   return (
     <div className="assembler-image-chooser assembler-image-chooser--box-management">
@@ -37,7 +46,7 @@ export default function BoxManagementDialog({
         type="button"
         className="assembler-image-chooser__backdrop"
         aria-label="Close box management"
-        onClick={creating || renaming || deleting ? undefined : onClose}
+        onClick={mutating ? undefined : onClose}
       />
 
       <div
@@ -57,8 +66,8 @@ export default function BoxManagementDialog({
           <button
             type="button"
             className="assembler-sheet__close"
-            onClick={creating || renaming || deleting ? undefined : onClose}
-            disabled={creating || renaming || deleting}
+            onClick={mutating ? undefined : onClose}
+            disabled={mutating}
           >
             Close
           </button>
@@ -78,7 +87,7 @@ export default function BoxManagementDialog({
                 onChange={(event) => onCreateTitleChange(event.target.value)}
                 placeholder="Untitled Box"
                 aria-label="New Box title"
-                disabled={creating || renaming || deleting}
+                disabled={mutating}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && createTitle.trim() && !creating) {
                     event.preventDefault();
@@ -90,7 +99,7 @@ export default function BoxManagementDialog({
                 type="button"
                 className="assembler-box-management__primary"
                 onClick={onCreate}
-                disabled={!createTitle.trim() || creating || renaming || deleting}
+                disabled={!createTitle.trim() || mutating}
               >
                 {creating ? "Creating…" : "Create Box"}
               </button>
@@ -112,7 +121,7 @@ export default function BoxManagementDialog({
                     project.projectKey === selectedProject?.projectKey ? "is-active" : ""
                   }`}
                   onClick={() => onSelectProject(project.projectKey)}
-                  disabled={creating || renaming || deleting}
+                  disabled={mutating}
                 >
                   <span className="assembler-box-management__row-copy">
                     <span className="assembler-box-management__row-title">
@@ -152,7 +161,7 @@ export default function BoxManagementDialog({
                     onChange={(event) => onRenameTitleChange(event.target.value)}
                     placeholder="Untitled Box"
                     aria-label="Selected Box title"
-                    disabled={creating || renaming || deleting}
+                    disabled={mutating}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && renameTitle.trim() && !renaming) {
                         event.preventDefault();
@@ -166,7 +175,7 @@ export default function BoxManagementDialog({
                       type="button"
                       className="assembler-box-management__secondary"
                       onClick={onOpenProject}
-                      disabled={creating || renaming || deleting}
+                      disabled={mutating}
                     >
                       Open Box
                     </button>
@@ -174,16 +183,34 @@ export default function BoxManagementDialog({
                       type="button"
                       className="assembler-box-management__primary"
                       onClick={onRename}
-                      disabled={!renameTitle.trim() || creating || renaming || deleting}
+                      disabled={!renameTitle.trim() || mutating}
                     >
                       {renaming ? "Saving…" : "Save name"}
                     </button>
+                    <button
+                      type="button"
+                      className="assembler-box-management__secondary"
+                      onClick={onTogglePin}
+                      disabled={mutating}
+                    >
+                      {selectedProject.isPinned ? "Unpin" : "Pin"}
+                    </button>
+                    {!selectedProject.isDefaultBox ? (
+                      <button
+                        type="button"
+                        className="assembler-box-management__secondary"
+                        onClick={onToggleArchive}
+                        disabled={mutating}
+                      >
+                        {selectedProject.isArchived ? "Restore" : "Archive"}
+                      </button>
+                    ) : null}
                     {!selectedProject.isDefaultBox ? (
                       <button
                         type="button"
                         className="assembler-box-management__danger"
                         onClick={onDelete}
-                        disabled={creating || renaming || deleting}
+                        disabled={mutating}
                       >
                         {deleting ? "Moving work…" : "Delete Box"}
                       </button>

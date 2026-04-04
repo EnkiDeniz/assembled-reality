@@ -26,12 +26,14 @@ function ActionButton({ active = false, disabled = false, label, onClick, tone =
 export default function WorkspaceControlSurface({
   viewModel,
   isMobileLayout = false,
+  activeSidecar = "",
   onOpenBoxes,
   onOpenBoxHome,
   onSelectPhase,
   onOpenIntake,
   onOpenSpeak,
-  onToggleAi,
+  onOpenSeven,
+  onOpenStage,
   onRunOperate,
   onOpenReceipts,
   onManageBox,
@@ -58,7 +60,7 @@ export default function WorkspaceControlSurface({
         />
         <ModeButton
           active={viewModel?.boxPhase === "create"}
-          label="Create"
+          label="Seed"
           onClick={() => onSelectPhase("create")}
         />
         <ModeButton
@@ -76,7 +78,12 @@ export default function WorkspaceControlSurface({
       <div className="assembler-control-surface__actions">
         <ActionButton label="Add source" onClick={onOpenIntake} />
         <ActionButton label="Speak" onClick={onOpenSpeak} />
-        <ActionButton active={Boolean(viewModel?.aiOpen)} label="7" onClick={onToggleAi} />
+        <ActionButton active={activeSidecar === "seven"} label="Seven" onClick={onOpenSeven} />
+        <ActionButton
+          active={activeSidecar === "stage"}
+          label={viewModel?.stageCount ? `Stage ${viewModel.stageCount}` : "Stage"}
+          onClick={onOpenStage}
+        />
         <ActionButton
           active={viewModel?.boxPhase === "operate"}
           label="Operate"
@@ -86,7 +93,7 @@ export default function WorkspaceControlSurface({
         />
         <ActionButton
           active={viewModel?.boxPhase === "receipts"}
-          label="Proof"
+          label="Receipts"
           onClick={onOpenReceipts}
         />
         {!isMobileLayout ? (

@@ -61,6 +61,7 @@ function SevenMessage({
 
 export default function AiUtilityRail({
   open = false,
+  embedded = false,
   documentTitle = "",
   thread = null,
   inputRef,
@@ -78,37 +79,42 @@ export default function AiUtilityRail({
   const messages = Array.isArray(thread?.messages) ? thread.messages : [];
   const scrollRef = useRef(null);
   const lastMessageContent = messages[messages.length - 1]?.content;
+  const isExpanded = embedded || open;
 
   useEffect(() => {
     const node = scrollRef.current;
-    if (!node || !open) return;
+    if (!node || !isExpanded) return;
     node.scrollTop = node.scrollHeight;
-  }, [lastMessageContent, messages.length, open]);
+  }, [isExpanded, lastMessageContent, messages.length]);
 
   return (
-    <section className={`assembler-utility-rail ${open ? "is-open" : ""}`}>
-      <div className="assembler-utility-rail__header">
-        <div className="assembler-utility-rail__copy">
-          <span className="assembler-utility-rail__eyebrow">7</span>
-          <span className="assembler-utility-rail__title">Seven</span>
-          <span className="assembler-utility-rail__document">{documentTitle || "Current document"}</span>
-        </div>
+    <section className={`assembler-utility-rail ${open ? "is-open" : ""} ${embedded ? "is-embedded" : ""}`}>
+      {!embedded ? (
+        <>
+          <div className="assembler-utility-rail__header">
+            <div className="assembler-utility-rail__copy">
+              <span className="assembler-utility-rail__eyebrow">7</span>
+              <span className="assembler-utility-rail__title">Seven</span>
+              <span className="assembler-utility-rail__document">{documentTitle || "Current document"}</span>
+            </div>
 
-        <button
-          type="button"
-          className={`assembler-utility-rail__toggle ${open ? "is-active" : ""}`}
-          onClick={onToggleOpen}
-          aria-label={open ? "Close Seven conversation" : "Open Seven conversation"}
-        >
-          {open ? "Close" : "Open"}
-        </button>
-      </div>
+            <button
+              type="button"
+              className={`assembler-utility-rail__toggle ${open ? "is-active" : ""}`}
+              onClick={onToggleOpen}
+              aria-label={open ? "Close Seven conversation" : "Open Seven conversation"}
+            >
+              {open ? "Close" : "Open"}
+            </button>
+          </div>
 
-      <p className="assembler-utility-rail__hint">
-        Think with the current document. Seven stays tied to this box, and useful answers can move into Create.
-      </p>
+          <p className="assembler-utility-rail__hint">
+            Think with the current document. Seven stays tied to this box, and useful answers can move into the seed.
+          </p>
+        </>
+      ) : null}
 
-      {open ? (
+      {isExpanded ? (
         <div className="assembler-utility-rail__body">
           <div className="assembler-utility-rail__presets">
             {suggestions.map((label) => (

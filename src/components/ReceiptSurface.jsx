@@ -150,7 +150,7 @@ export default function ReceiptSurface({
               ))
             ) : (
               <p className="assembler-receipt-surface__empty">
-                No receipt drafts yet. Draft one after Create or Operate.
+                No receipt drafts yet. Draft one after Seed or Operate.
               </p>
             )}
           </div>

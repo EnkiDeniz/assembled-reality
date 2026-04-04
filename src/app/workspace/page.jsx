@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import WorkspaceShell from "@/components/WorkspaceShell";
 import { authOptions } from "@/lib/auth";
@@ -50,6 +51,11 @@ function listRealDocuments(documents = []) {
   );
 }
 
+function isMobileRequest(userAgent = "") {
+  const normalized = String(userAgent || "").toLowerCase();
+  return /iphone|ipad|ipod|android|mobile|blackberry|opera mini|windows phone/.test(normalized);
+}
+
 export default async function WorkspacePage({ searchParams }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -62,10 +68,12 @@ export default async function WorkspacePage({ searchParams }) {
   const requestedLaunchpad = String(resolvedSearchParams?.launchpad || "").trim() === "1";
   const requestedLaunchpadView = String(resolvedSearchParams?.launchpadView || "").trim().toLowerCase();
   const requestedMode = String(resolvedSearchParams?.mode || "").trim().toLowerCase();
+  const headerStore = await headers();
+  const mobileRequest = isMobileRequest(headerStore.get("user-agent") || "");
   const initialLaunchpadView =
     requestedLaunchpadView === "box" || requestedLaunchpadView === "boxes"
       ? requestedLaunchpadView
-      : requestedProjectKey
+      : requestedProjectKey || !mobileRequest
         ? "box"
         : "boxes";
 
@@ -76,6 +84,9 @@ export default async function WorkspacePage({ searchParams }) {
     (document) => document?.isAssembly || document?.documentType === "assembly",
   );
   const isFirstTime = realDocuments.length === 0 && !hasSeed;
+  const showLaunchpadInitially =
+    requestedLaunchpad ||
+    (!mobileRequest && !isFirstTime && !requestedDocumentKey);
   const resumeProject =
     getProjectForDocumentKey(projects, requestedDocumentKey) ||
     null;
@@ -152,7 +163,7 @@ export default async function WorkspacePage({ searchParams }) {
       initialMode={defaultMode}
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={voiceCatalog[0] || null}
-      showLaunchpadInitially={requestedLaunchpad}
+      showLaunchpadInitially={showLaunchpadInitially}
       initialLaunchpadView={initialLaunchpadView}
       resumeSessionSummary={resumeSessionSummary}
       initialEntryState={isFirstTime ? "first-time" : "returning"}

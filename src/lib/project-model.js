@@ -115,6 +115,8 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     boxHref: buildProjectHref(DEFAULT_PROJECT_KEY),
     isDefault: true,
     isDefaultBox: true,
+    isPinned: false,
+    isArchived: false,
     boxTitle: DEFAULT_PROJECT_TITLE,
     boxSubtitle: currentAssembly
       ? `Seed: ${currentAssembly.title}`
@@ -136,6 +138,8 @@ export function buildDefaultProjectFromDocuments(documents = []) {
       PRIMARY_WORKSPACE_DOCUMENT_KEY,
     createdAt: builtinSource?.createdAt || visibleDocuments[0]?.createdAt || null,
     updatedAt: latestTouchedDocument?.updatedAt || latestTouchedDocument?.createdAt || null,
+    receiptDraftCount: 0,
+    latestReceiptUpdatedAt: null,
   };
 }
 
@@ -223,10 +227,14 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
     boxDocuments: projectDocuments.filter((document) => isProjectDocumentVisible(document)),
     isDefaultBox:
       (project.projectKey || fallbackProject.projectKey || DEFAULT_PROJECT_KEY) === DEFAULT_PROJECT_KEY,
+    isPinned: Boolean(project.isPinned),
+    isArchived: Boolean(project.isArchived),
     currentAssembly: currentAssemblyDocument,
     currentSeed: currentAssemblyDocument,
     seedDocumentKey:
       project.currentAssemblyDocumentKey ?? fallbackProject.currentAssemblyDocumentKey ?? null,
+    receiptDraftCount: Number(project.receiptDraftCount) || 0,
+    latestReceiptUpdatedAt: project.latestReceiptUpdatedAt || null,
   };
 }
 

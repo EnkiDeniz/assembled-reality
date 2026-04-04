@@ -134,6 +134,8 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
     projectKey: projectRecord.projectKey,
     title: projectRecord.title,
     subtitle: projectRecord.subtitle || fallbackProject.subtitle,
+    isPinned: Boolean(projectRecord.isPinned),
+    isArchived: Boolean(projectRecord.isArchived),
     documentKeys: memberships.map((membership) => membership.documentKey),
     sourceDocumentKeys,
     assemblyDocumentKeys,
@@ -144,6 +146,9 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
       fallbackProject.defaultDocumentKey,
     createdAt: projectRecord.createdAt?.toISOString?.() || fallbackProject.createdAt || null,
     updatedAt: projectRecord.updatedAt?.toISOString?.() || fallbackProject.updatedAt || null,
+    receiptDraftCount: Number(projectRecord?._count?.readingReceiptDrafts) || 0,
+    latestReceiptUpdatedAt:
+      projectRecord?.readingReceiptDrafts?.[0]?.updatedAt?.toISOString?.() || null,
   };
 }
 
@@ -301,6 +306,18 @@ export async function listReaderProjectsForUser(userId, documents = []) {
         documents: {
           orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
         },
+        readingReceiptDrafts: {
+          orderBy: [{ updatedAt: "desc" }],
+          take: 1,
+          select: {
+            updatedAt: true,
+          },
+        },
+        _count: {
+          select: {
+            readingReceiptDrafts: true,
+          },
+        },
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     });
@@ -400,6 +417,8 @@ export async function updateReaderProjectForUser(
   {
     title,
     subtitle,
+    isPinned,
+    isArchived,
   } = {},
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -409,9 +428,17 @@ export async function updateReaderProjectForUser(
   }
 
   const normalizedProjectKey = String(projectKey || "").trim() || DEFAULT_PROJECT_KEY;
+  const hasTitle = title !== undefined;
+  const hasSubtitle = subtitle !== undefined;
+  const hasPinned = isPinned !== undefined;
+  const hasArchived = isArchived !== undefined;
   const normalizedTitle = String(title || "").trim();
 
-  if (!normalizedTitle) {
+  if (!hasTitle && !hasSubtitle && !hasPinned && !hasArchived) {
+    throw new Error("No box changes were provided.");
+  }
+
+  if (hasTitle && !normalizedTitle) {
     throw new Error("Box title is required.");
   }
 
@@ -427,21 +454,55 @@ export async function updateReaderProjectForUser(
       throw new Error("Box not found.");
     }
 
+    if (project.projectKey === DEFAULT_PROJECT_KEY && isArchived === true) {
+      throw new Error("The default box cannot be archived.");
+    }
+
+    const nextArchived = hasArchived ? Boolean(isArchived) : Boolean(project.isArchived);
+    const nextPinned =
+      nextArchived
+        ? false
+        : hasPinned
+          ? Boolean(isPinned)
+          : Boolean(project.isPinned);
+
     return await readerProjectModel.update({
       where: {
         id: project.id,
       },
       data: {
-        title: normalizedTitle,
-        ...(subtitle === undefined
-          ? {}
-          : {
+        ...(hasTitle
+          ? {
+              title: normalizedTitle,
+            }
+          : {}),
+        ...(hasSubtitle
+          ? {
               subtitle: String(subtitle || "").trim() || null,
-            }),
+            }
+          : {}),
+        ...(hasPinned || hasArchived
+          ? {
+              isPinned: nextPinned,
+              isArchived: nextArchived,
+            }
+          : {}),
       },
       include: {
         documents: {
           orderBy: [{ role: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+        },
+        readingReceiptDrafts: {
+          orderBy: [{ updatedAt: "desc" }],
+          take: 1,
+          select: {
+            updatedAt: true,
+          },
+        },
+        _count: {
+          select: {
+            readingReceiptDrafts: true,
+          },
         },
       },
     });

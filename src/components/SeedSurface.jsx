@@ -25,7 +25,7 @@ export default function SeedSurface({
     <section className="assembler-phase assembler-phase--create">
       <header className="assembler-phase__header assembler-phase__header--seed">
         <div className="assembler-phase__copy">
-          <span className="assembler-phase__eyebrow">Create</span>
+          <span className="assembler-phase__eyebrow">Seed</span>
           <h2 className="assembler-phase__title">Shape the seed.</h2>
           <p className="assembler-phase__subtitle">
             The seed is the living working position of the box. Feed it from sources, staging, and proof.

@@ -20,6 +20,7 @@ export default function MobileControlDock({
   onOpenBoxes,
   onSelectPhase,
   onOpenIntake,
+  onOpenPhoto,
   onOpenSpeak,
   onToggleAi,
   onRunOperate,
@@ -37,9 +38,9 @@ export default function MobileControlDock({
           {viewModel?.boxPhase === "operate"
             ? "Operate"
             : viewModel?.boxPhase === "receipts"
-              ? "Proof"
+              ? "Receipts"
               : viewModel?.boxPhase === "create"
-                ? "Create"
+                ? "Seed"
                 : "Think"}
         </span>
         <span className="assembler-mobile-dock__toggle-action">
@@ -51,12 +52,13 @@ export default function MobileControlDock({
         <div className="assembler-mobile-dock__panel">
           <div className="assembler-mobile-dock__column">
             <DockButton active={viewModel?.boxPhase === "think"} shortLabel="T" label="Think" onClick={() => onSelectPhase("think")} />
-            <DockButton active={viewModel?.boxPhase === "create"} shortLabel="C" label="Create" onClick={() => onSelectPhase("create")} />
+            <DockButton active={viewModel?.boxPhase === "create"} shortLabel="S" label="Seed" onClick={() => onSelectPhase("create")} />
             <DockButton active={viewModel?.boxPhase === "operate"} shortLabel="O" label="Operate" onClick={() => onSelectPhase("operate")} />
             <DockButton active={viewModel?.boxPhase === "receipts"} shortLabel="R" label="Receipts" onClick={() => onSelectPhase("receipts")} />
           </div>
           <div className="assembler-mobile-dock__column">
             <DockButton shortLabel="+" label="Add source" onClick={onOpenIntake} />
+            <DockButton shortLabel="Pic" label="Photo" onClick={onOpenPhoto} />
             <DockButton shortLabel="Mic" label="Speak" onClick={onOpenSpeak} />
             <DockButton active={Boolean(viewModel?.aiOpen)} shortLabel="7" label="Seven" onClick={onToggleAi} />
             <DockButton
@@ -67,7 +69,7 @@ export default function MobileControlDock({
               disabled={!viewModel?.canRunOperate}
             />
             <DockButton shortLabel="Box" label="Boxes" onClick={onOpenBoxes} />
-            <DockButton shortLabel="Proof" label="Open receipts" onClick={onOpenReceipts} />
+            <DockButton shortLabel="Rcpt" label="Open receipts" onClick={onOpenReceipts} />
           </div>
         </div>
       ) : null}

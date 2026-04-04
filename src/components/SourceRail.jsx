@@ -1,5 +1,32 @@
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 
+function formatTrustLabel(value = "") {
+  const normalized = String(value || "").trim();
+  return normalized ? `${normalized} trust` : "";
+}
+
+function buildSourceBadges(sourceSummary) {
+  if (!sourceSummary) return [];
+
+  return [
+    sourceSummary.badge || "",
+    sourceSummary.originLabel || "",
+    formatTrustLabel(sourceSummary.trustProfile?.trustLevelHint),
+  ].filter(Boolean);
+}
+
+function buildSourceProvenanceLine(sourceSummary, document) {
+  if (!sourceSummary) return "";
+
+  return (
+    sourceSummary.trustProfile?.summary ||
+    (sourceSummary.provenance?.sourceLabel &&
+    sourceSummary.provenance.sourceLabel !== document?.title
+      ? sourceSummary.provenance.sourceLabel
+      : "")
+  );
+}
+
 function SourceRailRow({
   document,
   activeDocumentKey,
@@ -14,6 +41,8 @@ function SourceRailRow({
   const active = document.documentKey === activeDocumentKey;
   const isGuide =
     document?.documentType === "builtin" || document?.sourceType === "builtin";
+  const badges = buildSourceBadges(sourceSummary);
+  const provenanceLine = buildSourceProvenanceLine(sourceSummary, document);
 
   return (
     <div className={`assembler-source-rail__row ${active ? "is-active" : ""} ${isGuide ? "is-guide" : ""}`}>
@@ -35,13 +64,27 @@ function SourceRailRow({
         <span className="assembler-source-rail__meta">
           {sourceSummary?.metaLine || getDocumentBlockCountLabel(document)}
         </span>
+        {provenanceLine ? (
+          <span className="assembler-source-rail__provenance">{provenanceLine}</span>
+        ) : null}
       </button>
 
-      <span className="assembler-source-rail__badge">
-        {loadingDocumentKey === document.documentKey
-          ? "Loading…"
-          : sourceSummary?.badge || getDocumentKindLabel(document)}
-      </span>
+      <div className="assembler-source-rail__badges">
+        {loadingDocumentKey === document.documentKey ? (
+          <span className="assembler-source-rail__badge">Loading…</span>
+        ) : (
+          badges.map((badge) => (
+            <span key={`${document.documentKey}-${badge}`} className="assembler-source-rail__badge">
+              {badge}
+            </span>
+          ))
+        )}
+        {!badges.length && !loadingDocumentKey ? (
+          <span className="assembler-source-rail__badge">
+            {getDocumentKindLabel(document)}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -55,6 +98,7 @@ export default function SourceRail({
   assemblyDocuments = [],
   onOpenProjectHome,
   onUpload,
+  onOpenPhoto,
   onPasteSource,
   onOpenDocument,
   uploading = false,
@@ -82,7 +126,7 @@ export default function SourceRail({
             className="assembler-source-rail__action"
             onClick={onOpenProjectHome}
           >
-            Boxes
+            Box home
           </button>
           <button
             type="button"
@@ -90,7 +134,15 @@ export default function SourceRail({
             onClick={onUpload}
             disabled={uploading}
           >
-            {uploading ? "Importing…" : "Upload"}
+            {uploading ? "Importing…" : "Add file"}
+          </button>
+          <button
+            type="button"
+            className="assembler-source-rail__action"
+            onClick={onOpenPhoto}
+            disabled={uploading}
+          >
+            Photo
           </button>
           <button
             type="button"

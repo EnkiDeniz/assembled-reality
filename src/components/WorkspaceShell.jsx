@@ -15,6 +15,7 @@ import SourceRail from "@/components/SourceRail";
 import StagingPanel from "@/components/StagingPanel";
 import ThinkSurface from "@/components/ThinkSurface";
 import WorkspaceControlSurface from "@/components/WorkspaceControlSurface";
+import WorkspaceGlyph from "@/components/WorkspaceGlyph";
 import {
   buildWorkspaceMarkdown,
   createWorkspaceLogEntry,
@@ -77,6 +78,11 @@ const LAUNCHPAD_VIEWS = Object.freeze({
   boxes: "boxes",
   box: "box",
 });
+const DESKTOP_SIDECAR_PANELS = Object.freeze({
+  seven: "seven",
+  stage: "stage",
+  details: "details",
+});
 const IMAGE_DERIVATION_OPTIONS = [
   { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
   { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
@@ -112,6 +118,16 @@ function normalizeWorkspaceMode(value, fallback = WORKSPACE_MODES.assemble) {
 
 function normalizeLaunchpadView(value, fallback = LAUNCHPAD_VIEWS.boxes) {
   return Object.values(LAUNCHPAD_VIEWS).includes(value) ? value : fallback;
+}
+
+function normalizeDesktopSidecarPanel(value, fallback = DESKTOP_SIDECAR_PANELS.details) {
+  return Object.values(DESKTOP_SIDECAR_PANELS).includes(value) ? value : fallback;
+}
+
+function getDefaultDesktopSidecarPanel(phase) {
+  if (phase === BOX_PHASES.create) return DESKTOP_SIDECAR_PANELS.stage;
+  if (phase === BOX_PHASES.think) return DESKTOP_SIDECAR_PANELS.seven;
+  return DESKTOP_SIDECAR_PANELS.details;
 }
 
 function browserSupportsDeviceVoice() {
@@ -385,7 +401,7 @@ function getLaunchUploadBlockedMessage(file, sourceKind = "") {
   }
 
   if (intakeKind === "image") {
-    return "Image import stays in beta for now. Use PDF, DOCX, Markdown, TXT, paste, link import, or Speak note.";
+    return "Use Photo to turn an image into a source.";
   }
 
   if (intakeKind === "audio_upload") {
@@ -768,6 +784,16 @@ function WorkspaceActionIcon({ kind }) {
         <path d="M12 16V5" />
         <path d="m7.5 9.5 4.5-4.5 4.5 4.5" />
         <path d="M5 18.5h14" />
+      </svg>
+    );
+  }
+
+  if (kind === "photo") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M5 8.5h14v10H5z" />
+        <path d="M9 8.5 10.5 6h3L15 8.5" />
+        <circle cx="12" cy="13.5" r="2.8" />
       </svg>
     );
   }
@@ -1335,6 +1361,8 @@ function WorkspaceLaunchpad({
   onCreateProject,
   onBrowseBoxes,
   onManageProjects,
+  onToggleProjectPinned,
+  onToggleProjectArchived,
   onOpenReceipts,
   onOpenDocument,
   onOpenProject,
@@ -1342,11 +1370,14 @@ function WorkspaceLaunchpad({
   onPasteClipboard,
   onOpenSpeak,
   onOpenIntake,
+  onOpenPhoto,
+  onOpenSeven,
   uploading = false,
   pastePendingMode = "",
   recordingVoice = false,
   clipboardCount = 0,
   resumeSessionSummary = null,
+  isMobileLayout = false,
 }) {
   const grouped = groupedDocuments(documents);
   const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
@@ -1464,6 +1495,13 @@ function WorkspaceLaunchpad({
               }),
           }
         : null;
+  const sevenTargetDocumentKey =
+    resumeSessionSummary?.documentKey ||
+    currentAssemblyDocument?.documentKey ||
+    boxViewModel?.latestTouchedSource?.documentKey ||
+    latestSourceDocument?.documentKey ||
+    listenDocument?.documentKey ||
+    "";
 
   if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.boxes) {
     return (
@@ -1475,6 +1513,12 @@ function WorkspaceLaunchpad({
         onOpenProjectHome={onOpenProject}
         onCreateProject={onCreateProject}
         onManageProjects={onManageProjects}
+        onPasteClipboard={onPasteClipboard}
+        onOpenSpeak={onOpenSpeak}
+        onOpenIntake={onOpenIntake}
+        onOpenPhoto={onOpenPhoto}
+        onToggleProjectPinned={onToggleProjectPinned}
+        onToggleProjectArchived={onToggleProjectArchived}
       />
     );
   }
@@ -1502,11 +1546,14 @@ function WorkspaceLaunchpad({
       onPasteClipboard={onPasteClipboard}
       onOpenSpeak={onOpenSpeak}
       onOpenIntake={onOpenIntake}
+      onOpenPhoto={onOpenPhoto}
+      onAskSeven={() => onOpenSeven(sevenTargetDocumentKey)}
       ActionIcon={WorkspaceActionIcon}
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
       getDocumentKindLabel={getDocumentKindLabel}
       canDeleteDocument={canDeleteDocument}
       sourceOpenMode={WORKSPACE_MODES.listen}
+      isMobileLayout={isMobileLayout}
     />
   );
 }
@@ -1566,10 +1613,10 @@ function ListenPicker({
       </div>
 
       <div className="assembler-listen-picker__section">
-        <span className="assembler-listen-picker__label">Assemblies</span>
+        <span className="assembler-listen-picker__label">Seeds</span>
         {grouped.assemblies.length
           ? grouped.assemblies.map((document) => renderDocumentRow(document))
-          : <span className="assembler-listen-picker__empty">Nothing assembled yet.</span>}
+          : <span className="assembler-listen-picker__empty">No seed yet.</span>}
       </div>
     </div>
   );
@@ -1651,7 +1698,7 @@ function ListenSurface({
                       onSwitchToAssemble();
                     }}
                   >
-                    Create
+                    Seed
                   </button>
                   <button
                     type="button"
@@ -2020,6 +2067,7 @@ function DropAnythingSheet({
   pending = false,
   onClose,
   onUpload,
+  onPhoto,
   onPaste,
   onSpeak,
   onImportLink,
@@ -2075,6 +2123,20 @@ function DropAnythingSheet({
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Upload file</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-drop-sheet__action"
+            onClick={onPhoto}
+            disabled={pending}
+          >
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="photo" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Add photo</span>
             </span>
           </button>
 
@@ -2142,8 +2204,86 @@ function DropAnythingSheet({
         </div>
 
         <p className="assembler-drop-sheet__note assembler-drop-sheet__note--beta">
-          Beta or future paths stay secondary here: image conversion, folder import, and arbitrary audio uploads.
+          Folder import and arbitrary audio uploads stay secondary here. Photo is now a first-class mobile path.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function PhotoSourceSheet({
+  open = false,
+  pending = false,
+  onClose,
+  onTakePhoto,
+  onChooseLibrary,
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="assembler-image-chooser assembler-image-chooser--intake">
+      <button
+        type="button"
+        className="assembler-image-chooser__backdrop"
+        aria-label="Close photo intake"
+        onClick={pending ? undefined : onClose}
+      />
+
+      <div
+        className="assembler-image-chooser__panel assembler-drop-sheet assembler-drop-sheet--photo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="photo-intake-title"
+      >
+        <div className="assembler-image-chooser__header">
+          <div className="assembler-image-chooser__copy">
+            <h2 id="photo-intake-title" className="assembler-image-chooser__title">
+              Add photo
+            </h2>
+            <p className="assembler-drop-sheet__note">
+              Turn a photo into a source without going through generic file upload.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="assembler-sheet__close"
+            onClick={pending ? undefined : onClose}
+            disabled={pending}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="assembler-drop-sheet__actions">
+          <button
+            type="button"
+            className="assembler-drop-sheet__action is-primary"
+            onClick={onTakePhoto}
+            disabled={pending}
+          >
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="photo" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Take photo</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="assembler-drop-sheet__action"
+            onClick={onChooseLibrary}
+            disabled={pending}
+          >
+            <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
+              <WorkspaceActionIcon kind="upload" />
+            </span>
+            <span className="assembler-drop-sheet__action-copy">
+              <span className="assembler-drop-sheet__action-title">Photo library</span>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -2356,12 +2496,14 @@ function SourceCleanupTray({
 
 function WorkspaceToolbar({
   viewModel,
+  activeSidecar = "",
   onSetBoxPhase,
   onOpenBoxes,
   onOpenBoxHome,
   onOpenIntake,
   onOpenSpeak,
-  onToggleAi,
+  onOpenSeven,
+  onOpenStage,
   onRunOperate,
   onOpenReceipts,
   onManageBox,
@@ -2371,16 +2513,267 @@ function WorkspaceToolbar({
     <WorkspaceControlSurface
       viewModel={viewModel}
       isMobileLayout={isMobileLayout}
+      activeSidecar={activeSidecar}
       onOpenBoxes={onOpenBoxes}
       onOpenBoxHome={onOpenBoxHome}
       onSelectPhase={onSetBoxPhase}
       onOpenIntake={onOpenIntake}
       onOpenSpeak={onOpenSpeak}
-      onToggleAi={onToggleAi}
+      onOpenSeven={onOpenSeven}
+      onOpenStage={onOpenStage}
       onRunOperate={onRunOperate}
       onOpenReceipts={onOpenReceipts}
       onManageBox={onManageBox}
     />
+  );
+}
+
+function SidecarTab({ icon, label, active = false, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`assembler-sidecar-shell__tab ${active ? "is-active" : ""}`}
+      onClick={onClick}
+    >
+      <WorkspaceGlyph kind={icon} />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function DetailsMetric({ label, value, detail = "" }) {
+  return (
+    <article className="assembler-details-panel__metric">
+      <span className="assembler-details-panel__metric-label">{label}</span>
+      <strong className="assembler-details-panel__metric-value">{value}</strong>
+      {detail ? <span className="assembler-details-panel__metric-detail">{detail}</span> : null}
+    </article>
+  );
+}
+
+function DetailsRow({ label, value, detail = "" }) {
+  return (
+    <div className="assembler-details-panel__row">
+      <span className="assembler-details-panel__row-label">{label}</span>
+      <div className="assembler-details-panel__row-copy">
+        <strong className="assembler-details-panel__row-value">{value}</strong>
+        {detail ? <span className="assembler-details-panel__row-detail">{detail}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceDetailsPanel({
+  activeProject = null,
+  activeDocument = null,
+  currentSeedDocument = null,
+  activeDocumentAsset = null,
+  activeDocumentWarning = "",
+  receiptSummary = null,
+  clipboardCount = 0,
+  stagedCount = 0,
+  sourceCount = 0,
+  seedCount = 0,
+  getDocumentKindLabel,
+  getDocumentBlockCountLabel,
+}) {
+  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
+  const latestProofLabel =
+    receiptSummary?.latestDraftStatusLabel ||
+    (receiptSummary?.draftCount ? "Draft ready" : "No proof yet");
+  const latestProofDetail =
+    receiptSummary?.latestDraftTitle ||
+    receiptSummary?.syncLine ||
+    "Draft a receipt when the box is ready.";
+  const activeDocumentLabel = activeDocument?.title || currentSeedDocument?.title || "No active focus";
+  const activeDocumentDetail = activeDocument
+    ? `${getDocumentKindLabel(activeDocument)} · ${getDocumentBlockCountLabel(activeDocument)}`
+    : "Open a source or seed to keep the current working context visible.";
+  const queueCount = Math.max(0, Number(clipboardCount) || 0) + Math.max(0, Number(stagedCount) || 0);
+  const provenanceLabel = activeDocumentAsset
+    ? getSourceAssetLabel(activeDocumentAsset)
+    : activeDocument?.sourceFiles?.length
+      ? activeDocument.sourceFiles.join(", ")
+      : "No original asset visible";
+  const provenanceDetail = [
+    activeDocumentAsset?.kind ? `${activeDocumentAsset.kind} source` : "",
+    activeDocument?.derivationModel || "",
+    activeDocument?.derivationStatus || "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <section className="assembler-details-panel">
+      <div className="assembler-details-panel__grid">
+        <DetailsMetric
+          label="Current focus"
+          value={activeDocumentLabel}
+          detail={activeDocumentDetail}
+        />
+        <DetailsMetric
+          label="Seed"
+          value={currentSeedDocument?.title || "No seed yet"}
+          detail={seedCount ? `${seedCount} seed in this box` : "The first real source creates the first seed."}
+        />
+        <DetailsMetric
+          label="Receipts"
+          value={latestProofLabel}
+          detail={latestProofDetail}
+        />
+        <DetailsMetric
+          label="Queue"
+          value={queueCount ? `${queueCount} staged block${queueCount === 1 ? "" : "s"}` : "Empty"}
+          detail={queueCount ? "Ready to shape the next seed revision." : "Add blocks from sources or Seven."}
+        />
+      </div>
+
+      <div className="assembler-details-panel__section">
+        <div className="assembler-details-panel__section-head">
+          <span>Box status</span>
+          <span>{boxTitle}</span>
+        </div>
+        <div className="assembler-details-panel__rows">
+          <DetailsRow
+            label="Sources"
+            value={`${sourceCount} real source${sourceCount === 1 ? "" : "s"}`}
+            detail={sourceCount ? "Use Think to compare and listen before shaping the seed." : "Add the first real source to start the box."}
+          />
+          <DetailsRow
+            label="Connection"
+            value={receiptSummary?.connectionStatusLabel || "Not connected"}
+            detail={receiptSummary?.syncLine || "Local proof remains first-class even without GetReceipts."}
+          />
+        </div>
+      </div>
+
+      <div className="assembler-details-panel__section">
+        <div className="assembler-details-panel__section-head">
+          <span>Source provenance</span>
+          <span>{activeDocument?.title || "Current context"}</span>
+        </div>
+        <div className="assembler-details-panel__rows">
+          <DetailsRow
+            label="Original"
+            value={provenanceLabel}
+            detail={provenanceDetail || "The current source did not expose an original asset or derivation trace."}
+          />
+          {activeDocument?.updatedAt ? (
+            <DetailsRow
+              label="Updated"
+              value={new Intl.DateTimeFormat(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              }).format(new Date(activeDocument.updatedAt))}
+              detail="Latest visible edit in this workspace."
+            />
+          ) : null}
+        </div>
+      </div>
+
+      {activeDocumentWarning ? (
+        <p className="assembler-details-panel__note">{activeDocumentWarning}</p>
+      ) : null}
+    </section>
+  );
+}
+
+function DesktopAssemblySidecar({
+  activePanel = DESKTOP_SIDECAR_PANELS.details,
+  stageCount = 0,
+  onSelectPanel,
+  activeProject,
+  activeDocument,
+  currentSeedDocument,
+  activeDocumentAsset,
+  activeDocumentWarning,
+  receiptSummary,
+  clipboardCount = 0,
+  stagedCount = 0,
+  sourceCount = 0,
+  seedCount = 0,
+  getDocumentKindLabel,
+  getDocumentBlockCountLabel,
+  sevenContent,
+  stageContent,
+}) {
+  const panelCopy =
+    activePanel === DESKTOP_SIDECAR_PANELS.seven
+      ? {
+          eyebrow: "Seven",
+          title: "Ask against the current box.",
+          detail: "Keep the conversation anchored to the current source or seed, then move useful replies into staging.",
+        }
+      : activePanel === DESKTOP_SIDECAR_PANELS.stage
+        ? {
+            eyebrow: "Stage",
+            title: "Shape the next seed revision.",
+            detail: "The queue is the handoff between sources, Seven, and the living seed.",
+          }
+        : {
+            eyebrow: "Details",
+            title: "Keep trust visible.",
+            detail: "Use this panel to read provenance, proof state, and the current box posture without leaving the canvas.",
+          };
+
+  return (
+    <aside className="assembler-workbench__sidecar">
+      <div className="assembler-sidecar-shell">
+        <div className="assembler-sidecar-shell__header">
+          <div className="assembler-sidecar-shell__copy">
+            <span className="assembler-sidecar-shell__eyebrow">{panelCopy.eyebrow}</span>
+            <h3 className="assembler-sidecar-shell__title">{panelCopy.title}</h3>
+            <p className="assembler-sidecar-shell__detail">{panelCopy.detail}</p>
+          </div>
+
+          <div className="assembler-sidecar-shell__tabs" role="tablist" aria-label="Workspace sidecar">
+            <SidecarTab
+              icon="seven"
+              label="Seven"
+              active={activePanel === DESKTOP_SIDECAR_PANELS.seven}
+              onClick={() => onSelectPanel(DESKTOP_SIDECAR_PANELS.seven)}
+            />
+            <SidecarTab
+              icon="seed"
+              label={stageCount ? `Stage ${stageCount}` : "Stage"}
+              active={activePanel === DESKTOP_SIDECAR_PANELS.stage}
+              onClick={() => onSelectPanel(DESKTOP_SIDECAR_PANELS.stage)}
+            />
+            <SidecarTab
+              icon="manage"
+              label="Details"
+              active={activePanel === DESKTOP_SIDECAR_PANELS.details}
+              onClick={() => onSelectPanel(DESKTOP_SIDECAR_PANELS.details)}
+            />
+          </div>
+        </div>
+
+        <div className="assembler-sidecar-shell__body">
+          {activePanel === DESKTOP_SIDECAR_PANELS.seven ? (
+            sevenContent
+          ) : activePanel === DESKTOP_SIDECAR_PANELS.stage ? (
+            stageContent
+          ) : (
+            <WorkspaceDetailsPanel
+              activeProject={activeProject}
+              activeDocument={activeDocument}
+              currentSeedDocument={currentSeedDocument}
+              activeDocumentAsset={activeDocumentAsset}
+              activeDocumentWarning={activeDocumentWarning}
+              receiptSummary={receiptSummary}
+              clipboardCount={clipboardCount}
+              stagedCount={stagedCount}
+              sourceCount={sourceCount}
+              seedCount={seedCount}
+              getDocumentKindLabel={getDocumentKindLabel}
+              getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+            />
+          )}
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -2710,6 +3103,7 @@ function ClipboardTray({
   stagedBlocks,
   clipboard,
   documents,
+  embedded = false,
   onAcceptStagedBlock,
   onAcceptAllStagedBlocks,
   onClearStagedBlocks,
@@ -2723,6 +3117,7 @@ function ClipboardTray({
       stagedBlocks={stagedBlocks}
       clipboard={clipboard}
       documents={documents}
+      embedded={embedded}
       onAcceptStagedBlock={onAcceptStagedBlock}
       onAcceptAllStagedBlocks={onAcceptAllStagedBlocks}
       onClearStagedBlocks={onClearStagedBlocks}
@@ -3073,6 +3468,8 @@ export default function WorkspaceShell({
   initialEntryState = "returning",
 }) {
   const fileInputRef = useRef(null);
+  const photoCameraInputRef = useRef(null);
+  const photoLibraryInputRef = useRef(null);
   const aiInputRef = useRef(null);
   const runAiOperationRef = useRef(null);
   const blockRefs = useRef({});
@@ -3204,10 +3601,20 @@ export default function WorkspaceShell({
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
+  const [photoIntakeOpen, setPhotoIntakeOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
   const [mobileSourceToolsOpen, setMobileSourceToolsOpen] = useState(false);
   const [mobileControlDockOpen, setMobileControlDockOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [desktopSidecarPanel, setDesktopSidecarPanel] = useState(() =>
+    getDefaultDesktopSidecarPanel(
+      requestedWorkspaceMode === WORKSPACE_MODES.assemble ||
+        initialDocument?.isAssembly ||
+        initialDocument?.documentType === "assembly"
+        ? BOX_PHASES.create
+        : BOX_PHASES.think,
+    ),
+  );
   const [playbackStatus, setPlaybackStatus] = useState("idle");
   const [voiceRecorderOpen, setVoiceRecorderOpen] = useState(false);
   const [voiceRecorderPhase, setVoiceRecorderPhase] = useState("idle");
@@ -3328,6 +3735,7 @@ export default function WorkspaceShell({
   });
   const resolvedEntryMode = entryStateOverride || entryStateViewModel.mode;
   const currentSeedFingerprint = String(currentSeedDocument?.seedMeta?.sourceFingerprint || "").trim();
+  const desktopStageCount = clipboard.length + stagedAiBlocks.length;
   const controlSurfaceViewModel = buildControlSurfaceViewModel({
     activeProject,
     currentAssemblyDocument: currentSeedDocument,
@@ -3341,6 +3749,10 @@ export default function WorkspaceShell({
   const isCreatePhase = boxPhase === BOX_PHASES.create;
   const isOperatePhase = boxPhase === BOX_PHASES.operate;
   const isReceiptsPhase = boxPhase === BOX_PHASES.receipts;
+  const activeDesktopSidecar = normalizeDesktopSidecarPanel(
+    desktopSidecarPanel,
+    getDefaultDesktopSidecarPanel(boxPhase),
+  );
   const isFirstTimeSurface =
     !launchpadOpen &&
     resolvedEntryMode === "first-time" &&
@@ -3493,6 +3905,57 @@ export default function WorkspaceShell({
           onDeleteMatches={() => void deleteMatchingBlocks()}
           onClose={() => setCleanupOpen(false)}
         />
+      ) : null}
+
+      {isMobileLayout ? (
+        <div className="assembler-document__quick-actions">
+          <button
+            type="button"
+            className="assembler-document__quick-action"
+            onClick={() => setWorkspacePickerOpen(true)}
+          >
+            <WorkspaceActionIcon kind="browse" />
+            <span>Sources</span>
+          </button>
+          <button
+            type="button"
+            className="assembler-document__quick-action"
+            onClick={() => void pasteIntoWorkspace("source")}
+            disabled={Boolean(pastePendingMode) || uploading}
+          >
+            <WorkspaceActionIcon kind="clipboard" />
+            <span>Paste</span>
+          </button>
+          <button
+            type="button"
+            className="assembler-document__quick-action"
+            onClick={openPhotoIntake}
+            disabled={Boolean(pastePendingMode) || uploading}
+          >
+            <WorkspaceActionIcon kind="photo" />
+            <span>Photo</span>
+          </button>
+          <button
+            type="button"
+            className="assembler-document__quick-action"
+            onClick={openVoiceRecorder}
+            disabled={Boolean(pastePendingMode) || uploading}
+          >
+            <WorkspaceActionIcon kind="speak" />
+            <span>Speak</span>
+          </button>
+          <button
+            type="button"
+            className={`assembler-document__quick-action ${aiOpen && isThinkPhase ? "is-active" : ""}`}
+            onClick={() => {
+              setBoxPhase(BOX_PHASES.think);
+              setAiOpen((value) => !value || !isThinkPhase);
+            }}
+          >
+            <WorkspaceActionIcon kind="continue" />
+            <span>Seven</span>
+          </button>
+        </div>
       ) : null}
 
       <div className="assembler-document__blocks">
@@ -3739,7 +4202,10 @@ export default function WorkspaceShell({
     if (!isMobileLayout && mobileControlDockOpen) {
       setMobileControlDockOpen(false);
     }
-  }, [isMobileLayout, mobileControlDockOpen]);
+    if (!isMobileLayout && photoIntakeOpen) {
+      setPhotoIntakeOpen(false);
+    }
+  }, [isMobileLayout, mobileControlDockOpen, photoIntakeOpen]);
 
   useEffect(() => {
     if (launchpadOpen) return;
@@ -3946,6 +4412,7 @@ export default function WorkspaceShell({
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
     setDropAnythingOpen(false);
+    setPhotoIntakeOpen(false);
     setVoiceRecorderOpen(false);
     setVoiceRecorderPhase("idle");
     setVoiceRecorderElapsed(0);
@@ -4091,6 +4558,11 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && photoIntakeOpen) {
+        setPhotoIntakeOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && voiceRecorderOpen) {
         closeVoiceRecorderRef.current?.();
         return;
@@ -4116,7 +4588,7 @@ export default function WorkspaceShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, dropAnythingOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, dropAnythingOpen, photoIntakeOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
     async function handlePaste(event) {
@@ -4150,6 +4622,87 @@ export default function WorkspaceShell({
   function setFeedback(message, tone = "") {
     setStatus(message);
     setStatusTone(tone);
+  }
+
+  function setDesktopSidecar(nextPanel) {
+    const normalizedPanel = normalizeDesktopSidecarPanel(
+      nextPanel,
+      getDefaultDesktopSidecarPanel(boxPhase),
+    );
+    setDesktopSidecarPanel(normalizedPanel);
+    if (!isMobileLayout) {
+      setAiOpen(normalizedPanel === DESKTOP_SIDECAR_PANELS.seven);
+    }
+  }
+
+  function openSevenSidecar() {
+    if (isMobileLayout) {
+      setBoxPhase(BOX_PHASES.think);
+      setAiOpen((value) => !value || !isThinkPhase);
+      return;
+    }
+
+    setDesktopSidecar(DESKTOP_SIDECAR_PANELS.seven);
+    if (isOperatePhase || isReceiptsPhase) {
+      setBoxPhase(BOX_PHASES.think);
+    }
+  }
+
+  function openStageSidecar() {
+    if (isMobileLayout) {
+      setBoxPhase(BOX_PHASES.create);
+      setMobileComposeOpen(true);
+      setAiOpen(false);
+      return;
+    }
+
+    setDesktopSidecar(DESKTOP_SIDECAR_PANELS.stage);
+    if (isOperatePhase || isReceiptsPhase) {
+      void handleSelectBoxPhase(BOX_PHASES.create);
+    }
+  }
+
+  function openPhotoIntake() {
+    setDropAnythingOpen(false);
+
+    if (isMobileLayout) {
+      setPhotoIntakeOpen(true);
+      return;
+    }
+
+    photoLibraryInputRef.current?.click();
+  }
+
+  function choosePhotoCamera() {
+    setPhotoIntakeOpen(false);
+    photoCameraInputRef.current?.click();
+  }
+
+  function choosePhotoLibrary() {
+    setPhotoIntakeOpen(false);
+    photoLibraryInputRef.current?.click();
+  }
+
+  function openSevenForDocument(documentKey = "") {
+    const targetDocumentKey =
+      String(documentKey || "").trim() ||
+      currentSeedDocument?.documentKey ||
+      activeDocument?.documentKey ||
+      getProjectListenDocumentKey(activeProject, projectDocuments) ||
+      "";
+
+    if (!targetDocumentKey) {
+      setFeedback("Open a source or seed before asking Seven.", "error");
+      return;
+    }
+
+    void enterWorkspace(targetDocumentKey, WORKSPACE_MODES.assemble, {
+      phase: BOX_PHASES.think,
+    });
+    if (!isMobileLayout) {
+      setDesktopSidecarPanel(DESKTOP_SIDECAR_PANELS.seven);
+    }
+    setAiOpen(true);
   }
 
   function setDocumentState(documentKey, nextState = null) {
@@ -4295,6 +4848,7 @@ export default function WorkspaceShell({
       setListenPickerOpen(false);
       setWorkspacePickerOpen(false);
       setDropAnythingOpen(false);
+      setPhotoIntakeOpen(false);
       closeVoiceRecorderRef.current?.();
       setMobileComposeOpen(false);
       setMobileControlDockOpen(false);
@@ -4342,6 +4896,7 @@ export default function WorkspaceShell({
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
     setDropAnythingOpen(false);
+    setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
     setMobileControlDockOpen(false);
@@ -4357,6 +4912,101 @@ export default function WorkspaceShell({
         }),
       );
     }
+  }
+
+  async function updateProjectSettings(projectKey, patch = {}) {
+    const normalizedProjectKey = String(projectKey || "").trim();
+    if (!normalizedProjectKey) return null;
+
+    setProjectActionPending(normalizedProjectKey);
+    setBoxManagementError("");
+
+    try {
+      const response = await fetch("/api/workspace/project", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: normalizedProjectKey,
+          ...patch,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.project?.projectKey) {
+        throw new Error(payload?.error || "Could not update the box.");
+      }
+
+      setProjectsState((previous) =>
+        previous.map((project) =>
+          project.projectKey === payload.project.projectKey
+            ? {
+                ...project,
+                title: payload.project.title ?? project.title,
+                boxTitle: payload.project.title ?? project.boxTitle ?? project.title,
+                subtitle:
+                  payload.project.subtitle === undefined ? project.subtitle : payload.project.subtitle,
+                boxSubtitle:
+                  payload.project.subtitle === undefined
+                    ? project.boxSubtitle || project.subtitle
+                    : payload.project.subtitle,
+                currentAssemblyDocumentKey:
+                  payload.project.currentAssemblyDocumentKey ?? project.currentAssemblyDocumentKey,
+                isPinned:
+                  payload.project.isPinned === undefined
+                    ? Boolean(project.isPinned)
+                    : Boolean(payload.project.isPinned),
+                isArchived:
+                  payload.project.isArchived === undefined
+                    ? Boolean(project.isArchived)
+                    : Boolean(payload.project.isArchived),
+              }
+            : project,
+        ),
+      );
+
+      return payload.project;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not update the box.";
+      setBoxManagementError(message);
+      setFeedback(message, "error");
+      return null;
+    } finally {
+      setProjectActionPending("");
+    }
+  }
+
+  async function toggleProjectPinned(project, nextPinned) {
+    if (!project?.projectKey) return;
+
+    const payload = await updateProjectSettings(project.projectKey, {
+      isPinned: Boolean(nextPinned),
+    });
+    if (!payload) return;
+
+    setFeedback(
+      payload.isPinned
+        ? `Pinned ${project.boxTitle || project.title || "the box"}.`
+        : `Unpinned ${project.boxTitle || project.title || "the box"}.`,
+      "success",
+    );
+  }
+
+  async function toggleProjectArchived(project, nextArchived) {
+    if (!project?.projectKey) return;
+
+    const payload = await updateProjectSettings(project.projectKey, {
+      isArchived: Boolean(nextArchived),
+    });
+    if (!payload) return;
+
+    setFeedback(
+      payload.isArchived
+        ? `Archived ${project.boxTitle || project.title || "the box"}.`
+        : `Restored ${project.boxTitle || project.title || "the box"}.`,
+      "success",
+    );
   }
 
   async function createProject() {
@@ -4523,6 +5173,14 @@ export default function WorkspaceShell({
                   : projectPayload.subtitle,
               currentAssemblyDocumentKey:
                 projectPayload.currentAssemblyDocumentKey ?? project.currentAssemblyDocumentKey,
+              isPinned:
+                projectPayload.isPinned === undefined
+                  ? Boolean(project.isPinned)
+                  : Boolean(projectPayload.isPinned),
+              isArchived:
+                projectPayload.isArchived === undefined
+                  ? Boolean(project.isArchived)
+                  : Boolean(projectPayload.isArchived),
             }
           : project,
       ),
@@ -4842,6 +5500,7 @@ export default function WorkspaceShell({
     setLaunchpadOpen(false);
     setWorkspacePickerOpen(false);
     setDropAnythingOpen(false);
+    setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
     setMobileControlDockOpen(false);
@@ -4853,6 +5512,11 @@ export default function WorkspaceShell({
         : boxPhase,
     );
     setBoxPhase(nextPhase);
+    if (!isMobileLayout && normalizedMode === WORKSPACE_MODES.assemble) {
+      const nextSidecarPanel = getDefaultDesktopSidecarPanel(nextPhase);
+      setDesktopSidecarPanel(nextSidecarPanel);
+      setAiOpen(nextSidecarPanel === DESKTOP_SIDECAR_PANELS.seven);
+    }
 
     if (!documentKey || documentKey === activeDocumentKey) {
       if (options.focusBlockId) {
@@ -4882,6 +5546,11 @@ export default function WorkspaceShell({
 
     if (documentKey === activeDocumentKey) {
       setBoxPhase(nextPhase);
+      if (!isMobileLayout && nextMode === WORKSPACE_MODES.assemble) {
+        const nextSidecarPanel = getDefaultDesktopSidecarPanel(nextPhase);
+        setDesktopSidecarPanel(nextSidecarPanel);
+        setAiOpen(nextSidecarPanel === DESKTOP_SIDECAR_PANELS.seven);
+      }
       if (nextFocusBlockId) {
         setFocusBlockId(nextFocusBlockId);
         setPlayheadBlockId(nextFocusBlockId);
@@ -4910,6 +5579,11 @@ export default function WorkspaceShell({
         setActiveDocumentKey(documentKey);
       });
       setBoxPhase(nextPhase);
+      if (!isMobileLayout && nextMode === WORKSPACE_MODES.assemble) {
+        const nextSidecarPanel = getDefaultDesktopSidecarPanel(nextPhase);
+        setDesktopSidecarPanel(nextSidecarPanel);
+        setAiOpen(nextSidecarPanel === DESKTOP_SIDECAR_PANELS.seven);
+      }
       updateUrl(documentKey, activeProjectKey, { mode: nextMode });
       setFeedback(`Opened ${documentsState.find((document) => document.documentKey === documentKey)?.title || "document"}.`);
     } catch (error) {
@@ -4953,6 +5627,9 @@ export default function WorkspaceShell({
     }
 
     if (normalizedPhase === BOX_PHASES.create) {
+      if (!isMobileLayout) {
+        setDesktopSidecarPanel(DESKTOP_SIDECAR_PANELS.stage);
+      }
       setAiOpen(false);
       if (!currentSeedDocument?.documentKey && realProjectSourceDocuments.length) {
         pendingSeedFocusRef.current = true;
@@ -4973,6 +5650,11 @@ export default function WorkspaceShell({
 
     if (normalizedPhase !== BOX_PHASES.think) {
       setAiOpen(false);
+    }
+
+    if (!isMobileLayout && normalizedPhase === BOX_PHASES.think) {
+      setDesktopSidecarPanel(DESKTOP_SIDECAR_PANELS.seven);
+      setAiOpen(true);
     }
 
     setBoxPhase(normalizedPhase);
@@ -5161,6 +5843,7 @@ export default function WorkspaceShell({
 
   function openVoiceRecorder() {
     setDropAnythingOpen(false);
+    setPhotoIntakeOpen(false);
     setVoiceRecorderOpen(true);
     setVoiceRecorderPhase("idle");
     setVoiceRecorderElapsed(0);
@@ -5365,6 +6048,7 @@ export default function WorkspaceShell({
 
   async function importLinkFromIntake(url) {
     setDropAnythingOpen(false);
+    setPhotoIntakeOpen(false);
     setPastePendingMode("source");
     setFeedback("Fetching page from link…");
 
@@ -5499,7 +6183,7 @@ export default function WorkspaceShell({
     const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
     const sourceKind = options.sourceKind || "";
 
-    if (sourceKind !== "voice" && !isLaunchSupportedUpload(file)) {
+    if (sourceKind !== "voice" && !imageLike && !isLaunchSupportedUpload(file)) {
       const message = getLaunchUploadBlockedMessage(file, sourceKind);
       trackWorkspaceEvent("source_import_blocked", {
         source_kind: getSourceIntakeKind(file, sourceKind),
@@ -6105,14 +6789,14 @@ export default function WorkspaceShell({
       }
 
       if (hasImagePayload && !normalizedImageMode) {
-        trackWorkspaceEvent("source_import_blocked", {
-          source_kind: "image",
-          intake_surface: "paste",
+        setPendingImageIntake({
+          source: "paste",
+          payload: clipboardPayload,
+          filename: clipboardPayload?.imageFilename || "clipboard-image.png",
+          mimeType: resolvedImageMimeType,
+          selectedMode: preferredImageDerivationMode,
         });
-        setFeedback(
-          "Image paste stays in beta for now. Paste text, use a link, or import PDF, DOCX, Markdown, or TXT.",
-          "error",
-        );
+        setFeedback("Choose how to turn this image into a source.");
         return;
       }
 
@@ -7316,6 +8000,33 @@ export default function WorkspaceShell({
           event.target.value = "";
         }}
       />
+      <input
+        ref={photoCameraInputRef}
+        className="terminal-file-input"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            void handleUpload(file);
+          }
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={photoLibraryInputRef}
+        className="terminal-file-input"
+        type="file"
+        accept="image/*"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            void handleUpload(file);
+          }
+          event.target.value = "";
+        }}
+      />
 
       <div className="assembler-shell">
         <header className={`assembler-header ${!launchpadOpen && !isListenMode ? "is-workspace" : ""}`}>
@@ -7382,6 +8093,8 @@ export default function WorkspaceShell({
               onCreateProject={() => openProjectManagement(activeProjectKey)}
               onBrowseBoxes={openBoxesIndex}
               onManageProjects={() => openProjectManagement(activeProjectKey)}
+              onToggleProjectPinned={toggleProjectPinned}
+              onToggleProjectArchived={toggleProjectArchived}
               onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
@@ -7389,8 +8102,11 @@ export default function WorkspaceShell({
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onOpenSpeak={openVoiceRecorder}
               onOpenIntake={() => setDropAnythingOpen(true)}
+              onOpenPhoto={openPhotoIntake}
+              onOpenSeven={openSevenForDocument}
               recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               resumeSessionSummary={resumeSessionSummaryState}
+              isMobileLayout={isMobileLayout}
             />
           </section>
         ) : isFirstTimeSurface ? (
@@ -7402,6 +8118,10 @@ export default function WorkspaceShell({
               onUpload={() => {
                 pendingSeedFocusRef.current = true;
                 fileInputRef.current?.click();
+              }}
+              onPhoto={() => {
+                pendingSeedFocusRef.current = true;
+                openPhotoIntake();
               }}
               onPaste={() => {
                 pendingSeedFocusRef.current = true;
@@ -7515,7 +8235,11 @@ export default function WorkspaceShell({
               lastUsedMode={lastUsedMode}
             />
 
-            <div className={`assembler-workbench ${isMobileLayout ? "is-mobile" : ""}`}>
+            <div
+              className={`assembler-workbench assembler-workbench--next ${isMobileLayout ? "is-mobile" : ""} ${
+                isOperatePhase || isReceiptsPhase ? "is-takeover" : ""
+              }`}
+            >
               {!isMobileLayout ? (
                 <SourceRail
                   activeProject={activeProject}
@@ -7524,8 +8248,9 @@ export default function WorkspaceShell({
                   guideDocument={guideSourceDocument}
                   sourceDocuments={visibleSourceDocuments}
                   assemblyDocuments={visibleAssemblyDocuments}
-                  onOpenProjectHome={openBoxesIndex}
+                  onOpenProjectHome={() => openCurrentBoxHome(activeProjectKey)}
                   onUpload={() => fileInputRef.current?.click()}
+                  onOpenPhoto={openPhotoIntake}
                   onPasteSource={() => void pasteIntoWorkspace("source")}
                   onOpenDocument={(documentKey, mode, options = {}) => {
                     void enterWorkspace(documentKey, mode, options);
@@ -7542,15 +8267,14 @@ export default function WorkspaceShell({
                 {!isMobileLayout ? (
                   <WorkspaceToolbar
                     viewModel={controlSurfaceViewModel}
+                    activeSidecar={activeDesktopSidecar}
                     onSetBoxPhase={handleSelectBoxPhase}
                     onOpenBoxes={openBoxesIndex}
                     onOpenBoxHome={() => openCurrentBoxHome(activeProjectKey)}
                     onOpenIntake={() => setDropAnythingOpen(true)}
                     onOpenSpeak={openVoiceRecorder}
-                    onToggleAi={() => {
-                      setBoxPhase(BOX_PHASES.think);
-                      setAiOpen((value) => !value);
-                    }}
+                    onOpenSeven={openSevenSidecar}
+                    onOpenStage={openStageSidecar}
                     onRunOperate={() => void runOperate()}
                     onOpenReceipts={openReceiptsSurface}
                     onManageBox={() => openProjectManagement(activeProjectKey)}
@@ -7558,7 +8282,11 @@ export default function WorkspaceShell({
                   />
                 ) : null}
 
-                <section className="assembler-surface assembler-surface--workbench">
+                <section
+                  className={`assembler-surface assembler-surface--workbench ${
+                    isOperatePhase || isReceiptsPhase ? "is-takeover" : ""
+                  }`}
+                >
                   {isReceiptsPhase ? (
                     <LogView
                       logEntries={activeDocument.logEntries || []}
@@ -7667,6 +8395,10 @@ export default function WorkspaceShell({
                     setMobileControlDockOpen(false);
                     setDropAnythingOpen(true);
                   }}
+                  onOpenPhoto={() => {
+                    setMobileControlDockOpen(false);
+                    openPhotoIntake();
+                  }}
                   onOpenSpeak={() => {
                     setMobileControlDockOpen(false);
                     openVoiceRecorder();
@@ -7688,10 +8420,26 @@ export default function WorkspaceShell({
               ) : null}
 
               {!isMobileLayout && (isThinkPhase || isCreatePhase) ? (
-                <aside className="assembler-workbench__context">
-                  {isThinkPhase ? (
+                <DesktopAssemblySidecar
+                  activePanel={activeDesktopSidecar}
+                  stageCount={desktopStageCount}
+                  onSelectPanel={setDesktopSidecar}
+                  activeProject={activeProject}
+                  activeDocument={activeDocument}
+                  currentSeedDocument={currentSeedDocument}
+                  activeDocumentAsset={activeDocumentAsset}
+                  activeDocumentWarning={activeDocumentWarning}
+                  receiptSummary={receiptSummaryViewModel}
+                  clipboardCount={clipboard.length}
+                  stagedCount={stagedAiBlocks.length}
+                  sourceCount={visibleSourceDocuments.length}
+                  seedCount={visibleAssemblyDocuments.length}
+                  getDocumentKindLabel={getDocumentKindLabel}
+                  getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+                  sevenContent={
                     <AiUtilityRail
-                      open={aiOpen}
+                      open
+                      embedded
                       documentTitle={activeDocument.title}
                       thread={activeSevenThread}
                       inputRef={aiInputRef}
@@ -7700,7 +8448,7 @@ export default function WorkspaceShell({
                       loading={sevenThreadLoading}
                       errorMessage={sevenThreadError}
                       suggestions={sevenSuggestions}
-                      onToggleOpen={() => setAiOpen((value) => !value)}
+                      onToggleOpen={() => setDesktopSidecar(DESKTOP_SIDECAR_PANELS.details)}
                       onChange={(nextValue) => {
                         setAiInput(nextValue);
                         if (sevenThreadError) {
@@ -7711,10 +8459,10 @@ export default function WorkspaceShell({
                       onSuggestion={(prompt) => void runAiOperation(prompt)}
                       onStageMessage={stageSevenMessage}
                     />
-                  ) : null}
-
-                  {isCreatePhase ? (
+                  }
+                  stageContent={
                     <ClipboardTray
+                      embedded
                       stagedBlocks={stagedAiBlocks}
                       clipboard={clipboard}
                       documents={projectDocuments}
@@ -7728,8 +8476,8 @@ export default function WorkspaceShell({
                       onClearClipboard={() => setClipboard([])}
                       onAssemble={assembleClipboard}
                     />
-                  ) : null}
-                </aside>
+                  }
+                />
               ) : null}
             </div>
 
@@ -7816,6 +8564,20 @@ export default function WorkspaceShell({
             setBoxManagementOpen(false);
             openProject(selectedManagementProjectKey);
           }}
+          onTogglePin={() => {
+            const selectedProject =
+              hydratedProjects.find((project) => project.projectKey === selectedManagementProjectKey) ||
+              null;
+            if (!selectedProject) return;
+            void toggleProjectPinned(selectedProject, !selectedProject.isPinned);
+          }}
+          onToggleArchive={() => {
+            const selectedProject =
+              hydratedProjects.find((project) => project.projectKey === selectedManagementProjectKey) ||
+              null;
+            if (!selectedProject || selectedProject.isDefaultBox) return;
+            void toggleProjectArchived(selectedProject, !selectedProject.isArchived);
+          }}
         />
 
         <ImageIntakeChooser
@@ -7848,6 +8610,9 @@ export default function WorkspaceShell({
             setDropAnythingOpen(false);
             fileInputRef.current?.click();
           }}
+          onPhoto={() => {
+            openPhotoIntake();
+          }}
           onPaste={() => {
             setDropAnythingOpen(false);
             void pasteIntoWorkspace("source");
@@ -7859,6 +8624,13 @@ export default function WorkspaceShell({
           onImportLink={(url) => {
             void importLinkFromIntake(url);
           }}
+        />
+        <PhotoSourceSheet
+          open={photoIntakeOpen}
+          pending={uploading || Boolean(pastePendingMode)}
+          onClose={() => setPhotoIntakeOpen(false)}
+          onTakePhoto={choosePhotoCamera}
+          onChooseLibrary={choosePhotoLibrary}
         />
         <LinkIntakeChooser
           open={Boolean(pendingLinkIntake)}

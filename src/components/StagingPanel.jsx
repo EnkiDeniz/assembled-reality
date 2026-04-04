@@ -10,6 +10,7 @@ export default function StagingPanel({
   stagedBlocks = [],
   clipboard = [],
   documents = [],
+  embedded = false,
   onAcceptStagedBlock,
   onAcceptAllStagedBlocks,
   onClearStagedBlocks,
@@ -23,16 +24,18 @@ export default function StagingPanel({
   ).size;
 
   return (
-    <section className="assembler-staging-panel">
-      <div className="assembler-staging-panel__header">
-        <div>
-          <span className="assembler-staging-panel__eyebrow">Create</span>
-          <h2 className="assembler-staging-panel__title">Staging</h2>
+    <section className={`assembler-staging-panel ${embedded ? "is-embedded" : ""}`}>
+      {!embedded ? (
+        <div className="assembler-staging-panel__header">
+          <div>
+            <span className="assembler-staging-panel__eyebrow">Seed</span>
+            <h2 className="assembler-staging-panel__title">Staging</h2>
+          </div>
+          <span className="assembler-staging-panel__count">
+            {clipboard.length} block{clipboard.length === 1 ? "" : "s"}
+          </span>
         </div>
-        <span className="assembler-staging-panel__count">
-          {clipboard.length} block{clipboard.length === 1 ? "" : "s"}
-        </span>
-      </div>
+      ) : null}
 
       <div className="assembler-staging-panel__body">
         {stagedBlocks.length ? (
@@ -80,7 +83,7 @@ export default function StagingPanel({
         <div className="assembler-staging-panel__section">
             <div className="assembler-staging-panel__section-head">
               <span>
-              Create queue
+              Seed queue
               {sourceCount ? ` · ${sourceCount} source${sourceCount === 1 ? "" : "s"}` : ""}
             </span>
             <div className="assembler-staging-panel__section-actions">
