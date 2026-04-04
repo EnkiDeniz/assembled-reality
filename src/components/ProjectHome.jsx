@@ -87,8 +87,6 @@ function SummaryCard({ eyebrow, title, body, detail, actions = [], tone = "" }) 
 export default function ProjectHome({
   boxViewModel,
   activeProject,
-  activeProjectKey,
-  projects,
   projectDrafts = [],
   projectActionPending = "",
   loadingDocumentKey = "",
@@ -99,9 +97,8 @@ export default function ProjectHome({
   recentAssemblies = [],
   primaryAction,
   currentPositionAction = null,
-  onCreateProject,
+  onBrowseBoxes,
   onManageProjects,
-  onOpenProject,
   onOpenReceipts,
   onOpenDocument,
   onDeleteDocument,
@@ -130,13 +127,6 @@ export default function ProjectHome({
     syncLine: "Draft a local receipt when the box is ready.",
     recentDrafts: projectDrafts.slice(0, 4),
   };
-  const boxes = projects.length
-    ? projects
-    : activeProject
-      ? [activeProject]
-      : [];
-  const boxCount = boxes.length;
-  const otherBoxes = boxes.filter((project) => project.projectKey !== activeProjectKey);
   const currentContext = boxViewModel?.resumeTarget || null;
 
   return (
@@ -170,10 +160,9 @@ export default function ProjectHome({
             <button
               type="button"
               className="assembler-project-home__secondary-button"
-              onClick={onCreateProject}
-              disabled={projectActionPending === "__create__"}
+              onClick={onBrowseBoxes}
             >
-              {projectActionPending === "__create__" ? "Creating…" : "New Box"}
+              All boxes
             </button>
             <button
               type="button"
@@ -414,54 +403,6 @@ export default function ProjectHome({
 
         </div>
       </div>
-
-      <section className="assembler-project-home__panel assembler-project-home__footer-panel">
-        <div className="assembler-project-home__section-head">
-          <span>Other boxes</span>
-          <div className="assembler-project-home__section-actions">
-            <span>{Math.max(boxCount - 1, 0)}</span>
-            <button
-              type="button"
-              className="assembler-project-home__section-action"
-              onClick={onManageProjects}
-              disabled={Boolean(projectActionPending)}
-            >
-              Manage boxes
-            </button>
-          </div>
-        </div>
-
-        <p className="assembler-project-home__footer-note">
-          This box is the working surface. Other boxes stay available here as a secondary launcher.
-        </p>
-
-        <div className="assembler-project-home__project-list">
-          {otherBoxes.length ? (
-            otherBoxes.map((project) => (
-              <button
-                key={project.projectKey}
-                type="button"
-                className="assembler-project-home__project-row"
-                onClick={() => onOpenProject(project.projectKey)}
-                disabled={projectActionPending === project.projectKey}
-              >
-                <span className="assembler-project-home__project-title">
-                  {project.boxTitle || project.title || "Untitled Box"}
-                </span>
-                <span className="assembler-project-home__project-meta">
-                  {projectActionPending === project.projectKey
-                    ? "Opening…"
-                    : `${project.sourceCount} sources · ${project.assemblyCount} assemblies`}
-                </span>
-              </button>
-            ))
-          ) : (
-            <p className="assembler-project-home__empty">
-              No other boxes yet. Create another box when this work needs a separate container.
-            </p>
-          )}
-        </div>
-      </section>
     </div>
   );
 }

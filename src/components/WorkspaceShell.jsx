@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import AiUtilityRail from "@/components/AiUtilityRail";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
+import BoxesIndex from "@/components/BoxesIndex";
 import ProjectHome from "@/components/ProjectHome";
 import BoxPhaseBar from "@/components/BoxPhaseBar";
 import CreateSurface from "@/components/CreateSurface";
@@ -62,6 +63,10 @@ const WORKSPACE_MODES = {
   listen: "listen",
   assemble: "assemble",
 };
+const LAUNCHPAD_VIEWS = Object.freeze({
+  boxes: "boxes",
+  box: "box",
+});
 const IMAGE_DERIVATION_OPTIONS = [
   { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
   { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
@@ -93,6 +98,10 @@ function isWorkspaceMode(value) {
 
 function normalizeWorkspaceMode(value, fallback = WORKSPACE_MODES.assemble) {
   return isWorkspaceMode(value) ? value : fallback;
+}
+
+function normalizeLaunchpadView(value, fallback = LAUNCHPAD_VIEWS.boxes) {
+  return Object.values(LAUNCHPAD_VIEWS).includes(value) ? value : fallback;
 }
 
 function browserSupportsDeviceVoice() {
@@ -1145,6 +1154,7 @@ function buildWorkspaceUrl(
   projectKey = DEFAULT_PROJECT_KEY,
   {
     launchpad = false,
+    launchpadView = "",
     mode = "",
   } = {},
 ) {
@@ -1160,6 +1170,10 @@ function buildWorkspaceUrl(
 
   if (launchpad) {
     params.set("launchpad", "1");
+    const normalizedLaunchpadView = normalizeLaunchpadView(launchpadView, "");
+    if (normalizedLaunchpadView) {
+      params.set("launchpadView", normalizedLaunchpadView);
+    }
   }
 
   if (documentKey && documentKey !== PRIMARY_WORKSPACE_DOCUMENT_KEY) {
@@ -1297,6 +1311,7 @@ function WorkspaceShelf({
 }
 
 function WorkspaceLaunchpad({
+  launchpadView = LAUNCHPAD_VIEWS.boxes,
   activeProject,
   activeProjectKey,
   projects,
@@ -1308,6 +1323,7 @@ function WorkspaceLaunchpad({
   loadingDocumentKey,
   onEnterMode,
   onCreateProject,
+  onBrowseBoxes,
   onManageProjects,
   onOpenReceipts,
   onOpenDocument,
@@ -1438,12 +1454,25 @@ function WorkspaceLaunchpad({
               }),
           }
         : null;
+
+  if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.boxes) {
+    return (
+      <BoxesIndex
+        activeProject={activeProject}
+        activeProjectKey={activeProjectKey}
+        projects={projects}
+        projectActionPending={projectActionPending}
+        onOpenProjectHome={onOpenProject}
+        onCreateProject={onCreateProject}
+        onManageProjects={onManageProjects}
+      />
+    );
+  }
+
   return (
     <ProjectHome
       boxViewModel={boxViewModel}
       activeProject={activeProject}
-      activeProjectKey={activeProjectKey}
-      projects={projects}
       projectDrafts={projectDrafts}
       projectActionPending={projectActionPending}
       loadingDocumentKey={loadingDocumentKey}
@@ -1455,11 +1484,10 @@ function WorkspaceLaunchpad({
       sourceDocuments={sourceDocuments}
       currentAssemblyDocument={currentAssemblyDocument}
       recentAssemblies={recentAssemblies}
-      onCreateProject={onCreateProject}
+      onBrowseBoxes={onBrowseBoxes}
       onManageProjects={onManageProjects}
       onOpenReceipts={onOpenReceipts}
       onOpenDocument={onOpenDocument}
-      onOpenProject={onOpenProject}
       onDeleteDocument={onDeleteDocument}
       onPasteClipboard={onPasteClipboard}
       onOpenSpeak={onOpenSpeak}
@@ -3040,6 +3068,7 @@ export default function WorkspaceShell({
   voiceCatalog,
   defaultVoiceChoice,
   showLaunchpadInitially = false,
+  initialLaunchpadView = LAUNCHPAD_VIEWS.boxes,
   resumeSessionSummary = null,
 }) {
   const fileInputRef = useRef(null);
@@ -3151,6 +3180,9 @@ export default function WorkspaceShell({
   const [renameProjectTitle, setRenameProjectTitle] = useState("");
   const [boxManagementError, setBoxManagementError] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
+  const [launchpadView, setLaunchpadView] = useState(
+    normalizeLaunchpadView(initialLaunchpadView, LAUNCHPAD_VIEWS.boxes),
+  );
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
@@ -4129,12 +4161,56 @@ export default function WorkspaceShell({
     if (!projectKey || typeof window === "undefined") return;
 
     if (projectKey === activeProjectKey) {
-      openLaunchpad();
+      setLaunchpadView(LAUNCHPAD_VIEWS.box);
+      setLaunchpadOpen(true);
+      window.history.replaceState(
+        {},
+        "",
+        buildWorkspaceUrl("", projectKey, {
+          launchpad: true,
+          launchpadView: LAUNCHPAD_VIEWS.box,
+        }),
+      );
       return;
     }
 
     setProjectActionPending(projectKey);
-    window.location.assign(buildWorkspaceUrl("", projectKey, { launchpad: true }));
+    window.location.assign(
+      buildWorkspaceUrl("", projectKey, {
+        launchpad: true,
+        launchpadView: LAUNCHPAD_VIEWS.box,
+      }),
+    );
+  }
+
+  function openBoxesIndex() {
+    if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
+      void persistListeningSession("paused", {
+        documentKey: activeDocument.documentKey,
+        block: currentBlock,
+      });
+    }
+    stopPlayback();
+    setAiOpen(false);
+    setEditMode(false);
+    setBoxPhase(BOX_PHASES.think);
+    setListenPickerOpen(false);
+    setWorkspacePickerOpen(false);
+    setDropAnythingOpen(false);
+    closeVoiceRecorder();
+    setMobileComposeOpen(false);
+    setLaunchpadView(LAUNCHPAD_VIEWS.boxes);
+    setLaunchpadOpen(true);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(
+        {},
+        "",
+        buildWorkspaceUrl("", activeProjectKey, {
+          launchpad: true,
+          launchpadView: LAUNCHPAD_VIEWS.boxes,
+        }),
+      );
+    }
   }
 
   async function createProject() {
@@ -4161,6 +4237,7 @@ export default function WorkspaceShell({
       window.location.assign(
         buildWorkspaceUrl("", payload.project.projectKey, {
           launchpad: true,
+          launchpadView: LAUNCHPAD_VIEWS.box,
         }),
       );
     } catch (error) {
@@ -4261,6 +4338,7 @@ export default function WorkspaceShell({
         window.location.assign(
           buildWorkspaceUrl("", payload.result.fallbackProjectKey, {
             launchpad: true,
+            launchpadView: LAUNCHPAD_VIEWS.boxes,
           }),
         );
         return;
@@ -4282,31 +4360,7 @@ export default function WorkspaceShell({
   }
 
   function openLaunchpad() {
-    if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
-      void persistListeningSession("paused", {
-        documentKey: activeDocument.documentKey,
-        block: currentBlock,
-      });
-    }
-    stopPlayback();
-    setAiOpen(false);
-    setEditMode(false);
-    setBoxPhase(BOX_PHASES.think);
-    setListenPickerOpen(false);
-    setWorkspacePickerOpen(false);
-    setDropAnythingOpen(false);
-    closeVoiceRecorder();
-    setMobileComposeOpen(false);
-    setLaunchpadOpen(true);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(
-        {},
-        "",
-        buildWorkspaceUrl("", activeProjectKey, {
-          launchpad: true,
-        }),
-      );
-    }
+    openBoxesIndex();
   }
 
   function openReceiptsSurface() {
@@ -5561,13 +5615,17 @@ export default function WorkspaceShell({
 
       setActiveProjectKey(nextProjectKey);
       setActiveDocumentKey(nextDocumentKey);
+      setLaunchpadView(LAUNCHPAD_VIEWS.box);
       setLaunchpadOpen(true);
 
       if (typeof window !== "undefined") {
         window.history.replaceState(
           {},
           "",
-          buildWorkspaceUrl("", nextProjectKey, { launchpad: true }),
+          buildWorkspaceUrl("", nextProjectKey, {
+            launchpad: true,
+            launchpadView: LAUNCHPAD_VIEWS.box,
+          }),
         );
       }
 
@@ -6949,11 +7007,17 @@ export default function WorkspaceShell({
               >
                 Sources
               </button>
-            ) : !launchpadOpen ? (
+            ) : launchpadOpen ? (
+              launchpadView === LAUNCHPAD_VIEWS.box ? (
+                <button type="button" className="assembler-header__start" onClick={openBoxesIndex}>
+                  All boxes
+                </button>
+              ) : null
+            ) : (
               <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
                 Boxes
               </button>
-            ) : null}
+            )}
 
             {!launchpadOpen ? (
               <button
@@ -6980,6 +7044,7 @@ export default function WorkspaceShell({
         {launchpadOpen ? (
           <section className="assembler-surface assembler-surface--launchpad">
             <WorkspaceLaunchpad
+              launchpadView={launchpadView}
               activeProject={activeProject}
               activeProjectKey={activeProjectKey}
               projects={hydratedProjects}
@@ -6994,6 +7059,7 @@ export default function WorkspaceShell({
               clipboardCount={clipboard.length}
               onEnterMode={openMode}
               onCreateProject={() => openProjectManagement(activeProjectKey)}
+              onBrowseBoxes={openBoxesIndex}
               onManageProjects={() => openProjectManagement(activeProjectKey)}
               onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}

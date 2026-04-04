@@ -34,7 +34,14 @@ export default async function WorkspacePage({ searchParams }) {
   const requestedDocumentKey = String(resolvedSearchParams?.document || "").trim();
   const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
   const requestedLaunchpad = String(resolvedSearchParams?.launchpad || "").trim() === "1";
+  const requestedLaunchpadView = String(resolvedSearchParams?.launchpadView || "").trim().toLowerCase();
   const requestedMode = String(resolvedSearchParams?.mode || "").trim().toLowerCase();
+  const initialLaunchpadView =
+    requestedLaunchpadView === "box" || requestedLaunchpadView === "boxes"
+      ? requestedLaunchpadView
+      : requestedProjectKey
+        ? "box"
+        : "boxes";
 
   const documents = await listReaderDocumentsForUser(session.user.id);
 
@@ -102,6 +109,7 @@ export default async function WorkspacePage({ searchParams }) {
       voiceCatalog={voiceCatalog}
       defaultVoiceChoice={voiceCatalog[0] || null}
       showLaunchpadInitially={requestedLaunchpad || (!requestedDocumentKey && !requestedProjectKey)}
+      initialLaunchpadView={initialLaunchpadView}
       resumeSessionSummary={resumeSessionSummary}
     />
   );
