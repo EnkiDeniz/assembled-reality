@@ -14,6 +14,8 @@
   --assembly-step-1-border: rgba(94, 167, 255, 0.28);
   --assembly-step-1-glow: rgba(94, 167, 255, 0.22);
   --assembly-step-1-text: #7eb8ff;
+  --assembly-step-1-tint: rgba(94, 167, 255, 0.08);
+  --assembly-step-1-border-strong: rgba(94, 167, 255, 0.45);
   --assembly-step-2: #43c7ff;
   --assembly-step-2-soft: rgba(67, 199, 255, 0.15);
   --assembly-step-2-border: rgba(67, 199, 255, 0.3);
@@ -39,6 +41,7 @@
   --assembly-step-6-border: rgba(225, 154, 63, 0.32);
   --assembly-step-6-glow: rgba(225, 154, 63, 0.25);
   --assembly-step-6-text: #ebad5a;
+  --assembly-step-6-tint: rgba(225, 154, 63, 0.08);
   --assembly-step-7: #f08a45;
   --assembly-step-7-soft: rgba(240, 138, 69, 0.17);
   --assembly-step-7-border: rgba(240, 138, 69, 0.34);
