@@ -1,9 +1,12 @@
 import {
   ACTION_LINE,
   COMPANY_NAME,
+  PRODUCT_CHAIN_LABEL,
+  PRODUCT_CHAIN_NOTE,
   PRODUCT_DESCRIPTOR,
   PRODUCT_MARK,
   PRODUCT_NAME,
+  PRODUCT_SENTENCE,
 } from "@/lib/product-language";
 
 const founder = {
@@ -97,16 +100,15 @@ export const publicSite = {
   ],
   llms: {
     title: PRODUCT_MARK,
-    summary:
-      "Loegos is an invite-only, desktop-first workspace for solo operators. It turns source material into a Box you can think in, create from, and read with Operate.",
+    summary: PRODUCT_SENTENCE,
     homeSummary:
-      "Homepage summary of the Box model, the live Think/Create/Operate loop, supported inputs, and the proof model.",
+      "Homepage summary of the assembly-lane model, supported inputs, and the proof-backed box workflow.",
     aboutSummary:
       "What Loegos is, how Boxes and Operate work, and how the product relates to GetReceipts and PromiseMe.",
     trustSummary:
       "Public trust and provenance model, including L1-L3 trust levels and the rule that normalization is not verification.",
     selfAssemblySummary:
-      "Curated self-assembly demo showing how Loegos can open its own box by combining source documents, image-derived chronology, and Git history exports.",
+      "Curated self-assembly demo showing how Loegos can open its own box as an assembly lane with source documents, image-derived chronology, Git history exports, and proof closure.",
     privacySummary:
       "Draft privacy posture covering sign-in, analytics, uploads, AI processing, and optional GetReceipts sync.",
     termsSummary:
@@ -124,16 +126,16 @@ export const publicPages = {
     label: "Home",
     title: PRODUCT_MARK,
     metaTitle: "Loegos",
-    description:
-      "Loegos is an invite-only, desktop-first workspace for solo operators. It turns source material into a Box you can think in, create from, and read with Operate.",
+    description: PRODUCT_SENTENCE,
     quote: "Meaning is an assembled object.",
     lede:
-      "Loegos is an invite-only, desktop-first web workbench for solo operators. You bring source material into a Box, shape a seed from it, and run Operate when you need an honest read of where intention and reality meet.",
+      "Loegos is an invite-only, desktop-first web workbench for solo operators. The box is an assembly lane: sources enter, meaning is shaped, proof closes moves, and the box can prove how it got here.",
     sections: [
       {
-        title: "The live loop",
+        title: "The assembly lane",
         paragraphs: [
-          "The user-facing loop in the current product is Think, Create, Operate. That is the public language for how work moves inside a Box.",
+          `${PRODUCT_CHAIN_LABEL}: ${PRODUCT_CHAIN_NOTE}`,
+          "Think, Create, and Operate still exist, but they sit inside the same lane rather than describing separate worlds.",
         ],
         items: loop,
       },
@@ -165,7 +167,7 @@ export const publicPages = {
       "What Loegos is, how the Box and Operate model work, and how the product fits inside the broader Lakin system.",
     quote: "A workspace where thinking becomes testable.",
     lede:
-      "Loegos is a workspace for turning source material into a Box you can inspect, shape, and pressure toward proof. It is not just an editor, not just an AI assistant, and not just a receipt system. It is a workbench for closing the gap between what you think and what you do.",
+      "Loegos is a workspace for turning source material into a box you can inspect, shape, and pressure toward proof. It is an assembly lane rather than a generic timeline: the lane is the receipt of the box’s own assembly.",
     sections: [
       {
         title: "What the product does",
@@ -233,16 +235,16 @@ export const publicPages = {
     title: "Self-Assembly",
     metaTitle: "Loegos Self-Assembly",
     description:
-      "Curated self-assembly demo showing how Loegos can open its own box using source documents, image-derived chronology, and Git history exports.",
+      "Curated self-assembly demo showing how Loegos can open its own box as an assembly lane using source documents, image-derived chronology, Git history exports, and proof closure.",
     quote: "The product opens its own box.",
     lede:
-      "This public demo treats the project's own source library as a box and walks through how the seed-of-seeds would be assembled: what would be selected, what would be staged, what advances, and what actually seals.",
+      "This public demo treats the project's own source library as a box and walks through the assembly lane: what enters, what is staged, what advances, what seals, and how the box proves how it got here.",
     sections: [
       {
         title: "What this demo is",
         paragraphs: [
-          "The self-assembly page is a curated reconstruction, not an automatic causal engine. It uses the same source, provenance, and block grammar as the product while staying honest about where interpretation is still editorial.",
-          "The page keeps the seven-image chronology as the public narrative spine and uses imported Git history as corroborating software chronology rather than flattening the whole story into a raw commit log.",
+          "The self-assembly page is a curated reconstruction, not an automatic causal engine. It uses the same source, provenance, block, and lane grammar as the product while staying honest about where interpretation is still editorial.",
+          "The page keeps the seven-image chronology as the public narrative spine and uses imported Git history as corroborating chronology rather than flattening the whole story into a raw commit log.",
         ],
       },
       {
@@ -257,7 +259,7 @@ export const publicPages = {
       {
         title: "What this implies for future boxes",
         paragraphs: [
-          "Some boxes will have rich exported history from platforms like GitHub, email, chat, or task systems. Others will not. The self-assembly demo models history exports as optional corroborating sources, not as a requirement for assembly.",
+          "Some boxes will have rich exported history from platforms like GitHub, email, chat, or task systems. Others will not. The self-assembly demo models history exports as optional corroborating sources inside the assembly lane, not as a requirement for assembly.",
         ],
       },
     ],

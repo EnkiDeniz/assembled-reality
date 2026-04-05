@@ -173,7 +173,7 @@ export default function BoxesIndex({
   activeProject = null,
   activeProjectKey = "",
   projects = [],
-  resumeTarget = null,
+  resumeTarget: _resumeTarget = null,
   projectActionPending = "",
   onOpenProjectHome,
   onResumeProject,
@@ -236,7 +236,7 @@ export default function BoxesIndex({
             onClick={() => activeProject?.projectKey && onOpenProjectHome(activeProject.projectKey)}
             disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
           >
-            Home
+            Lane
           </button>
           <button type="button" className="terminal-button" onClick={onOpenIntake}>
             Add

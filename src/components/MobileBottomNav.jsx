@@ -51,7 +51,7 @@ function NavItem({
 }
 
 export default function MobileBottomNav({
-  activeTab = "home",
+  activeTab = "lane",
   canOpenSeed = false,
   confirmationCount = 0,
   stateTone = null,
@@ -70,9 +70,9 @@ export default function MobileBottomNav({
     <div className="assembler-mobile-nav">
       <div className="assembler-mobile-nav__bar">
         <NavItem
-          active={activeTab === "home"}
+          active={activeTab === "lane"}
           icon="box"
-          label="Home"
+          label="Lane"
           onClick={onGoHome}
           badge={badgeLabel}
           onBadgeClick={onOpenConfirmation}

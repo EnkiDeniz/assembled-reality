@@ -126,7 +126,7 @@ export default function SourceRail({
             className="assembler-source-rail__action"
             onClick={onOpenProjectHome}
           >
-            Box home
+            Assembly lane
           </button>
           <button
             type="button"

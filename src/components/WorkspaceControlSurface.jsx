@@ -64,19 +64,21 @@ export default function WorkspaceControlSurface({
             }}
           />
           <span className="assembler-control-surface__title-copy">
-            <span className="assembler-control-surface__title-label">{viewModel?.currentBoxTitle || "Untitled Box"}</span>
-          <span className="assembler-control-surface__title-subtitle">
-            {viewModel?.currentSeedTitle || "Seed"}
-          </span>
+            <span className="assembler-control-surface__title-label">
+              {viewModel?.currentBoxTitle || "Untitled Box"}
+            </span>
+            <span className="assembler-control-surface__title-subtitle">
+              {viewModel?.currentSurfaceLabel || viewModel?.currentSeedTitle || "Assembly lane"}
+            </span>
           </span>
         </button>
       </div>
 
       <div className="assembler-control-surface__modes">
         <ModeButton
-          active={viewModel?.boxPhase === "think"}
-          label="Think"
-          onClick={() => onSelectPhase("think")}
+          active={viewModel?.boxPhase === "lane"}
+          label="Assembly lane"
+          onClick={() => onSelectPhase("lane")}
         />
         <ModeButton
           active={viewModel?.boxPhase === "create"}

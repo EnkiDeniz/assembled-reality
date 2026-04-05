@@ -8,6 +8,10 @@ import {
   buildWorkspaceBlocksFromDocument,
   stripMarkdownSyntax,
 } from "@/lib/document-blocks";
+import {
+  normalizeHistoryExportEntries,
+  SUPPORTED_HISTORY_EXPORTS,
+} from "@/lib/history-normalization";
 import { PRODUCT_MARK } from "@/lib/product-language";
 import {
   createSourceProvenanceSeed,
@@ -19,7 +23,6 @@ import { buildExcerpt } from "@/lib/text";
 
 const CORPUS_ROOT_SEGMENTS = ["docs", "First seed"];
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
-const GIT_COMMIT_RE = /^commit ([0-9a-f]{40})$/m;
 
 const SOURCE_ROLE_LABELS = Object.freeze({
   "origin-fragment": "Origin fragment",
@@ -40,57 +43,6 @@ const EVIDENCE_BASIS_LABELS = Object.freeze({
   "image-derived-markdown": "Image-derived markdown",
   "platform-export": "Platform export",
 });
-
-export const SUPPORTED_HISTORY_EXPORTS = Object.freeze([
-  {
-    historyKind: "git-log",
-    platform: "github",
-    label: "Git log export",
-    status: "Live in this demo",
-    description:
-      "Split exported Git history into commit entries with stable metadata, chronology, and change summaries.",
-  },
-  {
-    historyKind: "email-thread-export",
-    platform: "email",
-    label: "Email thread export",
-    status: "Planned",
-    description:
-      "Normalize exported email threads into dated messages, participants, and attachment-aware evidence entries.",
-  },
-  {
-    historyKind: "chat-export",
-    platform: "chat",
-    label: "Chat export",
-    status: "Planned",
-    description:
-      "Normalize conversation exports into message timelines with speaker identity, timestamps, and quoted context.",
-  },
-  {
-    historyKind: "calendar-export",
-    platform: "calendar",
-    label: "Calendar export",
-    status: "Planned",
-    description:
-      "Normalize event history into meetings, invites, attendees, and time-bound chronology anchors.",
-  },
-  {
-    historyKind: "task-history-export",
-    platform: "tasks",
-    label: "Task history export",
-    status: "Planned",
-    description:
-      "Normalize task-system history into created, moved, commented, completed, and reopened events.",
-  },
-  {
-    historyKind: "docs-revision-export",
-    platform: "docs",
-    label: "Docs revision export",
-    status: "Planned",
-    description:
-      "Normalize version history from writing tools into revisions, authors, timestamps, and document-state transitions.",
-  },
-]);
 
 const SELF_ASSEMBLY_SOURCE_DEFS = Object.freeze([
   {
@@ -497,100 +449,12 @@ function structureLooseMarkdown(rawMarkdown = "", titleHint = "") {
   };
 }
 
-function stripOuterCodeFence(rawText = "") {
-  const normalized = normalizeLineEndings(rawText).trim();
-  const lines = normalized.split("\n");
-  if (lines.length < 3) return normalized;
-  if (!lines[0].startsWith("```") || lines[lines.length - 1].trim() !== "```") {
-    return normalized;
-  }
-
-  return lines.slice(1, -1).join("\n").trim();
-}
-
-function splitGitCommitChunks(rawText = "") {
-  const normalized = stripOuterCodeFence(rawText);
-  const lines = normalized.split("\n");
-  const chunks = [];
-  let current = [];
-
-  lines.forEach((line) => {
-    if (/^commit [0-9a-f]{40}$/.test(line.trim()) && current.length > 0) {
-      chunks.push(current.join("\n").trim());
-      current = [line];
-      return;
-    }
-
-    current.push(line);
-  });
-
-  if (current.length > 0) {
-    const chunk = current.join("\n").trim();
-    if (chunk) chunks.push(chunk);
-  }
-
-  return chunks.filter((chunk) => GIT_COMMIT_RE.test(chunk));
-}
-
-function parseGitCommitChunk(chunk = "", index = 0) {
-  const lines = normalizeLineEndings(chunk)
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+$/g, ""));
-  const hash = lines[0]?.match(/^commit ([0-9a-f]{40})$/)?.[1] || "";
-  const author = lines.find((line) => line.startsWith("Author:"))?.replace(/^Author:\s*/, "").trim() || "";
-  const occurredAt =
-    lines.find((line) => line.startsWith("Date:"))?.replace(/^Date:\s*/, "").trim() || "";
-  const subject = lines.find((line) => line.startsWith("Subject:"))?.replace(/^Subject:\s*/, "").trim() || `Commit ${index + 1}`;
-  const changedFiles = lines.filter((line) => /^\s*[^|\n]+\|\s+\d+/.test(line));
-  const aggregateLine =
-    [...lines]
-      .reverse()
-      .find((line) => /files? changed|insertions?\(\+\)|deletions?\(-\)/i.test(line)) || "";
-  const bodyLines = [];
-
-  if (hash) {
-    bodyLines.push(`- Hash: \`${hash.slice(0, 7)}\``);
-  }
-  if (occurredAt) {
-    bodyLines.push(`- Date: ${occurredAt}`);
-  }
-  if (author) {
-    bodyLines.push(`- Author: ${author}`);
-  }
-  if (aggregateLine) {
-    bodyLines.push(`- Diff summary: ${aggregateLine.trim()}`);
-  }
-
-  const fileList = changedFiles
-    .slice(0, 8)
-    .map((line) => line.trim())
-    .join("\n");
-
-  return {
-    entryId: hash || `commit-${index + 1}`,
-    hash,
-    author,
-    occurredAt,
-    title: subject,
-    body: fileList,
-    changeSummary: {
-      aggregate: aggregateLine.trim(),
-      files: changedFiles.slice(0, 8).map((line) => line.trim()),
-      fileCount: changedFiles.length,
-    },
-    markdown: [
-      bodyLines.join("\n"),
-      fileList ? "Changed files:\n" + fileList.split("\n").map((line) => `- ${line}`).join("\n") : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
-  };
-}
-
 function normalizeGitHistoryExport(definition, rawText = "") {
-  const entries = splitGitCommitChunks(rawText).map((chunk, index) =>
-    parseGitCommitChunk(chunk, index),
-  );
+  const normalizedHistory = normalizeHistoryExportEntries({
+    historyKind: definition.historyKind,
+    rawText,
+  });
+  const entries = normalizedHistory.entries;
 
   const introMarkdown = [
     `This exported Git history is treated as a platform history source for the self-assembly demo.`,
@@ -627,8 +491,8 @@ function normalizeGitHistoryExport(definition, rawText = "") {
     parsed,
     blocks,
     entries,
-    historyKind: definition.historyKind,
-    platform: definition.platform,
+    historyKind: normalizedHistory.historyKind || definition.historyKind,
+    platform: normalizedHistory.platform || definition.platform,
   };
 }
 

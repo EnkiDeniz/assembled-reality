@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AiUtilityRail from "@/components/AiUtilityRail";
+import AssemblyLane from "@/components/AssemblyLane";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
 import ConfirmationQueueDialog from "@/components/ConfirmationQueueDialog";
 import FirstBoxComposer from "@/components/FirstBoxComposer";
 import MobileBottomNav from "@/components/MobileBottomNav";
-import ProjectHome from "@/components/ProjectHome";
 import RealityInstrument from "@/components/RealityInstrument";
 import RootBar from "@/components/RootBar";
 import RootEditor from "@/components/RootEditor";
@@ -36,6 +36,7 @@ import {
 } from "@/lib/listening";
 import {
   BOX_PHASES,
+  buildBoxAssemblyLaneViewModel,
   buildBoxViewModel,
   buildControlSurfaceViewModel,
   buildCreateViewModel,
@@ -1379,7 +1380,7 @@ function WorkspaceShelf({
 
           <div className="assembler-sheet__section-actions">
             <button type="button" className="assembler-sheet__close" onClick={onOpenProjectHome}>
-              Home
+              Lane
             </button>
             <button
               type="button"
@@ -1711,8 +1712,8 @@ function MobileBoxSheet({
             <div className="assembler-mobile-sheet__panel-group">
               <MobileSheetAction
                 icon="box"
-                label="Go Home"
-                detail="Return to Box Home"
+                label="Open lane"
+                detail="Return to Assembly lane"
                 onClick={() => {
                   onClose();
                   onGoHome();
@@ -1754,7 +1755,7 @@ function WorkspaceLaunchpad({
   getReceiptsConnectionStatus = "DISCONNECTED",
   getReceiptsConnectionLastError = "",
   projectActionPending = "",
-  loadingDocumentKey,
+  loadingDocumentKey: _loadingDocumentKey,
   onEnterMode,
   onBrowseBoxes,
   onManageProjects,
@@ -1771,23 +1772,22 @@ function WorkspaceLaunchpad({
   resumeSessionSummary = null,
 }) {
   const grouped = groupedDocuments(documents);
-  const guideDocument = grouped.sources.find(
-    (document) => document.documentType === "builtin" || document.sourceType === "builtin",
-  ) || null;
-  const userSourceDocuments = grouped.sources.filter(
-    (document) => document.documentType !== "builtin" && document.sourceType !== "builtin",
-  );
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
     grouped.assemblies[0] ||
     null;
-  const shouldFeatureGuide = Boolean(guideDocument) && (
-    userSourceDocuments.length <= 2 || !currentAssemblyDocument
-  );
-  const sourceDocuments = shouldFeatureGuide ? userSourceDocuments : grouped.sources;
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
   const boxViewModel = buildBoxViewModel({
+    activeProject,
+    projectDocuments: documents,
+    currentAssemblyDocument,
+    projectDrafts,
+    resumeSessionSummary,
+    connectionStatus: getReceiptsConnectionStatus,
+    connectionLastError: getReceiptsConnectionLastError,
+  });
+  const assemblyLaneViewModel = buildBoxAssemblyLaneViewModel({
     activeProject,
     projectDocuments: documents,
     currentAssemblyDocument,
@@ -1830,19 +1830,27 @@ function WorkspaceLaunchpad({
   }
 
   return (
-    <ProjectHome
-      boxViewModel={boxViewModel}
-      activeProject={activeProject}
-      loadingDocumentKey={loadingDocumentKey}
+    <AssemblyLane
+      viewModel={assemblyLaneViewModel}
       currentPositionAction={currentPositionAction}
-      guideDocument={shouldFeatureGuide ? guideDocument : null}
-      sourceDocuments={sourceDocuments}
       onBrowseBoxes={onBrowseBoxes}
-      onOpenReceipts={onOpenReceipts}
-      onOpenDocument={onOpenDocument}
-      getDocumentBlockCountLabel={getDocumentBlockCountLabel}
-      getDocumentKindLabel={getDocumentKindLabel}
-      sourceOpenMode={WORKSPACE_MODES.assemble}
+      onOpenEntry={(entry) => {
+        if (entry?.actionKind === "receipt") {
+          onOpenReceipts();
+          return;
+        }
+
+        if (!entry?.documentKey) return;
+
+        const openAsSeed = entry.actionKind === "seed";
+        onOpenDocument(
+          entry.documentKey,
+          WORKSPACE_MODES.assemble,
+          {
+            phase: openAsSeed ? BOX_PHASES.create : BOX_PHASES.think,
+          },
+        );
+      }}
     />
   );
 }
@@ -1952,7 +1960,7 @@ function ListenSurface({
               type="button"
               className="assembler-listen__topbar-icon"
               onClick={onOpenProjectHome}
-              aria-label="Open Box home"
+              aria-label="Open Assembly lane"
             >
               <WorkspaceActionIcon kind="back" />
             </button>
@@ -3883,7 +3891,7 @@ export default function WorkspaceShell({
       initialDocument?.isAssembly ||
       initialDocument?.documentType === "assembly"
         ? BOX_PHASES.create
-        : BOX_PHASES.think),
+        : BOX_PHASES.lane),
   );
   const [editMode, setEditMode] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -3977,7 +3985,7 @@ export default function WorkspaceShell({
         initialDocument?.isAssembly ||
         initialDocument?.documentType === "assembly"
         ? BOX_PHASES.create
-        : BOX_PHASES.think,
+        : BOX_PHASES.lane,
     ),
   );
   const [playbackStatus, setPlaybackStatus] = useState("idle");
@@ -4008,14 +4016,17 @@ export default function WorkspaceShell({
     null;
   const activeBoxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
-  const realProjectSourceDocuments = listRealSourceDocuments(projectDocuments);
+  const hydratedProjectDocuments = projectDocuments.map((document) =>
+    applyDocumentLogState(documentCache[document.documentKey] || document, documentLogs),
+  );
+  const realProjectSourceDocuments = listRealSourceDocuments(hydratedProjectDocuments);
   const latestRealSourceDocument =
     [...realProjectSourceDocuments].sort((left, right) => {
       const rightTimestamp = Date.parse(right?.updatedAt || right?.createdAt || "");
       const leftTimestamp = Date.parse(left?.updatedAt || left?.createdAt || "");
       return (Number.isNaN(rightTimestamp) ? 0 : rightTimestamp) - (Number.isNaN(leftTimestamp) ? 0 : leftTimestamp);
     })[0] || null;
-  const projectDocumentGroups = groupedDocuments(projectDocuments);
+  const projectDocumentGroups = groupedDocuments(hydratedProjectDocuments);
   const guideSourceDocument = projectDocumentGroups.sources.find(
     (document) => document.documentType === "builtin" || document.sourceType === "builtin",
   ) || null;
@@ -4024,11 +4035,11 @@ export default function WorkspaceShell({
   );
   const visibleAssemblyDocuments = projectDocumentGroups.assemblies;
   const currentAssemblyDocument =
-    getSeedDocument(activeProject, projectDocuments, activeDocumentKey) ||
-    getOperateAssemblyDocument(activeProject, projectDocuments, activeDocumentKey) ||
+    getSeedDocument(activeProject, hydratedProjectDocuments, activeDocumentKey) ||
+    getOperateAssemblyDocument(activeProject, hydratedProjectDocuments, activeDocumentKey) ||
     null;
   const currentSeedDocument = currentAssemblyDocument;
-  const operateState = listOperateIncludedDocuments(activeProject, projectDocuments, {
+  const operateState = listOperateIncludedDocuments(activeProject, hydratedProjectDocuments, {
     preferredDocumentKey: activeDocumentKey,
     includeAssembly: true,
     includeGuide: false,
@@ -4096,7 +4107,7 @@ export default function WorkspaceShell({
   const thinkViewModel = buildThinkViewModel({
     activeProject,
     activeDocument,
-    projectDocuments,
+    projectDocuments: hydratedProjectDocuments,
     guideDocument: guideSourceDocument,
   });
   const createViewModel = buildCreateViewModel({
@@ -4108,14 +4119,14 @@ export default function WorkspaceShell({
   const seedViewModel = buildSeedViewModel({
     activeProject,
     currentAssemblyDocument: currentSeedDocument,
-    projectDocuments,
+    projectDocuments: hydratedProjectDocuments,
     projectDrafts: projectDraftsState,
     pendingSuggestion: seedSuggestion,
   });
   const entryStateViewModel = buildEntryStateViewModel({
     projects: hydratedProjects,
     activeProject,
-    projectDocuments,
+    projectDocuments: hydratedProjectDocuments,
     allDocuments: documentsState,
     projectDrafts: projectDraftsState,
     currentAssemblyDocument: currentSeedDocument,
@@ -4127,13 +4138,22 @@ export default function WorkspaceShell({
   const controlSurfaceViewModel = buildControlSurfaceViewModel({
     activeProject,
     currentAssemblyDocument: currentSeedDocument,
-    projectDocuments,
+    projectDocuments: hydratedProjectDocuments,
     projectDrafts: projectDraftsState,
     boxPhase,
     canRunOperate,
     aiOpen,
     clipboardCount: clipboard.length,
     stagedCount: stagedAiBlocks.length,
+  });
+  const assemblyLaneViewModel = buildBoxAssemblyLaneViewModel({
+    activeProject,
+    projectDocuments: hydratedProjectDocuments,
+    currentAssemblyDocument: currentSeedDocument,
+    projectDrafts: projectDraftsState,
+    resumeSessionSummary: resumeSessionSummaryState,
+    connectionStatus: getReceiptsConnectionStatus,
+    connectionLastError: getReceiptsConnectionLastError,
   });
   const rootViewModel = buildRootViewModel(activeProject);
   const hasRoot = Boolean(rootViewModel?.hasRoot);
@@ -4156,6 +4176,7 @@ export default function WorkspaceShell({
   const assemblySurfaceStyle = {
     "--assembly-wash": controlSurfaceViewModel?.stateColorTokens?.fill || "transparent",
   };
+  const isLanePhase = boxPhase === BOX_PHASES.lane;
   const isThinkPhase = boxPhase === BOX_PHASES.think;
   const isCreatePhase = boxPhase === BOX_PHASES.create;
   const isOperatePhase = boxPhase === BOX_PHASES.operate;
@@ -5951,7 +5972,9 @@ export default function WorkspaceShell({
       stopPlayback();
       setAiOpen(false);
       setEditMode(false);
-      setBoxPhase(BOX_PHASES.think);
+      setBoxPhase(
+        nextLaunchpadView === LAUNCHPAD_VIEWS.box ? BOX_PHASES.lane : BOX_PHASES.think,
+      );
       setListenPickerOpen(false);
       setWorkspacePickerOpen(false);
       setMobileBoxSheetOpen(false);
@@ -6038,7 +6061,7 @@ export default function WorkspaceShell({
     stopPlayback();
     setAiOpen(false);
     setEditMode(false);
-    setBoxPhase(BOX_PHASES.think);
+    setBoxPhase(BOX_PHASES.lane);
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
     setMobileBoxSheetOpen(false);
@@ -7164,7 +7187,7 @@ export default function WorkspaceShell({
   }
 
   function handleSelectBoxPhase(nextPhase, options = {}) {
-    const normalizedPhase = normalizeBoxPhase(nextPhase, BOX_PHASES.think);
+    const normalizedPhase = normalizeBoxPhase(nextPhase, BOX_PHASES.lane);
     const skipRootGate = Boolean(options?.skipRootGate);
 
     if (normalizedPhase !== BOX_PHASES.create) {
@@ -7211,6 +7234,16 @@ export default function WorkspaceShell({
         });
         return;
       }
+    }
+
+    if (normalizedPhase === BOX_PHASES.lane) {
+      setAiOpen(false);
+      setEditMode(false);
+      if (!isMobileLayout) {
+        setDesktopSidecarPanel(DESKTOP_SIDECAR_PANELS.details);
+      }
+      setBoxPhase(BOX_PHASES.lane);
+      return;
     }
 
     if (normalizedPhase !== BOX_PHASES.think) {
@@ -9703,18 +9736,20 @@ export default function WorkspaceShell({
   const headerContextLabel = launchpadOpen
     ? launchpadView === LAUNCHPAD_VIEWS.boxes
       ? "Boxes"
-      : "Box Home"
+      : "Assembly lane"
     : isFirstTimeSurface
       ? "First Box"
       : isListenMode
         ? "Listen"
-        : isReceiptsPhase
+      : isReceiptsPhase
           ? "Receipts"
-          : isOperatePhase
+        : isOperatePhase
             ? "Operate"
             : isCreatePhase
-            ? "Seed"
-            : "Think";
+              ? "Seed"
+              : isLanePhase
+                ? "Assembly lane"
+                : "Source";
   const mobileSourceDocument =
     !launchpadOpen && (isCreatePhase || isOperatePhase || isReceiptsPhase)
       ? currentSeedDocument || activeDocument
@@ -9737,14 +9772,16 @@ export default function WorkspaceShell({
     !isFirstTimeSurface &&
     !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes);
   const activeMobileTab = launchpadOpen
-    ? "home"
+    ? "lane"
     : isListenMode
       ? "listen"
       : isReceiptsPhase
         ? "receipts"
         : isOperatePhase
           ? "operate"
-          : "seed";
+          : isLanePhase
+            ? "lane"
+            : "seed";
 
   return (
     <main
@@ -9870,7 +9907,7 @@ export default function WorkspaceShell({
                   className="assembler-header__start"
                   onClick={() => openCurrentBoxHome(activeProject.projectKey)}
                 >
-                  Current box
+                  Assembly lane
                 </button>
               ) : null
             ) : isFirstTimeSurface ? (
@@ -9941,7 +9978,7 @@ export default function WorkspaceShell({
               activeProject={activeProject}
               activeProjectKey={activeProjectKey}
               projects={hydratedProjects}
-              documents={projectDocuments}
+              documents={hydratedProjectDocuments}
               projectDrafts={projectDraftsState}
               getReceiptsConnectionStatus={getReceiptsConnectionStatus}
               getReceiptsConnectionLastError={getReceiptsConnectionLastError}
@@ -10228,6 +10265,52 @@ export default function WorkspaceShell({
                     >
                       {documentWorkbench}
                     </SeedSurface>
+                  ) : isLanePhase ? (
+                    <AssemblyLane
+                      viewModel={assemblyLaneViewModel}
+                      currentPositionAction={
+                        assemblyLaneViewModel?.resumeTarget?.documentKey
+                          ? {
+                              label: assemblyLaneViewModel.resumeTarget.label || "Open",
+                              disabled: false,
+                              onClick: () =>
+                                void enterWorkspace(
+                                  assemblyLaneViewModel.resumeTarget.documentKey,
+                                  assemblyLaneViewModel.resumeTarget.mode === "listen"
+                                    ? WORKSPACE_MODES.listen
+                                    : WORKSPACE_MODES.assemble,
+                                  {
+                                    phase:
+                                      assemblyLaneViewModel.resumeTarget.phase || BOX_PHASES.lane,
+                                  },
+                                ),
+                            }
+                          : null
+                      }
+                      onBrowseBoxes={openBoxesIndex}
+                      onOpenEntry={(entry) => {
+                        if (entry?.actionKind === "root") {
+                          openRootEditorFor("voluntary");
+                          return;
+                        }
+
+                        if (entry?.actionKind === "receipt") {
+                          openReceiptsSurface();
+                          return;
+                        }
+
+                        if (!entry?.documentKey) return;
+
+                        void enterWorkspace(
+                          entry.documentKey,
+                          WORKSPACE_MODES.assemble,
+                          {
+                            phase:
+                              entry.actionKind === "seed" ? BOX_PHASES.create : BOX_PHASES.think,
+                          },
+                        );
+                      }}
+                    />
                   ) : (
                     <ThinkSurface
                       boxTitle={thinkViewModel.boxTitle}
@@ -10240,7 +10323,7 @@ export default function WorkspaceShell({
 
               </div>
 
-              {!isMobileLayout && (isThinkPhase || isCreatePhase) ? (
+              {!isMobileLayout && (isLanePhase || isThinkPhase || isCreatePhase) ? (
                 <DesktopAssemblySidecar
                   activePanel={activeDesktopSidecar}
                   stageCount={desktopStageCount}
@@ -10286,7 +10369,7 @@ export default function WorkspaceShell({
                       embedded
                       stagedBlocks={stagedAiBlocks}
                       clipboard={clipboard}
-                      documents={projectDocuments}
+                      documents={hydratedProjectDocuments}
                       onAcceptStagedBlock={acceptStagedBlock}
                       onAcceptAllStagedBlocks={acceptAllStagedBlocks}
                       onClearStagedBlocks={() => setStagedAiBlocks([])}
@@ -10307,7 +10390,7 @@ export default function WorkspaceShell({
                 open={mobileComposeOpen}
                 clipboard={clipboard}
                 stagedBlocks={stagedAiBlocks}
-                documents={projectDocuments}
+                documents={hydratedProjectDocuments}
                 onClose={() => setMobileComposeOpen(false)}
                 onAcceptStagedBlock={acceptStagedBlock}
                 onAcceptAllStagedBlocks={acceptAllStagedBlocks}
@@ -10403,7 +10486,7 @@ export default function WorkspaceShell({
             boxTitle={activeBoxTitle}
             activeDocument={mobileSourceDocument || sevenContextDocument}
             currentSeedDocument={currentSeedDocument}
-            documents={projectDocuments}
+            documents={hydratedProjectDocuments}
             activeDocumentKey={activeDocumentKey}
             loadingDocumentKey={loadingDocumentKey}
             onOpenDocument={(documentKey, mode, options = {}) => {

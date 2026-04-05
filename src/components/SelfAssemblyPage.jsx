@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PublicFooterLinks from "@/components/PublicFooterLinks";
 import { publicSite } from "@/lib/public-site";
+import { PRODUCT_CHAIN_LABEL, PRODUCT_CHAIN_NOTE, PRODUCT_SENTENCE } from "@/lib/product-language";
 
 function MetricPill({ label, value }) {
   return (
@@ -142,6 +143,9 @@ export default function SelfAssemblyPage({ page, demo, jsonLd = null }) {
           <span className="self-assembly-hero__eyebrow">{page.label}</span>
           <h1>{page.title}</h1>
           <p className="self-assembly-hero__lede">{page.lede}</p>
+          <p className="self-assembly-hero__note">
+            {PRODUCT_CHAIN_LABEL}: {PRODUCT_SENTENCE}
+          </p>
           <div className="self-assembly-hero__metrics">
             <MetricPill label="Curated sources" value={demo.sources.length} />
             <MetricPill label="Assembly milestones" value={demo.milestones.length} />
@@ -149,7 +153,7 @@ export default function SelfAssemblyPage({ page, demo, jsonLd = null }) {
           </div>
           <p className="self-assembly-hero__note">
             The seven-image chronology stays primary. Git history sits underneath it as a
-            corroborating software-evolution witness.
+            corroborating chronology witness, and the lane stays accountable to proof. {PRODUCT_CHAIN_NOTE}
           </p>
         </header>
 
@@ -167,8 +171,8 @@ export default function SelfAssemblyPage({ page, demo, jsonLd = null }) {
 
         <section className="self-assembly-section">
           <div className="self-assembly-section__header">
-            <span>Assembly path</span>
-            <strong>Seven curated milestones from naming to seal</strong>
+            <span>Assembly lane</span>
+            <strong>Seven curated moves in the box proving how it got here</strong>
           </div>
 
           <ol className="self-assembly-timeline">

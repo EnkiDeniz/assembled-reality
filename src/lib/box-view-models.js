@@ -10,7 +10,12 @@ import {
   listRealSourceDocuments,
 } from "@/lib/seed-model";
 import {
+  detectHistoryWitnessKind,
+  normalizeHistoryExportEntries,
+} from "@/lib/history-normalization";
+import {
   ASSEMBLY_DOMAINS,
+  ASSEMBLY_CONFIRMATION_STATUSES,
   buildAssemblyStateSummary,
   getAssemblyColorTokens,
   getAssemblyStateColorStep,
@@ -20,10 +25,35 @@ import {
 } from "@/lib/assembly-architecture";
 
 export const BOX_PHASES = Object.freeze({
+  lane: "lane",
   think: "think",
   create: "create",
   operate: "operate",
   receipts: "receipts",
+});
+
+const LANE_STAGE_LABELS = Object.freeze({
+  selected: "Selected",
+  staged: "Staged",
+  advanced: "Advanced",
+  sealed: "Sealed",
+});
+
+const LANE_PROOF_LABELS = Object.freeze({
+  open: "Open",
+  witness: "Witness",
+  supported: "Supported",
+  sealed: "Sealed",
+});
+
+const LANE_KIND_LABELS = Object.freeze({
+  root: "Root",
+  source: "Source",
+  "derived-source": "Derived source",
+  "history-export": "History export",
+  move: "Assembly move",
+  seed: "Seed",
+  receipt: "Receipt",
 });
 
 function getTimestamp(value = null) {
@@ -37,6 +67,184 @@ function getMostRecentItem(items = []) {
     const leftTimestamp = getTimestamp(left?.updatedAt || left?.createdAt);
     return rightTimestamp - leftTimestamp;
   })[0] || null;
+}
+
+function isAssemblyDocument(document = null) {
+  return Boolean(document?.isAssembly || document?.documentType === "assembly");
+}
+
+function isGuideDocument(document = null) {
+  return Boolean(document?.documentType === "builtin" || document?.sourceType === "builtin");
+}
+
+function isRealSourceDocument(document = null) {
+  return Boolean(document && !isAssemblyDocument(document) && !isGuideDocument(document));
+}
+
+function formatLaneMoment(value = "", fallback = "Order inferred") {
+  const parsed = getTimestamp(value);
+  if (!parsed) return fallback;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(parsed));
+}
+
+function buildDocumentPlainText(document = null) {
+  if (!document) return "";
+  const blockText = Array.isArray(document?.blocks)
+    ? document.blocks.map((block) => block?.text || block?.plainText || "").join("\n\n")
+    : "";
+
+  return [
+    document?.contentMarkdown || "",
+    document?.rawMarkdown || "",
+    blockText,
+    document?.excerpt || "",
+  ]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+}
+
+function getConfirmationCounts(document = null) {
+  const blocks = Array.isArray(document?.blocks) ? document.blocks : [];
+  return blocks.reduce(
+    (accumulator, block) => {
+      const status = String(block?.confirmationStatus || "").trim().toLowerCase();
+      if (status === ASSEMBLY_CONFIRMATION_STATUSES.confirmed) {
+        accumulator.confirmed += 1;
+      }
+      if (status === ASSEMBLY_CONFIRMATION_STATUSES.discarded) {
+        accumulator.discarded += 1;
+      }
+      return accumulator;
+    },
+    { confirmed: 0, discarded: 0 },
+  );
+}
+
+function getSeedSourceDocumentKeys(seedDocument = null) {
+  const keys = new Set();
+  (Array.isArray(seedDocument?.blocks) ? seedDocument.blocks : []).forEach((block) => {
+    const key = String(block?.sourceDocumentKey || "").trim();
+    if (key) keys.add(key);
+  });
+  return keys;
+}
+
+function buildHistoryWitnessSummary(document = null) {
+  const historyKind = detectHistoryWitnessKind({
+    historyKind: document?.historyKind,
+    title: document?.title,
+    originalFilename: document?.originalFilename,
+    relativePath: document?.relativePath,
+    rawText: buildDocumentPlainText(document),
+  });
+
+  if (!historyKind) return null;
+
+  const normalized = normalizeHistoryExportEntries({
+    historyKind,
+    rawText: buildDocumentPlainText(document),
+  });
+
+  return {
+    historyKind,
+    platform: normalized.platform || "",
+    entryCount: Array.isArray(normalized.entries) ? normalized.entries.length : 0,
+    definition: normalized.definition,
+  };
+}
+
+function getLaneEvidenceBasis(document = null, historyWitness = null) {
+  if (historyWitness) {
+    return {
+      value: "corroborating-history",
+      label: "Corroborating history",
+    };
+  }
+
+  if (document?.derivationKind || (Array.isArray(document?.sourceAssets) && document.sourceAssets.length)) {
+    return {
+      value: "derived-witness",
+      label: "Derived witness",
+    };
+  }
+
+  return {
+    value: "direct-evidence",
+    label: "Direct evidence",
+  };
+}
+
+function buildLaneSourceRefs(document = null) {
+  if (!document?.documentKey) return [];
+  return [
+    {
+      documentKey: document.documentKey,
+      title: document.title || "Untitled document",
+    },
+  ];
+}
+
+function buildLaneStageStatus({
+  historyWitness = null,
+  advancedBlockCount = 0,
+  confirmedBlockCount = 0,
+  sealed = false,
+} = {}) {
+  if (sealed) return "sealed";
+  if (advancedBlockCount > 0) return "advanced";
+  if (confirmedBlockCount > 0 || historyWitness) return "staged";
+  return "selected";
+}
+
+function buildLaneProofStatus({ stageStatus = "selected", confirmedBlockCount = 0, sealed = false } = {}) {
+  if (sealed) return "sealed";
+  if (stageStatus === "advanced" || confirmedBlockCount > 0) return "supported";
+  if (stageStatus === "staged") return "witness";
+  return "open";
+}
+
+function buildLaneStateEventEntry(event = null, index = 0) {
+  const type = String(event?.type || "").trim().toLowerCase();
+  if (type !== "state_advanced") return null;
+
+  const context = event?.detail?.context && typeof event.detail.context === "object"
+    ? event.detail.context
+    : {};
+  const nextState = String(context?.to || "").trim().toLowerCase();
+  const stageStatus = nextState === "sealed" || nextState === "released" ? "sealed" : "advanced";
+  const proofStatus = stageStatus === "sealed" ? "sealed" : "witness";
+
+  return {
+    id: `event-${type}-${event?.at || index}`,
+    kind: "move",
+    kindLabel: LANE_KIND_LABELS.move,
+    title: nextState ? `Assembly moved to ${nextState}` : "Assembly moved",
+    detail:
+      event?.detail?.move ||
+      event?.detail?.return ||
+      event?.detail?.echo ||
+      "The box advanced to a new assembly state.",
+    occurredAt: event?.at || null,
+    orderKind: getTimestamp(event?.at) ? "explicit" : "inferred",
+    stageStatus,
+    stageStatusLabel: LANE_STAGE_LABELS[stageStatus],
+    proofStatus,
+    proofStatusLabel: LANE_PROOF_LABELS[proofStatus],
+    evidenceBasis: "assembly-event",
+    evidenceBasisLabel: "Assembly event",
+    trustSummary: event?.detail?.return || "",
+    linkedReceiptId: String(context?.receiptId || "").trim(),
+    sourceRefs: [],
+    isLeadingEdge: false,
+    documentKey: "",
+    actionKind: "",
+    actionLabel: "",
+  };
 }
 
 function formatReceiptStatus(status = "") {
@@ -252,7 +460,7 @@ export function buildRootViewModel(activeProject = null) {
   };
 }
 
-export function normalizeBoxPhase(value, fallback = BOX_PHASES.think) {
+export function normalizeBoxPhase(value, fallback = BOX_PHASES.lane) {
   return Object.values(BOX_PHASES).includes(value) ? value : fallback;
 }
 
@@ -512,6 +720,302 @@ export function buildBoxViewModel({
   };
 }
 
+export function buildBoxAssemblyLaneViewModel({
+  activeProject = null,
+  projectDocuments = [],
+  currentAssemblyDocument = null,
+  projectDrafts = [],
+  resumeSessionSummary = null,
+  connectionStatus = "DISCONNECTED",
+  connectionLastError = "",
+} = {}) {
+  const documents = Array.isArray(projectDocuments) ? projectDocuments.filter(Boolean) : [];
+  const realSourceDocuments = documents.filter(isRealSourceDocument);
+  const seedDocument = currentAssemblyDocument || getMostRecentItem(documents.filter(isAssemblyDocument));
+  const seedSections = getSeedSectionsFromDocument(seedDocument);
+  const seedSourceDocumentKeys = getSeedSourceDocumentKeys(seedDocument);
+  const earliestDocument =
+    [...documents]
+      .sort(
+        (left, right) =>
+          getTimestamp(left?.createdAt || left?.updatedAt) -
+          getTimestamp(right?.createdAt || right?.updatedAt),
+      )[0] || null;
+  const receiptSummary = buildReceiptSummaryViewModel(projectDrafts, {
+    connectionStatus,
+    connectionLastError,
+  });
+  const root = buildRootViewModel(activeProject);
+  const stateSummary = buildAssemblyStateSummary({
+    project: activeProject,
+    projectDocuments: documents,
+    projectDrafts,
+  });
+  const meta = normalizeProjectArchitectureMeta(
+    activeProject?.metadataJson || activeProject?.architectureMeta || null,
+  );
+  const confirmationQueue = listConfirmationQueueItems(documents, root);
+
+  const rootEntry = root?.hasRoot
+    ? {
+        id: "lane-root",
+        kind: "root",
+        kindLabel: LANE_KIND_LABELS.root,
+        title: root.text || "Root declared",
+        detail: root.gloss || "The box has a declared line to return to.",
+        occurredAt:
+          root.createdAt ||
+          earliestDocument?.createdAt ||
+          earliestDocument?.updatedAt ||
+          activeProject?.createdAt ||
+          meta.assemblyState?.updatedAt ||
+          null,
+        orderKind: getTimestamp(
+          root.createdAt ||
+            earliestDocument?.createdAt ||
+            earliestDocument?.updatedAt ||
+            activeProject?.createdAt ||
+            meta.assemblyState?.updatedAt,
+        )
+          ? "explicit"
+          : "inferred",
+        stageStatus: "staged",
+        stageStatusLabel: LANE_STAGE_LABELS.staged,
+        proofStatus: "witness",
+        proofStatusLabel: LANE_PROOF_LABELS.witness,
+        evidenceBasis: "declared-origin",
+        evidenceBasisLabel: "Declared origin",
+        trustSummary: root.gloss || "Declared by the operator.",
+        linkedReceiptId: "",
+        sourceRefs: [],
+        isLeadingEdge: false,
+        documentKey: "",
+        actionKind: "root",
+        actionLabel: "Open root",
+      }
+    : null;
+
+  const sourceEntries = realSourceDocuments.map((document) => {
+    const sourceSummary = buildSourceSummaryViewModel(document);
+    const historyWitness = buildHistoryWitnessSummary(document);
+    const confirmationCounts = getConfirmationCounts(document);
+    const advancedBlockCount = seedSourceDocumentKeys.has(document.documentKey)
+      ? (Array.isArray(seedDocument?.blocks) ? seedDocument.blocks : []).filter(
+          (block) => block?.sourceDocumentKey === document.documentKey,
+        ).length
+      : 0;
+    const stageStatus = buildLaneStageStatus({
+      historyWitness,
+      advancedBlockCount,
+      confirmedBlockCount: confirmationCounts.confirmed,
+    });
+    const proofStatus = buildLaneProofStatus({
+      stageStatus,
+      confirmedBlockCount: confirmationCounts.confirmed,
+    });
+    const evidenceBasis = getLaneEvidenceBasis(document, historyWitness);
+    const kind =
+      historyWitness
+        ? "history-export"
+        : document?.derivationKind || (Array.isArray(document?.sourceAssets) && document.sourceAssets.length)
+          ? "derived-source"
+          : "source";
+    const detail = historyWitness
+      ? historyWitness.entryCount > 0
+        ? `${historyWitness.entryCount} normalized ${
+            historyWitness.entryCount === 1 ? "entry" : "entries"
+          } support chronology for this box.`
+        : "Imported chronology witness ready for normalization."
+      : sourceSummary?.metaLine ||
+        `${document.sectionCount || document.blocks?.length || 0} block${
+          (document.sectionCount || document.blocks?.length || 0) === 1 ? "" : "s"
+        }`;
+
+    return {
+      id: `lane-source-${document.documentKey}`,
+      kind,
+      kindLabel: LANE_KIND_LABELS[kind] || LANE_KIND_LABELS.source,
+      title: document.title || "Untitled source",
+      detail,
+      occurredAt: document.createdAt || document.updatedAt || null,
+      orderKind: getTimestamp(document.createdAt || document.updatedAt) ? "explicit" : "inferred",
+      stageStatus,
+      stageStatusLabel: LANE_STAGE_LABELS[stageStatus],
+      proofStatus,
+      proofStatusLabel: LANE_PROOF_LABELS[proofStatus],
+      evidenceBasis: evidenceBasis.value,
+      evidenceBasisLabel: evidenceBasis.label,
+      trustSummary:
+        sourceSummary?.trustProfile?.summary ||
+        sourceSummary?.provenance?.sourceLabel ||
+        historyWitness?.definition?.description ||
+        "",
+      linkedReceiptId: "",
+      sourceRefs: buildLaneSourceRefs(document),
+      isLeadingEdge: false,
+      documentKey: document.documentKey,
+      actionKind: historyWitness ? "history" : "source",
+      actionLabel: historyWitness ? "Open witness" : "Open source",
+      historyEntryCount: historyWitness?.entryCount || 0,
+    };
+  });
+
+  const moveEntries = meta.assemblyIndexMeta.events
+    .map((event, index) => buildLaneStateEventEntry(event, index))
+    .filter(Boolean);
+
+  const seedEntry = seedDocument
+    ? {
+        id: `lane-seed-${seedDocument.documentKey}`,
+        kind: "seed",
+        kindLabel: LANE_KIND_LABELS.seed,
+        title: seedDocument.title || "Current seed",
+        detail:
+          seedSections.length > 0
+            ? `${seedSections.length} seed section${seedSections.length === 1 ? "" : "s"} shape the current live edge.`
+            : "Current live assembly shape.",
+        occurredAt: seedDocument.updatedAt || seedDocument.createdAt || null,
+        orderKind: getTimestamp(seedDocument.updatedAt || seedDocument.createdAt) ? "explicit" : "inferred",
+        stageStatus: receiptSummary.sealedDraftCount > 0 ? "advanced" : "advanced",
+        stageStatusLabel: LANE_STAGE_LABELS.advanced,
+        proofStatus: receiptSummary.sealedDraftCount > 0 ? "supported" : "open",
+        proofStatusLabel:
+          receiptSummary.sealedDraftCount > 0
+            ? LANE_PROOF_LABELS.supported
+            : LANE_PROOF_LABELS.open,
+        evidenceBasis: "live-assembly",
+        evidenceBasisLabel: "Live assembly",
+        trustSummary:
+          `${seedSourceDocumentKeys.size} source${
+            seedSourceDocumentKeys.size === 1 ? "" : "s"
+          } are currently carried by the seed.`,
+        linkedReceiptId: "",
+        sourceRefs: [
+          {
+            documentKey: seedDocument.documentKey,
+            title: seedDocument.title || "Current seed",
+          },
+        ],
+        isLeadingEdge: true,
+        documentKey: seedDocument.documentKey,
+        actionKind: "seed",
+        actionLabel: "Open seed",
+      }
+    : null;
+
+  const receiptEntries = (receiptSummary?.recentDrafts || []).map((draft) => {
+    const sealed = String(draft?.status || "").trim().toUpperCase() === "SEALED";
+    const proofStatus = sealed ? "sealed" : draft?.courthouseStatusLine ? "witness" : "open";
+    const stageStatus = sealed ? "sealed" : "advanced";
+    const detail =
+      draft?.courthouseStatusLine ||
+      draft?.courthouseStatusDetail ||
+      draft?.statusLabel ||
+      "Receipt draft held locally.";
+
+    return {
+      id: `lane-receipt-${draft.id || draft.documentKey || detail}`,
+      kind: "receipt",
+      kindLabel: LANE_KIND_LABELS.receipt,
+      title: draft?.title || "Receipt draft",
+      detail,
+      occurredAt: draft?.updatedAt || draft?.createdAt || null,
+      orderKind: getTimestamp(draft?.updatedAt || draft?.createdAt) ? "explicit" : "inferred",
+      stageStatus,
+      stageStatusLabel: LANE_STAGE_LABELS[stageStatus],
+      proofStatus,
+      proofStatusLabel: LANE_PROOF_LABELS[proofStatus],
+      evidenceBasis: "proof-closure",
+      evidenceBasisLabel: sealed ? "Proof closure" : "Proof draft",
+      trustSummary: draft?.verifyUrl ? "Courthouse verification is attached." : "Proof is held in the box.",
+      linkedReceiptId: String(draft?.id || "").trim(),
+      sourceRefs: draft?.documentKey
+        ? [
+            {
+              documentKey: draft.documentKey,
+              title: draft.title || "Receipt document",
+            },
+          ]
+        : [],
+      isLeadingEdge: false,
+      documentKey: String(draft?.documentKey || "").trim(),
+      actionKind: "receipt",
+      actionLabel: "Open receipts",
+    };
+  });
+
+  const entries = [rootEntry, ...sourceEntries, ...moveEntries, seedEntry, ...receiptEntries]
+    .filter(Boolean)
+    .map((entry, index) => ({
+      ...entry,
+      sortTimestamp: getTimestamp(entry.occurredAt),
+      sortIndex: index,
+    }))
+    .sort((left, right) => {
+      const leftWeight = left.sortTimestamp || Number.MAX_SAFE_INTEGER;
+      const rightWeight = right.sortTimestamp || Number.MAX_SAFE_INTEGER;
+      if (leftWeight !== rightWeight) return leftWeight - rightWeight;
+      return left.sortIndex - right.sortIndex;
+    })
+    .map(({ sortTimestamp: _sortTimestamp, sortIndex: _sortIndex, ...entry }) => ({
+      ...entry,
+      occurredAtLabel: formatLaneMoment(
+        entry.occurredAt,
+        entry.orderKind === "inferred" ? "Order inferred" : "Undated",
+      ),
+    }));
+
+  const liveEdge = seedEntry || entries[entries.length - 1] || null;
+  const recentWitnessCount = sourceEntries.filter((entry) => entry.kind === "history-export").length;
+  const resumeTarget =
+    resumeSessionSummary?.documentKey || liveEdge?.documentKey
+      ? {
+          documentKey: resumeSessionSummary?.documentKey || liveEdge?.documentKey || "",
+          mode: resumeSessionSummary?.documentKey ? "listen" : liveEdge?.kind === "seed" ? "assemble" : "assemble",
+          phase: resumeSessionSummary?.documentKey
+            ? BOX_PHASES.think
+            : liveEdge?.kind === "seed"
+              ? BOX_PHASES.create
+              : BOX_PHASES.think,
+          label: resumeSessionSummary?.documentKey ? "Resume" : liveEdge?.actionLabel || "Open",
+          title: resumeSessionSummary?.title || liveEdge?.title || "Current position",
+          detail: resumeSessionSummary?.blockPosition && resumeSessionSummary?.totalBlocks
+            ? `Block ${resumeSessionSummary.blockPosition} of ${resumeSessionSummary.totalBlocks}`
+            : liveEdge?.detail || "Current box position.",
+        }
+      : null;
+
+  return {
+    boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
+    boxSubtitle: activeProject?.boxSubtitle || activeProject?.subtitle || "",
+    entryCount: entries.length,
+    realSourceCount: realSourceDocuments.length,
+    recentWitnessCount,
+    confirmationCount: confirmationQueue.length,
+    root,
+    stateSummary,
+    receiptSummary,
+    liveEdge,
+    resumeTarget,
+    entries,
+    moveGroups: [
+      {
+        id: "assembly-lane",
+        label: "Assembly lane",
+        entries,
+      },
+    ],
+    proofSummary: {
+      line: receiptSummary?.courthouseStatusLine || "Local proof only",
+      detail:
+        receiptSummary?.courthouseStatusDetail ||
+        receiptSummary?.syncLine ||
+        "Proof closes moves when the box can carry it.",
+      sealedCount: receiptSummary?.sealedDraftCount || 0,
+    },
+  };
+}
+
 export function buildThinkViewModel({
   activeProject = null,
   activeDocument = null,
@@ -635,8 +1139,8 @@ export function buildEntryStateViewModel({
     activeBoxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
     resumeDocumentKey,
     resumeSeedKey,
-    desktopInitialSurface: isFirstTime ? "first-time" : "home",
-    mobileInitialSurface: resumeDocumentKey ? "listen" : "home",
+    desktopInitialSurface: isFirstTime ? "first-time" : "lane",
+    mobileInitialSurface: resumeDocumentKey ? "listen" : "lane",
   };
 }
 
@@ -645,7 +1149,7 @@ export function buildControlSurfaceViewModel({
   currentAssemblyDocument = null,
   projectDocuments = [],
   projectDrafts = [],
-  boxPhase = BOX_PHASES.think,
+  boxPhase = BOX_PHASES.lane,
   canRunOperate = false,
   aiOpen = false,
   clipboardCount = 0,
@@ -666,6 +1170,16 @@ export function buildControlSurfaceViewModel({
   return {
     currentBoxTitle,
     currentSeedTitle,
+    currentSurfaceLabel:
+      boxPhase === BOX_PHASES.lane
+        ? "Assembly lane"
+        : boxPhase === BOX_PHASES.create
+          ? "Seed"
+          : boxPhase === BOX_PHASES.operate
+            ? "Operate"
+            : boxPhase === BOX_PHASES.receipts
+              ? "Receipts"
+              : "Source",
     boxPhase,
     canRunOperate: Boolean(canRunOperate),
     aiOpen: Boolean(aiOpen),
@@ -678,7 +1192,9 @@ export function buildControlSurfaceViewModel({
     confirmationCount,
     isLooping: Boolean(stateSummary.isLooping),
     primaryActionLabel:
-      boxPhase === BOX_PHASES.create
+      boxPhase === BOX_PHASES.lane
+        ? "Add source"
+        : boxPhase === BOX_PHASES.create
         ? stageCount > 0
           ? `Stage ${stageCount}`
           : "Add source"
