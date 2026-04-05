@@ -71,10 +71,16 @@ function parseJsonObject(text = "") {
 function buildInstrumentSystemPrompt(intent = "") {
   const normalizedIntent = normalizeText(intent).toLowerCase();
 
-  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+  if (
+    normalizedIntent === "root-compress" ||
+    normalizedIntent === "root-rewrite" ||
+    normalizedIntent === "root-suggest"
+  ) {
     return [
       `You are Seven, the Root shaper inside ${PRODUCT_NAME}.`,
-      "Help compress or rewrite a box Root without changing its intent.",
+      normalizedIntent === "root-suggest"
+        ? "Help suggest a portable box Root from the available material without overstating certainty."
+        : "Help compress or rewrite a box Root without changing its intent.",
       "Return strict JSON only.",
       "Use this shape: {\"summary\":\"...\",\"candidates\":[{\"rootText\":\"...\",\"gloss\":\"...\",\"rationale\":\"...\"}]}",
       "Return 2 or 3 candidates.",
@@ -94,14 +100,52 @@ function buildInstrumentSystemPrompt(intent = "") {
 function buildInstrumentUserPrompt(intent = "", context = {}) {
   const normalizedIntent = normalizeText(intent).toLowerCase();
 
-  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+  if (
+    normalizedIntent === "root-compress" ||
+    normalizedIntent === "root-rewrite" ||
+    normalizedIntent === "root-suggest"
+  ) {
+    const sourceDocuments = Array.isArray(context?.sourceDocuments) ? context.sourceDocuments : [];
+    const seedDocument = context?.seedDocument && typeof context.seedDocument === "object"
+      ? context.seedDocument
+      : null;
+
     return [
       `Intent: ${normalizedIntent}`,
       `Current Root: ${normalizeText(context?.rootText) || "(missing)"}`,
       `Current gloss: ${normalizeText(context?.rootGloss) || "(missing)"}`,
       `Suggested domains: ${(Array.isArray(context?.suggestedDomains) ? context.suggestedDomains : []).join(", ") || "(none)"}`,
       `Applicable domains: ${(Array.isArray(context?.applicableDomains) ? context.applicableDomains : []).join(", ") || "(none)"}`,
-      "Keep the declared aim intact while making the Root smaller and more buildable.",
+      context?.boxTitle ? `Box title: ${normalizeText(context.boxTitle)}` : "",
+      Number.isFinite(Number(context?.sourceCount)) ? `Real source count: ${Number(context.sourceCount)}` : "",
+      sourceDocuments.length
+        ? `Source material:\n${sourceDocuments
+            .map((document, index) => {
+              const lines = [
+                `${index + 1}. ${normalizeText(document?.title) || "Untitled source"}`,
+                normalizeText(document?.subtitle),
+                Array.isArray(document?.snippets) && document.snippets.length
+                  ? `Snippets: ${document.snippets.map((entry) => normalizeText(entry)).filter(Boolean).join(" | ")}`
+                  : "",
+              ].filter(Boolean);
+              return lines.join(" — ");
+            })
+            .join("\n")}`
+        : "",
+      seedDocument
+        ? `Current seed: ${[
+            normalizeText(seedDocument?.title) || "Untitled seed",
+            normalizeText(seedDocument?.subtitle),
+            Array.isArray(seedDocument?.snippets) && seedDocument.snippets.length
+              ? `Snippets: ${seedDocument.snippets.map((entry) => normalizeText(entry)).filter(Boolean).join(" | ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" — ")}`
+        : "",
+      normalizedIntent === "root-suggest"
+        ? "Suggest a Root that matches the available material, stays concrete, and leaves room for revision."
+        : "Keep the declared aim intact while making the Root smaller and more buildable.",
     ].join("\n\n");
   }
 
@@ -123,7 +167,11 @@ function normalizeInstrumentResult(intent = "", rawResult = null) {
   const normalizedIntent = normalizeText(intent).toLowerCase();
   if (!rawResult || typeof rawResult !== "object") return null;
 
-  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+  if (
+    normalizedIntent === "root-compress" ||
+    normalizedIntent === "root-rewrite" ||
+    normalizedIntent === "root-suggest"
+  ) {
     const candidates = (Array.isArray(rawResult.candidates) ? rawResult.candidates : [])
       .map((candidate) => ({
         rootText: normalizeText(candidate?.rootText),
@@ -148,9 +196,16 @@ function formatInstrumentAnswer(intent = "", instrumentResult = null, fallbackAn
   const normalizedIntent = normalizeText(intent).toLowerCase();
   if (!instrumentResult) return normalizeText(fallbackAnswer);
 
-  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+  if (
+    normalizedIntent === "root-compress" ||
+    normalizedIntent === "root-rewrite" ||
+    normalizedIntent === "root-suggest"
+  ) {
     return [
-      instrumentResult.summary || "Seven found a smaller Root shape.",
+      instrumentResult.summary ||
+        (normalizedIntent === "root-suggest"
+          ? "Seven found a few Root shapes."
+          : "Seven found a smaller Root shape."),
       ...instrumentResult.candidates.map(
         (candidate, index) =>
           `${index + 1}. ${candidate.rootText}${candidate.gloss ? ` — ${candidate.gloss}` : ""}`,

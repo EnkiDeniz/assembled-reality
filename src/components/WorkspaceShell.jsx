@@ -114,6 +114,22 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
 ]);
 const LAUNCH_SOURCE_HINT = "Supports PDF, DOCX, Markdown, TXT, link import, paste, and Speak note.";
 
+function buildRootSuggestionDocumentSummary(document = null) {
+  if (!document) return null;
+
+  const snippets = (Array.isArray(document?.blocks) ? document.blocks : [])
+    .map((block) => stripMarkdownSyntax(block?.plainText || block?.text || ""))
+    .map((text) => String(text || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  return {
+    title: String(document?.title || "").trim(),
+    subtitle: String(document?.subtitle || "").trim(),
+    snippets,
+  };
+}
+
 function normalizeImageDerivationMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "notes") return "notes";
@@ -350,6 +366,9 @@ function buildFeedbackInstrumentIssue(message, tone = "", options = {}) {
 
 function buildInstrumentAssistPrompt(intent = "", context = {}) {
   const normalizedIntent = normalizeInstrumentText(intent).toLowerCase();
+  if (normalizedIntent === "root-suggest") {
+    return `Suggest up to three seven-word-or-fewer Roots for ${normalizeInstrumentText(context?.boxTitle) || "this box"} from the current source material.`;
+  }
   if (normalizedIntent === "root-compress") {
     return `Compress this Root into up to three seven-word-or-fewer declarations: ${normalizeInstrumentText(context?.rootText)}`;
   }
@@ -3929,6 +3948,7 @@ export default function WorkspaceShell({
   const [boxManagementError, setBoxManagementError] = useState("");
   const [rootPending, setRootPending] = useState(false);
   const [rootEditorOpen, setRootEditorOpen] = useState(false);
+  const [pendingRootGate, setPendingRootGate] = useState(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationPending, setConfirmationPending] = useState(false);
   const [receiptSealDraft, setReceiptSealDraft] = useState(null);
@@ -4116,6 +4136,23 @@ export default function WorkspaceShell({
     stagedCount: stagedAiBlocks.length,
   });
   const rootViewModel = buildRootViewModel(activeProject);
+  const hasRoot = Boolean(rootViewModel?.hasRoot);
+  const rootSuggestionReady =
+    !hasRoot && (realProjectSourceDocuments.length >= 2 || Boolean(currentSeedDocument?.documentKey));
+  const rootSuggestionContext = useMemo(
+    () => ({
+      boxTitle: activeBoxTitle,
+      sourceCount: realProjectSourceDocuments.length,
+      sourceDocuments: realProjectSourceDocuments
+        .slice(0, 5)
+        .map((document) => buildRootSuggestionDocumentSummary(document))
+        .filter(Boolean),
+      seedDocument: currentSeedDocument
+        ? buildRootSuggestionDocumentSummary(currentSeedDocument)
+        : null,
+    }),
+    [activeBoxTitle, currentSeedDocument, realProjectSourceDocuments],
+  );
   const assemblySurfaceStyle = {
     "--assembly-wash": controlSurfaceViewModel?.stateColorTokens?.fill || "transparent",
   };
@@ -4136,6 +4173,9 @@ export default function WorkspaceShell({
     !isMobileLayout &&
     launchpadOpen &&
     normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box;
+  const isHomeSurface =
+    launchpadOpen &&
+    normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box;
   const showMobileChromeRootBar =
     isMobileLayout &&
     Boolean(activeProject?.projectKey) &&
@@ -4146,6 +4186,7 @@ export default function WorkspaceShell({
   useEffect(() => {
     if (!activeProject?.projectKey) {
       setRootEditorOpen(false);
+      setPendingRootGate(null);
     }
   }, [activeProject?.projectKey]);
   const focusedBlock =
@@ -4567,25 +4608,32 @@ export default function WorkspaceShell({
       voiceInstrumentIssue,
     ],
   );
+  const shouldHideDefaultRealityInstrument =
+    !hasRoot &&
+    workspaceRealityIssues.issues.length === 0 &&
+    (isHomeSurface || isListenMode || isThinkPhase);
   const realityInstrumentViewModel = useMemo(
     () =>
-      buildRealityInstrumentViewModel({
-        surfaceKey: activeSurfaceKey,
-        boxTitle: activeBoxTitle,
-        documentTitle: activeDocument.title,
-        stateSummary: controlSurfaceViewModel?.stateSummary,
-        issues: workspaceRealityIssues.issues,
-        defaultSummary:
-          controlSurfaceViewModel?.stateSummary?.nextRequirement ||
-          "Reality is currently legible.",
-        defaultMoveSpace: defaultRealityMoveSpace,
-      }),
+      shouldHideDefaultRealityInstrument
+        ? null
+        : buildRealityInstrumentViewModel({
+            surfaceKey: activeSurfaceKey,
+            boxTitle: activeBoxTitle,
+            documentTitle: activeDocument.title,
+            stateSummary: controlSurfaceViewModel?.stateSummary,
+            issues: workspaceRealityIssues.issues,
+            defaultSummary:
+              controlSurfaceViewModel?.stateSummary?.nextRequirement ||
+              "Reality is currently legible.",
+            defaultMoveSpace: defaultRealityMoveSpace,
+          }),
     [
       activeBoxTitle,
       activeDocument.title,
       activeSurfaceKey,
       controlSurfaceViewModel?.stateSummary,
       defaultRealityMoveSpace,
+      shouldHideDefaultRealityInstrument,
       workspaceRealityIssues.issues,
     ],
   );
@@ -5507,14 +5555,18 @@ export default function WorkspaceShell({
     surface = "",
     openAi = true,
   } = {}) {
+    const normalizedIntent = normalizeInstrumentText(intent).toLowerCase();
     const targetDocument =
       sevenContextDocument?.documentKey
         ? sevenContextDocument
         : currentSeedDocument?.documentKey
           ? currentSeedDocument
-          : activeDocument;
+          : normalizedIntent === "root-suggest" && realProjectSourceDocuments[0]?.documentKey
+            ? realProjectSourceDocuments[0]
+            : null;
+    const fallbackTargetDocument = targetDocument || activeDocument;
 
-    if (!targetDocument?.documentKey) {
+    if (!fallbackTargetDocument?.documentKey) {
       setFeedback("Open a source or seed before asking Seven to interpret this state.", "error");
       return null;
     }
@@ -5525,7 +5577,7 @@ export default function WorkspaceShell({
       instrumentIntent: intent,
       instrumentContext: context,
       openAi,
-      documentOverride: targetDocument,
+      documentOverride: fallbackTargetDocument,
     });
 
     return payload?.instrumentResult || null;
@@ -5683,6 +5735,31 @@ export default function WorkspaceShell({
     }
   }
 
+  function openRootEditorFor(reason = "voluntary", payload = null) {
+    setPendingRootGate(
+      reason === "voluntary"
+        ? null
+        : {
+            kind: reason,
+            payload: payload && typeof payload === "object" ? payload : null,
+          },
+    );
+    setAiOpen(false);
+    setRealityInstrumentOpen(false);
+    setRootEditorOpen(true);
+  }
+
+  function closeRootEditor() {
+    setRootEditorOpen(false);
+    setPendingRootGate(null);
+  }
+
+  function requireRootFor(kind = "", payload = null) {
+    if (hasRoot) return false;
+    openRootEditorFor(kind, payload);
+    return true;
+  }
+
   function openSevenSidecar() {
     if (isMobileLayout) {
       setBoxPhase(BOX_PHASES.think);
@@ -5697,6 +5774,10 @@ export default function WorkspaceShell({
   }
 
   function openStageSidecar() {
+    if (requireRootFor("seed")) {
+      return;
+    }
+
     if (isMobileLayout) {
       setBoxPhase(BOX_PHASES.create);
       setMobileComposeOpen(true);
@@ -6050,17 +6131,49 @@ export default function WorkspaceShell({
     }
   }
 
+  async function resumePendingRootGate(rootGate = null) {
+    const normalizedGate = rootGate && typeof rootGate === "object" ? rootGate : null;
+    const gateKind = String(normalizedGate?.kind || "").trim().toLowerCase();
+    const gatePayload = normalizedGate?.payload && typeof normalizedGate.payload === "object"
+      ? normalizedGate.payload
+      : {};
+
+    if (gateKind === "seed") {
+      await handleSelectBoxPhase(BOX_PHASES.create, { skipRootGate: true });
+      return;
+    }
+
+    if (gateKind === "receipt-draft") {
+      await createReceiptDraft({
+        mode: gatePayload.mode || "workspace",
+        operateResult: gatePayload.operateResult || null,
+        skipRootGate: true,
+      });
+      return;
+    }
+
+    if (gateKind === "receipt-seal") {
+      await sealReceiptDraft({ skipRootGate: true });
+    }
+  }
+
   async function saveRootForProject(projectKey, payload) {
     const normalizedProjectKey = String(projectKey || "").trim();
     if (!normalizedProjectKey) return null;
 
     setRootPending(true);
     try {
+      const rootGate = pendingRootGate;
       const updated = await updateProjectSettings(normalizedProjectKey, payload);
       if (updated?.metadataJson?.root?.text) {
         setFeedback(`Root declared for ${updated.title || "this box"}.`, "success");
+        if (rootGate) {
+          await resumePendingRootGate(rootGate);
+        }
+        setPendingRootGate(null);
       } else if (updated) {
         setFeedback("Saved the root gloss.", "success");
+        setPendingRootGate(null);
       }
       return updated;
     } finally {
@@ -6316,8 +6429,11 @@ export default function WorkspaceShell({
     });
   }, [getReceiptsConnectionStatus, projectDraftsState, retryReceiptRemoteSync]);
 
-  async function sealReceiptDraft() {
+  async function sealReceiptDraft({ skipRootGate = false } = {}) {
     if (!receiptSealDraft?.id) return;
+    if (!skipRootGate && requireRootFor("receipt-seal")) {
+      return;
+    }
 
     const deltaStatement = String(receiptSealDelta || "").trim();
     if (!deltaStatement) {
@@ -7047,8 +7163,9 @@ export default function WorkspaceShell({
     openMode(mode, documentKey, options);
   }
 
-  function handleSelectBoxPhase(nextPhase) {
+  function handleSelectBoxPhase(nextPhase, options = {}) {
     const normalizedPhase = normalizeBoxPhase(nextPhase, BOX_PHASES.think);
+    const skipRootGate = Boolean(options?.skipRootGate);
 
     if (normalizedPhase !== BOX_PHASES.create) {
       setMobileComposeOpen(false);
@@ -7072,6 +7189,9 @@ export default function WorkspaceShell({
     }
 
     if (normalizedPhase === BOX_PHASES.create) {
+      if (!skipRootGate && requireRootFor("seed")) {
+        return;
+      }
       if (!isMobileLayout) {
         setDesktopSidecarPanel(DESKTOP_SIDECAR_PANELS.stage);
       }
@@ -9458,7 +9578,12 @@ export default function WorkspaceShell({
   async function createReceiptDraft({
     mode = "workspace",
     operateResult: nextOperateResult = null,
+    skipRootGate = false,
   } = {}) {
+    if (!skipRootGate && requireRootFor("receipt-draft", { mode, operateResult: nextOperateResult })) {
+      return;
+    }
+
     setReceiptPending(true);
 
     try {
@@ -9771,7 +9896,7 @@ export default function WorkspaceShell({
                   hasRoot={rootViewModel?.hasRoot}
                   stateSummary={controlSurfaceViewModel?.stateSummary}
                   confirmationCount={controlSurfaceViewModel?.confirmationCount || 0}
-                  onOpen={() => setRootEditorOpen(true)}
+                  onOpen={() => openRootEditorFor("voluntary")}
                   compact
                 />
               ) : null}
@@ -9805,7 +9930,7 @@ export default function WorkspaceShell({
                 onOpenReceipts={openReceiptsSurface}
                 onManageBox={() => openProjectManagement(activeProjectKey)}
                 onOpenConfirmation={() => setConfirmationOpen(true)}
-                onOpenRoot={() => setRootEditorOpen(true)}
+                onOpenRoot={() => openRootEditorFor("voluntary")}
                 onInstrumentMove={handleRealityInstrumentMove}
                 isMobileLayout={false}
                 receiptAttentionTone={receiptPhaseAttentionTone}
@@ -10022,7 +10147,7 @@ export default function WorkspaceShell({
                     onOpenReceipts={openReceiptsSurface}
                     onManageBox={() => openProjectManagement(activeProjectKey)}
                     onOpenConfirmation={() => setConfirmationOpen(true)}
-                    onOpenRoot={() => setRootEditorOpen(true)}
+                    onOpenRoot={() => openRootEditorFor("voluntary")}
                     onInstrumentMove={handleRealityInstrumentMove}
                     isMobileLayout={false}
                     receiptAttentionTone={receiptPhaseAttentionTone}
@@ -10354,7 +10479,10 @@ export default function WorkspaceShell({
           stateSummary={controlSurfaceViewModel?.stateSummary}
           confirmationCount={controlSurfaceViewModel?.confirmationCount || 0}
           pending={rootPending}
-          onClose={() => setRootEditorOpen(false)}
+          entryReason={pendingRootGate?.kind || "voluntary"}
+          canAutoSuggest={rootSuggestionReady}
+          suggestionContext={rootSuggestionContext}
+          onClose={closeRootEditor}
           onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
           onInstrumentChange={setRootInstrumentIssue}
           onRunSevenAssist={(payload) =>

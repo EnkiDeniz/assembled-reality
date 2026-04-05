@@ -398,7 +398,7 @@ export async function createReaderProjectForUser(
                 buildAssemblyIndexEvent("root_declared", {
                   declaration: String(rootText || "").trim(),
                   move: "Declared the Root for this box.",
-                  return: "The box now has a fixed origin.",
+                  return: "The box now has a declared line.",
                   echo: "declare-root -> rooted",
                   context: {
                     rootText: String(rootText || "").trim(),
@@ -553,7 +553,7 @@ export async function updateReaderProjectForUser(
         buildAssemblyIndexEvent("root_declared", {
           declaration: nextRootDraft.text,
           move: "Declared the Root for this box.",
-          return: "The box now has a fixed origin.",
+          return: "The box now has a declared line.",
           echo: "declare-root -> rooted",
           context: {
             rootText: nextRootDraft.text,

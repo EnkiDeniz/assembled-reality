@@ -15,6 +15,9 @@ export default function RootEditor({
   root = null,
   stateSummary = null,
   confirmationCount = 0,
+  entryReason = "voluntary",
+  canAutoSuggest = false,
+  suggestionContext = null,
   pending = false,
   onClose,
   onSaveRoot,
@@ -22,6 +25,7 @@ export default function RootEditor({
   onRunSevenAssist,
 }) {
   const hasRoot = Boolean(root?.hasRoot || root?.text);
+  const autoSuggestAttemptedRef = useRef(false);
   const rootInputRef = useRef(null);
   const glossInputRef = useRef(null);
   const rationaleInputRef = useRef(null);
@@ -41,6 +45,7 @@ export default function RootEditor({
 
   useEffect(() => {
     if (!open) return;
+    autoSuggestAttemptedRef.current = false;
     setRootText(root?.text || "");
     setRootGloss(root?.gloss || "");
     setSelectedDomains(rootApplicableDomains.length ? rootApplicableDomains : rootSuggestedDomains);
@@ -63,6 +68,12 @@ export default function RootEditor({
     const target = hasRoot ? glossInputRef.current : rootInputRef.current;
     target?.focus();
   }, [hasRoot, open]);
+
+  useEffect(() => {
+    if (!open) {
+      autoSuggestAttemptedRef.current = false;
+    }
+  }, [open]);
 
   const suggestedDomains = useMemo(
     () =>
@@ -226,8 +237,6 @@ export default function RootEditor({
     setAssistResult(null);
   }, [error, rootText, rootGloss, rationale, selectedDomains]);
 
-  if (!open) return null;
-
   function toggleDomain(domainKey) {
     setSelectedDomains((current) =>
       current.includes(domainKey)
@@ -247,6 +256,7 @@ export default function RootEditor({
         rootGloss,
         suggestedDomains,
         applicableDomains: activeDomains,
+        suggestionContext,
       });
       setAssistResult(result || null);
     } finally {
@@ -326,6 +336,50 @@ export default function RootEditor({
     }
   }
 
+  useEffect(() => {
+    if (
+      !open ||
+      hasRoot ||
+      !canAutoSuggest ||
+      !onRunSevenAssist ||
+      assistPending ||
+      assistResult?.candidates?.length ||
+      rootText.trim() ||
+      autoSuggestAttemptedRef.current
+    ) {
+      return;
+    }
+
+    autoSuggestAttemptedRef.current = true;
+    setAssistPending(true);
+    void onRunSevenAssist({
+      intent: "root-suggest",
+      rootText,
+      rootGloss,
+      suggestedDomains,
+      applicableDomains: activeDomains,
+      suggestionContext,
+    })
+      .then((result) => {
+        setAssistResult(result || null);
+      })
+      .finally(() => {
+        setAssistPending(false);
+      });
+  }, [
+    activeDomains,
+    assistPending,
+    assistResult?.candidates?.length,
+    canAutoSuggest,
+    hasRoot,
+    onRunSevenAssist,
+    open,
+    rootGloss,
+    rootText,
+    suggestionContext,
+    suggestedDomains,
+  ]);
+
   const inlineTone = error
     ? "blocked"
     : rationaleValidationMessage
@@ -347,9 +401,30 @@ export default function RootEditor({
     rationaleValidationMessage ||
     rootValidationMessage ||
     glossValidationMessage ||
-    stateSummary?.nextRequirement ||
-    "The Root holds the line.";
+    (
+      !hasRoot
+        ? entryReason === "seed"
+          ? "Declare Root to shape the seed."
+          : entryReason === "receipt-draft" || entryReason === "receipt-seal"
+            ? "Declare Root to seal proof."
+            : "Name the box when you're ready."
+        : stateSummary?.nextRequirement || "The Root holds the line."
+    );
   const showAssistButtons = Boolean(rootText.trim()) && Boolean(onRunSevenAssist);
+  const editorTitle = hasRoot
+    ? root.text
+    : entryReason === "voluntary"
+      ? "Name box"
+      : "Declare Root";
+  const panelTitle = hasRoot
+    ? "Keep the Root clean."
+    : entryReason === "seed"
+      ? "Declare Root to shape the seed."
+      : entryReason === "receipt-draft" || entryReason === "receipt-seal"
+        ? "Declare Root to seal proof."
+        : "Name the box when you're ready.";
+
+  if (!open) return null;
 
   return (
     <div className="assembler-sheet assembler-sheet--workspace is-open">
@@ -357,8 +432,8 @@ export default function RootEditor({
       <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--root-editor">
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
-            <span className="assembler-sheet__eyebrow">Root</span>
-            <span className="assembler-sheet__title">{hasRoot ? root.text : "Declare Root"}</span>
+            <span className="assembler-sheet__eyebrow">{hasRoot ? "Root" : "Box"}</span>
+            <span className="assembler-sheet__title">{editorTitle}</span>
           </div>
 
           <button type="button" className="assembler-sheet__close" onClick={pending ? undefined : onClose}>
@@ -371,23 +446,23 @@ export default function RootEditor({
             <div className="assembler-root-panel__head">
               <div>
                 <span className="assembler-root-panel__eyebrow">State</span>
-                <h3 className="assembler-root-panel__title">
-                  {hasRoot ? "Keep the Root clean." : "Declare the line."}
-                </h3>
+                <h3 className="assembler-root-panel__title">{panelTitle}</h3>
               </div>
               <div className="assembler-root-panel__meta">
-                <span
-                  className="assembler-assembly-chip"
-                  style={{
-                    "--assembly-tone": stateTone.fill,
-                    "--assembly-tone-soft": stateTone.soft,
-                    "--assembly-tone-border": stateTone.border,
-                    "--assembly-tone-glow": stateTone.glow,
-                    "--assembly-tone-text": stateTone.text,
-                  }}
-                >
-                  {stateSummary?.chipLabel || stateSummary?.label || "Declare Root"}
-                </span>
+                {hasRoot ? (
+                  <span
+                    className="assembler-assembly-chip"
+                    style={{
+                      "--assembly-tone": stateTone.fill,
+                      "--assembly-tone-soft": stateTone.soft,
+                      "--assembly-tone-border": stateTone.border,
+                      "--assembly-tone-glow": stateTone.glow,
+                      "--assembly-tone-text": stateTone.text,
+                    }}
+                  >
+                    {stateSummary?.chipLabel || stateSummary?.label || "Name box"}
+                  </span>
+                ) : null}
                 {confirmationCount > 0 ? (
                   <span
                     className={`assembler-root-panel__queue ${stateSummary?.isLooping ? "is-looping" : ""}`}

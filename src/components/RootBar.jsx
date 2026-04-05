@@ -9,8 +9,10 @@ export default function RootBar({
   compact = false,
 }) {
   const stateTone = stateSummary?.colorTokens || getAssemblyColorTokens(stateSummary?.colorStep);
-  const stateLabel = stateSummary?.label || "Declare Root";
+  const stateLabel = stateSummary?.label || "Name box";
   const phaseLabel = stateSummary?.phaseLabel || "";
+  const eyebrowLabel = hasRoot ? "Root" : "Box";
+  const actionLabel = hasRoot ? rootText : "Name box";
 
   return (
     <div className={`assembler-root-bar ${compact ? "is-compact" : ""} ${hasRoot ? "" : "is-empty"}`}>
@@ -18,25 +20,27 @@ export default function RootBar({
         type="button"
         className="assembler-root-bar__main"
         onClick={onOpen}
-        aria-label={hasRoot ? `Edit Root: ${rootText}` : "Declare Root"}
+        aria-label={hasRoot ? `Edit Root: ${rootText}` : "Name box"}
       >
-        <span className="assembler-root-bar__eyebrow">Root</span>
-        <span className="assembler-root-bar__text">{hasRoot ? rootText : "Declare Root"}</span>
+        <span className="assembler-root-bar__eyebrow">{eyebrowLabel}</span>
+        <span className="assembler-root-bar__text">{actionLabel}</span>
       </button>
 
       <div className="assembler-root-bar__meta">
-        <span
-          className="assembler-assembly-chip assembler-root-bar__state"
-          style={{
-            "--assembly-tone": stateTone.fill,
-            "--assembly-tone-soft": stateTone.soft,
-            "--assembly-tone-border": stateTone.border,
-            "--assembly-tone-glow": stateTone.glow,
-            "--assembly-tone-text": stateTone.text,
-          }}
-        >
-          {stateLabel}
-        </span>
+        {hasRoot ? (
+          <span
+            className="assembler-assembly-chip assembler-root-bar__state"
+            style={{
+              "--assembly-tone": stateTone.fill,
+              "--assembly-tone-soft": stateTone.soft,
+              "--assembly-tone-border": stateTone.border,
+              "--assembly-tone-glow": stateTone.glow,
+              "--assembly-tone-text": stateTone.text,
+            }}
+          >
+            {stateLabel}
+          </span>
+        ) : null}
         {hasRoot && phaseLabel ? (
           <span className="assembler-root-bar__phase">{phaseLabel}</span>
         ) : null}

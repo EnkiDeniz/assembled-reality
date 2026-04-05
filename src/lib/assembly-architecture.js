@@ -25,7 +25,7 @@ export const ASSEMBLY_DOMAINS = Object.freeze([
 ]);
 
 export const ASSEMBLY_STATE_ORDER = Object.freeze([
-  { key: "declare-root", label: "Declare Root" },
+  { key: "declare-root", label: "Name box" },
   { key: "rooted", label: "Rooted" },
   { key: "fertilized", label: "Fertilized" },
   { key: "sprouted", label: "Sprouted" },
@@ -675,7 +675,7 @@ export function buildAssemblyStateSummary({
   ).length;
 
   let currentState = "declare-root";
-  let nextRequirement = "Declare the root so the box has a fixed origin.";
+  let nextRequirement = "Name the box before shaping or sealing.";
 
   if (hasRoot) {
     currentState = "rooted";
