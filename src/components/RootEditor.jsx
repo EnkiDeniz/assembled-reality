@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import InlineAssist from "@/components/InlineAssist";
 import {
   getAssemblyColorTokens,
   suggestApplicableDomains,
   validateRootText,
 } from "@/lib/assembly-architecture";
-import { buildRealityInstrumentIssue } from "@/lib/reality-instrument";
 
 function joinDomainDependency(domains = []) {
   return (Array.isArray(domains) ? domains : []).join("|");
@@ -21,7 +21,6 @@ export default function RootEditor({
   pending = false,
   onClose,
   onSaveRoot,
-  onInstrumentChange,
   onRunSevenAssist,
 }) {
   const hasRoot = Boolean(root?.hasRoot || root?.text);
@@ -96,139 +95,16 @@ export default function RootEditor({
       ? "Explain why the removed domain does not apply."
       : "";
 
-  const rootInstrumentIssue = useMemo(() => {
-    if (!open) return null;
-
-    if (rootValidationMessage) {
-      return buildRealityInstrumentIssue({
-        key: "root-word-count",
-        surfaceKey: "root",
-        severity: "constraint",
-        priority: 85,
-        label: "Root constraint",
-        headline: "The Root is outside the declared frame.",
-        summary: "A Root stays within seven words so the line stays portable and testable.",
-        compactSummary: `${rootWordCount} words · Root must stay within seven`,
-        evidence: [
-          { label: "Words", value: String(rootWordCount) },
-          { label: "Limit", value: "7 words" },
-        ],
-        moveSpace: [
-          {
-            key: "root-compress",
-            label: assistPending ? "Compressing…" : "Compress with Seven",
-            disabled: !onRunSevenAssist || assistPending || pending || !rootText.trim(),
-          },
-          { key: "focus-root", label: "Keep editing" },
-          {
-            key: "root-rewrite",
-            label: "Use operator form",
-            disabled: !onRunSevenAssist || assistPending || pending || !rootText.trim(),
-          },
-        ],
-        sevenAssist: {
-          intent: "root-compress",
-          context: {
-            rootText,
-            rootGloss,
-            suggestedDomains,
-            applicableDomains: activeDomains,
-          },
-        },
-      });
-    }
-
-    if (glossValidationMessage) {
-      return buildRealityInstrumentIssue({
-        key: "root-gloss-missing",
-        surfaceKey: "root",
-        severity: "constraint",
-        priority: 70,
-        label: "Gloss",
-        headline: "The Root needs one line of intent.",
-        summary: "The gloss expands the Root just enough to keep the line readable without changing it.",
-        compactSummary: "Add one line of gloss",
-        evidence: [{ label: "Gloss", value: "Missing" }],
-        moveSpace: [
-          { key: "focus-gloss", label: "Write gloss" },
-          {
-            key: "root-rewrite",
-            label: "Ask Seven",
-            disabled: !onRunSevenAssist || assistPending || pending || !rootText.trim(),
-          },
-        ],
-      });
-    }
-
-    if (rationaleValidationMessage) {
-      return buildRealityInstrumentIssue({
-        key: "root-domain-rationale",
-        surfaceKey: "root",
-        severity: "warning",
-        priority: 75,
-        label: "Domain rationale",
-        headline: "Removing a suggested domain needs a reason.",
-        summary: "A removed domain needs one sentence so the boundary stays auditable.",
-        compactSummary: `${removedSuggested.length} domain${removedSuggested.length === 1 ? "" : "s"} need rationale`,
-        evidence: removedSuggested.map((domainKey) => ({
-          label: "Removed",
-          value: domainKey,
-        })),
-        moveSpace: [
-          { key: "focus-rationale", label: "Explain why" },
-          { key: "restore-domains", label: "Restore domains" },
-        ],
-      });
-    }
-
-    if (error) {
-      return buildRealityInstrumentIssue({
-        key: "root-save",
-        surfaceKey: "root",
-        severity: "blocked",
-        priority: 90,
-        label: "Root save",
-        headline: "The Root could not be saved.",
-        summary: error,
-        compactSummary: error,
-        moveSpace: [{ key: "focus-root", label: "Review Root" }],
-      });
-    }
-
-    return null;
-  }, [
-    activeDomains,
-    assistPending,
-    error,
-    glossValidationMessage,
-    onRunSevenAssist,
-    open,
-    pending,
-    rationaleValidationMessage,
-    removedSuggested,
-    rootGloss,
-    rootText,
-    rootValidationMessage,
-    rootWordCount,
-    suggestedDomains,
-  ]);
-
-  useEffect(() => {
-    onInstrumentChange?.(rootInstrumentIssue);
-  }, [onInstrumentChange, rootInstrumentIssue]);
-
-  useEffect(
-    () => () => {
-      onInstrumentChange?.(null);
-    },
-    [onInstrumentChange],
+  const assistSuggestions = useMemo(
+    () =>
+      (assistResult?.candidates || []).map((candidate, index) => ({
+        key: `${candidate.rootText || "suggestion"}-${index}`,
+        heading: candidate.rootText || "",
+        detail: candidate.gloss || "",
+        rationale: candidate.rationale || "",
+      })),
+    [assistResult?.candidates],
   );
-
-  useEffect(() => {
-    if (!open) {
-      onInstrumentChange?.(null);
-    }
-  }, [onInstrumentChange, open]);
 
   useEffect(() => {
     if (error) {
@@ -274,32 +150,6 @@ export default function RootEditor({
     }
     setError("");
     setAssistResult(null);
-  }
-
-  function handleInlineMove(moveKey) {
-    if (moveKey === "focus-root") {
-      rootInputRef.current?.focus();
-      return;
-    }
-    if (moveKey === "focus-gloss") {
-      glossInputRef.current?.focus();
-      return;
-    }
-    if (moveKey === "focus-rationale") {
-      rationaleInputRef.current?.focus();
-      return;
-    }
-    if (moveKey === "restore-domains") {
-      setSelectedDomains((current) => [...new Set([...current, ...removedSuggested])]);
-      return;
-    }
-    if (moveKey === "root-compress") {
-      void handleRunSevenAssist("root-compress");
-      return;
-    }
-    if (moveKey === "root-rewrite") {
-      void handleRunSevenAssist("root-rewrite");
-    }
   }
 
   async function handleSave() {
@@ -380,37 +230,6 @@ export default function RootEditor({
     suggestedDomains,
   ]);
 
-  const inlineTone = error
-    ? "blocked"
-    : rationaleValidationMessage
-      ? "warning"
-      : rootValidationMessage || glossValidationMessage
-        ? "constraint"
-        : "clear";
-  const inlineLabel = error
-    ? "Blocked"
-    : rationaleValidationMessage
-      ? "Rationale"
-      : rootValidationMessage
-        ? "Constraint"
-        : glossValidationMessage
-          ? "Gloss"
-          : "Next";
-  const inlineMessage =
-    error ||
-    rationaleValidationMessage ||
-    rootValidationMessage ||
-    glossValidationMessage ||
-    (
-      !hasRoot
-        ? entryReason === "seed"
-          ? "Declare Root to shape the seed."
-          : entryReason === "receipt-draft" || entryReason === "receipt-seal"
-            ? "Declare Root to seal proof."
-            : "Name the box when you're ready."
-        : stateSummary?.nextRequirement || "The Root holds the line."
-    );
-  const showAssistButtons = Boolean(rootText.trim()) && Boolean(onRunSevenAssist);
   const editorTitle = hasRoot
     ? root.text
     : entryReason === "voluntary"
@@ -473,38 +292,6 @@ export default function RootEditor({
               </div>
             </div>
 
-            <div className={`assembler-root-editor__status is-${inlineTone}`}>
-              <div className="assembler-root-editor__status-head">
-                <span className="assembler-root-editor__status-label">{inlineLabel}</span>
-                {!hasRoot ? (
-                  <span className="assembler-root-editor__word-count">
-                    {rootWordCount} / 7 words
-                  </span>
-                ) : null}
-              </div>
-              <p className="assembler-root-editor__status-text">{inlineMessage}</p>
-              {showAssistButtons ? (
-                <div className="assembler-root-editor__status-actions">
-                  <button
-                    type="button"
-                    className="terminal-button"
-                    onClick={() => handleInlineMove("root-compress")}
-                    disabled={assistPending || pending}
-                  >
-                    {assistPending ? "Compressing…" : "Compress with Seven"}
-                  </button>
-                  <button
-                    type="button"
-                    className="terminal-button"
-                    onClick={() => handleInlineMove("root-rewrite")}
-                    disabled={assistPending || pending}
-                  >
-                    Use operator form
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
             <div className="assembler-root-panel__form">
               {!hasRoot ? (
                 <input
@@ -523,6 +310,17 @@ export default function RootEditor({
                 </div>
               )}
 
+              <InlineAssist
+                error={rootValidationMessage}
+                visible={Boolean(rootValidationMessage)}
+                assemblyStep={stateSummary?.colorStep || 0}
+                assistPending={assistPending}
+                suggestions={assistSuggestions}
+                assistSummary={assistResult?.summary || ""}
+                onRequestAssist={onRunSevenAssist ? () => handleRunSevenAssist("root-compress") : undefined}
+                onApply={applyAssistCandidate}
+              />
+
               <textarea
                 ref={glossInputRef}
                 className="assembler-root-panel__textarea"
@@ -531,6 +329,17 @@ export default function RootEditor({
                 placeholder="One sentence expanding the intent."
                 rows={4}
                 disabled={pending}
+              />
+
+              <InlineAssist
+                error={glossValidationMessage}
+                visible={Boolean(glossValidationMessage && rootText.trim())}
+                assemblyStep={stateSummary?.colorStep || 0}
+                assistPending={assistPending}
+                suggestions={assistSuggestions}
+                assistSummary={assistResult?.summary || ""}
+                onRequestAssist={onRunSevenAssist ? () => handleRunSevenAssist("root-rewrite") : undefined}
+                onApply={applyAssistCandidate}
               />
 
               <div className="assembler-root-panel__domains">
@@ -560,34 +369,13 @@ export default function RootEditor({
                   disabled={pending}
                 />
               ) : null}
-            </div>
 
-            {assistResult?.candidates?.length ? (
-              <div className="assembler-root-panel__assist">
-                <div className="assembler-root-panel__assist-head">
-                  <span className="assembler-root-panel__assist-label">Seven suggestions</span>
-                  {assistResult?.summary ? (
-                    <p className="assembler-root-panel__assist-summary">{assistResult.summary}</p>
-                  ) : null}
-                </div>
-                <div className="assembler-root-panel__assist-list">
-                  {assistResult.candidates.map((candidate, index) => (
-                    <button
-                      key={`${candidate.rootText}-${index}`}
-                      type="button"
-                      className="assembler-root-panel__assist-card"
-                      onClick={() => applyAssistCandidate(candidate)}
-                      disabled={pending || assistPending}
-                    >
-                      <strong>{candidate.rootText}</strong>
-                      {candidate.gloss ? <span>{candidate.gloss}</span> : null}
-                      {candidate.rationale ? <em>{candidate.rationale}</em> : null}
-                      <span className="assembler-root-panel__assist-apply">Use this</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+              <InlineAssist
+                error={rationaleValidationMessage}
+                visible={Boolean(rationaleValidationMessage)}
+                assemblyStep={stateSummary?.colorStep || 0}
+              />
+            </div>
           </section>
         </div>
 

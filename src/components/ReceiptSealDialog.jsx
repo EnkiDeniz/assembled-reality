@@ -1,3 +1,5 @@
+import InlineAssist from "@/components/InlineAssist";
+
 export default function ReceiptSealDialog({
   open = false,
   draft = null,
@@ -61,6 +63,14 @@ export default function ReceiptSealDialog({
               rows={4}
               placeholder="State the one operator sentence describing what changed."
               disabled={pending}
+            />
+
+            <InlineAssist
+              error={!deltaStatement.trim() && audit ? "Write one operator sentence describing what changed." : ""}
+              visible={Boolean(!deltaStatement.trim() && audit)}
+              assemblyStep={0}
+              onRequestAssist={!auditPending ? onRefreshAudit : undefined}
+              assistPending={auditPending}
             />
           </section>
 
