@@ -104,8 +104,8 @@ function buildCourthouseStatusViewModel(
     return {
       line: `Verified${remoteLevel ? ` · ${remoteLevel}` : ""}`,
       detail: verifyUrl
-        ? "GetReceipts stamped and verified this seal."
-        : "GetReceipts stamped this seal.",
+        ? "Courthouse seal is live."
+        : "Courthouse seal is live.",
       tone: "success",
       action: verifyUrl
         ? {
@@ -126,8 +126,8 @@ function buildCourthouseStatusViewModel(
   if (isSealed) {
     if (remoteStatus === "failed" || errorMessage) {
       return {
-        line: "Sync failed · Retry",
-        detail: "The local seal succeeded, but the courthouse sync failed.",
+        line: "Courthouse failed · Retry",
+        detail: "Local seal held. Retry the courthouse step.",
         tone: "error",
         action:
           normalizedConnectionStatus === "CONNECTED"
@@ -148,11 +148,11 @@ function buildCourthouseStatusViewModel(
       (normalizedConnectionStatus === "CONNECTED" && hasRemoteDraft)
     ) {
       return {
-        line: "Sealed locally · Pending courthouse",
+        line: "Pending courthouse",
         detail:
           normalizedConnectionStatus === "CONNECTED"
-            ? "The local seal is complete. Retry when you want the courthouse stamp."
-            : "Reconnect GetReceipts when you want to finish the courthouse step.",
+            ? "Local seal held. Courthouse step is waiting."
+            : "Reconnect to finish the courthouse step.",
         tone: "warning",
         action:
           normalizedConnectionStatus === "CONNECTED"
@@ -168,11 +168,11 @@ function buildCourthouseStatusViewModel(
     }
 
     return {
-      line: "Sealed locally",
+      line: "Local only",
       detail:
         normalizedConnectionStatus === "CONNECTED"
-          ? "Local proof is first-class. Retry when you want the courthouse stamp."
-          : "Local proof stays first-class until you choose to connect the courthouse.",
+          ? "Local seal held. Retry for courthouse proof."
+          : "Local proof holds here.",
       tone: "",
       action:
         normalizedConnectionStatus === "CONNECTED"
@@ -189,8 +189,8 @@ function buildCourthouseStatusViewModel(
 
   if (errorMessage) {
     return {
-      line: "Sync failed · Retry",
-      detail: "The last courthouse push failed, but the local draft is still safe.",
+      line: "Courthouse failed · Retry",
+      detail: "Local draft held. Retry the courthouse step.",
       tone: "error",
       action:
         normalizedConnectionStatus === "CONNECTED"
@@ -208,7 +208,7 @@ function buildCourthouseStatusViewModel(
   if (normalizedConnectionStatus === "CONNECTED") {
     return {
       line: "GetReceipts connected",
-      detail: "The courthouse is ready when you want portable verification.",
+      detail: "Courthouse ready.",
       tone: "",
       action: null,
       remoteStatus,
@@ -222,7 +222,7 @@ function buildCourthouseStatusViewModel(
 
   return {
     line: "Local only",
-    detail: "Local proof remains first-class until you connect the courthouse.",
+    detail: "Local proof holds here.",
     tone: "",
     action: { kind: "connect", label: "Connect GetReceipts" },
     remoteStatus,
@@ -234,7 +234,7 @@ function buildCourthouseStatusViewModel(
   };
 }
 
-function buildRootViewModel(activeProject = null) {
+export function buildRootViewModel(activeProject = null) {
   const meta = normalizeProjectArchitectureMeta(
     activeProject?.metadataJson || activeProject?.architectureMeta || null,
   );
@@ -298,17 +298,17 @@ export function buildReceiptSummaryViewModel(
     connectionLastError,
   );
 
-  let syncLine = "Draft a local receipt when the box is ready.";
+  let syncLine = "Local proof. Portable when sealed.";
   if (courthouseStatus?.detail) {
     syncLine = courthouseStatus.detail;
   } else if (normalizedConnectionStatus !== "CONNECTED") {
-    syncLine = "Local proof still works. Connect GetReceipts when you want remote proof.";
+    syncLine = "Local proof. Connect when ready.";
   } else if (latestRemoteError) {
-    syncLine = "The last push failed, but the local draft was preserved.";
+    syncLine = "Local seal held. Courthouse failed.";
   } else if (latestDraftStatus === "REMOTE_DRAFT") {
-    syncLine = "The latest proof was pushed to GetReceipts.";
+    syncLine = "Courthouse draft ready.";
   } else if (drafts.length > 0) {
-    syncLine = "The latest proof is local only until you push it.";
+    syncLine = "Local proof. Pending courthouse.";
   }
 
   return {
@@ -460,8 +460,8 @@ export function buildBoxViewModel({
           documentKey: seedDocument.documentKey || "",
           mode: "assemble",
           phase: BOX_PHASES.create,
-          title: seedDocument.title || "Current seed",
-          detail: "Seed is the current working position of this box.",
+            title: seedDocument.title || "Current seed",
+          detail: "Current working position.",
         }
       : latestTouchedSource
         ? {
@@ -471,7 +471,7 @@ export function buildBoxViewModel({
             mode: "listen",
             phase: BOX_PHASES.think,
             title: latestTouchedSource.title,
-            detail: `${latestTouchedSource.metaLine} · Latest touched source`,
+            detail: `${latestTouchedSource.metaLine} · Latest source`,
           }
         : {
             kind: "empty",
@@ -480,7 +480,7 @@ export function buildBoxViewModel({
             mode: "listen",
             phase: BOX_PHASES.think,
             title: guideSource?.title || "Add the first real source",
-            detail: "The built-in guide stays available, but real work starts with a source.",
+            detail: "Add a source. Shape the seed.",
           };
 
   return {

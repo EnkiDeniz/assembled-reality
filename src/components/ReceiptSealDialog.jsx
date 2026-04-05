@@ -1,5 +1,3 @@
-import RealityInstrument from "@/components/RealityInstrument";
-
 export default function ReceiptSealDialog({
   open = false,
   draft = null,
@@ -10,8 +8,6 @@ export default function ReceiptSealDialog({
   auditError = "",
   pending = false,
   onRefreshAudit,
-  instrument = null,
-  onInstrumentMove,
   onClose,
   onSeal,
 }) {
@@ -53,14 +49,6 @@ export default function ReceiptSealDialog({
         </div>
 
         <div className="assembler-sheet__content">
-          {instrument ? (
-            <RealityInstrument
-              viewModel={instrument}
-              variant="inline"
-              onMove={onInstrumentMove}
-            />
-          ) : null}
-
           <section className="assembler-receipt-audit__section">
             <div className="assembler-receipt-audit__section-head">
               <span className="assembler-receipt-audit__label">Delta</span>

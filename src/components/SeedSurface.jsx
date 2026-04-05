@@ -1,5 +1,4 @@
 import BoxObjectVisualization from "@/components/BoxObjectVisualization";
-import RootSummaryPanel from "@/components/RootSummaryPanel";
 import SeedUpdatePanel from "@/components/SeedUpdatePanel";
 
 export default function SeedSurface({
@@ -13,14 +12,9 @@ export default function SeedSurface({
   onOpenStage,
   onRunOperate,
   onAssemble,
-  onOpenConfirmation,
-  onSaveRoot,
-  onRootInstrumentChange,
-  onRunRootAssist,
   onApplySuggestion,
   onEditSuggestion,
   onDismissSuggestion,
-  rootPending = false,
   isMobileLayout = false,
   children,
 }) {
@@ -30,23 +24,12 @@ export default function SeedSurface({
   const showSeedDocument =
     Boolean(activeDocument?.documentKey) &&
     (activeDocument?.isAssembly || activeDocument?.documentType === "assembly");
-  const rootPanelKey = [
-    seedViewModel?.root?.text || "",
-    seedViewModel?.root?.gloss || "",
-    seedViewModel?.root?.hasRoot ? "1" : "0",
-    seedViewModel?.stateSummary?.current || "",
-    seedViewModel?.confirmationCount || 0,
-  ].join("::");
-
   return (
     <section className="assembler-phase assembler-phase--create">
       <header className="assembler-phase__header assembler-phase__header--seed">
         <div className="assembler-phase__copy">
           <span className="assembler-phase__eyebrow">Seed</span>
           <h2 className="assembler-phase__title">Shape the seed.</h2>
-          <p className="assembler-phase__subtitle">
-            The seed is the living working position of the box. Feed it from sources, staging, and proof.
-          </p>
         </div>
         <div className="assembler-phase__meta">
           <span>{viewModel?.boxTitle || "Untitled Box"}</span>
@@ -76,8 +59,8 @@ export default function SeedSurface({
           </h3>
           <p className="assembler-seed-surface__body">
             {currentSeedDocument
-              ? "Keep the seed honest: name the aim, describe what is actually here, and keep the gap visible until proof closes it."
-              : "The first real source will create the first seed. Until then, staging can keep gathering material."}
+              ? "Aim. What's here. The gap."
+              : "The first real source creates the first seed."}
           </p>
           {isMobileLayout ? (
             <div className="assembler-seed-surface__hero-actions">
@@ -96,19 +79,6 @@ export default function SeedSurface({
           ) : null}
         </div>
       </div>
-
-      <RootSummaryPanel
-        key={rootPanelKey}
-        root={seedViewModel?.root}
-        stateSummary={seedViewModel?.stateSummary}
-        confirmationCount={seedViewModel?.confirmationCount || 0}
-        pending={rootPending}
-        compact={isMobileLayout}
-        onSaveRoot={onSaveRoot}
-        onOpenConfirmation={onOpenConfirmation}
-        onInstrumentChange={onRootInstrumentChange}
-        onRunSevenAssist={onRunRootAssist}
-      />
 
       <SeedUpdatePanel
         suggestion={suggestion}
@@ -129,8 +99,8 @@ export default function SeedSurface({
             </h3>
             <p className="assembler-phase__empty-text">
               {currentSeedDocument
-                ? "Open the live seed to keep shaping it, or keep feeding staging until the next revision is ready."
-                : "Keep collecting blocks in staging. The first real source will create the seed automatically."}
+                ? "Open the seed. Keep shaping."
+                : "Keep staging. The first real source creates the seed."}
             </p>
           </div>
 

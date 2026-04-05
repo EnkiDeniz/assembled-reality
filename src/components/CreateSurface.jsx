@@ -18,9 +18,6 @@ export default function CreateSurface({
         <div className="assembler-phase__copy">
           <span className="assembler-phase__eyebrow">Seed</span>
           <h2 className="assembler-phase__title">Shape the seed.</h2>
-          <p className="assembler-phase__subtitle">
-            Move selected material into staging, then shape and rewrite the living working position of the box.
-          </p>
         </div>
         <div className="assembler-phase__meta">
           <span>{viewModel?.boxTitle || "Untitled Box"}</span>
@@ -40,8 +37,8 @@ export default function CreateSurface({
             </h3>
             <p className="assembler-phase__empty-text">
               {currentAssemblyDocument
-                ? "Open the current seed to keep shaping it, or keep feeding staging until the next revision is ready."
-                : "You can keep collecting blocks in staging and shape the first seed once the direction is clear."}
+                ? "Open the seed. Keep shaping."
+                : "Keep staging. Shape when the line is clear."}
             </p>
           </div>
 

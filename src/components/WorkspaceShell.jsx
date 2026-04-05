@@ -10,6 +10,8 @@ import FirstBoxComposer from "@/components/FirstBoxComposer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProjectHome from "@/components/ProjectHome";
 import RealityInstrument from "@/components/RealityInstrument";
+import RootBar from "@/components/RootBar";
+import RootEditor from "@/components/RootEditor";
 import OperateSurface from "@/components/OperateSurface";
 import ReceiptSurface from "@/components/ReceiptSurface";
 import ReceiptSealDialog from "@/components/ReceiptSealDialog";
@@ -40,6 +42,7 @@ import {
   buildEntryStateViewModel,
   buildOperateViewModel,
   buildReceiptSummaryViewModel,
+  buildRootViewModel,
   buildSeedViewModel,
   buildThinkViewModel,
   normalizeBoxPhase,
@@ -60,7 +63,7 @@ import {
   getOperateAssemblyDocument,
   listOperateIncludedDocuments,
 } from "@/lib/operate";
-import { PRODUCT_MARK, PRODUCT_NAME } from "@/lib/product-language";
+import { PRODUCT_MARK } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 import { parseSevenAudioHeaders } from "@/lib/seven";
 import {
@@ -666,43 +669,6 @@ function blobToDataUrl(blob) {
     reader.onerror = () => reject(new Error("Could not read the pasted image."));
     reader.readAsDataURL(blob);
   });
-}
-
-function isSourceDocument(document) {
-  return Boolean(document) && !document.isAssembly && document.documentType !== "assembly";
-}
-
-function resolveProjectModeDocument(project, documents, mode, fallbackDocument = null) {
-  const projectDocuments = Array.isArray(documents) ? documents : [];
-  const normalizedMode = normalizeWorkspaceMode(mode, WORKSPACE_MODES.assemble);
-  if (normalizedMode === WORKSPACE_MODES.listen) {
-    const sourceFallback =
-      isSourceDocument(fallbackDocument) && isProjectDocumentVisible(fallbackDocument)
-        ? fallbackDocument
-        : null;
-    const listenDocumentKey = getProjectListenDocumentKey(project, projectDocuments);
-    return (
-      projectDocuments.find((document) => document.documentKey === listenDocumentKey) ||
-      sourceFallback ||
-      projectDocuments.find(
-        (document) => isSourceDocument(document) && isProjectDocumentVisible(document),
-      ) ||
-      fallbackDocument ||
-      projectDocuments[0] ||
-      null
-    );
-  }
-
-  return (
-    (project?.currentAssemblyDocumentKey &&
-      projectDocuments.find(
-        (document) => document.documentKey === project.currentAssemblyDocumentKey,
-      )) ||
-    projectDocuments.find((document) => document.documentKey === getProjectEntryDocumentKey(project)) ||
-    fallbackDocument ||
-    projectDocuments[0] ||
-    null
-  );
 }
 
 function summarizePolishChanges(changes = null) {
@@ -1779,36 +1745,19 @@ function WorkspaceLaunchpad({
   onOpenDocument,
   onOpenProject,
   onResumeProject,
-  onDeleteDocument,
-  onPasteClipboard,
-  onOpenSpeak,
   onOpenIntake,
-  onOpenConfirmation,
-  onSaveRoot,
-  onRootInstrumentChange,
-  onRunRootAssist,
-  rootPending = false,
   uploading = false,
   pastePendingMode = "",
   recordingVoice = false,
   resumeSessionSummary = null,
-  isMobileLayout = false,
 }) {
   const grouped = groupedDocuments(documents);
-  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const guideDocument = grouped.sources.find(
     (document) => document.documentType === "builtin" || document.sourceType === "builtin",
   ) || null;
   const userSourceDocuments = grouped.sources.filter(
     (document) => document.documentType !== "builtin" && document.sourceType !== "builtin",
   );
-  const listenDocument =
-    resolveProjectModeDocument(
-      activeProject,
-      documents,
-      WORKSPACE_MODES.listen,
-      null,
-    );
   const currentAssemblyDocument =
     (activeProject?.currentAssemblyDocumentKey &&
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
@@ -1818,61 +1767,7 @@ function WorkspaceLaunchpad({
     userSourceDocuments.length <= 2 || !currentAssemblyDocument
   );
   const sourceDocuments = shouldFeatureGuide ? userSourceDocuments : grouped.sources;
-  const assemblyDocuments = grouped.assemblies;
-  const latestSourceDocument =
-    [...userSourceDocuments].sort((left, right) => {
-      const rightTimestamp = Date.parse(right?.updatedAt || right?.createdAt || "");
-      const leftTimestamp = Date.parse(left?.updatedAt || left?.createdAt || "");
-      return (Number.isNaN(rightTimestamp) ? 0 : rightTimestamp) - (Number.isNaN(leftTimestamp) ? 0 : leftTimestamp);
-    })[0] || null;
-  const recentAssemblies = assemblyDocuments
-    .filter((document) => document.documentKey !== currentAssemblyDocument?.documentKey)
-    .slice(0, 3);
   const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
-  const primaryAction = currentAssemblyDocument
-    ? {
-        label: "Continue Seed",
-        title: currentAssemblyDocument.title,
-        detail: getDocumentBlockCountLabel(currentAssemblyDocument),
-        icon: "assemble",
-        disabled: busy,
-        onClick: () =>
-          onEnterMode(WORKSPACE_MODES.assemble, currentAssemblyDocument.documentKey, {
-            phase: BOX_PHASES.create,
-          }),
-      }
-      : latestSourceDocument
-        ? {
-            label: "Open latest source",
-            title: latestSourceDocument.title,
-        detail: getDocumentBlockCountLabel(latestSourceDocument),
-        icon: "listen",
-        disabled: busy,
-        onClick: () =>
-          onEnterMode(WORKSPACE_MODES.listen, latestSourceDocument.documentKey, {
-            phase: BOX_PHASES.think,
-          }),
-      }
-        : listenDocument
-          ? {
-              label: guideDocument?.documentKey === listenDocument.documentKey ? "Open built-in guide" : "Open source",
-              title: listenDocument.title,
-              detail: getDocumentBlockCountLabel(listenDocument),
-              icon: "listen",
-              disabled: busy,
-              onClick: () =>
-                onEnterMode(WORKSPACE_MODES.listen, listenDocument.documentKey, {
-                  phase: BOX_PHASES.think,
-                }),
-            }
-          : {
-            label: "Add source",
-            title: boxTitle || PRODUCT_NAME,
-            detail: "Start with a supported source for the 1.0 beta.",
-            icon: "upload",
-            disabled: busy,
-            onClick: onOpenIntake,
-          };
   const boxViewModel = buildBoxViewModel({
     activeProject,
     projectDocuments: documents,
@@ -1919,33 +1814,16 @@ function WorkspaceLaunchpad({
     <ProjectHome
       boxViewModel={boxViewModel}
       activeProject={activeProject}
-      projectDrafts={projectDrafts}
       loadingDocumentKey={loadingDocumentKey}
-      busy={busy}
-      primaryAction={primaryAction}
       currentPositionAction={currentPositionAction}
       guideDocument={shouldFeatureGuide ? guideDocument : null}
       sourceDocuments={sourceDocuments}
-      currentAssemblyDocument={currentAssemblyDocument}
-      recentAssemblies={recentAssemblies}
       onBrowseBoxes={onBrowseBoxes}
       onOpenReceipts={onOpenReceipts}
       onOpenDocument={onOpenDocument}
-      onDeleteDocument={onDeleteDocument}
-      onPasteClipboard={onPasteClipboard}
-      onOpenSpeak={onOpenSpeak}
-      onOpenIntake={onOpenIntake}
-      onOpenConfirmation={onOpenConfirmation}
-      onSaveRoot={onSaveRoot}
-      onRootInstrumentChange={onRootInstrumentChange}
-      onRunRootAssist={onRunRootAssist}
-      rootPending={rootPending}
-      ActionIcon={WorkspaceActionIcon}
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
       getDocumentKindLabel={getDocumentKindLabel}
-      canDeleteDocument={canDeleteDocument}
       sourceOpenMode={WORKSPACE_MODES.assemble}
-      isMobileLayout={isMobileLayout}
     />
   );
 }
@@ -2936,6 +2814,7 @@ function WorkspaceToolbar({
   onOpenReceipts,
   onManageBox,
   onOpenConfirmation,
+  onOpenRoot,
   onInstrumentMove,
   isMobileLayout = false,
   receiptAttentionTone = "",
@@ -2957,6 +2836,7 @@ function WorkspaceToolbar({
       onOpenReceipts={onOpenReceipts}
       onManageBox={onManageBox}
       onOpenConfirmation={onOpenConfirmation}
+      onOpenRoot={onOpenRoot}
       onInstrumentMove={onInstrumentMove}
       receiptAttentionTone={receiptAttentionTone}
     />
@@ -3375,14 +3255,6 @@ function LogView({
   onExportDocument,
   onOpenGetReceipts,
   onSealReceipt,
-  root = null,
-  stateSummary = null,
-  confirmationCount = 0,
-  onOpenConfirmation,
-  onSaveRoot,
-  onRootInstrumentChange,
-  onRunRootAssist,
-  rootPending = false,
   isMobileLayout = false,
 }) {
   return (
@@ -3398,14 +3270,6 @@ function LogView({
       onExportDocument={onExportDocument}
       onOpenGetReceipts={onOpenGetReceipts}
       onSealReceipt={onSealReceipt}
-      root={root}
-      stateSummary={stateSummary}
-      confirmationCount={confirmationCount}
-      onOpenConfirmation={onOpenConfirmation}
-      onSaveRoot={onSaveRoot}
-      onRootInstrumentChange={onRootInstrumentChange}
-      onRunRootAssist={onRunRootAssist}
-      rootPending={rootPending}
       isMobileLayout={isMobileLayout}
     />
   );
@@ -4064,6 +3928,7 @@ export default function WorkspaceShell({
   const [renameProjectTitle, setRenameProjectTitle] = useState("");
   const [boxManagementError, setBoxManagementError] = useState("");
   const [rootPending, setRootPending] = useState(false);
+  const [rootEditorOpen, setRootEditorOpen] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationPending, setConfirmationPending] = useState(false);
   const [receiptSealDraft, setReceiptSealDraft] = useState(null);
@@ -4250,6 +4115,10 @@ export default function WorkspaceShell({
     clipboardCount: clipboard.length,
     stagedCount: stagedAiBlocks.length,
   });
+  const rootViewModel = buildRootViewModel(activeProject);
+  const assemblySurfaceStyle = {
+    "--assembly-wash": controlSurfaceViewModel?.stateColorTokens?.fill || "transparent",
+  };
   const isThinkPhase = boxPhase === BOX_PHASES.think;
   const isCreatePhase = boxPhase === BOX_PHASES.create;
   const isOperatePhase = boxPhase === BOX_PHASES.operate;
@@ -4263,6 +4132,22 @@ export default function WorkspaceShell({
     resolvedEntryMode === "first-time" &&
     !currentSeedDocument?.documentKey &&
     realProjectSourceDocuments.length === 0;
+  const showDesktopHomeToolbar =
+    !isMobileLayout &&
+    launchpadOpen &&
+    normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box;
+  const showMobileChromeRootBar =
+    isMobileLayout &&
+    Boolean(activeProject?.projectKey) &&
+    !isFirstTimeSurface &&
+    (!launchpadOpen ||
+      normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box);
+
+  useEffect(() => {
+    if (!activeProject?.projectKey) {
+      setRootEditorOpen(false);
+    }
+  }, [activeProject?.projectKey]);
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
@@ -4501,33 +4386,6 @@ export default function WorkspaceShell({
     receiptSealDraft,
     canInterpretInstrument,
   ]);
-  const receiptInstrumentViewModel = useMemo(
-    () =>
-      receiptSealDraft?.id
-        ? buildRealityInstrumentViewModel({
-            surfaceKey: "receipts",
-            boxTitle: activeBoxTitle,
-            documentTitle: receiptSealDraft.title || "Receipt draft",
-            stateSummary: seedViewModel?.stateSummary,
-            issues: receiptInstrumentIssue ? [receiptInstrumentIssue] : [],
-            defaultSummary:
-              receiptSealAudit?.summary ||
-              "Check the Root, evidence, and Seed before sealing.",
-            defaultMoveSpace: receiptSealAudit?.sealReady
-              ? [{ key: "receipt-seal", label: "Seal receipt", disabled: receiptPending }]
-              : [{ key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Refresh audit", disabled: receiptSealAuditPending || receiptPending }],
-          })
-        : null,
-    [
-      activeBoxTitle,
-      receiptPending,
-      receiptInstrumentIssue,
-      receiptSealAudit,
-      receiptSealAuditPending,
-      receiptSealDraft,
-      seedViewModel?.stateSummary,
-    ],
-  );
   const voiceInstrumentIssue = useMemo(() => {
     if (!voiceRecorderOpen) return null;
     const hasDraft = Boolean(voiceMemoDraft?.id || voiceMemoDraft?.blob);
@@ -9904,19 +9762,55 @@ export default function WorkspaceShell({
           </div>
         </header>
 
-        {isMobileLayout && realityInstrumentViewModel ? (
+        {isMobileLayout && (showMobileChromeRootBar || realityInstrumentViewModel) ? (
           <div className="assembler-header__instrument">
-            <RealityInstrument
-              viewModel={realityInstrumentViewModel}
-              variant="compact"
-              onMove={handleRealityInstrumentMove}
-              onExpand={() => setRealityInstrumentOpen(true)}
-            />
+            <div className="assembler-header__instrument-stack">
+              {showMobileChromeRootBar ? (
+                <RootBar
+                  rootText={rootViewModel?.text}
+                  hasRoot={rootViewModel?.hasRoot}
+                  stateSummary={controlSurfaceViewModel?.stateSummary}
+                  confirmationCount={controlSurfaceViewModel?.confirmationCount || 0}
+                  onOpen={() => setRootEditorOpen(true)}
+                  compact
+                />
+              ) : null}
+              {realityInstrumentViewModel ? (
+                <RealityInstrument
+                  viewModel={realityInstrumentViewModel}
+                  variant="compact"
+                  onMove={handleRealityInstrumentMove}
+                  onExpand={() => setRealityInstrumentOpen(true)}
+                />
+              ) : null}
+            </div>
           </div>
         ) : null}
 
         {launchpadOpen ? (
-          <section className="assembler-surface assembler-surface--launchpad">
+          <section className="assembler-surface assembler-surface--launchpad" style={assemblySurfaceStyle}>
+            {showDesktopHomeToolbar ? (
+              <WorkspaceToolbar
+                viewModel={controlSurfaceViewModel}
+                instrument={realityInstrumentViewModel}
+                activeSidecar={activeDesktopSidecar}
+                onSetBoxPhase={handleSelectBoxPhase}
+                onOpenBoxes={openBoxesIndex}
+                onOpenBoxHome={() => openCurrentBoxHome(activeProjectKey)}
+                onOpenIntake={() => setDropAnythingOpen(true)}
+                onOpenSpeak={openVoiceRecorder}
+                onOpenSeven={openSevenSidecar}
+                onOpenStage={openStageSidecar}
+                onRunOperate={() => void runOperate()}
+                onOpenReceipts={openReceiptsSurface}
+                onManageBox={() => openProjectManagement(activeProjectKey)}
+                onOpenConfirmation={() => setConfirmationOpen(true)}
+                onOpenRoot={() => setRootEditorOpen(true)}
+                onInstrumentMove={handleRealityInstrumentMove}
+                isMobileLayout={false}
+                receiptAttentionTone={receiptPhaseAttentionTone}
+              />
+            ) : null}
             <WorkspaceLaunchpad
               launchpadView={launchpadView}
               activeProject={activeProject}
@@ -9939,20 +9833,6 @@ export default function WorkspaceShell({
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
               onResumeProject={resumeProject}
-              onDeleteDocument={requestDeleteDocument}
-              onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
-              onOpenSpeak={openVoiceRecorder}
-              onOpenConfirmation={() => setConfirmationOpen(true)}
-              onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
-              onRootInstrumentChange={setRootInstrumentIssue}
-              onRunRootAssist={(payload) =>
-                runInstrumentAssist({
-                  intent: payload?.intent || "root-compress",
-                  context: payload || {},
-                  surface: "root",
-                  openAi: false,
-                })
-              }
               onOpenIntake={() => {
                 if (isMobileLayout) {
                   openWorkspacePicker("add");
@@ -9960,10 +9840,8 @@ export default function WorkspaceShell({
                 }
                 setDropAnythingOpen(true);
               }}
-              rootPending={rootPending}
               recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               resumeSessionSummary={resumeSessionSummaryState}
-              isMobileLayout={isMobileLayout}
             />
           </section>
         ) : isFirstTimeSurface ? (
@@ -10144,6 +10022,7 @@ export default function WorkspaceShell({
                     onOpenReceipts={openReceiptsSurface}
                     onManageBox={() => openProjectManagement(activeProjectKey)}
                     onOpenConfirmation={() => setConfirmationOpen(true)}
+                    onOpenRoot={() => setRootEditorOpen(true)}
                     onInstrumentMove={handleRealityInstrumentMove}
                     isMobileLayout={false}
                     receiptAttentionTone={receiptPhaseAttentionTone}
@@ -10154,6 +10033,7 @@ export default function WorkspaceShell({
                   className={`assembler-surface assembler-surface--workbench ${
                     isOperatePhase || isReceiptsPhase ? "is-takeover" : ""
                   }`}
+                  style={assemblySurfaceStyle}
                 >
                   {isReceiptsPhase ? (
                     <LogView
@@ -10174,21 +10054,6 @@ export default function WorkspaceShell({
                         }
                       }}
                       onSealReceipt={openReceiptSealDialog}
-                      root={seedViewModel?.root}
-                      stateSummary={seedViewModel?.stateSummary}
-                      confirmationCount={seedViewModel?.confirmationCount || 0}
-                      onOpenConfirmation={() => setConfirmationOpen(true)}
-                      onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
-                      onRootInstrumentChange={setRootInstrumentIssue}
-                      onRunRootAssist={(payload) =>
-                        runInstrumentAssist({
-                          intent: payload?.intent || "root-compress",
-                          context: payload || {},
-                          surface: "root",
-                          openAi: false,
-                        })
-                      }
-                      rootPending={rootPending}
                       isMobileLayout={isMobileLayout}
                     />
                   ) : isOperatePhase ? (
@@ -10234,18 +10099,6 @@ export default function WorkspaceShell({
                         });
                       }}
                       onDismissSuggestion={dismissSeedSuggestion}
-                      onOpenConfirmation={() => setConfirmationOpen(true)}
-                      onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
-                      onRootInstrumentChange={setRootInstrumentIssue}
-                      onRunRootAssist={(payload) =>
-                        runInstrumentAssist({
-                          intent: payload?.intent || "root-compress",
-                          context: payload || {},
-                          surface: "root",
-                          openAi: false,
-                        })
-                      }
-                      rootPending={rootPending}
                       isMobileLayout={isMobileLayout}
                     >
                       {documentWorkbench}
@@ -10490,11 +10343,28 @@ export default function WorkspaceShell({
           auditPending={receiptSealAuditPending}
           auditError={receiptSealAuditError}
           pending={receiptPending}
-          instrument={receiptInstrumentViewModel}
-          onInstrumentMove={handleRealityInstrumentMove}
           onRefreshAudit={() => void runReceiptSealAudit()}
           onClose={closeReceiptSealDialog}
           onSeal={() => void sealReceiptDraft()}
+        />
+
+        <RootEditor
+          open={rootEditorOpen}
+          root={rootViewModel}
+          stateSummary={controlSurfaceViewModel?.stateSummary}
+          confirmationCount={controlSurfaceViewModel?.confirmationCount || 0}
+          pending={rootPending}
+          onClose={() => setRootEditorOpen(false)}
+          onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
+          onInstrumentChange={setRootInstrumentIssue}
+          onRunSevenAssist={(payload) =>
+            runInstrumentAssist({
+              intent: payload?.intent || "root-compress",
+              context: payload || {},
+              surface: "root",
+              openAi: false,
+            })
+          }
         />
 
         <ConfirmationQueueDialog

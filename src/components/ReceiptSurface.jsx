@@ -1,4 +1,3 @@
-import RootSummaryPanel from "@/components/RootSummaryPanel";
 import { formatWorkspaceLogTime, getWorkspaceLogActionColor } from "@/lib/document-blocks";
 
 function ReceiptStatusPill({ label, tone = "" }) {
@@ -23,14 +22,6 @@ export default function ReceiptSurface({
   onOpenGetReceipts,
   onRetryRemoteSync,
   onOpenVerifyUrl,
-  root = null,
-  stateSummary = null,
-  confirmationCount = 0,
-  onOpenConfirmation,
-  onSaveRoot,
-  onRootInstrumentChange,
-  onRunRootAssist,
-  rootPending = false,
   isMobileLayout = false,
 }) {
   const summary = receiptSummary || {
@@ -51,23 +42,12 @@ export default function ReceiptSurface({
     summary.courthouseAction?.kind === "connect";
   const canRetryLatest = Boolean(summary.latestCanRetryRemoteSync && latestDraft?.id);
   const canVerifyLatest = Boolean(summary.latestVerifyUrl && latestDraft?.id);
-  const rootPanelKey = [
-    root?.text || "",
-    root?.gloss || "",
-    root?.hasRoot ? "1" : "0",
-    stateSummary?.current || "",
-    confirmationCount || 0,
-  ].join("::");
-
   return (
     <section className="assembler-phase assembler-phase--receipts">
       <header className="assembler-phase__header">
         <div className="assembler-phase__copy">
           <span className="assembler-phase__eyebrow">Receipts</span>
           <h2 className="assembler-phase__title">Preserve the proof.</h2>
-          <p className="assembler-phase__subtitle">
-            Receipts keep the current proof state legible without blocking local work.
-          </p>
         </div>
         <div className="assembler-phase__meta">
           <span>{summary.draftCount} draft{summary.draftCount === 1 ? "" : "s"}</span>
@@ -83,8 +63,8 @@ export default function ReceiptSurface({
             </h3>
             <p className="assembler-receipt-surface__body">
               {hasLatestProof
-                ? summary.latestDraftSummary || "The latest proof is ready to review or push."
-                : "Use Draft receipt to preserve the current source, seed, or Operate result as local proof."}
+                ? summary.latestDraftSummary || "Review the latest proof."
+                : "Local proof. Portable when sealed."}
             </p>
           </div>
 
@@ -159,19 +139,6 @@ export default function ReceiptSurface({
             ) : null}
           </div>
         </section>
-
-        <RootSummaryPanel
-          key={rootPanelKey}
-          root={root}
-          stateSummary={stateSummary}
-          confirmationCount={confirmationCount}
-          pending={rootPending}
-          compact={isMobileLayout}
-          onSaveRoot={onSaveRoot}
-          onOpenConfirmation={onOpenConfirmation}
-          onInstrumentChange={onRootInstrumentChange}
-          onRunSevenAssist={onRunRootAssist}
-        />
 
         <section className="assembler-receipt-surface__panel">
           <div className="assembler-receipt-surface__panel-head">

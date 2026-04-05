@@ -63,9 +63,6 @@ export default function OperateSurface({
         <div className="assembler-phase__copy">
           <span className="assembler-phase__eyebrow">Operate</span>
           <h2 className="assembler-phase__title">Read the box.</h2>
-          <p className="assembler-phase__subtitle">
-            Operate projects the smallest honest structure the box can support right now.
-          </p>
         </div>
         <div className="assembler-phase__meta">
           <span>{viewModel?.title || result?.boxTitle || "Untitled Box"}</span>
@@ -184,7 +181,7 @@ export default function OperateSurface({
         ) : (
           <div className="assembler-operate__body">
             <p className="assembler-operate__loading">
-              Run Operate when the box has a real source or seed.
+              Add a real source. Run Operate.
             </p>
           </div>
         )}

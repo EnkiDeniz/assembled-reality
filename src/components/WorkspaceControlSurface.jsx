@@ -1,4 +1,5 @@
 import RealityInstrument from "@/components/RealityInstrument";
+import RootBar from "@/components/RootBar";
 
 function ModeButton({ active = false, label, onClick, attentionTone = "" }) {
   return (
@@ -44,6 +45,7 @@ export default function WorkspaceControlSurface({
   instrument = null,
   onInstrumentMove,
   receiptAttentionTone = "",
+  onOpenRoot,
 }) {
   return (
     <div className={`assembler-control-surface ${isMobileLayout ? "is-mobile" : ""}`}>
@@ -108,6 +110,14 @@ export default function WorkspaceControlSurface({
           <ActionButton label="Box" onClick={onManageBox} />
         ) : null}
       </div>
+
+      <RootBar
+        rootText={viewModel?.rootText}
+        hasRoot={viewModel?.hasRoot}
+        stateSummary={viewModel?.stateSummary}
+        confirmationCount={viewModel?.confirmationCount || 0}
+        onOpen={onOpenRoot}
+      />
 
       {instrument ? (
         <RealityInstrument
