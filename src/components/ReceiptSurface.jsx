@@ -107,7 +107,7 @@ export default function ReceiptSurface({
             {canVerifyLatest ? (
               <button
                 type="button"
-                className="assembler-inline-assist__apply"
+                className="assembler-receipt-surface__text-link"
                 onClick={() => onOpenVerifyUrl?.(summary.latestVerifyUrl)}
               >
                 Verify
@@ -139,7 +139,7 @@ export default function ReceiptSurface({
             ) : (showConnectAction || !isMobileLayout) ? (
               <button
                 type="button"
-                className="assembler-inline-assist__apply"
+                className="assembler-receipt-surface__text-link"
                 onClick={() => setShowMore(true)}
               >
                 More

@@ -6,6 +6,7 @@ export default function RootBar({
   stateSummary = null,
   confirmationCount = 0,
   onOpen,
+  onOpenConfirmation,
   compact = false,
 }) {
   const stateTone = stateSummary?.colorTokens || getAssemblyColorTokens(stateSummary?.colorStep);
@@ -45,11 +46,14 @@ export default function RootBar({
           <span className="assembler-root-bar__phase">{phaseLabel}</span>
         ) : null}
         {confirmationCount > 0 ? (
-          <span
+          <button
+            type="button"
             className={`assembler-root-bar__queue ${stateSummary?.isLooping ? "is-looping" : ""}`}
+            onClick={onOpenConfirmation}
+            aria-label={`${confirmationCount} blocks waiting for confirmation`}
           >
             ⊘ {confirmationCount}
-          </span>
+          </button>
         ) : null}
       </div>
     </div>

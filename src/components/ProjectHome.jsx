@@ -232,13 +232,7 @@ export default function ProjectHome({
         <section className="assembler-project-home__panel">
           <div className="assembler-project-home__section-head">
             <span>Recent proof</span>
-            <button
-              type="button"
-              className="assembler-project-home__section-action"
-              onClick={onOpenReceipts}
-            >
-              Open Receipts
-            </button>
+            <span>{recentDrafts.length}</span>
           </div>
 
           <div className="assembler-project-home__receipt-panel">

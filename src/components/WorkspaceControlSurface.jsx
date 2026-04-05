@@ -99,13 +99,6 @@ export default function WorkspaceControlSurface({
       <div className="assembler-control-surface__actions">
         <ActionButton label="Add source" onClick={onOpenIntake} tone="primary" />
         <ActionButton label="Speak" onClick={onOpenSpeak} />
-        {viewModel?.confirmationCount > 0 ? (
-          <ActionButton
-            label={`⊘ ${viewModel.confirmationCount}`}
-            onClick={onOpenConfirmation}
-            tone={viewModel?.isLooping ? "looping" : ""}
-          />
-        ) : null}
         {!isMobileLayout ? (
           <ActionButton label="Box" onClick={onManageBox} />
         ) : null}
@@ -117,6 +110,7 @@ export default function WorkspaceControlSurface({
         stateSummary={viewModel?.stateSummary}
         confirmationCount={viewModel?.confirmationCount || 0}
         onOpen={onOpenRoot}
+        onOpenConfirmation={onOpenConfirmation}
       />
 
       {instrument ? (

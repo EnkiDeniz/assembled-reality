@@ -4861,6 +4861,20 @@ main {
   gap: 10px;
 }
 
+.assembler-receipt-surface__text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.assembler-receipt-surface__text-link:hover {
+  text-decoration: underline;
+}
+
 .assembler-project-home__summary-body,
 .assembler-receipt-surface__body,
 .assembler-receipt-surface__status-detail,

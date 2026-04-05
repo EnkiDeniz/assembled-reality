@@ -43,13 +43,6 @@ export default function SeedSurface({
           state={seedViewModel?.visualizationState}
           size="standard"
           title={seedViewModel?.seedTitle || "Seed"}
-          subtitle={
-            suggestion
-              ? "Seven sees a clearer shape for this seed."
-              : currentSeedDocument
-                ? "Current working object"
-                : "The first seed appears after the first real signal."
-          }
         />
 
         <div className="assembler-seed-surface__hero-copy">
