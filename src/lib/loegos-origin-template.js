@@ -325,6 +325,11 @@ export const LOEGOS_ORIGIN_MOVE_DEFS = Object.freeze([
     stageStatus: "advanced",
     proofStatus: "witness",
     linkedSourceIds: ["loegos-git-history"],
+    isLakinMoment: true,
+    pivotFrom: "listener",
+    pivotTo: "box",
+    lakinSummary:
+      "The audio-led guest direction is explicitly rolled back, and the box keeps what it learned without pretending the turn never happened.",
   },
   {
     id: "pivot-to-workspace",
@@ -335,6 +340,11 @@ export const LOEGOS_ORIGIN_MOVE_DEFS = Object.freeze([
     stageStatus: "advanced",
     proofStatus: "witness",
     linkedSourceIds: ["assembled-reality", "meaning-operator", "loegos-git-history"],
+    isLakinMoment: true,
+    pivotFrom: "player",
+    pivotTo: "workspace",
+    lakinSummary:
+      "The product carries assembly and proof forward while dropping the player-first center of gravity.",
   },
   {
     id: "workspace-shell-and-home",
@@ -447,4 +457,3 @@ export function normalizeProjectSystemMeta(system = null) {
         : {},
   };
 }
-

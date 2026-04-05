@@ -43,6 +43,9 @@ function buildOperatingPrinciple(surface = "", explicitPrinciple = "") {
   if (normalizedSurface === "root") {
     return "Presence precedes aim. Help the user compress the declared line until it is portable, concrete, and small enough to build from.";
   }
+  if (normalizedSurface === "lane") {
+    return "Read the box as an assembly history. Stay close to evidence, distinguish what is carried from what fell away, and only suggest hypotheses the language can support.";
+  }
 
   return "";
 }
@@ -70,6 +73,21 @@ function parseJsonObject(text = "") {
 
 function buildInstrumentSystemPrompt(intent = "") {
   const normalizedIntent = normalizeText(intent).toLowerCase();
+
+  if (normalizedIntent === "word-layer-hypothesis") {
+    return [
+      `You are Seven, the lexical archaeology guide inside ${PRODUCT_NAME}.`,
+      "Return strict JSON only.",
+      "Use this shape: {\"hypotheses\":[{\"label\":\"...\",\"summary\":\"...\",\"evidenceTerms\":[\"...\"],\"evidenceMoments\":[\"...\"],\"confidence\":\"low|medium\"}]}",
+      "Return between 1 and 3 hypotheses.",
+      "Each hypothesis must be phrased as a suggestion, not a fact.",
+      "Never claim that a ghost operator is proven. You may only suggest that the lexical evidence may indicate a pattern.",
+      "If surfaced Lakin moments are supplied, you may interpret what those turns may suggest. Do not invent new Lakin moments beyond the supplied data.",
+      "Do not psychologize, diagnose, or infer biography without lexical evidence.",
+      "Evidence terms and evidence moments must come from the supplied summaries.",
+      "Do not include markdown fences.",
+    ].join(" ");
+  }
 
   if (
     normalizedIntent === "root-compress" ||
@@ -99,6 +117,114 @@ function buildInstrumentSystemPrompt(intent = "") {
 
 function buildInstrumentUserPrompt(intent = "", context = {}) {
   const normalizedIntent = normalizeText(intent).toLowerCase();
+
+  if (normalizedIntent === "word-layer-hypothesis") {
+    const classSummary = Array.isArray(context?.classSummary) ? context.classSummary : [];
+    const joinTerms = (terms = []) =>
+      (Array.isArray(terms) ? terms : [])
+        .map((entry) => {
+          const term = normalizeText(entry?.term);
+          const count = Number(entry?.count) || 0;
+          return term ? `${term}${count ? ` (${count})` : ""}` : "";
+        })
+        .filter(Boolean)
+        .join(", ");
+    const divergenceMoments = Array.isArray(context?.divergenceMoments)
+      ? context.divergenceMoments
+      : [];
+    const lakinMoments = Array.isArray(context?.lakinMoments) ? context.lakinMoments : [];
+    const cooccurrences = Array.isArray(context?.topCooccurrences)
+      ? context.topCooccurrences
+      : [];
+    const evidenceMoments = Array.isArray(context?.evidenceMoments)
+      ? context.evidenceMoments
+      : [];
+
+    return [
+      "Intent: word-layer-hypothesis",
+      context?.boxTitle ? `Box: ${normalizeText(context.boxTitle)}` : "",
+      context?.protocolPosition ? `Protocol position: ${normalizeText(context.protocolPosition)}` : "",
+      context?.protocolStateLabel ? `Assembly state: ${normalizeText(context.protocolStateLabel)}` : "",
+      context?.chronologyKind ? `Chronology: ${normalizeText(context.chronologyKind)}` : "",
+      context?.hasEnoughChronology === false && context?.lowHistoryNote
+        ? `Chronology note: ${normalizeText(context.lowHistoryNote)}`
+        : "",
+      Array.isArray(context?.dominantClasses) && context.dominantClasses.length
+        ? `Dominant classes: ${context.dominantClasses.map((entry) => normalizeText(entry)).filter(Boolean).join(", ")}`
+        : "",
+      classSummary.length
+        ? `Class summary: ${classSummary
+            .map((entry) => `${normalizeText(entry?.label)} (${Number(entry?.count) || 0})`)
+            .filter(Boolean)
+            .join(", ")}`
+        : "",
+      context?.invariantTerms?.length ? `Invariant terms: ${joinTerms(context.invariantTerms)}` : "",
+      context?.emergentTerms?.length ? `Emergent terms: ${joinTerms(context.emergentTerms)}` : "",
+      context?.recedingTerms?.length ? `Receding terms: ${joinTerms(context.recedingTerms)}` : "",
+      context?.carriedTerms?.length ? `Carried terms: ${joinTerms(context.carriedTerms)}` : "",
+      context?.droppedTerms?.length ? `Dropped terms: ${joinTerms(context.droppedTerms)}` : "",
+      divergenceMoments.length
+        ? `Selection points: ${divergenceMoments
+            .map((moment) => normalizeText(moment?.label || moment?.summary))
+            .filter(Boolean)
+            .join(" | ")}`
+        : "",
+      lakinMoments.length
+        ? `Lakin moments: ${lakinMoments
+            .map((moment) => {
+              const label = normalizeText(moment?.label || moment?.summary);
+              const pivotPair = normalizeText(moment?.pivotPair);
+              const evidenceTerms = Array.isArray(moment?.evidenceTerms)
+                ? moment.evidenceTerms.map((term) => normalizeText(term)).filter(Boolean).join(", ")
+                : "";
+              const source = normalizeText(moment?.source);
+              return [
+                label,
+                pivotPair,
+                evidenceTerms ? `terms: ${evidenceTerms}` : "",
+                source ? `source: ${source}` : "",
+              ]
+                .filter(Boolean)
+                .join(" — ");
+            })
+            .filter(Boolean)
+            .join(" | ")}`
+        : "",
+      context?.topCanonicalTerms?.length
+        ? `Canonical terms: ${joinTerms(context.topCanonicalTerms)}`
+        : "",
+      context?.topStructuralTerms?.length
+        ? `Structural terms: ${joinTerms(context.topStructuralTerms)}`
+        : "",
+      cooccurrences.length
+        ? `Top co-occurrences: ${cooccurrences
+            .map((entry) => {
+              const terms = Array.isArray(entry?.terms) ? entry.terms.map((term) => normalizeText(term)).filter(Boolean) : [];
+              if (!terms.length) return "";
+              return `${terms.join(" + ")}${Number(entry?.count) ? ` (${Number(entry.count)})` : ""}`;
+            })
+            .filter(Boolean)
+            .join(" | ")}`
+        : "",
+      evidenceMoments.length
+        ? `Evidence moments:\n${evidenceMoments
+            .map((moment, index) => {
+              const parts = [
+                moment?.occurredAt ? normalizeText(moment.occurredAt) : "",
+                normalizeText(moment?.label),
+                normalizeText(moment?.excerpt),
+                normalizeText(moment?.term),
+              ].filter(Boolean);
+              return `${index + 1}. ${parts.join(" — ")}`;
+            })
+            .filter(Boolean)
+            .join("\n")}`
+        : "",
+      "Suggest 1 to 3 cautious lexical hypotheses. If a ghost-operator pattern seems possible, describe it as a hypothesis only and ground it in the supplied terms and moments. You may interpret surfaced Lakin moments, but do not invent new ones.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }
 
   if (
     normalizedIntent === "root-compress" ||
@@ -167,6 +293,32 @@ function normalizeInstrumentResult(intent = "", rawResult = null) {
   const normalizedIntent = normalizeText(intent).toLowerCase();
   if (!rawResult || typeof rawResult !== "object") return null;
 
+  if (normalizedIntent === "word-layer-hypothesis") {
+    const hypotheses = (Array.isArray(rawResult.hypotheses) ? rawResult.hypotheses : [])
+      .map((hypothesis) => ({
+        label: normalizeText(hypothesis?.label),
+        summary: normalizeText(hypothesis?.summary),
+        evidenceTerms: Array.isArray(hypothesis?.evidenceTerms)
+          ? hypothesis.evidenceTerms.map((term) => normalizeText(term)).filter(Boolean)
+          : [],
+        evidenceMoments: Array.isArray(hypothesis?.evidenceMoments)
+          ? hypothesis.evidenceMoments.map((moment) => normalizeText(moment)).filter(Boolean)
+          : [],
+        confidence:
+          normalizeText(hypothesis?.confidence).toLowerCase() === "medium"
+            ? "medium"
+            : "low",
+      }))
+      .filter((hypothesis) => hypothesis.label && hypothesis.summary)
+      .slice(0, 3);
+
+    if (!hypotheses.length) return null;
+
+    return {
+      hypotheses,
+    };
+  }
+
   if (
     normalizedIntent === "root-compress" ||
     normalizedIntent === "root-rewrite" ||
@@ -195,6 +347,15 @@ function normalizeInstrumentResult(intent = "", rawResult = null) {
 function formatInstrumentAnswer(intent = "", instrumentResult = null, fallbackAnswer = "") {
   const normalizedIntent = normalizeText(intent).toLowerCase();
   if (!instrumentResult) return normalizeText(fallbackAnswer);
+
+  if (normalizedIntent === "word-layer-hypothesis") {
+    return instrumentResult.hypotheses
+      .map(
+        (hypothesis, index) =>
+          `${index + 1}. ${hypothesis.label} — ${hypothesis.summary}`,
+      )
+      .join("\n");
+  }
 
   if (
     normalizedIntent === "root-compress" ||
@@ -482,12 +643,15 @@ export async function POST(request) {
       );
     }
 
-    const exchange = await appendConversationExchangeForUser(session.user.id, {
-      documentKey: resolvedDocumentKey,
-      userLine: question || buildInstruction(mode),
-      answer,
-      citations,
-    });
+    const shouldPersistConversation = normalizedInstrumentIntent !== "word-layer-hypothesis";
+    const exchange = shouldPersistConversation
+      ? await appendConversationExchangeForUser(session.user.id, {
+          documentKey: resolvedDocumentKey,
+          userLine: question || buildInstruction(mode),
+          answer,
+          citations,
+        })
+      : null;
 
     return NextResponse.json({
       ok: true,

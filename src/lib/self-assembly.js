@@ -37,6 +37,10 @@ import {
 } from "@/lib/source-model";
 import { buildExcerpt } from "@/lib/text";
 import { finalizeLaneEntry, LANE_KIND_LABELS, LANE_GROUP_LABELS } from "@/lib/box-view-models";
+import {
+  annotateWordLayerWithLakinMoments,
+  buildWordLayerViewModel,
+} from "@/lib/word-layer";
 
 const CORPUS_ROOT_SEGMENTS = ["docs", "First seed"];
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
@@ -617,6 +621,93 @@ function buildSeedOfSeeds(sources, historySource, milestones) {
   };
 }
 
+function buildSelfAssemblyWordLayer(sources = [], seed = {}) {
+  const operateMoment =
+    LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === "operate-and-seed-first")?.occurredAt || "";
+  const seedArtifactTexts = [
+    {
+      id: "seed-aim",
+      title: "Aim",
+      text: seed.aim,
+      occurredAt: operateMoment,
+    },
+    {
+      id: "seed-whats-here",
+      title: "What's here",
+      text: seed.whatsHere,
+      occurredAt: operateMoment,
+    },
+    {
+      id: "seed-gap",
+      title: "The gap",
+      text: seed.gap,
+      occurredAt: operateMoment,
+    },
+    {
+      id: "seed-sealed",
+      title: "Sealed",
+      text: seed.sealed,
+      occurredAt: LOEGOS_ORIGIN_RECEIPT_SEED.occurredAt,
+    },
+  ];
+
+  return buildWordLayerViewModel({
+    boxTitle: `${PRODUCT_MARK} Self-Assembly Demo`,
+    currentSeedDocumentKey: "seed-of-seeds",
+    artifacts: [
+      ...sources.flatMap((source) =>
+        (Array.isArray(source?.blocks) ? source.blocks : [])
+          .filter((block) => String(block?.plainText || block?.text || "").trim())
+          .map((block, index) => ({
+            artifactId: `demo-word-source-${source.id}-${block.id || index + 1}`,
+            artifactKind: "source",
+            documentKey: source.id,
+            occurredAt: block?.createdAt || block?.updatedAt || source.occurredAt || "",
+            orderKind:
+              block?.createdAt || block?.updatedAt || source.occurredAt ? "explicit" : "inferred",
+            authorship: "system_example",
+            text: block?.plainText || block?.text || "",
+            title: source.title,
+            sectionTitle: block?.sectionTitle || "",
+          })),
+      ),
+      ...seedArtifactTexts
+        .filter((artifact) => String(artifact.text || "").trim())
+        .map((artifact) => ({
+          artifactId: `demo-word-${artifact.id}`,
+          artifactKind: "seed",
+          documentKey: "seed-of-seeds",
+          occurredAt: artifact.occurredAt,
+          orderKind: artifact.occurredAt ? "explicit" : "inferred",
+          authorship: "system_example",
+          text: artifact.text,
+          title: "Seed of seeds",
+          sectionTitle: artifact.title,
+        })),
+      {
+        artifactId: `demo-word-receipt-${LOEGOS_ORIGIN_RECEIPT_SEED.id}`,
+        artifactKind: "receipt",
+        documentKey: "",
+        receiptId: `demo-receipt-${LOEGOS_ORIGIN_RECEIPT_SEED.id}`,
+        occurredAt: LOEGOS_ORIGIN_RECEIPT_SEED.occurredAt,
+        orderKind: "explicit",
+        authorship: "system_example",
+        text: [
+          LOEGOS_ORIGIN_RECEIPT_SEED.title,
+          LOEGOS_ORIGIN_RECEIPT_SEED.note,
+          LOEGOS_ORIGIN_RECEIPT_SEED.interpretation,
+          LOEGOS_ORIGIN_RECEIPT_SEED.implications,
+          LOEGOS_ORIGIN_RECEIPT_SEED.stance,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        title: LOEGOS_ORIGIN_RECEIPT_SEED.title,
+        sealed: true,
+      },
+    ],
+  });
+}
+
 function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
   const sourceGroups = buildSourceGroups(sources);
   const sourceIdsCarriedBySeed = new Set(
@@ -716,6 +807,17 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
       documentKey: "",
       actionKind: "",
       nextAction: null,
+      isLakinMoment: Boolean(move.isLakinMoment),
+      pivotPair:
+        move.pivotFrom && move.pivotTo
+          ? `${String(move.pivotFrom).trim().toLowerCase()} -> ${String(move.pivotTo)
+              .trim()
+              .toLowerCase()}`
+          : "",
+      fromTerm: String(move.pivotFrom || "").trim().toLowerCase(),
+      toTerm: String(move.pivotTo || "").trim().toLowerCase(),
+      lakinSummary: String(move.lakinSummary || "").trim(),
+      lakinSource: move.isLakinMoment ? "curated" : "",
       sortIndex: index,
     }),
   );
@@ -833,8 +935,24 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     ),
   }));
 
-  const entries = normalizedMoveGroups.flatMap((group) => group.entries);
+  const baseEntries = normalizedMoveGroups.flatMap((group) => group.entries);
+  const baseWordLayer = buildSelfAssemblyWordLayer(sources, seed);
+  const lakinAnnotation = annotateWordLayerWithLakinMoments({
+    wordLayer: baseWordLayer,
+    laneEntries: baseEntries,
+  });
+  const entries = Array.isArray(lakinAnnotation?.laneEntries)
+    ? lakinAnnotation.laneEntries
+    : baseEntries;
+  const wordLayer = lakinAnnotation?.wordLayer || baseWordLayer;
   const normalizedSeedEntry = entries.find((entry) => entry.id === "seed-of-seeds") || seedEntry;
+  const annotatedMoveGroups = ["origin", "assembly", "proof"]
+    .map((groupId) => ({
+      id: groupId,
+      label: LANE_GROUP_LABELS[groupId],
+      entries: entries.filter((entry) => entry.groupId === groupId),
+    }))
+    .filter((group) => group.entries.length > 0);
 
   return {
     boxTitle: `${PRODUCT_MARK} Self-Assembly Demo`,
@@ -855,13 +973,14 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     protocolPosition: "proving",
     protocolStateLabel: "Curated demo",
     contextualAction: null,
+    wordLayer,
     receiptSummary: {
       sealedDraftCount: 1,
     },
     liveEdge: normalizedSeedEntry,
     resumeTarget: null,
     entries,
-    moveGroups: normalizedMoveGroups,
+    moveGroups: annotatedMoveGroups,
     proofSummary: {
       line: "Proof closure available",
       detail: seed.sealed,

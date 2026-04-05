@@ -4402,7 +4402,8 @@ main {
 }
 
 .assembler-assembly-lane__meta-strip,
-.assembler-assembly-lane__entries-panel {
+.assembler-assembly-lane__entries-panel,
+.assembler-assembly-lane__word-layer {
   display: grid;
   gap: 10px;
 }
@@ -4421,9 +4422,14 @@ main {
 }
 
 .assembler-assembly-lane__entry-detail,
+.assembler-assembly-lane__entry-pivot,
 .assembler-assembly-lane__entry-meta-note,
 .assembler-assembly-lane__entry-trust,
-.assembler-assembly-lane__empty {
+.assembler-assembly-lane__empty,
+.assembler-assembly-lane__word-empty,
+.assembler-assembly-lane__word-disclaimer,
+.assembler-assembly-lane__word-error,
+.assembler-assembly-lane__word-hypothesis-list p {
   margin: 0;
   color: var(--text-secondary);
   font-size: 14px;
@@ -4433,7 +4439,10 @@ main {
 .assembler-assembly-lane__strip-meta,
 .assembler-assembly-lane__entry-badges,
 .assembler-assembly-lane__entry-actions,
-.assembler-assembly-lane__protocol-strip {
+.assembler-assembly-lane__protocol-strip,
+.assembler-assembly-lane__word-summary-row,
+.assembler-assembly-lane__word-pills,
+.assembler-assembly-lane__word-hypothesis-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -4442,7 +4451,8 @@ main {
 
 .assembler-assembly-lane__meta-strip,
 .assembler-assembly-lane__entries-panel,
-.assembler-assembly-lane__entry {
+.assembler-assembly-lane__entry,
+.assembler-assembly-lane__word-layer {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -4625,6 +4635,12 @@ main {
   color: var(--assembly-step-4-text);
 }
 
+.assembler-assembly-lane__badge.is-lakin {
+  border-color: var(--assembly-step-3-border);
+  background: var(--assembly-step-3-soft);
+  color: var(--assembly-step-3-text);
+}
+
 .assembler-assembly-lane__entry-links {
   margin: 0;
   color: var(--text-meta);
@@ -4637,6 +4653,12 @@ main {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.assembler-assembly-lane__entry-pivot {
+  color: var(--assembly-step-3-text);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .assembler-assembly-lane__entry-meta-note {
@@ -4692,6 +4714,152 @@ main {
 .assembler-assembly-lane__contextual-action:focus-visible {
   outline: 2px solid var(--assembly-step-1-border);
   outline-offset: 2px;
+}
+
+.assembler-assembly-lane__word-layer {
+  gap: 14px;
+}
+
+.assembler-assembly-lane__word-layer-head,
+.assembler-assembly-lane__word-group-head,
+.assembler-assembly-lane__word-hypotheses-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.assembler-assembly-lane__word-layer-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.assembler-assembly-lane__word-layer-title {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.assembler-assembly-lane__word-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out;
+}
+
+.assembler-assembly-lane__word-action:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.assembler-assembly-lane__word-action:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.assembler-assembly-lane__word-action:focus-visible {
+  outline: 2px solid var(--assembly-step-1-border);
+  outline-offset: 2px;
+}
+
+.assembler-assembly-lane__word-summary-pill,
+.assembler-assembly-lane__word-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 12px;
+}
+
+.assembler-assembly-lane__word-summary-pill strong,
+.assembler-assembly-lane__word-pill strong,
+.assembler-assembly-lane__word-group-head strong,
+.assembler-assembly-lane__word-hypotheses-head strong {
+  color: var(--text-primary);
+}
+
+.assembler-assembly-lane__word-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.assembler-assembly-lane__word-grid--secondary {
+  align-items: start;
+}
+
+.assembler-assembly-lane__word-group,
+.assembler-assembly-lane__word-hypotheses {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.assembler-assembly-lane__word-group-head span,
+.assembler-assembly-lane__word-hypotheses-head span {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assembler-assembly-lane__word-pills,
+.assembler-assembly-lane__word-selection-list,
+.assembler-assembly-lane__word-hypothesis-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assembler-assembly-lane__word-selection-list,
+.assembler-assembly-lane__word-hypothesis-list {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-assembly-lane__word-selection-list li,
+.assembler-assembly-lane__word-hypothesis-list li {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.assembler-assembly-lane__word-selection-list li strong,
+.assembler-assembly-lane__word-hypothesis-list li strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.assembler-assembly-lane__word-selection-list li.is-lakin {
+  border-color: var(--assembly-step-3-border);
+}
+
+.assembler-assembly-lane__word-selection-list li span,
+.assembler-assembly-lane__word-hypothesis-meta span {
+  color: var(--text-meta);
+  font-size: 12px;
+}
+
+.assembler-assembly-lane__word-error {
+  color: var(--danger-text);
 }
 
 .assembler-project-home__masthead {
@@ -7694,6 +7862,7 @@ main {
   .assembler-assembly-lane__meta-strip,
   .assembler-assembly-lane__entries-panel,
   .assembler-assembly-lane__entry,
+  .assembler-assembly-lane__word-layer,
   .assembler-boxes-index__masthead,
   .assembler-boxes-index__panel,
   .assembler-project-home__masthead,
@@ -7719,7 +7888,8 @@ main {
 
   .assembler-assembly-lane__meta-strip,
   .assembler-assembly-lane__entries-panel,
-  .assembler-assembly-lane__entry {
+  .assembler-assembly-lane__entry,
+  .assembler-assembly-lane__word-layer {
     padding: 16px;
     border-radius: 18px;
   }
@@ -7730,6 +7900,14 @@ main {
 
   .assembler-assembly-lane__contextual-action {
     width: 100%;
+  }
+
+  .assembler-assembly-lane__word-action {
+    width: 100%;
+  }
+
+  .assembler-assembly-lane__word-grid {
+    grid-template-columns: 1fr;
   }
 
   .assembler-assembly-lane__strip-title-row,

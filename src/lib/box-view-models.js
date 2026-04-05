@@ -24,6 +24,10 @@ import {
   listConfirmationQueueItems,
   normalizeProjectArchitectureMeta,
 } from "@/lib/assembly-architecture";
+import {
+  annotateWordLayerWithLakinMoments,
+  buildBoxWordLayerViewModel,
+} from "@/lib/word-layer";
 
 export const BOX_PHASES = Object.freeze({
   lane: "lane",
@@ -332,6 +336,17 @@ export function finalizeLaneEntry(entry = null) {
       : [],
     sourceRefs: Array.isArray(entry.sourceRefs) ? entry.sourceRefs : [],
     canInspectEvidence: Boolean(entry.canInspectEvidence),
+    isLakinMoment: Boolean(entry.isLakinMoment && kind === "move"),
+    pivotPair: kind === "move" ? String(entry.pivotPair || "").trim() : "",
+    fromTerm: kind === "move" ? String(entry.fromTerm || "").trim() : "",
+    toTerm: kind === "move" ? String(entry.toTerm || "").trim() : "",
+    lakinSummary: kind === "move" ? String(entry.lakinSummary || "").trim() : "",
+    lakinSource:
+      kind === "move" && String(entry.lakinSource || "").trim().toLowerCase() === "curated"
+        ? "curated"
+        : kind === "move" && entry.lakinSource
+          ? "derived"
+          : "",
   };
 }
 
@@ -606,6 +621,11 @@ function buildLaneEventEntry(event = null, index = 0, documentsByKey = new Map()
   }
 
   if (type === "assembly_move") {
+    const pivotFrom = String(context?.pivotFrom || "").trim().toLowerCase();
+    const pivotTo = String(context?.pivotTo || "").trim().toLowerCase();
+    const pivotPair =
+      pivotFrom && pivotTo ? `${pivotFrom} -> ${pivotTo}` : String(context?.pivotPair || "").trim();
+
     return finalizeLaneEntry({
       ...base,
       groupId: String(context?.groupId || "assembly").trim().toLowerCase() || "assembly",
@@ -633,6 +653,12 @@ function buildLaneEventEntry(event = null, index = 0, documentsByKey = new Map()
               label: "Open receipts",
             }
           : base.nextAction,
+      isLakinMoment: Boolean(context?.isLakinMoment),
+      pivotPair,
+      fromTerm: pivotFrom,
+      toTerm: pivotTo,
+      lakinSummary: String(context?.lakinSummary || "").trim(),
+      lakinSource: context?.isLakinMoment ? "curated" : "",
     });
   }
 
@@ -1215,6 +1241,12 @@ export function buildBoxAssemblyLaneViewModel({
     connectionLastError,
   });
   const root = buildRootViewModel(activeProject);
+  const baseWordLayer = buildBoxWordLayerViewModel({
+    activeProject,
+    projectDocuments: documents,
+    currentAssemblyDocument: seedDocument,
+    projectDrafts,
+  });
   const stateSummary = buildAssemblyStateSummary({
     project: activeProject,
     projectDocuments: documents,
@@ -1512,7 +1544,7 @@ export function buildBoxAssemblyLaneViewModel({
       .map((entry) => [entry.linkedReceiptId, entry.id]),
   );
 
-  const entries = rawEntries
+  const sortedEntries = rawEntries
     .map((entry) =>
       finalizeLaneEntry({
         ...entry,
@@ -1570,6 +1602,15 @@ export function buildBoxAssemblyLaneViewModel({
       }) => entry,
     );
 
+  const lakinAnnotation = annotateWordLayerWithLakinMoments({
+    wordLayer: baseWordLayer,
+    laneEntries: sortedEntries,
+  });
+  const entries = Array.isArray(lakinAnnotation?.laneEntries)
+    ? lakinAnnotation.laneEntries
+    : sortedEntries;
+  const wordLayer = lakinAnnotation?.wordLayer || baseWordLayer;
+
   const moveGroups = ["origin", "assembly", "proof"]
     .map((groupId) => ({
       id: groupId,
@@ -1620,6 +1661,7 @@ export function buildBoxAssemblyLaneViewModel({
     confirmationQueue,
     entries,
     moveGroups,
+    wordLayer,
     proofSummary: {
       line: receiptSummary?.courthouseStatusLine || "Local proof only",
       detail:

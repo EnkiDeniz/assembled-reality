@@ -389,6 +389,54 @@ function buildInstrumentAssistPrompt(intent = "", context = {}) {
   return "Interpret this reality state and name the clearest next move.";
 }
 
+function buildWordLayerInstrumentContext(viewModel = null, wordLayer = null) {
+  const hypothesisReadyEvidence =
+    wordLayer?.hypothesisReadyEvidence && typeof wordLayer.hypothesisReadyEvidence === "object"
+      ? wordLayer.hypothesisReadyEvidence
+      : {};
+
+  return {
+    boxTitle: String(viewModel?.boxTitle || "").trim(),
+    protocolPosition: String(viewModel?.protocolPosition || "").trim(),
+    protocolStateLabel: String(viewModel?.protocolStateLabel || "").trim(),
+    dominantClasses: Array.isArray(wordLayer?.dominantClasses)
+      ? wordLayer.dominantClasses.map((entry) => entry.label)
+      : [],
+    hasEnoughChronology: Boolean(wordLayer?.hasEnoughChronology),
+    chronologyKind: String(wordLayer?.chronologyKind || "").trim() || "inferred",
+    lowHistoryNote: String(wordLayer?.lowHistoryNote || "").trim(),
+    ...hypothesisReadyEvidence,
+    lakinMoments: Array.isArray(hypothesisReadyEvidence?.lakinMoments)
+      ? hypothesisReadyEvidence.lakinMoments
+      : Array.isArray(wordLayer?.lakinMoments)
+        ? wordLayer.lakinMoments
+        : [],
+  };
+}
+
+function normalizeWordLayerHypotheses(result = null) {
+  const hypotheses = Array.isArray(result?.hypotheses) ? result.hypotheses : [];
+  return hypotheses
+    .map((hypothesis) => ({
+      label: normalizeInstrumentText(hypothesis?.label),
+      summary: normalizeInstrumentText(hypothesis?.summary),
+      evidenceTerms: Array.isArray(hypothesis?.evidenceTerms)
+        ? hypothesis.evidenceTerms.map((term) => normalizeInstrumentText(term)).filter(Boolean)
+        : [],
+      evidenceMoments: Array.isArray(hypothesis?.evidenceMoments)
+        ? hypothesis.evidenceMoments
+            .map((moment) => normalizeInstrumentText(moment))
+            .filter(Boolean)
+        : [],
+      confidence:
+        String(hypothesis?.confidence || "").trim().toLowerCase() === "medium"
+          ? "medium"
+          : "low",
+    }))
+    .filter((hypothesis) => hypothesis.label && hypothesis.summary)
+    .slice(0, 3);
+}
+
 function buildSevenSuggestions(focusedBlock = null) {
   if (focusedBlock) {
     return [
@@ -1764,9 +1812,13 @@ function WorkspaceLaunchpad({
   onOpenProject,
   onOpenRoot,
   onRunContextualAction,
+  onInterpretWordLayer,
   onResumeProject,
   onOpenIntake,
   onInspectEvidence,
+  wordLayerHypotheses = [],
+  wordLayerHypothesesPending = false,
+  wordLayerHypothesesError = "",
   resumeSessionSummary = null,
 }) {
   const grouped = groupedDocuments(documents);
@@ -1816,6 +1868,10 @@ function WorkspaceLaunchpad({
     <AssemblyLane
       viewModel={assemblyLaneViewModel}
       onRunContextualAction={onRunContextualAction}
+      onInterpretWordLayer={onInterpretWordLayer}
+      wordLayerHypotheses={wordLayerHypotheses}
+      wordLayerHypothesesPending={wordLayerHypothesesPending}
+      wordLayerHypothesesError={wordLayerHypothesesError}
       onOpenEntry={(entry) => {
         if (entry?.actionKind === "root") {
           onOpenRoot?.();
@@ -3875,6 +3931,9 @@ export default function WorkspaceShell({
   }));
   const [sevenThreadLoadingKey, setSevenThreadLoadingKey] = useState("");
   const [sevenThreadError, setSevenThreadError] = useState("");
+  const [wordLayerHypothesesByProjectKey, setWordLayerHypothesesByProjectKey] = useState({});
+  const [wordLayerPendingProjectKey, setWordLayerPendingProjectKey] = useState("");
+  const [wordLayerErrorByProjectKey, setWordLayerErrorByProjectKey] = useState({});
   const [operatePending, setOperatePending] = useState(false);
   const [operateError, setOperateError] = useState("");
   const [operateResult, setOperateResult] = useState(null);
@@ -4106,6 +4165,13 @@ export default function WorkspaceShell({
     connectionStatus: getReceiptsConnectionStatus,
     connectionLastError: getReceiptsConnectionLastError,
   });
+  const activeWordLayerProjectKey = activeProjectKey || DEFAULT_PROJECT_KEY;
+  const activeWordLayerHypotheses =
+    wordLayerHypothesesByProjectKey[activeWordLayerProjectKey] || [];
+  const activeWordLayerHypothesesError =
+    wordLayerErrorByProjectKey[activeWordLayerProjectKey] || "";
+  const activeWordLayerHypothesesPending =
+    wordLayerPendingProjectKey === activeWordLayerProjectKey;
   const rootViewModel = buildRootViewModel(activeProject);
   const hasRoot = Boolean(rootViewModel?.hasRoot);
   const rootSuggestionReady =
@@ -6254,6 +6320,83 @@ export default function WorkspaceShell({
       }
 
       openReceiptsSurface();
+    }
+  }
+
+  async function handleInterpretWordLayer(wordLayer = null) {
+    const projectKey = activeProjectKey || DEFAULT_PROJECT_KEY;
+    if (!wordLayer?.hypothesisReadyEvidence?.available) {
+      setFeedback("The box needs more lexical evidence before Seven can suggest a hypothesis.", "error");
+      return;
+    }
+
+    const fallbackTargetDocument =
+      currentSeedDocument?.documentKey
+        ? currentSeedDocument
+        : realProjectSourceDocuments[0]?.documentKey
+          ? realProjectSourceDocuments[0]
+          : activeDocument;
+
+    if (!fallbackTargetDocument?.documentKey) {
+      setFeedback("Open a source or seed before asking Seven to read the word layer.", "error");
+      return;
+    }
+
+    setWordLayerPendingProjectKey(projectKey);
+    setWordLayerErrorByProjectKey((previous) => ({
+      ...previous,
+      [projectKey]: "",
+    }));
+
+    try {
+      const response = await fetch("/api/seven", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mode: "question",
+          question: "",
+          surface: "lane",
+          instrumentIntent: "word-layer-hypothesis",
+          instrumentContext: buildWordLayerInstrumentContext(
+            assemblyLaneViewModel,
+            wordLayer,
+          ),
+          documentKey: fallbackTargetDocument.documentKey,
+          documentTitle: fallbackTargetDocument.title,
+          documentSubtitle: fallbackTargetDocument.subtitle || "",
+          ...buildSevenRequestContext(fallbackTargetDocument),
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Seven couldn't read the word layer right now.");
+      }
+
+      const hypotheses = normalizeWordLayerHypotheses(payload?.instrumentResult);
+      if (!hypotheses.length) {
+        throw new Error("Seven did not return a usable hypothesis from the word layer.");
+      }
+
+      setWordLayerHypothesesByProjectKey((previous) => ({
+        ...previous,
+        [projectKey]: hypotheses,
+      }));
+      setFeedback("Seven read the word layer.", "success");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Seven couldn't read the word layer right now.";
+      setWordLayerErrorByProjectKey((previous) => ({
+        ...previous,
+        [projectKey]: message,
+      }));
+      setFeedback(message, "error");
+    } finally {
+      setWordLayerPendingProjectKey((current) => (current === projectKey ? "" : current));
     }
   }
 
@@ -9989,8 +10132,12 @@ export default function WorkspaceShell({
               onOpenProject={openProject}
               onOpenRoot={() => openRootEditorFor("voluntary")}
               onRunContextualAction={handleAssemblyLaneContextualAction}
+              onInterpretWordLayer={handleInterpretWordLayer}
               onResumeProject={resumeProject}
               onInspectEvidence={openFocusedConfirmation}
+              wordLayerHypotheses={activeWordLayerHypotheses}
+              wordLayerHypothesesPending={activeWordLayerHypothesesPending}
+              wordLayerHypothesesError={activeWordLayerHypothesesError}
               onOpenIntake={() => {
                 if (isMobileLayout) {
                   openWorkspacePicker("add");
@@ -10267,6 +10414,10 @@ export default function WorkspaceShell({
                     <AssemblyLane
                       viewModel={assemblyLaneViewModel}
                       onRunContextualAction={handleAssemblyLaneContextualAction}
+                      onInterpretWordLayer={handleInterpretWordLayer}
+                      wordLayerHypotheses={activeWordLayerHypotheses}
+                      wordLayerHypothesesPending={activeWordLayerHypothesesPending}
+                      wordLayerHypothesesError={activeWordLayerHypothesesError}
                       onOpenEntry={(entry) => {
                         if (entry?.actionKind === "root") {
                           openRootEditorFor("voluntary");
