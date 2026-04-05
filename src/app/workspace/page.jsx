@@ -16,6 +16,7 @@ import {
   getProjectByKey,
   getProjectEntryDocumentKey,
   getProjectListenDocumentKey,
+  isProjectDocumentVisible,
   PRIMARY_WORKSPACE_DOCUMENT_KEY,
 } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
@@ -47,6 +48,45 @@ function getProjectTimestamp(project = null) {
 function getDocumentTimestamp(document = null) {
   const parsed = Date.parse(document?.updatedAt || document?.createdAt || "");
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function listProjectDocuments(project = null, documents = []) {
+  const documentKeys = Array.isArray(project?.documentKeys) ? project.documentKeys : [];
+  if (!documentKeys.length) return [];
+  const allowedKeys = new Set(documentKeys);
+  return (Array.isArray(documents) ? documents : []).filter((document) =>
+    allowedKeys.has(document.documentKey),
+  );
+}
+
+function listVisibleProjectDocuments(project = null, documents = []) {
+  return listProjectDocuments(project, documents).filter((document) =>
+    isProjectDocumentVisible(document),
+  );
+}
+
+function hasDocumentBearingProject(project = null, documents = []) {
+  return listVisibleProjectDocuments(project, documents).length > 0;
+}
+
+function getFirstVisibleProjectDocumentKey(project = null, documents = []) {
+  return listVisibleProjectDocuments(project, documents)[0]?.documentKey || "";
+}
+
+function getProjectDocumentCandidates(project = null, documents = []) {
+  const visibleProjectDocuments = listVisibleProjectDocuments(project, documents);
+  const visibleKeys = new Set(visibleProjectDocuments.map((document) => document.documentKey));
+
+  return [
+    String(project?.currentAssemblyDocumentKey || "").trim(),
+    String(getProjectEntryDocumentKey(project) || "").trim(),
+    String(getProjectListenDocumentKey(project, documents) || "").trim(),
+    String(getFirstVisibleProjectDocumentKey(project, documents) || "").trim(),
+  ].filter((documentKey, index, values) => {
+    if (!documentKey) return false;
+    if (values.indexOf(documentKey) !== index) return false;
+    return visibleKeys.has(documentKey) || documentKey === PRIMARY_WORKSPACE_DOCUMENT_KEY;
+  });
 }
 
 function listRealDocuments(documents = []) {
@@ -82,11 +122,25 @@ function isSystemExampleProject(project = null) {
   );
 }
 
-function getMostRecentWorkspaceProject(projects = []) {
+function getMostRecentWorkspaceProject(projects = [], documents = []) {
   const normalizedProjects = Array.isArray(projects) ? projects.filter(Boolean) : [];
   const nonExampleProjects = normalizedProjects.filter((project) => !isSystemExampleProject(project));
   const candidates = nonExampleProjects.length ? nonExampleProjects : normalizedProjects;
-  return [...candidates].sort((left, right) => getProjectTimestamp(right) - getProjectTimestamp(left))[0] || null;
+  const documentBearingCandidates = candidates.filter((project) =>
+    hasDocumentBearingProject(project, documents),
+  );
+  const rankedCandidates = documentBearingCandidates.length ? documentBearingCandidates : candidates;
+  return (
+    [...rankedCandidates].sort((left, right) => getProjectTimestamp(right) - getProjectTimestamp(left))[0] ||
+    null
+  );
+}
+
+function getFirstDocumentBearingProject(projects = [], documents = []) {
+  const normalizedProjects = Array.isArray(projects) ? projects.filter(Boolean) : [];
+  return (
+    normalizedProjects.find((project) => hasDocumentBearingProject(project, documents)) || null
+  );
 }
 
 function getLatestRealProjectDocumentKey(project = null, documents = []) {
@@ -210,37 +264,53 @@ export default async function WorkspacePage({ searchParams }) {
       : requestedProjectKey || shouldAutoOpenExample || !mobileRequest
         ? "box"
         : "boxes";
-  const resumeProject =
-    getProjectForDocumentKey(projects, requestedDocumentKey) ||
-    null;
-  const mostRecentProject = getMostRecentWorkspaceProject(projects);
-  const resolvedProject =
-    getProjectByKey(projects, requestedProjectKey) ||
-    resumeProject ||
-    (shouldAutoOpenExample
-      ? getProjectByKey(projects, exampleBootstrap.autoOpenProjectKey)
+  const requestedProject = requestedProjectKey
+    ? getProjectByKey(projects, requestedProjectKey)
+    : null;
+  const resumeProject = getProjectForDocumentKey(projects, requestedDocumentKey) || null;
+  const primaryExampleProject =
+    (exampleBootstrap.exampleProjectKey
+      ? getProjectByKey(projects, exampleBootstrap.exampleProjectKey)
       : null) ||
-    mostRecentProject ||
-    projects[0] ||
+    projects.find((project) => project?.isSystemExample) ||
     null;
-  const initialProject = resolvedProject;
-  const initialProjectDocuments = documents.filter((document) =>
-    Array.isArray(initialProject?.documentKeys) ? initialProject.documentKeys.includes(document.documentKey) : false,
-  );
+  const mostRecentProject = getMostRecentWorkspaceProject(projects, documents);
+  const firstDocumentBearingProject = getFirstDocumentBearingProject(projects, documents);
+  const projectCandidates = [
+    requestedProject,
+    resumeProject,
+    shouldAutoOpenExample ? primaryExampleProject : null,
+    mostRecentProject,
+    firstDocumentBearingProject,
+    primaryExampleProject,
+    projects[0] || null,
+  ].filter((project, index, values) => project && values.indexOf(project) === index);
+  const resolvedProject =
+    projectCandidates.find((project) => hasDocumentBearingProject(project, documents)) ||
+    projectCandidates[0] ||
+    null;
+  let initialProject = resolvedProject;
+  let initialProjectDocuments = listProjectDocuments(initialProject, documents);
   const shouldSuppressExampleResume =
     Boolean(initialProject?.isSystemExample) &&
     !exampleBootstrap.hadRealHistory &&
     !shouldAutoOpenExample;
   const initialListenDocumentKey =
-    getProjectListenDocumentKey(initialProject, documents) ||
-    getProjectEntryDocumentKey(initialProject) ||
+    [
+      String(getProjectListenDocumentKey(initialProject, documents) || "").trim(),
+      String(getFirstVisibleProjectDocumentKey(initialProject, documents) || "").trim(),
+      String(getProjectEntryDocumentKey(initialProject) || "").trim(),
+    ].find(Boolean) ||
     documents[0]?.documentKey ||
-    "";
+    PRIMARY_WORKSPACE_DOCUMENT_KEY;
   const initialAssembleDocumentKey =
-    initialProject?.currentAssemblyDocumentKey ||
-    getProjectEntryDocumentKey(initialProject) ||
+    [
+      String(initialProject?.currentAssemblyDocumentKey || "").trim(),
+      String(getProjectEntryDocumentKey(initialProject) || "").trim(),
+      String(getFirstVisibleProjectDocumentKey(initialProject, documents) || "").trim(),
+    ].find(Boolean) ||
     documents[0]?.documentKey ||
-    "";
+    PRIMARY_WORKSPACE_DOCUMENT_KEY;
   const resumeSessionSummary = await safeWorkspaceRead(
     "buildResumeSessionSummaryForUser",
     () =>
@@ -273,19 +343,45 @@ export default async function WorkspacePage({ searchParams }) {
       !isFirstTime &&
       !requestedDocumentKey &&
       (!mobileRequest || !mobileResumeDocumentKey));
-  const fallbackDocumentKey =
-    requestedDocumentKey ||
-    (mobileRequest
+  const initialDocumentCandidates = [
+    requestedDocumentKey,
+    mobileRequest
       ? mobileResumeDocumentKey || initialAssembleDocumentKey
       : defaultMode === "assemble"
         ? initialAssembleDocumentKey
-        : initialListenDocumentKey);
-  let [initialDocument, projectDrafts, readerData] = await Promise.all([
-    safeWorkspaceRead(
-      "getReaderDocumentDataForUser",
-      () => getReaderDocumentDataForUser(session.user.id, fallbackDocumentKey),
+        : initialListenDocumentKey,
+    ...getProjectDocumentCandidates(initialProject, documents),
+    ...getProjectDocumentCandidates(primaryExampleProject, documents),
+    PRIMARY_WORKSPACE_DOCUMENT_KEY,
+  ].filter((documentKey, index, values) => {
+    const normalizedDocumentKey = String(documentKey || "").trim();
+    return normalizedDocumentKey && values.indexOf(documentKey) === index;
+  });
+  let initialDocument = null;
+  for (const candidateDocumentKey of initialDocumentCandidates) {
+    // Try every valid box-backed candidate before falling back to the built-in workspace doc.
+    initialDocument = await safeWorkspaceRead(
+      `getReaderDocumentDataForUser ${candidateDocumentKey}`,
+      () => getReaderDocumentDataForUser(session.user.id, candidateDocumentKey),
       null,
-    ),
+    );
+    if (initialDocument) break;
+  }
+
+  if (!initialDocument) {
+    redirect("/");
+  }
+
+  const projectForInitialDocument =
+    getProjectForDocumentKey(projects, initialDocument.documentKey) ||
+    initialProject ||
+    null;
+  if (projectForInitialDocument?.projectKey && projectForInitialDocument.projectKey !== initialProject?.projectKey) {
+    initialProject = projectForInitialDocument;
+    initialProjectDocuments = listProjectDocuments(initialProject, documents);
+  }
+
+  const [projectDrafts, readerData] = await Promise.all([
     safeWorkspaceRead(
       "listReadingReceiptDraftsForProjectForUser",
       () =>
@@ -302,22 +398,6 @@ export default async function WorkspacePage({ searchParams }) {
       null,
     ),
   ]);
-
-  if (!initialDocument) {
-    initialDocument = await safeWorkspaceRead(
-      "getReaderDocumentDataForUser builtin fallback",
-      () => getReaderDocumentDataForUser(session.user.id, PRIMARY_WORKSPACE_DOCUMENT_KEY),
-      null,
-    );
-  }
-
-  if (!initialDocument && !isFirstTime) {
-    redirect("/");
-  }
-
-  if (!initialDocument) {
-    redirect("/");
-  }
 
   const voiceCatalog = getVoiceCatalog({
     openAiEnabled: appEnv.openai.enabled,

@@ -15,12 +15,13 @@ export default function SeedSurface({
   onApplySuggestion,
   onEditSuggestion,
   onDismissSuggestion,
+  onDismissRerouteContext,
   isMobileLayout = false,
   children,
 }) {
   const selectedBlockCount = viewModel?.selectedBlockCount || 0;
   const stagedReplyCount = viewModel?.stagedReplyCount || 0;
-  const stageCount = selectedBlockCount + stagedReplyCount;
+  const rerouteContext = viewModel?.rerouteContext || null;
   const showSeedDocument =
     Boolean(activeDocument?.documentKey) &&
     (activeDocument?.isAssembly || activeDocument?.documentType === "assembly");
@@ -67,6 +68,29 @@ export default function SeedSurface({
           ) : null}
         </div>
       </div>
+
+      {rerouteContext ? (
+        <section className="assembler-seed-surface__reroute">
+          <div className="assembler-seed-surface__reroute-copy">
+            <span className="assembler-seed-surface__eyebrow">Reroute context</span>
+            <strong>
+              {rerouteContext.delta || rerouteContext.nextMove || "Operate preserved a real turn."}
+            </strong>
+            <p>
+              {[rerouteContext.aim, rerouteContext.bridge]
+                .filter(Boolean)
+                .join(" · ") || rerouteContext.ground || "Carry this line into the next seed pass."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={onDismissRerouteContext}
+          >
+            Dismiss
+          </button>
+        </section>
+      ) : null}
 
       <SeedUpdatePanel
         suggestion={suggestion}

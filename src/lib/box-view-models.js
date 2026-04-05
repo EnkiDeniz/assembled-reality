@@ -1724,6 +1724,7 @@ export function buildCreateViewModel({
   currentAssemblyDocument = null,
   clipboard = [],
   stagedAiBlocks = [],
+  rerouteContext = null,
 } = {}) {
   return {
     boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
@@ -1732,6 +1733,16 @@ export function buildCreateViewModel({
     selectedBlockCount: Array.isArray(clipboard) ? clipboard.length : 0,
     stagedReplyCount: Array.isArray(stagedAiBlocks) ? stagedAiBlocks.length : 0,
     root: buildRootViewModel(activeProject),
+    rerouteContext:
+      rerouteContext && typeof rerouteContext === "object"
+        ? {
+            delta: String(rerouteContext.delta || "").trim(),
+            nextMove: String(rerouteContext.nextMove || "").trim(),
+            aim: String(rerouteContext.aim || "").trim(),
+            ground: String(rerouteContext.ground || "").trim(),
+            bridge: String(rerouteContext.bridge || "").trim(),
+          }
+        : null,
   };
 }
 

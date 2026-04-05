@@ -42,7 +42,7 @@ export default function CloseMoveDialog({
           <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">Close move</span>
             <span className="assembler-sheet__title">
-              {mode === "seal" ? "Seal or save the move" : "Reroute from the read"}
+              {mode === "seal" ? "Seal the move" : "Reroute the seed"}
             </span>
           </div>
 
@@ -59,8 +59,8 @@ export default function CloseMoveDialog({
           <div className="assembler-close-move__intro">
             <p>
               {mode === "seal"
-                ? "Operate found a convergent enough line to close. Seal it now or save the draft for later."
-                : "Operate found a real turn, but not a proof-ready one. Reroute the seed without forcing a receipt."}
+                ? "This move can close now."
+                : "This move needs a reroute, not a receipt."}
             </p>
           </div>
 

@@ -136,6 +136,19 @@ function buildCloseMoveDeltaStatement(result = null) {
   );
 }
 
+function buildRerouteContext(result = null, deltaStatement = "") {
+  if (!result) return null;
+
+  return {
+    delta: String(deltaStatement || "").trim(),
+    nextMove: String(result?.nextMove || "").trim(),
+    aim: String(result?.aim?.sentence || "").trim(),
+    ground: String(result?.ground?.sentence || "").trim(),
+    bridge: String(result?.bridge?.sentence || "").trim(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
 function buildRootSuggestionDocumentSummary(document = null) {
   if (!document) return null;
 
@@ -3964,6 +3977,7 @@ export default function WorkspaceShell({
   const [closeMoveDelta, setCloseMoveDelta] = useState("");
   const [closeMovePending, setCloseMovePending] = useState(false);
   const [closeMoveError, setCloseMoveError] = useState("");
+  const [rerouteContextByProjectKey, setRerouteContextByProjectKey] = useState({});
   const [pendingOperateAudit, setPendingOperateAudit] = useState(null);
   const [seedSuggestion, setSeedSuggestion] = useState(null);
   const [seedSuggestionPending, setSeedSuggestionPending] = useState(false);
@@ -4143,6 +4157,9 @@ export default function WorkspaceShell({
     activeDocument?.documentType !== "assembly" &&
     Boolean(activeDocument?.isEditable);
   const showActiveDocumentTools = canManageActiveSource || canDeleteActiveDocument;
+  const activeRerouteContext = activeProjectKey
+    ? rerouteContextByProjectKey[activeProjectKey] || null
+    : null;
   const thinkViewModel = buildThinkViewModel({
     activeProject,
     activeDocument,
@@ -4154,6 +4171,7 @@ export default function WorkspaceShell({
     currentAssemblyDocument: currentSeedDocument,
     clipboard,
     stagedAiBlocks,
+    rerouteContext: activeRerouteContext,
   });
   const seedViewModel = buildSeedViewModel({
     activeProject,
@@ -6490,6 +6508,28 @@ export default function WorkspaceShell({
     setCloseMoveError("");
   }
 
+  function setProjectRerouteContext(projectKey, nextContext = null) {
+    const normalizedProjectKey = String(projectKey || "").trim();
+    if (!normalizedProjectKey) return;
+
+    setRerouteContextByProjectKey((previous) => {
+      if (!nextContext) {
+        if (!previous[normalizedProjectKey]) return previous;
+        const { [normalizedProjectKey]: _removed, ...rest } = previous;
+        return rest;
+      }
+
+      return {
+        ...previous,
+        [normalizedProjectKey]: nextContext,
+      };
+    });
+  }
+
+  function clearActiveRerouteContext() {
+    setProjectRerouteContext(activeProjectKey, null);
+  }
+
   async function handleCloseMovePrimaryAction() {
     if (!closeMoveResult) return;
 
@@ -6533,6 +6573,7 @@ export default function WorkspaceShell({
         setCloseMoveResult(null);
         setCloseMoveDelta("");
         setCloseMoveError("");
+        clearActiveRerouteContext();
         setBoxPhase(BOX_PHASES.receipts);
         setFeedback("Operate closed as a sealed move.", "success");
         return;
@@ -6542,6 +6583,10 @@ export default function WorkspaceShell({
       setCloseMoveResult(null);
       setCloseMoveDelta("");
       setCloseMoveError("");
+      setProjectRerouteContext(
+        activeProjectKey,
+        buildRerouteContext(closeMoveResult, closeMoveDelta),
+      );
       setBoxPhase(BOX_PHASES.create);
       setFeedback("Operate preserved the turn. Reroute the seed from here.", "success");
     } catch (error) {
@@ -6574,6 +6619,7 @@ export default function WorkspaceShell({
       setCloseMoveResult(null);
       setCloseMoveDelta("");
       setCloseMoveError("");
+      clearActiveRerouteContext();
       setBoxPhase(BOX_PHASES.receipts);
       setFeedback("Operate draft saved. Seal it when the move is ready.", "success");
     } catch (error) {
@@ -7348,6 +7394,7 @@ export default function WorkspaceShell({
       applyProjectPayload(payload?.project);
       setSeedSuggestion(null);
       setEntryStateOverride("");
+      clearActiveRerouteContext();
       seedSuggestFingerprintRef.current = payload?.seed?.seedMeta?.sourceFingerprint || seedSourceFingerprint;
       setFeedback("Applied the latest seed update.", "success");
     } catch (error) {
@@ -7766,6 +7813,9 @@ export default function WorkspaceShell({
     }
 
     upsertDocument(payload.document, { replaceLogs: true });
+    if (payload.document?.isAssembly || payload.document?.documentType === "assembly") {
+      setProjectRerouteContext(activeProjectKey, null);
+    }
     return payload.document;
   }
 
@@ -9946,6 +9996,7 @@ export default function WorkspaceShell({
       setDocumentsState((previous) =>
         sortDocuments(payload.documents || mergeDocumentSummary(previous, payload.document)),
       );
+      clearActiveRerouteContext();
       setClipboard([]);
       setStagedAiBlocks([]);
       setMobileComposeOpen(false);
@@ -10636,6 +10687,7 @@ export default function WorkspaceShell({
                         });
                       }}
                       onDismissSuggestion={dismissSeedSuggestion}
+                      onDismissRerouteContext={clearActiveRerouteContext}
                       isMobileLayout={isMobileLayout}
                     >
                       {documentWorkbench}

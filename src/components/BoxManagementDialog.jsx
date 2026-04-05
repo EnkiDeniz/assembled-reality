@@ -53,14 +53,14 @@ export default function BoxManagementDialog({
   const selectedExampleUpdateAvailable = Boolean(selectedProject?.systemExampleUpdateAvailable);
   const selectedCanDelete = selectedProject && !selectedProject.isDefaultBox;
   const selectedDescription = selectedProject?.isDefaultBox
-    ? "Rename the default box here. It cannot be deleted or archived."
+    ? "Rename the default box here. It stays."
     : selectedExampleUpdateAvailable
       ? selectedProject?.systemExampleUserModified
-        ? "A newer Lœgos example is available. This copy has been edited, so it will not refresh silently."
-        : "A newer Lœgos example is available for this box."
+        ? "A newer Lœgos example exists. This copy was edited, so it will not refresh silently."
+        : "A newer Lœgos example exists for this box."
     : selectedIsExample
-      ? "This editable example was seeded from the real Lœgos origin corpus. Deleting it fully removes the example and anything you kept inside it, and it will not be recreated."
-      : "Rename the box here. Deleting a non-default box moves its sources, seeds, and receipt drafts into the default box instead of deleting the work.";
+      ? "Editable example from the real Lœgos origin corpus. Delete it to remove the example and anything kept inside it."
+      : "Rename, pin, archive, or delete this box. Deleting it moves work into the default box.";
 
   return (
     <div className="assembler-sheet assembler-sheet--workspace is-open">
@@ -97,8 +97,8 @@ export default function BoxManagementDialog({
         <div className="assembler-box-management__body">
           <section className="assembler-box-management__section">
             <div className="assembler-box-management__section-head">
-              <span>Create a new Box</span>
-              <span>In-product flow</span>
+              <span>Create box</span>
+              <span>New</span>
             </div>
 
             <div className="assembler-box-management__form">
@@ -151,7 +151,7 @@ export default function BoxManagementDialog({
 
           <section className="assembler-box-management__section">
             <div className="assembler-box-management__section-head">
-              <span>Manage existing Boxes</span>
+              <span>Boxes</span>
               <span>{projects.length}</span>
             </div>
 
@@ -196,7 +196,7 @@ export default function BoxManagementDialog({
           {selectedProject ? (
             <section className="assembler-box-management__section">
               <div className="assembler-box-management__section-head">
-                <span>Selected Box</span>
+                <span>Selected box</span>
                 <span>
                   {selectedProject.isDefaultBox
                     ? "Protected"
@@ -269,7 +269,7 @@ export default function BoxManagementDialog({
                       <>
                         <button
                           type="button"
-                          className="assembler-box-management__secondary"
+                          className="assembler-box-management__primary"
                           onClick={onCreateUpdatedExampleCopy}
                           disabled={mutating}
                         >
@@ -316,7 +316,7 @@ export default function BoxManagementDialog({
                                 ? "Deleting example…"
                                 : "Moving work…"
                               : selectedIsExample
-                                ? "Delete Example"
+                                ? "Delete example"
                                 : "Delete Box"}
                           </button>
                         </div>

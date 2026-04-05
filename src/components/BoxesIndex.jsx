@@ -6,7 +6,6 @@ import {
 } from "@/lib/assembly-architecture";
 import BoxObjectVisualization from "@/components/BoxObjectVisualization";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
-import { PRODUCT_MARK } from "@/lib/product-language";
 import { buildVisualizationState } from "@/lib/seed-model";
 
 const BOX_SCOPES = Object.freeze({
@@ -168,9 +167,6 @@ function BoxRow({
           {project?.systemExampleUpdateAvailable ? (
             <span className="assembler-boxes-index__row-badge">Update available</span>
           ) : null}
-          {project?.isPinned ? (
-            <span className="assembler-boxes-index__row-badge">Pinned</span>
-          ) : null}
           {project?.isArchived ? (
             <span className="assembler-boxes-index__row-badge">Archived</span>
           ) : isActive ? (
@@ -220,13 +216,10 @@ export default function BoxesIndex({
   return (
     <div className="assembler-boxes-index assembler-boxes-index--next">
       <section className="assembler-boxes-index__masthead">
-        <div className="assembler-boxes-index__brand">
-          <span className="assembler-boxes-index__brand-mark">{PRODUCT_MARK}</span>
-          <span className="assembler-boxes-index__brand-meta">Boxes</span>
-        </div>
-
         <div className="assembler-boxes-index__copy">
-          <h1 className="assembler-boxes-index__title">Open the right box and keep moving.</h1>
+          <span className="assembler-boxes-index__eyebrow">Boxes</span>
+          <h1 className="assembler-boxes-index__title">Open a box and continue.</h1>
+          <p className="assembler-boxes-index__subtitle">Pinned boxes stay first. The current box stays close.</p>
           <div className="assembler-boxes-index__meta">
             <span>{activeBoxes.length} active</span>
             <span>{archivedBoxes.length} archived</span>
@@ -242,14 +235,6 @@ export default function BoxesIndex({
             disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
           >
             Resume
-          </button>
-          <button
-            type="button"
-            className="terminal-button"
-            onClick={() => activeProject?.projectKey && onOpenProjectHome(activeProject.projectKey)}
-            disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
-          >
-            Lane
           </button>
           <button type="button" className="terminal-button" onClick={onOpenIntake}>
             Add

@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { getAssemblyColorTokens } from "@/lib/assembly-architecture";
+import { DESIGN_TOKENS } from "@/lib/design-tokens";
 
 const SIZE_TOKENS = Object.freeze({
   compact: {
@@ -68,7 +69,7 @@ export default function BoxObjectVisualization({
           <defs>
             <linearGradient id={fillGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor={colorTokens.fill} />
-              <stop offset="50%" stopColor="rgba(255, 255, 255, 0.68)" />
+              <stop offset="50%" stopColor={DESIGN_TOKENS.textSecondary} />
               <stop offset="100%" stopColor={colorTokens.text} />
             </linearGradient>
             <linearGradient id={wireGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -203,7 +204,7 @@ export default function BoxObjectVisualization({
               cx="174"
               cy="42"
               r="8"
-              fill="rgba(255, 214, 118, 0.96)"
+              fill={DESIGN_TOKENS.assemblyStep6Text}
               initial={false}
               animate={{ opacity: 1, scale: prefersReducedMotion ? 1 : [1, 1.08, 1] }}
               transition={

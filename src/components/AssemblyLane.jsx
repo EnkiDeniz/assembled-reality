@@ -120,10 +120,17 @@ function WordSelectionList({ moments = [] }) {
             >
               <strong>{moment.label}</strong>
               <span>{moment.orderKind === "explicit" ? "Chronology explicit" : "Order inferred"}</span>
-              {moment.supportsLakinMoment ? (
-                <span>
-                  Supports Lakin moment
-                  {moment.pivotPair ? ` · ${moment.pivotPair}` : ""}
+              {moment.pivotPair ? (
+                <span
+                  className={`assembler-assembly-lane__word-selection-relation ${
+                    moment.supportsLakinMoment ? "is-lakin" : ""
+                  }`}
+                >
+                  {moment.supportsLakinMoment ? `Lakin pair · ${moment.pivotPair}` : moment.pivotPair}
+                </span>
+              ) : moment.supportsLakinMoment ? (
+                <span className="assembler-assembly-lane__word-selection-relation is-lakin">
+                  Lakin pair
                 </span>
               ) : null}
             </li>
@@ -206,12 +213,8 @@ function WordLayerSection({
       </summary>
 
       <section className="assembler-assembly-lane__word-layer" aria-label="Word layer">
-        <div className="assembler-assembly-lane__word-layer-head">
-          <div className="assembler-assembly-lane__word-layer-copy">
-            <span className="assembler-assembly-lane__strip-label">Word layer</span>
-            <strong className="assembler-assembly-lane__word-layer-title">Lexical archaeology</strong>
-          </div>
-          {canInterpret ? (
+        {canInterpret ? (
+          <div className="assembler-assembly-lane__word-layer-tools">
             <button
               type="button"
               className="assembler-assembly-lane__word-action"
@@ -221,8 +224,8 @@ function WordLayerSection({
               <ScanLine size={ICON_SIZE} strokeWidth={ICON_STROKE} />
               <span>{wordLayerHypothesesPending ? "Reading…" : "Interpret with Seven"}</span>
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {wordLayer?.empty ? (
           <p className="assembler-assembly-lane__word-empty">
@@ -307,10 +310,6 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence, showLakinDefinition 
   const EntryKindIcon = ENTRY_KIND_ICONS[entry?.kind] || FileText;
   const canOpen = typeof onOpenEntry === "function" && (entry?.actionKind || entry?.documentKey);
   const canInspect = Boolean(entry?.canInspectEvidence) && typeof onInspectEvidence === "function";
-  const evidenceMeta = [
-    entry?.evidenceBasisLabel || "",
-    entry?.certaintyKind === "event_backed" ? "Event-backed" : "Order inferred",
-  ].filter(Boolean);
 
   return (
     <article
@@ -379,10 +378,6 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence, showLakinDefinition 
         <p className="assembler-assembly-lane__entry-note">
           A Lakin moment is a turn where something fell away and something more durable was carried forward.
         </p>
-      ) : null}
-
-      {evidenceMeta.length ? (
-        <p className="assembler-assembly-lane__entry-meta-note">{evidenceMeta.join(" · ")}</p>
       ) : null}
     </article>
   );

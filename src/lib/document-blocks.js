@@ -2,6 +2,7 @@ import { buildExcerpt } from "@/lib/text";
 import {
   normalizeAssemblyBlockFields,
 } from "@/lib/assembly-architecture";
+import { WORKSPACE_LOG_ACTION_COLORS } from "@/lib/design-tokens";
 
 const BLOCK_KIND_MAP = {
   heading: "heading",
@@ -11,34 +12,6 @@ const BLOCK_KIND_MAP = {
   list: "list",
   bullet: "list",
   quote: "quote",
-};
-
-const LOG_ACTION_COLORS = {
-  UPLOADED: "#888888",
-  UPLOADED_IMAGE: "#f59e0b",
-  LINK_ADDED: "#38bdf8",
-  UPLOADED_AUDIO: "#fb7185",
-  PASTED: "#2dd4bf",
-  PASTED_IMAGE: "#2dd4bf",
-  LISTENED: "#60a5fa",
-  AI_QUERY: "#a78bfa",
-  AI_RESULT: "#22c55e",
-  DERIVED_IMAGE_SOURCE: "#f59e0b",
-  DERIVED_LINK_SOURCE: "#38bdf8",
-  DERIVED_AUDIO_SOURCE: "#fb7185",
-  SELECTED: "#06b6d4",
-  EDITED: "#f472b6",
-  CLEANED: "#f59e0b",
-  REPLACED: "#60a5fa",
-  DELETED: "#ef4444",
-  POLISHED: "#f59e0b",
-  ASSEMBLED: "#f59e0b",
-  OPERATED: "#339cff",
-  RECEIPT: "#22c55e",
-  CONFIRMED: "#22c55e",
-  DISCARDED: "#ef4444",
-  ROOT_DECLARED: "#60a5fa",
-  RECEIPT_SEALED: "#22c55e",
 };
 
 function timestamp(value) {
@@ -349,7 +322,10 @@ export function normalizeWorkspaceLogEntries(entries, defaultDocumentKey = "") {
 }
 
 export function getWorkspaceLogActionColor(action) {
-  return LOG_ACTION_COLORS[String(action || "").trim().toUpperCase()] || "#888888";
+  return (
+    WORKSPACE_LOG_ACTION_COLORS[String(action || "").trim().toUpperCase()] ||
+    WORKSPACE_LOG_ACTION_COLORS.UPLOADED
+  );
 }
 
 export function formatWorkspaceLogTime(value) {

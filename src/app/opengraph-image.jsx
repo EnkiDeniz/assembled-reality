@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import {
   ACTION_LINE,
   BRAND_TRUTH,
@@ -23,9 +24,9 @@ function MetaPill({ children, accent = false }) {
         alignItems: "center",
         padding: "10px 16px",
         borderRadius: 999,
-        border: `1px solid ${accent ? "rgba(51, 156, 255, 0.32)" : "rgba(255,255,255,0.1)"}`,
-        background: accent ? "rgba(51, 156, 255, 0.08)" : "rgba(255,255,255,0.03)",
-        color: accent ? "#339CFF" : "rgba(255,255,255,0.7)",
+        border: `1px solid ${accent ? DESIGN_TOKENS.assemblyStep1Border : DESIGN_TOKENS.line}`,
+        background: accent ? DESIGN_TOKENS.assemblyStep1Soft : DESIGN_TOKENS.surface2,
+        color: accent ? DESIGN_TOKENS.assemblyStep1Text : DESIGN_TOKENS.textSecondary,
         fontSize: 20,
         letterSpacing: 0.6,
       }}
@@ -44,8 +45,8 @@ function MockRow({ title, meta, active = false }) {
         gap: 18,
         padding: "18px 20px",
         borderRadius: 22,
-        border: `1px solid ${active ? "rgba(51,156,255,0.24)" : "rgba(255,255,255,0.06)"}`,
-        background: active ? "rgba(51,156,255,0.09)" : "rgba(255,255,255,0.03)",
+        border: `1px solid ${active ? DESIGN_TOKENS.assemblyStep1Border : DESIGN_TOKENS.line}`,
+        background: active ? DESIGN_TOKENS.assemblyStep1Soft : DESIGN_TOKENS.surface2,
       }}
     >
       <div
@@ -56,9 +57,9 @@ function MockRow({ title, meta, active = false }) {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 14,
-          border: "1px solid rgba(255,255,255,0.08)",
-          background: "#1b1b1b",
-          color: active ? "#339CFF" : "rgba(255,255,255,0.7)",
+          border: `1px solid ${DESIGN_TOKENS.line}`,
+          background: DESIGN_TOKENS.surface0,
+          color: active ? DESIGN_TOKENS.assemblyStep1Text : DESIGN_TOKENS.textSecondary,
           fontSize: 22,
         }}
       >
@@ -75,7 +76,7 @@ function MockRow({ title, meta, active = false }) {
       >
         <div
           style={{
-            color: "#FFFFFF",
+            color: DESIGN_TOKENS.textPrimary,
             fontSize: 24,
             fontWeight: 600,
             whiteSpace: "nowrap",
@@ -85,7 +86,7 @@ function MockRow({ title, meta, active = false }) {
         </div>
         <div
           style={{
-            color: "rgba(255,255,255,0.46)",
+            color: DESIGN_TOKENS.textMeta,
             fontSize: 18,
           }}
         >
@@ -105,8 +106,8 @@ export default function OpenGraphImage() {
           height: "100%",
           display: "flex",
           padding: 36,
-          background: "#181818",
-          color: "#FFFFFF",
+          background: DESIGN_TOKENS.surface0,
+          color: DESIGN_TOKENS.textPrimary,
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         }}
@@ -117,8 +118,8 @@ export default function OpenGraphImage() {
             height: "100%",
             display: "flex",
             borderRadius: 34,
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "#1f1f1f",
+            border: `1px solid ${DESIGN_TOKENS.line}`,
+            background: DESIGN_TOKENS.surface1,
             padding: 34,
             gap: 28,
           }}
@@ -159,7 +160,7 @@ export default function OpenGraphImage() {
                 </div>
                 <div
                   style={{
-                    color: "rgba(255,255,255,0.72)",
+                    color: DESIGN_TOKENS.textSecondary,
                     fontSize: 34,
                     lineHeight: 1.18,
                     maxWidth: 520,
@@ -191,7 +192,7 @@ export default function OpenGraphImage() {
               </div>
               <div
                 style={{
-                  color: "rgba(255,255,255,0.52)",
+                  color: DESIGN_TOKENS.textMeta,
                   fontSize: 20,
                   lineHeight: 1.4,
                   maxWidth: 560,
@@ -210,8 +211,8 @@ export default function OpenGraphImage() {
               gap: 16,
               padding: 18,
               borderRadius: 28,
-              border: "1px solid rgba(255,255,255,0.06)",
-              background: "#242424",
+              border: `1px solid ${DESIGN_TOKENS.line}`,
+              background: DESIGN_TOKENS.surface2,
             }}
           >
             <div
@@ -224,7 +225,7 @@ export default function OpenGraphImage() {
             >
               <div
                 style={{
-                  color: "#FFFFFF",
+                  color: DESIGN_TOKENS.textPrimary,
                   fontSize: 24,
                   fontWeight: 600,
                 }}

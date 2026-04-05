@@ -4763,7 +4763,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -4787,7 +4787,7 @@ main {
   gap: 14px;
 }
 
-.assembler-assembly-lane__word-layer-head,
+.assembler-assembly-lane__word-layer-tools,
 .assembler-assembly-lane__word-group-head,
 .assembler-assembly-lane__word-hypotheses-head {
   display: flex;
@@ -4813,7 +4813,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -4925,6 +4925,10 @@ main {
   font-size: 12px;
 }
 
+.assembler-assembly-lane__word-selection-relation.is-lakin {
+  color: var(--assembly-step-3-text);
+}
+
 .assembler-assembly-lane__word-error {
   color: var(--danger-text);
 }
@@ -4934,11 +4938,9 @@ main {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line);
   border-radius: 20px;
-  background:
-    linear-gradient(180deg, var(--assembly-tone-soft, rgba(51, 156, 255, 0.05)), transparent 65%),
-    rgba(15, 17, 17, 0.92);
+  background: var(--surface-1);
 }
 
 .assembler-project-home__copy {
@@ -5250,15 +5252,13 @@ main {
   display: grid;
   gap: 10px;
   padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(15, 17, 17, 0.92);
+  background: var(--surface-1);
 }
 
 .assembler-project-home__summary.is-primary {
-  background:
-    linear-gradient(180deg, var(--assembly-tone-soft, rgba(51, 156, 255, 0.05)), transparent 70%),
-    rgba(15, 17, 17, 0.94);
+  background: var(--surface-1);
 }
 
 .assembler-project-home__summary-title,
@@ -5463,9 +5463,9 @@ main {
   display: grid;
   gap: 12px;
   padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(15, 17, 17, 0.92);
+  background: var(--surface-1);
 }
 
 .assembler-boxes-index__masthead {
@@ -7504,6 +7504,36 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.assembler-seed-surface__reroute {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--assembly-step-3-border);
+  border-radius: 18px;
+  background: var(--assembly-step-3-soft);
+}
+
+.assembler-seed-surface__reroute-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.assembler-seed-surface__reroute-copy strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.assembler-seed-surface__reroute-copy p {
+  margin: 0;
+  color: var(--assembly-step-3-text);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .assembler-seed-update {
