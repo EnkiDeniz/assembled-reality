@@ -192,7 +192,7 @@ export function buildWorkspaceReceiptDraftInput({
       documentKey: document?.documentKey || "",
       getReceiptsReceiptId: remoteReceiptId || null,
       status,
-      title: `${boxTitle} receipt`,
+      title: `${boxTitle || "Box"} receipt`,
       interpretation: operateResult.bridge?.sentence || null,
       implications: operateResult.nextMove || null,
       stance: "WORKING",

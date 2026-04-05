@@ -228,7 +228,7 @@ main {
 }
 
 .terminal-status.is-success {
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
 }
 
 .terminal-status.is-error {
@@ -1601,12 +1601,12 @@ main {
 }
 
 .assembler-toolbar__document-state.is-saving {
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
   border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
 }
 
 .assembler-toolbar__document-state.is-saved {
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
   border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
 }
 
@@ -1657,7 +1657,7 @@ main {
 
 .assembler-tab.is-edit.is-active {
   border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
 }
 
 .assembler-ai-toggle {
@@ -1667,7 +1667,7 @@ main {
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1800,7 +1800,7 @@ main {
 }
 
 .assembler-launchpad__meta-line a {
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
 }
 
 .assembler-launchpad__body {
@@ -1936,7 +1936,7 @@ main {
 }
 
 .assembler-launchpad__section-action {
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -2787,10 +2787,10 @@ main {
 .assembler-seven-sheet__run {
   min-height: 30px;
   padding: 0 10px;
-  border: 1px solid var(--assembly-tone-border, rgba(51, 156, 255, 0.18));
+  border: 1px solid var(--assembly-tone-border, var(--assembly-step-1-border));
   border-radius: 999px;
-  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
-  color: var(--blue);
+  background: var(--assembly-tone-soft, var(--assembly-step-1-soft));
+  color: var(--assembly-tone-text, var(--assembly-step-1-text));
   font-size: 12px;
 }
 
@@ -2875,7 +2875,7 @@ main {
 }
 
 .assembler-seven-sheet__prompt {
-  color: var(--blue);
+  color: var(--assembly-step-1-text);
   font-size: 18px;
   line-height: 1.4;
 }
@@ -3011,13 +3011,13 @@ main {
 }
 
 .assembler-player__button.is-ai-active {
-  color: var(--blue);
-  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
+  color: var(--assembly-step-1-text);
+  border-color: var(--assembly-tone-border, var(--assembly-step-1-border));
 }
 
 .assembler-player__button.is-playing {
-  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.28));
-  color: var(--blue);
+  border-color: var(--assembly-tone-border, var(--assembly-step-1-border));
+  color: var(--assembly-step-1-text);
 }
 
 .assembler-player__progress {
@@ -3044,7 +3044,7 @@ main {
 
 .assembler-player__fill {
   height: 100%;
-  background: var(--blue);
+  background: var(--assembly-tone, var(--assembly-step-1));
 }
 
 .assembler-player__select {
@@ -7710,11 +7710,14 @@ main {
   .assembler-project-home__masthead-secondary,
   .assembler-project-home__summary-actions,
   .assembler-project-home__section-actions,
-  .assembler-receipt-surface__hero-actions,
   .assembler-box-management__form,
   .assembler-box-management__selected-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .assembler-receipt-surface__hero-actions {
+    flex-wrap: wrap;
   }
 
   .assembler-boxes-index__primary-button,

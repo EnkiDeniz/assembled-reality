@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SkipBack, Rewind, Play, Pause, FastForward, SkipForward } from "lucide-react";
 import AiUtilityRail from "@/components/AiUtilityRail";
 import AssemblyLane from "@/components/AssemblyLane";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
@@ -3641,72 +3642,32 @@ function PlayerBar({
       <div className="assembler-player__controls">
         {immersive ? (
           <>
-            <button
-              type="button"
-              className="assembler-player__button"
-              onClick={onPreviousBlock}
-              disabled={!playbackAvailable}
-            >
-              PREV
+            <button type="button" className="assembler-player__button" onClick={onPreviousBlock} disabled={!playbackAvailable} title="Previous block" aria-label="Previous block">
+              <SkipBack size={16} strokeWidth={1.7} />
             </button>
-            <button
-              type="button"
-              className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`}
-              onClick={onTogglePlayback}
-              disabled={!playbackAvailable}
-            >
-              {loadingAudio ? "…" : isPlaying ? "PAUSE" : "PLAY"}
+            <button type="button" className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`} onClick={onTogglePlayback} disabled={!playbackAvailable} title={isPlaying ? "Pause" : "Play"} aria-label={isPlaying ? "Pause" : "Play"}>
+              {loadingAudio ? "…" : isPlaying ? <Pause size={16} strokeWidth={1.7} /> : <Play size={16} strokeWidth={1.7} />}
             </button>
-            <button
-              type="button"
-              className="assembler-player__button"
-              onClick={onNextBlock}
-              disabled={!playbackAvailable}
-            >
-              NEXT
+            <button type="button" className="assembler-player__button" onClick={onNextBlock} disabled={!playbackAvailable} title="Next block" aria-label="Next block">
+              <SkipForward size={16} strokeWidth={1.7} />
             </button>
           </>
         ) : (
           <>
-            <button
-              type="button"
-              className="assembler-player__button"
-              onClick={onSeekBack}
-              disabled={!playbackAvailable}
-            >
-              ◄10
+            <button type="button" className="assembler-player__button" onClick={onSeekBack} disabled={!playbackAvailable} title="Back 10s" aria-label="Seek back 10 seconds">
+              <Rewind size={16} strokeWidth={1.7} />
             </button>
-            <button
-              type="button"
-              className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`}
-              onClick={onTogglePlayback}
-              disabled={!playbackAvailable}
-            >
-              {loadingAudio ? "…" : isPlaying ? "PAUSE" : "PLAY"}
+            <button type="button" className={`assembler-player__button is-primary ${isPlaying ? "is-playing" : ""}`} onClick={onTogglePlayback} disabled={!playbackAvailable} title={isPlaying ? "Pause" : "Play"} aria-label={isPlaying ? "Pause" : "Play"}>
+              {loadingAudio ? "…" : isPlaying ? <Pause size={16} strokeWidth={1.7} /> : <Play size={16} strokeWidth={1.7} />}
             </button>
-            <button
-              type="button"
-              className="assembler-player__button"
-              onClick={onSeekForward}
-              disabled={!playbackAvailable}
-            >
-              10►
+            <button type="button" className="assembler-player__button" onClick={onSeekForward} disabled={!playbackAvailable} title="Forward 10s" aria-label="Seek forward 10 seconds">
+              <FastForward size={16} strokeWidth={1.7} />
             </button>
-            <button
-              type="button"
-              className="assembler-player__button"
-              onClick={onPreviousBlock}
-              disabled={!playbackAvailable}
-            >
-              PREV
+            <button type="button" className="assembler-player__button" onClick={onPreviousBlock} disabled={!playbackAvailable} title="Previous" aria-label="Previous block">
+              <SkipBack size={16} strokeWidth={1.7} />
             </button>
-            <button
-              type="button"
-              className="assembler-player__button"
-              onClick={onNextBlock}
-              disabled={!playbackAvailable}
-            >
-              NEXT
+            <button type="button" className="assembler-player__button" onClick={onNextBlock} disabled={!playbackAvailable} title="Next" aria-label="Next block">
+              <SkipForward size={16} strokeWidth={1.7} />
             </button>
           </>
         )}
