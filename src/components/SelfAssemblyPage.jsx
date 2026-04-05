@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AssemblyLane from "@/components/AssemblyLane";
 import PublicFooterLinks from "@/components/PublicFooterLinks";
 import { publicSite } from "@/lib/public-site";
 import { PRODUCT_CHAIN_LABEL, PRODUCT_CHAIN_NOTE, PRODUCT_SENTENCE } from "@/lib/product-language";
@@ -18,51 +19,6 @@ function SeedCard({ title, body }) {
       <span className="self-assembly-seed-card__label">{title}</span>
       <p>{body}</p>
     </article>
-  );
-}
-
-function StageList({ items = [] }) {
-  if (!items.length) {
-    return <p className="self-assembly-muted">No selected blocks resolved for this step.</p>;
-  }
-
-  return (
-    <div className="self-assembly-stage-list">
-      {items.map((item) => (
-        <article key={`${item.blockId || item.label}-${item.text}`} className="self-assembly-stage-item">
-          <span className="self-assembly-stage-item__label">{item.label || "Selected"}</span>
-          <p>{item.text}</p>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function HistoryClusterList({ clusters = [] }) {
-  if (!clusters.length) return null;
-
-  return (
-    <div className="self-assembly-history-list">
-      {clusters.map((cluster) => (
-        <article key={cluster.id} className="self-assembly-history-card">
-          <div className="self-assembly-history-card__topline">
-            <span>{cluster.title}</span>
-            <strong>{cluster.commitCount} commits</strong>
-          </div>
-          <p>{cluster.description}</p>
-          {cluster.rangeLabel ? (
-            <p className="self-assembly-history-card__range">{cluster.rangeLabel}</p>
-          ) : null}
-          {cluster.sampleTitles?.length ? (
-            <ul className="self-assembly-history-card__samples">
-              {cluster.sampleTitles.map((title) => (
-                <li key={title}>{title}</li>
-              ))}
-            </ul>
-          ) : null}
-        </article>
-      ))}
-    </div>
   );
 }
 
@@ -172,78 +128,17 @@ export default function SelfAssemblyPage({ page, demo, jsonLd = null }) {
         <section className="self-assembly-section">
           <div className="self-assembly-section__header">
             <span>Assembly lane</span>
-            <strong>Seven curated moves in the box proving how it got here</strong>
+            <strong>One lane, one box, one truth grammar</strong>
           </div>
-
-          <ol className="self-assembly-timeline">
-            {demo.milestones.map((milestone) => (
-              <li key={milestone.id} className="self-assembly-milestone">
-                <article className="self-assembly-milestone__card">
-                  <header className="self-assembly-milestone__header">
-                    <span>{milestone.label}</span>
-                    <h2>{milestone.title}</h2>
-                  </header>
-
-                  <div className="self-assembly-milestone__narrative">
-                    <span className="self-assembly-milestone__subhead">Narrative source section</span>
-                    <p>{milestone.narrativeSection.excerpt}</p>
-                    <p className="self-assembly-milestone__path">
-                      {milestone.narrativeSection.relativePath}
-                    </p>
-                  </div>
-
-                  <div className="self-assembly-flow-grid">
-                    <section className="self-assembly-flow-card">
-                      <span className="self-assembly-flow-card__label">Selected</span>
-                      <StageList items={milestone.selected} />
-                    </section>
-
-                    <section className="self-assembly-flow-card">
-                      <span className="self-assembly-flow-card__label">Staged</span>
-                      <p>{milestone.stagedSummary}</p>
-                    </section>
-
-                    <section className="self-assembly-flow-card">
-                      <span className="self-assembly-flow-card__label">Advanced</span>
-                      <article className="self-assembly-stage-item is-advanced">
-                        <span className="self-assembly-stage-item__label">
-                          {milestone.advanced.label}
-                        </span>
-                        <p>{milestone.advanced.text}</p>
-                      </article>
-                    </section>
-
-                    <section className="self-assembly-flow-card">
-                      <span className="self-assembly-flow-card__label">Sealed</span>
-                      <p>{milestone.sealedSummary}</p>
-                    </section>
-                  </div>
-
-                  {milestone.supportingSources?.length ? (
-                    <div className="self-assembly-support">
-                      <span className="self-assembly-milestone__subhead">Supporting sources</span>
-                      <div className="self-assembly-support__chips">
-                        {milestone.supportingSources.map((source) => (
-                          <span key={source.id} className="self-assembly-support__chip">
-                            {source.title}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {milestone.historyClusters?.length ? (
-                    <div className="self-assembly-support">
-                      <span className="self-assembly-milestone__subhead">
-                        Corroborating Git history cluster
-                      </span>
-                      <HistoryClusterList clusters={milestone.historyClusters} />
-                    </div>
-                  ) : null}
-                </article>
-              </li>
-            ))}
-          </ol>
+          <p className="self-assembly-section__lede">
+            The public demo now renders the same lane entry shape and certainty grammar as the
+            workspace. The chronology stays curated, but the box is described in the same evidence language.
+          </p>
+          <AssemblyLane
+            viewModel={demo.assemblyLane}
+            showMasthead={false}
+            showSummary={false}
+          />
         </section>
 
         <section className="self-assembly-section">

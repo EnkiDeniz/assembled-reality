@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ASSEMBLY_DOMAINS,
   getAssemblyColorTokens,
@@ -11,6 +11,7 @@ export default function ConfirmationQueueDialog({
   queue = [],
   root = null,
   pending = false,
+  focus = null,
   onClose,
   onResolve,
 }) {
@@ -18,7 +19,20 @@ export default function ConfirmationQueueDialog({
   const [primaryTag, setPrimaryTag] = useState("");
   const [domain, setDomain] = useState("");
 
-  const currentItem = queue[index] || null;
+  const filteredQueue = useMemo(() => {
+    const items = Array.isArray(queue) ? queue : [];
+    if (!focus?.documentKey && !focus?.itemId) {
+      return items;
+    }
+
+    return items.filter((item) => {
+      if (focus?.itemId && item?.id === focus.itemId) return true;
+      if (focus?.documentKey && item?.documentKey === focus.documentKey) return true;
+      return false;
+    });
+  }, [focus, queue]);
+
+  const currentItem = filteredQueue[index] || null;
   const preferredDomains = root?.applicableDomains?.length
     ? root.applicableDomains
     : root?.suggestedDomains || [];
@@ -33,7 +47,7 @@ export default function ConfirmationQueueDialog({
 
   if (!open) return null;
 
-  const remaining = queue.length - index;
+  const remaining = filteredQueue.length - index;
   const stageTone =
     currentItem?.confirmationColorTokens ||
     getAssemblyColorTokens(getSevenStageColorStep(currentItem?.sevenStage));
@@ -52,11 +66,11 @@ export default function ConfirmationQueueDialog({
   }
 
   function advanceQueue() {
-    if (index >= queue.length - 1) {
+    if (index >= filteredQueue.length - 1) {
       handleClose();
       return;
     }
-    setIndex((value) => Math.min(value + 1, Math.max(0, queue.length - 1)));
+    setIndex((value) => Math.min(value + 1, Math.max(0, filteredQueue.length - 1)));
     setPrimaryTag("");
     setDomain("");
   }
@@ -92,8 +106,8 @@ export default function ConfirmationQueueDialog({
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">Confirmation</span>
-            <span className="assembler-sheet__title">
-              {currentItem ? `${index + 1} of ${queue.length}` : "Queue"}
+              <span className="assembler-sheet__title">
+              {currentItem ? `${index + 1} of ${filteredQueue.length}` : "Queue"}
             </span>
           </div>
 
@@ -105,7 +119,7 @@ export default function ConfirmationQueueDialog({
         {currentItem ? (
           <div className="assembler-confirmation">
             <div className="assembler-confirmation__meta">
-              <span>{currentItem.sourceTitle || currentItem.documentKey}</span>
+              <span>{focus?.label || currentItem.sourceTitle || currentItem.documentKey}</span>
               <span>{remaining} left</span>
             </div>
 
@@ -203,7 +217,11 @@ export default function ConfirmationQueueDialog({
           </div>
         ) : (
           <div className="assembler-confirmation assembler-confirmation--empty">
-            <p>Nothing is waiting for confirmation right now.</p>
+            <p>
+              {focus?.documentKey
+                ? "Nothing in this evidence slice is waiting for confirmation right now."
+                : "Nothing is waiting for confirmation right now."}
+            </p>
           </div>
         )}
       </div>

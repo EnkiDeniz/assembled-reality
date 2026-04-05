@@ -7,6 +7,7 @@ import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
 import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { PRODUCT_MARK } from "@/lib/product-language";
 import { normalizeSeedMeta } from "@/lib/seed-model";
+import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
 import { slugify } from "@/lib/text";
 import {
   buildWorkspaceBlocksFromDocument,
@@ -774,11 +775,37 @@ export async function createAssemblyDocumentForUser(
     },
   });
 
+  const normalizedSeedMeta = normalizeSeedMeta(seedMeta);
+  const relatedSourceDocumentKeys = [
+    ...new Set(
+      persistedBlocks
+        .map((block) => String(block?.sourceDocumentKey || "").trim())
+        .filter((key) => key && key !== documentKey),
+    ),
+  ];
+
   await attachDocumentToProjectForUser(userId, {
     projectKey,
     documentKey,
     role: "ASSEMBLY",
     setAsCurrentAssembly: true,
+    appendEvents: normalizedSeedMeta.isSeed
+      ? [
+          buildAssemblyIndexEvent("seed_created", {
+            move: `Created seed ${normalizedTitle}.`,
+            return: `${relatedSourceDocumentKeys.length} source${
+              relatedSourceDocumentKeys.length === 1 ? "" : "s"
+            } now shape the live edge.`,
+            echo: normalizedSeedMeta.status || "live",
+            context: {
+              documentKey,
+              primaryDocumentKey: documentKey,
+              relatedSourceDocumentKeys,
+              blockCount: persistedBlocks.length,
+            },
+          }),
+        ]
+      : [],
   });
 
   return getWorkspaceDocumentForUser(userId, documentKey);

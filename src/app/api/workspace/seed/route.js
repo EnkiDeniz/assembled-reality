@@ -12,6 +12,7 @@ import {
   listReaderProjectsForUser,
   updateReaderProjectForUser,
 } from "@/lib/reader-projects";
+import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
 import { getRequiredSession } from "@/lib/server-session";
 import {
@@ -49,6 +50,16 @@ const SEED_RESPONSE_SCHEMA = {
 
 const MAX_TOTAL_SOURCE_CHARS = 32000;
 const MAX_SOURCE_CHARS = 12000;
+
+function getRelatedSourceDocumentKeys(blocks = [], documentKey = "") {
+  return [
+    ...new Set(
+      (Array.isArray(blocks) ? blocks : [])
+        .map((block) => String(block?.sourceDocumentKey || "").trim())
+        .filter((key) => key && key !== documentKey),
+    ),
+  ];
+}
 
 function extractMessageText(payload) {
   const output = Array.isArray(payload?.output) ? payload.output : [];
@@ -418,6 +429,30 @@ export async function POST(request) {
         lastSuggestedFingerprint: sourceFingerprint,
       }),
     });
+
+    if (projectKey) {
+      const relatedSourceDocumentKeys = getRelatedSourceDocumentKeys(
+        nextBlocks,
+        seedDocument.documentKey,
+      );
+      await updateReaderProjectForUser(session.user.id, projectKey, {
+        appendEvents: [
+          buildAssemblyIndexEvent("seed_updated", {
+            move: `Updated seed ${nextSeed.title}.`,
+            return: `${relatedSourceDocumentKeys.length} source${
+              relatedSourceDocumentKeys.length === 1 ? "" : "s"
+            } are currently carried by the live edge.`,
+            echo: "live",
+            context: {
+              documentKey: seedDocument.documentKey,
+              primaryDocumentKey: seedDocument.documentKey,
+              relatedSourceDocumentKeys,
+              blockCount: nextBlocks.length,
+            },
+          }),
+        ],
+      });
+    }
 
     const renamedProject = await renameProjectIfNeeded(session.user.id, activeProject, nextSeed.title);
     const projectRecord =

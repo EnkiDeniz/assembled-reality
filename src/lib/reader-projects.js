@@ -805,6 +805,7 @@ export async function attachDocumentToProjectForUser(
     documentKey,
     role = "SOURCE",
     setAsCurrentAssembly = false,
+    appendEvents = [],
   },
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -847,14 +848,25 @@ export async function attachDocumentToProjectForUser(
       });
     }
 
+    const normalizedAppendEvents = Array.isArray(appendEvents) ? appendEvents.filter(Boolean) : [];
+    const nextProjectData = {};
+
     if (setAsCurrentAssembly) {
+      nextProjectData.currentAssemblyDocumentKey = documentKey;
+    }
+
+    if (normalizedAppendEvents.length > 0) {
+      nextProjectData.metadataJson = mergeProjectArchitectureMeta(project.metadataJson, {
+        events: normalizedAppendEvents,
+      });
+    }
+
+    if (Object.keys(nextProjectData).length > 0) {
       await readerProjectModel.update({
         where: {
           id: project.id,
         },
-        data: {
-          currentAssemblyDocumentKey: documentKey,
-        },
+        data: nextProjectData,
       });
     }
   } catch (error) {

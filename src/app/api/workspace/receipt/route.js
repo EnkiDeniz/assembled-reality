@@ -135,6 +135,34 @@ export async function POST(request) {
     },
   });
 
+  if (projectKey) {
+    await updateReaderProjectForUser(session.user.id, projectKey, {
+      appendEvents: [
+        buildAssemblyIndexEvent("receipt_drafted", {
+          move: `Drafted receipt ${draft.title || draft.id} for ${document.title || document.documentKey}.`,
+          return:
+            status === "REMOTE_DRAFT"
+              ? "Receipt draft is also pushed outward as a courthouse draft."
+              : "Receipt draft is held locally until you seal it.",
+          echo: status.toLowerCase(),
+          context: {
+            draftId: draft.id,
+            documentKey: document.documentKey,
+            primaryDocumentKey: document.documentKey,
+            relatedSourceDocumentKeys: [
+              ...new Set(
+                blocks
+                  .map((block) => String(block?.sourceDocumentKey || "").trim())
+                  .filter(Boolean),
+              ),
+            ],
+            remoteDraft: status === "REMOTE_DRAFT",
+          },
+        }),
+      ],
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     draft,

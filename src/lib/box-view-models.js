@@ -32,21 +32,21 @@ export const BOX_PHASES = Object.freeze({
   receipts: "receipts",
 });
 
-const LANE_STAGE_LABELS = Object.freeze({
+export const LANE_STAGE_LABELS = Object.freeze({
   selected: "Selected",
   staged: "Staged",
   advanced: "Advanced",
   sealed: "Sealed",
 });
 
-const LANE_PROOF_LABELS = Object.freeze({
+export const LANE_PROOF_LABELS = Object.freeze({
   open: "Open",
   witness: "Witness",
   supported: "Supported",
   sealed: "Sealed",
 });
 
-const LANE_KIND_LABELS = Object.freeze({
+export const LANE_KIND_LABELS = Object.freeze({
   root: "Root",
   source: "Source",
   "derived-source": "Derived source",
@@ -54,6 +54,118 @@ const LANE_KIND_LABELS = Object.freeze({
   move: "Assembly move",
   seed: "Seed",
   receipt: "Receipt",
+});
+
+export const LANE_GROUP_LABELS = Object.freeze({
+  origin: "Origin",
+  assembly: "Assembly",
+  proof: "Proof",
+});
+
+const LANE_GROUP_ORDER = Object.freeze({
+  origin: 0,
+  assembly: 1,
+  proof: 2,
+});
+
+const LANE_ROLE_ORDER = Object.freeze({
+  root: 0,
+  source: 1,
+  "derived-source": 2,
+  "history-export": 3,
+  move: 4,
+  seed: 5,
+  receipt: 6,
+});
+
+const LANE_SOFT_STAGE_LABELS = Object.freeze({
+  root: {
+    selected: "Present",
+    staged: "Declared",
+    advanced: "Declared",
+    sealed: "Sealed",
+  },
+  source: {
+    selected: "Present",
+    staged: "Linked",
+    advanced: "Carried",
+    sealed: "Sealed",
+  },
+  "derived-source": {
+    selected: "Present",
+    staged: "Linked",
+    advanced: "Carried",
+    sealed: "Sealed",
+  },
+  "history-export": {
+    selected: "Present",
+    staged: "Imported",
+    advanced: "Linked",
+    sealed: "Sealed",
+  },
+  move: {
+    selected: "Present",
+    staged: "Moved",
+    advanced: "Moved",
+    sealed: "Sealed",
+  },
+  seed: {
+    selected: "Live edge",
+    staged: "Live edge",
+    advanced: "Live edge",
+    sealed: "Sealed",
+  },
+  receipt: {
+    selected: "Drafted",
+    staged: "Drafted",
+    advanced: "Drafted",
+    sealed: "Sealed",
+  },
+});
+
+const LANE_SOFT_PROOF_LABELS = Object.freeze({
+  root: {
+    open: "Open",
+    witness: "Linked",
+    supported: "Linked",
+    sealed: "Sealed",
+  },
+  source: {
+    open: "Open",
+    witness: "Linked",
+    supported: "Linked",
+    sealed: "Sealed",
+  },
+  "derived-source": {
+    open: "Open",
+    witness: "Linked",
+    supported: "Linked",
+    sealed: "Sealed",
+  },
+  "history-export": {
+    open: "Open",
+    witness: "Linked",
+    supported: "Linked",
+    sealed: "Sealed",
+  },
+  move: {
+    open: "Open",
+    witness: "Linked",
+    supported: "Linked",
+    sealed: "Sealed",
+  },
+  seed: {
+    open: "Open",
+    witness: "Linked proof",
+    supported: "Linked proof",
+    sealed: "Sealed",
+  },
+  receipt: {
+    open: "Draft",
+    witness: "Draft",
+    supported: "Draft",
+    sealed: "Sealed",
+  },
 });
 
 function getTimestamp(value = null) {
@@ -89,6 +201,150 @@ function formatLaneMoment(value = "", fallback = "Order inferred") {
     day: "numeric",
     year: "numeric",
   }).format(new Date(parsed));
+}
+
+function getLaneGroupId(kind = "") {
+  if (kind === "receipt") return "proof";
+  if (kind === "move" || kind === "seed") return "assembly";
+  return "origin";
+}
+
+function getLaneRoleWeight(kind = "") {
+  return LANE_ROLE_ORDER[kind] ?? 999;
+}
+
+export function getLaneStageStatusLabel(stageStatus = "selected", certaintyKind = "inferred", kind = "source") {
+  if (stageStatus === "sealed") {
+    return LANE_STAGE_LABELS.sealed;
+  }
+
+  if (certaintyKind === "event_backed") {
+    return LANE_STAGE_LABELS[stageStatus] || LANE_STAGE_LABELS.selected;
+  }
+
+  return (
+    LANE_SOFT_STAGE_LABELS[kind]?.[stageStatus] ||
+    LANE_SOFT_STAGE_LABELS.source[stageStatus] ||
+    LANE_STAGE_LABELS[stageStatus] ||
+    LANE_STAGE_LABELS.selected
+  );
+}
+
+export function getLaneProofStatusLabel(proofStatus = "open", certaintyKind = "inferred", kind = "source") {
+  if (proofStatus === "sealed") {
+    return LANE_PROOF_LABELS.sealed;
+  }
+
+  if (certaintyKind === "event_backed") {
+    return LANE_PROOF_LABELS[proofStatus] || LANE_PROOF_LABELS.open;
+  }
+
+  return (
+    LANE_SOFT_PROOF_LABELS[kind]?.[proofStatus] ||
+    LANE_SOFT_PROOF_LABELS.source[proofStatus] ||
+    LANE_PROOF_LABELS[proofStatus] ||
+    LANE_PROOF_LABELS.open
+  );
+}
+
+function getLaneActionLabel(entry = null) {
+  if (entry?.nextAction?.label) return entry.nextAction.label;
+  if (entry?.actionLabel) return entry.actionLabel;
+  return entry?.canInspectEvidence ? "Inspect evidence" : "Open";
+}
+
+export function finalizeLaneEntry(entry = null) {
+  if (!entry) return null;
+
+  const kind = entry.kind || "source";
+  const certaintyKind = entry.certaintyKind === "event_backed" ? "event_backed" : "inferred";
+  const groupId = entry.groupId || getLaneGroupId(kind);
+  const stageStatus = entry.stageStatus || "selected";
+  const proofStatus = entry.proofStatus || "open";
+
+  return {
+    ...entry,
+    kind,
+    certaintyKind,
+    groupId,
+    groupLabel: entry.groupLabel || LANE_GROUP_LABELS[groupId] || "Assembly",
+    stageStatus,
+    proofStatus,
+    stageStatusLabel:
+      entry.stageStatusLabel ||
+      getLaneStageStatusLabel(stageStatus, certaintyKind, kind),
+    proofStatusLabel:
+      entry.proofStatusLabel ||
+      getLaneProofStatusLabel(proofStatus, certaintyKind, kind),
+    occurredAtLabel:
+      entry.occurredAtLabel ||
+      formatLaneMoment(
+        entry.occurredAt,
+        entry.orderKind === "explicit" ? "Undated" : "Order inferred",
+      ),
+    actionLabel: getLaneActionLabel(entry),
+    linkedEntryIds: Array.isArray(entry.linkedEntryIds)
+      ? [...new Set(entry.linkedEntryIds.filter(Boolean))]
+      : [],
+    linkedSourceKeys: Array.isArray(entry.linkedSourceKeys)
+      ? [...new Set(entry.linkedSourceKeys.filter(Boolean))]
+      : [],
+    sourceRefs: Array.isArray(entry.sourceRefs) ? entry.sourceRefs : [],
+    canInspectEvidence: Boolean(entry.canInspectEvidence),
+  };
+}
+
+function getEventContext(event = null) {
+  return event?.detail?.context && typeof event.detail.context === "object"
+    ? event.detail.context
+    : {};
+}
+
+function pushToMapArray(map, key, value) {
+  if (!key) return;
+  const list = map.get(key) || [];
+  list.push(value);
+  map.set(key, list);
+}
+
+function buildAssemblyEventIndex(events = []) {
+  const byType = new Map();
+  const byDocumentKey = new Map();
+  const byReceiptId = new Map();
+
+  (Array.isArray(events) ? events : []).forEach((event) => {
+    const type = String(event?.type || "").trim().toLowerCase();
+    if (!type) return;
+
+    pushToMapArray(byType, type, event);
+
+    const context = getEventContext(event);
+    const keys = [
+      context.documentKey,
+      context.primaryDocumentKey,
+      ...(Array.isArray(context.relatedSourceDocumentKeys) ? context.relatedSourceDocumentKeys : []),
+      ...(Array.isArray(context.evidenceSourceDocumentKeys) ? context.evidenceSourceDocumentKeys : []),
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+
+    [...new Set(keys)].forEach((key) => {
+      pushToMapArray(byDocumentKey, key, event);
+    });
+
+    [context.receiptId, context.draftId]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .forEach((receiptId) => {
+        pushToMapArray(byReceiptId, receiptId, event);
+      });
+  });
+
+  return {
+    byType,
+    byDocumentKey,
+    byReceiptId,
+  };
 }
 
 function buildDocumentPlainText(document = null) {
@@ -208,43 +464,181 @@ function buildLaneProofStatus({ stageStatus = "selected", confirmedBlockCount = 
   return "open";
 }
 
-function buildLaneStateEventEntry(event = null, index = 0) {
+function buildLaneEventEntry(event = null, index = 0, documentsByKey = new Map()) {
   const type = String(event?.type || "").trim().toLowerCase();
-  if (type !== "state_advanced") return null;
+  if (!type) return null;
 
-  const context = event?.detail?.context && typeof event.detail.context === "object"
-    ? event.detail.context
-    : {};
+  const context = getEventContext(event);
+  const documentKey = String(context?.documentKey || context?.primaryDocumentKey || "").trim();
+  const relatedSourceDocumentKeys = [
+    ...new Set(
+      (Array.isArray(context?.relatedSourceDocumentKeys) ? context.relatedSourceDocumentKeys : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const relatedDocument = documentKey ? documentsByKey.get(documentKey) : null;
+  const receiptId = String(context?.receiptId || context?.draftId || "").trim();
   const nextState = String(context?.to || "").trim().toLowerCase();
-  const stageStatus = nextState === "sealed" || nextState === "released" ? "sealed" : "advanced";
-  const proofStatus = stageStatus === "sealed" ? "sealed" : "witness";
 
-  return {
+  const base = {
     id: `event-${type}-${event?.at || index}`,
     kind: "move",
     kindLabel: LANE_KIND_LABELS.move,
-    title: nextState ? `Assembly moved to ${nextState}` : "Assembly moved",
+    title: "Assembly move",
     detail:
       event?.detail?.move ||
       event?.detail?.return ||
       event?.detail?.echo ||
-      "The box advanced to a new assembly state.",
+      "The box recorded an assembly event.",
     occurredAt: event?.at || null,
     orderKind: getTimestamp(event?.at) ? "explicit" : "inferred",
-    stageStatus,
-    stageStatusLabel: LANE_STAGE_LABELS[stageStatus],
-    proofStatus,
-    proofStatusLabel: LANE_PROOF_LABELS[proofStatus],
+    stageStatus: "selected",
+    proofStatus: "open",
     evidenceBasis: "assembly-event",
     evidenceBasisLabel: "Assembly event",
     trustSummary: event?.detail?.return || "",
-    linkedReceiptId: String(context?.receiptId || "").trim(),
-    sourceRefs: [],
+    linkedReceiptId: receiptId,
+    linkedSourceKeys: relatedSourceDocumentKeys,
+    linkedSeedDocumentKey: "",
+    sourceRefs: documentKey && relatedDocument
+      ? [
+          {
+            documentKey,
+            title: relatedDocument.title || "Related document",
+          },
+        ]
+      : [],
     isLeadingEdge: false,
-    documentKey: "",
-    actionKind: "",
-    actionLabel: "",
+    documentKey,
+    actionKind: documentKey
+      ? relatedDocument && isAssemblyDocument(relatedDocument)
+        ? "seed"
+        : "source"
+      : receiptId
+        ? "receipt"
+        : "",
+    certaintyKind: "event_backed",
+    canInspectEvidence: false,
+    nextAction: documentKey
+      ? {
+          kind: "open-related",
+          label: relatedDocument && isAssemblyDocument(relatedDocument) ? "Open seed" : "Open source",
+        }
+      : receiptId
+        ? {
+            kind: "open-receipt",
+            label: "Open receipts",
+          }
+        : null,
   };
+
+  if (type === "source_added") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "origin",
+      title: relatedDocument?.title ? `Source added · ${relatedDocument.title}` : "Source added",
+    });
+  }
+
+  if (type === "source_derived") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "origin",
+      title: relatedDocument?.title ? `Source derived · ${relatedDocument.title}` : "Source derived",
+    });
+  }
+
+  if (type === "history_export_imported") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "origin",
+      title: relatedDocument?.title ? `History imported · ${relatedDocument.title}` : "History imported",
+      stageStatus: "staged",
+      proofStatus: "witness",
+      actionKind: "history",
+      nextAction: {
+        kind: "open-history",
+        label: "Open witness",
+      },
+    });
+  }
+
+  if (type === "seed_created" || type === "seed_updated") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "assembly",
+      title: type === "seed_created" ? "Seed created" : "Seed updated",
+      stageStatus: "advanced",
+      linkedSeedDocumentKey: documentKey,
+      nextAction: {
+        kind: "open-seed",
+        label: "Open seed",
+      },
+      actionKind: "seed",
+    });
+  }
+
+  if (type === "block_confirmed" || type === "block_discarded") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "assembly",
+      title: type === "block_confirmed" ? "Block confirmed" : "Block discarded",
+      stageStatus: "staged",
+      proofStatus: "witness",
+      canInspectEvidence: documentKey ? true : false,
+      nextAction: documentKey
+        ? {
+            kind: "inspect-evidence",
+            label: "Inspect evidence",
+          }
+        : base.nextAction,
+    });
+  }
+
+  if (type === "receipt_drafted") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "proof",
+      title: "Receipt drafted",
+      stageStatus: "advanced",
+      proofStatus: "witness",
+      actionKind: "receipt",
+      nextAction: {
+        kind: "open-receipts",
+        label: "Open receipts",
+      },
+    });
+  }
+
+  if (type === "receipt_sealed") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "proof",
+      title: "Receipt sealed",
+      stageStatus: "sealed",
+      proofStatus: "sealed",
+      actionKind: "receipt",
+      nextAction: {
+        kind: "open-receipts",
+        label: "Open receipts",
+      },
+    });
+  }
+
+  if (type === "state_advanced") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "assembly",
+      title: nextState ? `Assembly moved to ${nextState}` : "Assembly moved",
+      stageStatus:
+        nextState === "sealed" || nextState === "released" ? "sealed" : "advanced",
+      proofStatus:
+        nextState === "sealed" || nextState === "released" ? "sealed" : "witness",
+    });
+  }
+
+  return null;
 }
 
 function formatReceiptStatus(status = "") {
@@ -730,6 +1124,9 @@ export function buildBoxAssemblyLaneViewModel({
   connectionLastError = "",
 } = {}) {
   const documents = Array.isArray(projectDocuments) ? projectDocuments.filter(Boolean) : [];
+  const documentsByKey = new Map(
+    documents.map((document) => [document.documentKey, document]),
+  );
   const realSourceDocuments = documents.filter(isRealSourceDocument);
   const seedDocument = currentAssemblyDocument || getMostRecentItem(documents.filter(isAssemblyDocument));
   const seedSections = getSeedSectionsFromDocument(seedDocument);
@@ -755,15 +1152,26 @@ export function buildBoxAssemblyLaneViewModel({
     activeProject?.metadataJson || activeProject?.architectureMeta || null,
   );
   const confirmationQueue = listConfirmationQueueItems(documents, root);
+  const confirmationQueueByDocumentKey = confirmationQueue.reduce((accumulator, item) => {
+    const documentKey = String(item?.documentKey || "").trim();
+    if (!documentKey) return accumulator;
+    const queue = accumulator.get(documentKey) || [];
+    queue.push(item);
+    accumulator.set(documentKey, queue);
+    return accumulator;
+  }, new Map());
+  const eventIndex = buildAssemblyEventIndex(meta.assemblyIndexMeta.events);
+  const rootDeclaredEvent = (eventIndex.byType.get("root_declared") || []).slice(-1)[0] || null;
 
   const rootEntry = root?.hasRoot
-    ? {
+    ? finalizeLaneEntry({
         id: "lane-root",
         kind: "root",
         kindLabel: LANE_KIND_LABELS.root,
         title: root.text || "Root declared",
         detail: root.gloss || "The box has a declared line to return to.",
         occurredAt:
+          rootDeclaredEvent?.at ||
           root.createdAt ||
           earliestDocument?.createdAt ||
           earliestDocument?.updatedAt ||
@@ -780,30 +1188,103 @@ export function buildBoxAssemblyLaneViewModel({
           ? "explicit"
           : "inferred",
         stageStatus: "staged",
-        stageStatusLabel: LANE_STAGE_LABELS.staged,
         proofStatus: "witness",
-        proofStatusLabel: LANE_PROOF_LABELS.witness,
         evidenceBasis: "declared-origin",
         evidenceBasisLabel: "Declared origin",
         trustSummary: root.gloss || "Declared by the operator.",
         linkedReceiptId: "",
+        linkedEntryIds: [],
+        linkedSourceKeys: [],
+        linkedSeedDocumentKey: "",
         sourceRefs: [],
         isLeadingEdge: false,
         documentKey: "",
         actionKind: "root",
-        actionLabel: "Open root",
-      }
+        certaintyKind: rootDeclaredEvent ? "event_backed" : "inferred",
+        nextAction: {
+          kind: "open-root",
+          label: "Open root",
+        },
+      })
     : null;
+
+  const receiptEntries = (receiptSummary?.recentDrafts || []).map((draft) => {
+    const sealed = String(draft?.status || "").trim().toUpperCase() === "SEALED";
+    const receiptEvents = eventIndex.byReceiptId.get(String(draft?.id || "").trim()) || [];
+    const certaintyKind = receiptEvents.length > 0 ? "event_backed" : "inferred";
+    const linkedSourceKeys = [
+      ...new Set(
+        [
+          ...(Array.isArray(draft?.sourceSections) ? draft.sourceSections : []),
+          ...(Array.isArray(draft?.payload?.evidenceSnapshot?.sourceDocumentKeys)
+            ? draft.payload.evidenceSnapshot.sourceDocumentKeys
+            : []),
+        ]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean),
+      ),
+    ];
+    const detail =
+      draft?.courthouseStatusLine ||
+      draft?.courthouseStatusDetail ||
+      draft?.statusLabel ||
+      "Receipt draft held locally.";
+
+    return finalizeLaneEntry({
+      id: `lane-receipt-${draft.id || draft.documentKey || detail}`,
+      kind: "receipt",
+      kindLabel: LANE_KIND_LABELS.receipt,
+      title: draft?.title || "Receipt draft",
+      detail,
+      occurredAt: draft?.updatedAt || draft?.createdAt || null,
+      orderKind: getTimestamp(draft?.updatedAt || draft?.createdAt) ? "explicit" : "inferred",
+      stageStatus: sealed ? "sealed" : "advanced",
+      proofStatus: sealed ? "sealed" : certaintyKind === "event_backed" ? "witness" : "open",
+      evidenceBasis: sealed ? "proof-closure" : "proof-draft",
+      evidenceBasisLabel: sealed ? "Proof closure" : "Proof draft",
+      trustSummary: draft?.verifyUrl ? "Courthouse verification is attached." : "Proof is held in the box.",
+      linkedReceiptId: String(draft?.id || "").trim(),
+      linkedSourceKeys,
+      linkedSeedDocumentKey:
+        seedDocument?.documentKey && draft?.documentKey === seedDocument.documentKey
+          ? seedDocument.documentKey
+          : "",
+      sourceRefs: draft?.documentKey
+        ? [
+            {
+              documentKey: draft.documentKey,
+              title: draft.title || "Receipt document",
+            },
+          ]
+        : [],
+      isLeadingEdge: false,
+      documentKey: String(draft?.documentKey || "").trim(),
+      actionKind: "receipt",
+      certaintyKind,
+      nextAction: {
+        kind: "open-receipts",
+        label: "Open receipts",
+      },
+    });
+  });
 
   const sourceEntries = realSourceDocuments.map((document) => {
     const sourceSummary = buildSourceSummaryViewModel(document);
     const historyWitness = buildHistoryWitnessSummary(document);
+    const documentEvents = eventIndex.byDocumentKey.get(document.documentKey) || [];
     const confirmationCounts = getConfirmationCounts(document);
     const advancedBlockCount = seedSourceDocumentKeys.has(document.documentKey)
       ? (Array.isArray(seedDocument?.blocks) ? seedDocument.blocks : []).filter(
           (block) => block?.sourceDocumentKey === document.documentKey,
         ).length
       : 0;
+    const certaintyKind = documentEvents.some((event) =>
+      ["source_added", "source_derived", "history_export_imported", "block_confirmed", "block_discarded"].includes(
+        String(event?.type || "").trim().toLowerCase(),
+      ),
+    )
+      ? "event_backed"
+      : "inferred";
     const stageStatus = buildLaneStageStatus({
       historyWitness,
       advancedBlockCount,
@@ -831,7 +1312,7 @@ export function buildBoxAssemblyLaneViewModel({
           (document.sectionCount || document.blocks?.length || 0) === 1 ? "" : "s"
         }`;
 
-    return {
+    return finalizeLaneEntry({
       id: `lane-source-${document.documentKey}`,
       kind,
       kindLabel: LANE_KIND_LABELS[kind] || LANE_KIND_LABELS.source,
@@ -840,9 +1321,7 @@ export function buildBoxAssemblyLaneViewModel({
       occurredAt: document.createdAt || document.updatedAt || null,
       orderKind: getTimestamp(document.createdAt || document.updatedAt) ? "explicit" : "inferred",
       stageStatus,
-      stageStatusLabel: LANE_STAGE_LABELS[stageStatus],
       proofStatus,
-      proofStatusLabel: LANE_PROOF_LABELS[proofStatus],
       evidenceBasis: evidenceBasis.value,
       evidenceBasisLabel: evidenceBasis.label,
       trustSummary:
@@ -851,21 +1330,42 @@ export function buildBoxAssemblyLaneViewModel({
         historyWitness?.definition?.description ||
         "",
       linkedReceiptId: "",
+      linkedEntryIds: [],
+      linkedSourceKeys: [document.documentKey],
+      linkedSeedDocumentKey: seedSourceDocumentKeys.has(document.documentKey)
+        ? seedDocument?.documentKey || ""
+        : "",
       sourceRefs: buildLaneSourceRefs(document),
       isLeadingEdge: false,
       documentKey: document.documentKey,
       actionKind: historyWitness ? "history" : "source",
-      actionLabel: historyWitness ? "Open witness" : "Open source",
+      certaintyKind,
+      canInspectEvidence: (confirmationQueueByDocumentKey.get(document.documentKey) || []).length > 0,
+      nextAction:
+        (confirmationQueueByDocumentKey.get(document.documentKey) || []).length > 0
+          ? {
+              kind: "inspect-evidence",
+              label: "Inspect evidence",
+            }
+          : {
+              kind: historyWitness ? "open-witness" : "open-source",
+              label: historyWitness ? "Open witness" : "Open source",
+            },
       historyEntryCount: historyWitness?.entryCount || 0,
-    };
+    });
   });
 
   const moveEntries = meta.assemblyIndexMeta.events
-    .map((event, index) => buildLaneStateEventEntry(event, index))
+    .map((event, index) => buildLaneEventEntry(event, index, documentsByKey))
     .filter(Boolean);
 
+  const seedEvents = seedDocument?.documentKey
+    ? eventIndex.byDocumentKey.get(seedDocument.documentKey) || []
+    : [];
+  const linkedSeedReceipt =
+    receiptEntries.find((entry) => entry.documentKey === seedDocument?.documentKey) || null;
   const seedEntry = seedDocument
-    ? {
+    ? finalizeLaneEntry({
         id: `lane-seed-${seedDocument.documentKey}`,
         kind: "seed",
         kindLabel: LANE_KIND_LABELS.seed,
@@ -876,20 +1376,23 @@ export function buildBoxAssemblyLaneViewModel({
             : "Current live assembly shape.",
         occurredAt: seedDocument.updatedAt || seedDocument.createdAt || null,
         orderKind: getTimestamp(seedDocument.updatedAt || seedDocument.createdAt) ? "explicit" : "inferred",
-        stageStatus: receiptSummary.sealedDraftCount > 0 ? "advanced" : "advanced",
-        stageStatusLabel: LANE_STAGE_LABELS.advanced,
-        proofStatus: receiptSummary.sealedDraftCount > 0 ? "supported" : "open",
-        proofStatusLabel:
+        stageStatus: "advanced",
+        proofStatus:
           receiptSummary.sealedDraftCount > 0
-            ? LANE_PROOF_LABELS.supported
-            : LANE_PROOF_LABELS.open,
+            ? "supported"
+            : seedSourceDocumentKeys.size > 0
+              ? "witness"
+              : "open",
         evidenceBasis: "live-assembly",
         evidenceBasisLabel: "Live assembly",
         trustSummary:
           `${seedSourceDocumentKeys.size} source${
             seedSourceDocumentKeys.size === 1 ? "" : "s"
           } are currently carried by the seed.`,
-        linkedReceiptId: "",
+        linkedReceiptId: linkedSeedReceipt?.linkedReceiptId || "",
+        linkedEntryIds: [],
+        linkedSourceKeys: [...seedSourceDocumentKeys],
+        linkedSeedDocumentKey: seedDocument.documentKey,
         sourceRefs: [
           {
             documentKey: seedDocument.documentKey,
@@ -899,73 +1402,104 @@ export function buildBoxAssemblyLaneViewModel({
         isLeadingEdge: true,
         documentKey: seedDocument.documentKey,
         actionKind: "seed",
-        actionLabel: "Open seed",
-      }
+        certaintyKind: seedEvents.some((event) =>
+          ["seed_created", "seed_updated"].includes(String(event?.type || "").trim().toLowerCase()),
+        )
+          ? "event_backed"
+          : "inferred",
+        nextAction: {
+          kind: "open-seed",
+          label: "Open seed",
+        },
+      })
     : null;
 
-  const receiptEntries = (receiptSummary?.recentDrafts || []).map((draft) => {
-    const sealed = String(draft?.status || "").trim().toUpperCase() === "SEALED";
-    const proofStatus = sealed ? "sealed" : draft?.courthouseStatusLine ? "witness" : "open";
-    const stageStatus = sealed ? "sealed" : "advanced";
-    const detail =
-      draft?.courthouseStatusLine ||
-      draft?.courthouseStatusDetail ||
-      draft?.statusLabel ||
-      "Receipt draft held locally.";
+  const rawEntries = [rootEntry, ...sourceEntries, ...moveEntries, seedEntry, ...receiptEntries]
+    .filter(Boolean);
 
-    return {
-      id: `lane-receipt-${draft.id || draft.documentKey || detail}`,
-      kind: "receipt",
-      kindLabel: LANE_KIND_LABELS.receipt,
-      title: draft?.title || "Receipt draft",
-      detail,
-      occurredAt: draft?.updatedAt || draft?.createdAt || null,
-      orderKind: getTimestamp(draft?.updatedAt || draft?.createdAt) ? "explicit" : "inferred",
-      stageStatus,
-      stageStatusLabel: LANE_STAGE_LABELS[stageStatus],
-      proofStatus,
-      proofStatusLabel: LANE_PROOF_LABELS[proofStatus],
-      evidenceBasis: "proof-closure",
-      evidenceBasisLabel: sealed ? "Proof closure" : "Proof draft",
-      trustSummary: draft?.verifyUrl ? "Courthouse verification is attached." : "Proof is held in the box.",
-      linkedReceiptId: String(draft?.id || "").trim(),
-      sourceRefs: draft?.documentKey
-        ? [
-            {
-              documentKey: draft.documentKey,
-              title: draft.title || "Receipt document",
-            },
-          ]
-        : [],
-      isLeadingEdge: false,
-      documentKey: String(draft?.documentKey || "").trim(),
-      actionKind: "receipt",
-      actionLabel: "Open receipts",
-    };
+  const entryIdByDocumentKey = new Map();
+  rawEntries.forEach((entry) => {
+    if (!entry?.documentKey) return;
+    const current = entryIdByDocumentKey.get(entry.documentKey) || [];
+    current.push(entry.id);
+    entryIdByDocumentKey.set(entry.documentKey, current);
   });
+  const entryIdByReceiptId = new Map(
+    receiptEntries
+      .filter((entry) => entry?.linkedReceiptId)
+      .map((entry) => [entry.linkedReceiptId, entry.id]),
+  );
 
-  const entries = [rootEntry, ...sourceEntries, ...moveEntries, seedEntry, ...receiptEntries]
-    .filter(Boolean)
+  const entries = rawEntries
+    .map((entry) =>
+      finalizeLaneEntry({
+        ...entry,
+        linkedEntryIds: [
+          ...(Array.isArray(entry?.linkedEntryIds) ? entry.linkedEntryIds : []),
+          ...(entry?.linkedSeedDocumentKey
+            ? entryIdByDocumentKey.get(entry.linkedSeedDocumentKey) || []
+            : []),
+          ...(Array.isArray(entry?.linkedSourceKeys)
+            ? entry.linkedSourceKeys.flatMap((key) => entryIdByDocumentKey.get(key) || [])
+            : []),
+          ...(entry?.linkedReceiptId && entryIdByReceiptId.has(entry.linkedReceiptId)
+            ? [entryIdByReceiptId.get(entry.linkedReceiptId)]
+            : []),
+          ...(entry?.documentKey && entry.kind === "move"
+            ? entryIdByDocumentKey.get(entry.documentKey) || []
+            : []),
+        ].filter((linkedEntryId) => linkedEntryId && linkedEntryId !== entry.id),
+      }),
+    )
     .map((entry, index) => ({
       ...entry,
       sortTimestamp: getTimestamp(entry.occurredAt),
+      sortHasTimestamp: Boolean(getTimestamp(entry.occurredAt)),
+      sortGroupWeight: LANE_GROUP_ORDER[entry.groupId] ?? 999,
+      sortRoleWeight: getLaneRoleWeight(entry.kind),
       sortIndex: index,
     }))
     .sort((left, right) => {
-      const leftWeight = left.sortTimestamp || Number.MAX_SAFE_INTEGER;
-      const rightWeight = right.sortTimestamp || Number.MAX_SAFE_INTEGER;
-      if (leftWeight !== rightWeight) return leftWeight - rightWeight;
+      if (left.sortGroupWeight !== right.sortGroupWeight) {
+        return left.sortGroupWeight - right.sortGroupWeight;
+      }
+      if (left.sortHasTimestamp && right.sortHasTimestamp && left.sortTimestamp !== right.sortTimestamp) {
+        return left.sortTimestamp - right.sortTimestamp;
+      }
+      if (left.sortRoleWeight !== right.sortRoleWeight) {
+        return left.sortRoleWeight - right.sortRoleWeight;
+      }
+      if (left.sortHasTimestamp !== right.sortHasTimestamp) {
+        return left.sortHasTimestamp ? -1 : 1;
+      }
+      if (left.sortHasTimestamp && right.sortHasTimestamp && left.sortTimestamp !== right.sortTimestamp) {
+        return left.sortTimestamp - right.sortTimestamp;
+      }
       return left.sortIndex - right.sortIndex;
     })
-    .map(({ sortTimestamp: _sortTimestamp, sortIndex: _sortIndex, ...entry }) => ({
-      ...entry,
-      occurredAtLabel: formatLaneMoment(
-        entry.occurredAt,
-        entry.orderKind === "inferred" ? "Order inferred" : "Undated",
-      ),
-    }));
+    .map(
+      ({
+        sortTimestamp: _sortTimestamp,
+        sortHasTimestamp: _sortHasTimestamp,
+        sortGroupWeight: _sortGroupWeight,
+        sortRoleWeight: _sortRoleWeight,
+        sortIndex: _sortIndex,
+        ...entry
+      }) => entry,
+    );
 
-  const liveEdge = seedEntry || entries[entries.length - 1] || null;
+  const moveGroups = ["origin", "assembly", "proof"]
+    .map((groupId) => ({
+      id: groupId,
+      label: LANE_GROUP_LABELS[groupId],
+      entries: entries.filter((entry) => entry.groupId === groupId),
+    }))
+    .filter((group) => group.entries.length > 0);
+
+  const liveEdge =
+    (seedEntry && entries.find((entry) => entry.id === seedEntry.id)) ||
+    entries[entries.length - 1] ||
+    null;
   const recentWitnessCount = sourceEntries.filter((entry) => entry.kind === "history-export").length;
   const resumeTarget =
     resumeSessionSummary?.documentKey || liveEdge?.documentKey
@@ -997,14 +1531,9 @@ export function buildBoxAssemblyLaneViewModel({
     receiptSummary,
     liveEdge,
     resumeTarget,
+    confirmationQueue,
     entries,
-    moveGroups: [
-      {
-        id: "assembly-lane",
-        label: "Assembly lane",
-        entries,
-      },
-    ],
+    moveGroups,
     proofSummary: {
       line: receiptSummary?.courthouseStatusLine || "Local proof only",
       detail:

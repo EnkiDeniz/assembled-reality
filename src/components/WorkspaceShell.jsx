@@ -1766,6 +1766,7 @@ function WorkspaceLaunchpad({
   onOpenProject,
   onResumeProject,
   onOpenIntake,
+  onInspectEvidence,
   uploading = false,
   pastePendingMode = "",
   recordingVoice = false,
@@ -1850,6 +1851,9 @@ function WorkspaceLaunchpad({
             phase: openAsSeed ? BOX_PHASES.create : BOX_PHASES.think,
           },
         );
+      }}
+      onInspectEvidence={(entry) => {
+        onInspectEvidence?.(entry);
       }}
     />
   );
@@ -3958,6 +3962,7 @@ export default function WorkspaceShell({
   const [rootEditorOpen, setRootEditorOpen] = useState(false);
   const [pendingRootGate, setPendingRootGate] = useState(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationFocus, setConfirmationFocus] = useState(null);
   const [confirmationPending, setConfirmationPending] = useState(false);
   const [receiptSealDraft, setReceiptSealDraft] = useState(null);
   const [receiptSealDelta, setReceiptSealDelta] = useState("");
@@ -5647,6 +5652,7 @@ export default function WorkspaceShell({
     }
 
     if (move.key === "open-confirmation") {
+      setConfirmationFocus(null);
       setConfirmationOpen(true);
       return;
     }
@@ -6202,6 +6208,17 @@ export default function WorkspaceShell({
     } finally {
       setRootPending(false);
     }
+  }
+
+  function openFocusedConfirmation(entry = null) {
+    const documentKey = String(entry?.documentKey || "").trim();
+    if (!documentKey) return;
+    setConfirmationFocus({
+      documentKey,
+      itemId: String(entry?.focusItemId || "").trim() || null,
+      label: entry?.title || "Evidence",
+    });
+    setConfirmationOpen(true);
   }
 
   async function resolveConfirmationItem({
@@ -9966,7 +9983,10 @@ export default function WorkspaceShell({
                 onRunOperate={() => void runOperate()}
                 onOpenReceipts={openReceiptsSurface}
                 onManageBox={() => openProjectManagement(activeProjectKey)}
-                onOpenConfirmation={() => setConfirmationOpen(true)}
+                onOpenConfirmation={() => {
+                  setConfirmationFocus(null);
+                  setConfirmationOpen(true);
+                }}
                 onOpenRoot={() => openRootEditorFor("voluntary")}
                 onInstrumentMove={handleRealityInstrumentMove}
                 isMobileLayout={false}
@@ -9995,6 +10015,7 @@ export default function WorkspaceShell({
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
               onResumeProject={resumeProject}
+              onInspectEvidence={openFocusedConfirmation}
               onOpenIntake={() => {
                 if (isMobileLayout) {
                   openWorkspacePicker("add");
@@ -10183,7 +10204,10 @@ export default function WorkspaceShell({
                     onRunOperate={() => void runOperate()}
                     onOpenReceipts={openReceiptsSurface}
                     onManageBox={() => openProjectManagement(activeProjectKey)}
-                    onOpenConfirmation={() => setConfirmationOpen(true)}
+                    onOpenConfirmation={() => {
+                      setConfirmationFocus(null);
+                      setConfirmationOpen(true);
+                    }}
                     onOpenRoot={() => openRootEditorFor("voluntary")}
                     onInstrumentMove={handleRealityInstrumentMove}
                     isMobileLayout={false}
@@ -10309,6 +10333,9 @@ export default function WorkspaceShell({
                               entry.actionKind === "seed" ? BOX_PHASES.create : BOX_PHASES.think,
                           },
                         );
+                      }}
+                      onInspectEvidence={(entry) => {
+                        openFocusedConfirmation(entry);
                       }}
                     />
                   ) : (
@@ -10457,7 +10484,10 @@ export default function WorkspaceShell({
             onGoSeed={openMobileSeedSurface}
             onGoReceipts={openReceiptsSurface}
             onOpenAdd={() => openWorkspacePicker("add")}
-            onOpenConfirmation={() => setConfirmationOpen(true)}
+            onOpenConfirmation={() => {
+              setConfirmationFocus(null);
+              setConfirmationOpen(true);
+            }}
           />
         ) : null}
 
@@ -10580,10 +10610,14 @@ export default function WorkspaceShell({
 
         <ConfirmationQueueDialog
           open={confirmationOpen}
-          queue={seedViewModel?.confirmationQueue || []}
+          queue={assemblyLaneViewModel?.confirmationQueue || seedViewModel?.confirmationQueue || []}
           root={seedViewModel?.root}
+          focus={confirmationFocus}
           pending={confirmationPending}
-          onClose={() => setConfirmationOpen(false)}
+          onClose={() => {
+            setConfirmationOpen(false);
+            setConfirmationFocus(null);
+          }}
           onResolve={(payload) => void resolveConfirmationItem(payload)}
         />
 

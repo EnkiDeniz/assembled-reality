@@ -4657,6 +4657,33 @@ main {
   letter-spacing: normal;
 }
 
+.assembler-assembly-lane__groups {
+  display: grid;
+  gap: 16px;
+}
+
+.assembler-assembly-lane__group {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-assembly-lane__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assembler-assembly-lane__group-head strong {
+  color: var(--white);
+  font-size: 12px;
+  letter-spacing: normal;
+}
+
 .assembler-assembly-lane__entries {
   display: grid;
   gap: 12px;
@@ -4725,11 +4752,34 @@ main {
   color: var(--white);
 }
 
-.assembler-assembly-lane__entry-action {
+.assembler-assembly-lane__entry-links {
+  margin: 0;
+  color: var(--soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.assembler-assembly-lane__entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.assembler-assembly-lane__entry-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
   color: var(--white);
   font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.assembler-assembly-lane__entry-button.is-secondary {
+  color: var(--soft);
 }
 
 .assembler-project-home__masthead {

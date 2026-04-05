@@ -20,6 +20,7 @@ import {
   SOURCE_ORIGINS,
 } from "@/lib/source-model";
 import { buildExcerpt } from "@/lib/text";
+import { finalizeLaneEntry, LANE_KIND_LABELS, LANE_GROUP_LABELS } from "@/lib/box-view-models";
 
 const CORPUS_ROOT_SEGMENTS = ["docs", "First seed"];
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
@@ -831,6 +832,287 @@ function buildSeedOfSeeds(sources, historySource, milestones) {
   };
 }
 
+function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
+  const sourceGroups = buildSourceGroups(sources);
+  const sourceIdsCarriedBySeed = new Set(
+    milestones.flatMap((milestone) => [
+      "loegos-origin-receipt-arc",
+      ...milestone.supportingSources.map((source) => source.id),
+    ]),
+  );
+  if (historySource?.id) {
+    sourceIdsCarriedBySeed.add(historySource.id);
+  }
+
+  const originEntries = sourceGroups.flatMap((group) =>
+    group.sources.map((source) => {
+      const kind =
+        source.sourceRole === "platform-history"
+          ? "history-export"
+          : source.evidenceBasis === "image-derived-markdown"
+            ? "derived-source"
+            : "source";
+      const carried = sourceIdsCarriedBySeed.has(source.id);
+      const stageStatus =
+        source.sourceRole === "platform-history"
+          ? "staged"
+          : carried
+            ? "advanced"
+            : source.sourceRole === "theory" || source.sourceRole === "product-spec"
+              ? "staged"
+              : "selected";
+      const proofStatus =
+        source.sourceRole === "platform-history"
+          ? "witness"
+          : carried
+            ? "supported"
+            : "open";
+
+      return finalizeLaneEntry({
+        id: `demo-source-${source.id}`,
+        kind,
+        kindLabel: LANE_KIND_LABELS[kind] || LANE_KIND_LABELS.source,
+        title: source.title,
+        detail: source.excerpt,
+        occurredAt: "",
+        orderKind: "inferred",
+        stageStatus,
+        proofStatus,
+        evidenceBasis: source.evidenceBasis,
+        evidenceBasisLabel: source.evidenceBasisLabel,
+        certaintyKind: source.sourceRole === "platform-history" ? "event_backed" : "inferred",
+        trustSummary: source.trustProfile.summary,
+        linkedEntryIds: [],
+        linkedSourceKeys: [source.id],
+        linkedSeedDocumentKey: carried ? "seed-of-seeds" : "",
+        linkedReceiptId: "",
+        sourceRefs: [
+          {
+            documentKey: source.id,
+            title: source.title,
+          },
+        ],
+        documentKey: source.id,
+        actionKind: "",
+        nextAction: null,
+      });
+    }),
+  );
+
+  const assemblyEntries = milestones.map((milestone, index) =>
+    finalizeLaneEntry({
+      id: `demo-move-${milestone.id}`,
+      kind: "move",
+      kindLabel: LANE_KIND_LABELS.move,
+      title: milestone.title,
+      detail: milestone.stagedSummary,
+      occurredAt: "",
+      orderKind: "inferred",
+      stageStatus: milestone.id === "sealed-receipt" ? "sealed" : "advanced",
+      proofStatus:
+        milestone.id === "sealed-receipt"
+          ? "sealed"
+          : milestone.id === "receipt-feed" || milestone.id === "investor-share"
+            ? "witness"
+            : "open",
+      evidenceBasis: "curated-move",
+      evidenceBasisLabel: "Curated move",
+      certaintyKind: milestone.id === "sealed-receipt" ? "event_backed" : "inferred",
+      trustSummary: milestone.sealedSummary,
+      linkedEntryIds: [],
+      linkedSourceKeys: [
+        "loegos-origin-receipt-arc",
+        ...milestone.supportingSources.map((source) => source.id),
+      ],
+      linkedSeedDocumentKey: "seed-of-seeds",
+      linkedReceiptId:
+        milestone.id === "receipt-feed" || milestone.id === "sealed-receipt"
+          ? `demo-receipt-${milestone.id}`
+          : "",
+      sourceRefs: [
+        {
+          documentKey: "loegos-origin-receipt-arc",
+          title: "Lœgos — Origin, Evolution, Feedback, and Receipt",
+        },
+      ],
+      documentKey: "",
+      actionKind: "",
+      nextAction: null,
+      sortIndex: index,
+    }),
+  );
+
+  const seedEntry = finalizeLaneEntry({
+    id: "seed-of-seeds",
+    kind: "seed",
+    kindLabel: LANE_KIND_LABELS.seed,
+    title: "Seed of seeds",
+    detail: seed.whatsHere,
+    occurredAt: "",
+    orderKind: "inferred",
+    stageStatus: "advanced",
+    proofStatus: "supported",
+    evidenceBasis: "live-assembly",
+    evidenceBasisLabel: "Live assembly",
+    certaintyKind: "inferred",
+    trustSummary: seed.gap,
+    linkedEntryIds: [],
+    linkedSourceKeys: [...sourceIdsCarriedBySeed],
+    linkedSeedDocumentKey: "seed-of-seeds",
+    linkedReceiptId: "demo-receipt-sealed-receipt",
+    sourceRefs: [
+      {
+        documentKey: "seed-of-seeds",
+        title: "Seed of seeds",
+      },
+    ],
+    isLeadingEdge: true,
+    documentKey: "seed-of-seeds",
+    actionKind: "",
+    nextAction: null,
+  });
+
+  const proofEntries = [
+    finalizeLaneEntry({
+      id: "demo-receipt-receipt-feed",
+      kind: "receipt",
+      kindLabel: LANE_KIND_LABELS.receipt,
+      title: "Receipt feed witness",
+      detail:
+        milestones.find((milestone) => milestone.id === "receipt-feed")?.sealedSummary ||
+        "The share is visible in the receipt ledger.",
+      occurredAt: "",
+      orderKind: "inferred",
+      stageStatus: "advanced",
+      proofStatus: "witness",
+      evidenceBasis: "proof-witness",
+      evidenceBasisLabel: "Proof witness",
+      certaintyKind: "inferred",
+      trustSummary: "The receipt feed witnesses that the share entered a proof surface.",
+      linkedEntryIds: [],
+      linkedSourceKeys: ["loegos-origin-receipt-arc", historySource?.id].filter(Boolean),
+      linkedSeedDocumentKey: "seed-of-seeds",
+      linkedReceiptId: "demo-receipt-receipt-feed",
+      sourceRefs: [],
+      documentKey: "",
+      actionKind: "",
+      nextAction: null,
+    }),
+    finalizeLaneEntry({
+      id: "demo-receipt-sealed-receipt",
+      kind: "receipt",
+      kindLabel: LANE_KIND_LABELS.receipt,
+      title: "Sealed receipt",
+      detail:
+        milestones.find((milestone) => milestone.id === "sealed-receipt")?.sealedSummary ||
+        seed.sealed,
+      occurredAt: "",
+      orderKind: "inferred",
+      stageStatus: "sealed",
+      proofStatus: "sealed",
+      evidenceBasis: "proof-closure",
+      evidenceBasisLabel: "Proof closure",
+      certaintyKind: "event_backed",
+      trustSummary: seed.sealed,
+      linkedEntryIds: [],
+      linkedSourceKeys: ["loegos-origin-receipt-arc", historySource?.id].filter(Boolean),
+      linkedSeedDocumentKey: "seed-of-seeds",
+      linkedReceiptId: "demo-receipt-sealed-receipt",
+      sourceRefs: [],
+      documentKey: "",
+      actionKind: "",
+      nextAction: null,
+    }),
+  ];
+
+  const moveGroups = [
+    {
+      id: "origin",
+      label: LANE_GROUP_LABELS.origin,
+      entries: originEntries,
+    },
+    {
+      id: "assembly",
+      label: LANE_GROUP_LABELS.assembly,
+      entries: [...assemblyEntries, seedEntry],
+    },
+    {
+      id: "proof",
+      label: LANE_GROUP_LABELS.proof,
+      entries: proofEntries,
+    },
+  ];
+
+  const entryIdByDocumentKey = new Map();
+  moveGroups.forEach((group) => {
+    group.entries.forEach((entry) => {
+      if (!entry?.documentKey) return;
+      const current = entryIdByDocumentKey.get(entry.documentKey) || [];
+      current.push(entry.id);
+      entryIdByDocumentKey.set(entry.documentKey, current);
+    });
+  });
+  const entryIdByReceiptId = new Map(
+    proofEntries
+      .filter((entry) => entry?.linkedReceiptId)
+      .map((entry) => [entry.linkedReceiptId, entry.id]),
+  );
+
+  const normalizedMoveGroups = moveGroups.map((group) => ({
+    ...group,
+    entries: group.entries.map((entry) =>
+      finalizeLaneEntry({
+        ...entry,
+        linkedEntryIds: [
+          ...(Array.isArray(entry?.linkedEntryIds) ? entry.linkedEntryIds : []),
+          ...(entry?.linkedSeedDocumentKey
+            ? entryIdByDocumentKey.get(entry.linkedSeedDocumentKey) || []
+            : []),
+          ...(Array.isArray(entry?.linkedSourceKeys)
+            ? entry.linkedSourceKeys.flatMap((key) => entryIdByDocumentKey.get(key) || [])
+            : []),
+          ...(entry?.linkedReceiptId && entryIdByReceiptId.has(entry.linkedReceiptId)
+            ? [entryIdByReceiptId.get(entry.linkedReceiptId)]
+            : []),
+        ].filter((linkedEntryId) => linkedEntryId && linkedEntryId !== entry.id),
+      }),
+    ),
+  }));
+
+  const entries = normalizedMoveGroups.flatMap((group) => group.entries);
+  const normalizedSeedEntry = entries.find((entry) => entry.id === "seed-of-seeds") || seedEntry;
+
+  return {
+    boxTitle: `${PRODUCT_MARK} Self-Assembly Demo`,
+    boxSubtitle: "Curated public reconstruction",
+    entryCount: entries.length,
+    realSourceCount: sources.length,
+    recentWitnessCount: historySource ? 1 : 0,
+    confirmationCount: 0,
+    confirmationQueue: [],
+    root: {
+      text: "",
+      gloss: "",
+      hasRoot: false,
+    },
+    stateSummary: {
+      chipLabel: "Curated demo",
+    },
+    receiptSummary: {
+      sealedDraftCount: 1,
+    },
+    liveEdge: normalizedSeedEntry,
+    resumeTarget: null,
+    entries,
+    moveGroups: normalizedMoveGroups,
+    proofSummary: {
+      line: "Proof closure available",
+      detail: seed.sealed,
+      sealedCount: 1,
+    },
+  };
+}
+
 export const getSelfAssemblyDemo = cache(() => {
   const sources = SELF_ASSEMBLY_SOURCE_DEFS.map(normalizeSourceDocument);
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
@@ -840,6 +1122,7 @@ export const getSelfAssemblyDemo = cache(() => {
     buildMilestone(definition, sourcesById, clusterMap),
   );
   const seed = buildSeedOfSeeds(sources, historySource, milestones);
+  const assemblyLane = buildSelfAssemblyLane(sources, milestones, seed, historySource);
 
   return {
     title: `${PRODUCT_MARK} Self-Assembly Demo`,
@@ -849,6 +1132,7 @@ export const getSelfAssemblyDemo = cache(() => {
     sourceGroups: buildSourceGroups(sources),
     milestones,
     seed,
+    assemblyLane,
     history: {
       primarySourceId: historySource?.id || "",
       commitCount: historySource?.historyEntries?.length || 0,

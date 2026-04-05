@@ -8,8 +8,9 @@ import {
 } from "@/lib/getreceipts";
 import { createReadingReceiptDraftForUser, getReaderProfileByUserId } from "@/lib/reader-db";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
-import { getReaderProjectForUser } from "@/lib/reader-projects";
+import { getReaderProjectForUser, updateReaderProjectForUser } from "@/lib/reader-projects";
 import { getRequiredSession } from "@/lib/server-session";
+import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
 import {
   buildWorkspaceReceiptDraftInput,
   buildWorkspaceReceiptPayload,
@@ -101,6 +102,34 @@ export async function POST(request) {
             remoteError,
           },
         });
+
+        if (projectKey) {
+          await updateReaderProjectForUser(session.user.id, projectKey, {
+            appendEvents: [
+              buildAssemblyIndexEvent("receipt_drafted", {
+                move: `Drafted receipt ${draft.title || draft.id} for ${document.title || document.documentKey}.`,
+                return:
+                  status === "REMOTE_DRAFT"
+                    ? "Receipt draft is also pushed outward as a courthouse draft."
+                    : "Receipt draft is held locally until you seal it.",
+                echo: status.toLowerCase(),
+                context: {
+                  draftId: draft.id,
+                  documentKey: document.documentKey,
+                  primaryDocumentKey: document.documentKey,
+                  relatedSourceDocumentKeys: [
+                    ...new Set(
+                      (Array.isArray(document.blocks) ? document.blocks : [])
+                        .map((block) => String(block?.sourceDocumentKey || "").trim())
+                        .filter(Boolean),
+                    ),
+                  ],
+                  remoteDraft: status === "REMOTE_DRAFT",
+                },
+              }),
+            ],
+          });
+        }
       }
     }
 

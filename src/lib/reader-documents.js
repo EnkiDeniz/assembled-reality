@@ -12,6 +12,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
 import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
+import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
+import { detectHistoryWitnessKind } from "@/lib/history-normalization";
 import { slugify } from "@/lib/text";
 import {
   buildStoredWorkspaceContent,
@@ -51,6 +53,92 @@ function countWords(text) {
     .split(/\s+/)
     .map((part) => part.trim())
     .filter(Boolean).length;
+}
+
+function getDocumentDisplayLabel({
+  title = "",
+  originalFilename = "",
+  intakeKind = "",
+} = {}) {
+  return (
+    String(title || "").trim() ||
+    String(originalFilename || "").trim() ||
+    String(intakeKind || "").trim() ||
+    "Untitled source"
+  );
+}
+
+function buildSourceAssemblyEvents({
+  documentKey = "",
+  title = "",
+  originalFilename = "",
+  intakeKind = "",
+  derivationKind = "",
+  derivationModel = "",
+  contentMarkdown = "",
+} = {}) {
+  const sourceLabel = getDocumentDisplayLabel({
+    title,
+    originalFilename,
+    intakeKind,
+  });
+  const normalizedDerivationKind = String(derivationKind || "").trim();
+  const historyKind = detectHistoryWitnessKind({
+    title,
+    originalFilename,
+    rawText: contentMarkdown,
+  });
+  const events = [
+    buildAssemblyIndexEvent("source_added", {
+      move: `Added ${sourceLabel} to the box.`,
+      return: "A new source entered the assembly lane.",
+      echo: "source entered",
+      context: {
+        documentKey,
+        primaryDocumentKey: documentKey,
+        relatedSourceDocumentKeys: documentKey ? [documentKey] : [],
+        intakeKind: String(intakeKind || "").trim(),
+      },
+    }),
+  ];
+
+  if (normalizedDerivationKind) {
+    events.push(
+      buildAssemblyIndexEvent("source_derived", {
+        move: `Derived ${sourceLabel} into a working source.`,
+        return:
+          derivationModel
+            ? `This source was normalized through ${derivationModel}.`
+            : "This source was normalized into a working document.",
+        echo: normalizedDerivationKind,
+        context: {
+          documentKey,
+          primaryDocumentKey: documentKey,
+          relatedSourceDocumentKeys: documentKey ? [documentKey] : [],
+          derivationKind: normalizedDerivationKind,
+          derivationModel: String(derivationModel || "").trim(),
+        },
+      }),
+    );
+  }
+
+  if (historyKind) {
+    events.push(
+      buildAssemblyIndexEvent("history_export_imported", {
+        move: `Imported ${historyKind} as a chronology witness.`,
+        return: "History exports strengthen chronology without replacing the box as source of truth.",
+        echo: historyKind,
+        context: {
+          documentKey,
+          primaryDocumentKey: documentKey,
+          relatedSourceDocumentKeys: documentKey ? [documentKey] : [],
+          historyKind,
+        },
+      }),
+    );
+  }
+
+  return events;
 }
 
 function serializeDocumentSummary(documentData, record = null, progressPercent = 0, sourceAssets = []) {
@@ -317,6 +405,15 @@ export async function createReaderDocumentForUser(
     projectKey,
     documentKey,
     role: "SOURCE",
+    appendEvents: buildSourceAssemblyEvents({
+      documentKey,
+      title: normalizedTitle,
+      originalFilename,
+      intakeKind,
+      derivationKind,
+      derivationModel,
+      contentMarkdown: storedContentMarkdown,
+    }),
   });
 
   return serializeUploadedDocument(record, 0);
