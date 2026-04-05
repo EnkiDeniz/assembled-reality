@@ -114,6 +114,7 @@ export async function POST(request) {
                     : "Receipt draft is held locally until you seal it.",
                 echo: status.toLowerCase(),
                 context: {
+                  receiptId: draft.id,
                   draftId: draft.id,
                   documentKey: document.documentKey,
                   primaryDocumentKey: document.documentKey,

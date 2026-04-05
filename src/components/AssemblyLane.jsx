@@ -21,6 +21,18 @@ const ENTRY_KIND_ICONS = {
   receipt: FileCheck,
 };
 
+const PROTOCOL_STEPS = [
+  { id: "collecting", label: "Collecting" },
+  { id: "shaping", label: "Shaping" },
+  { id: "proving", label: "Proving" },
+];
+
+const CONTEXTUAL_ACTION_ICONS = {
+  "open-create": Sprout,
+  "run-operate": Rows3,
+  "open-seal": FileCheck,
+};
+
 function LaneBadge({ label, tone = "" }) {
   return (
     <span className={`assembler-assembly-lane__badge ${tone ? `is-${tone}` : ""}`}>
@@ -45,10 +57,29 @@ function LaneIconButton({ label, icon, onClick }) {
   );
 }
 
+function LaneActionButton({ action, onClick }) {
+  const IconComponent = CONTEXTUAL_ACTION_ICONS[action?.kind] || ArrowUpRight;
+
+  return (
+    <button
+      type="button"
+      className="assembler-assembly-lane__contextual-action"
+      onClick={() => onClick(action)}
+    >
+      <IconComponent size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+      <span>{action?.label || "Continue"}</span>
+    </button>
+  );
+}
+
 function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
   const EntryKindIcon = ENTRY_KIND_ICONS[entry?.kind] || FileText;
   const canOpen = typeof onOpenEntry === "function" && (entry?.actionKind || entry?.documentKey);
   const canInspect = Boolean(entry?.canInspectEvidence) && typeof onInspectEvidence === "function";
+  const evidenceMeta = [
+    entry?.evidenceBasisLabel || "",
+    entry?.certaintyKind === "event_backed" ? "Event-backed" : "Order inferred",
+  ].filter(Boolean);
 
   return (
     <article
@@ -98,11 +129,11 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
       <div className="assembler-assembly-lane__entry-badges">
         <LaneBadge label={entry?.stageStatusLabel || "Present"} tone="stage" />
         <LaneBadge label={entry?.proofStatusLabel || "Open"} tone="proof" />
-        <LaneBadge label={entry?.evidenceBasisLabel || "Direct evidence"} />
-        <LaneBadge
-          label={entry?.certaintyKind === "event_backed" ? "Event-backed" : "Order inferred"}
-        />
       </div>
+
+      {evidenceMeta.length ? (
+        <p className="assembler-assembly-lane__entry-meta-note">{evidenceMeta.join(" · ")}</p>
+      ) : null}
 
       {entry?.trustSummary ? (
         <p className="assembler-assembly-lane__entry-trust">{entry.trustSummary}</p>
@@ -118,14 +149,22 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
   );
 }
 
-export default function AssemblyLane({ viewModel, onOpenEntry, onInspectEvidence }) {
+export default function AssemblyLane({
+  viewModel,
+  onOpenEntry,
+  onInspectEvidence,
+  onRunContextualAction,
+}) {
   const moveGroups = Array.isArray(viewModel?.moveGroups) ? viewModel.moveGroups : [];
   const entryCount = Array.isArray(viewModel?.entries) ? viewModel.entries.length : 0;
+  const protocolPosition = viewModel?.protocolPosition || "collecting";
   const metaItems = [
-    viewModel?.stateSummary?.chipLabel || "Collecting",
+    viewModel?.protocolStateLabel || viewModel?.stateSummary?.chipLabel || "Collecting",
     `${viewModel?.realSourceCount || 0} sources`,
     `${entryCount} ${entryCount === 1 ? "entry" : "entries"}`,
   ];
+  const canRunContextualAction =
+    viewModel?.contextualAction && typeof onRunContextualAction === "function";
 
   return (
     <div className="assembler-assembly-lane">
@@ -142,7 +181,29 @@ export default function AssemblyLane({ viewModel, onOpenEntry, onInspectEvidence
               ))}
             </div>
           </div>
+          <div
+            className="assembler-assembly-lane__protocol-strip"
+            aria-label="Assembly protocol position"
+          >
+            {PROTOCOL_STEPS.map((step) => (
+              <span
+                key={step.id}
+                className={`assembler-assembly-lane__protocol-step ${
+                  protocolPosition === step.id ? `is-active is-${step.id}` : ""
+                }`}
+                aria-current={protocolPosition === step.id ? "step" : undefined}
+              >
+                {step.label}
+              </span>
+            ))}
+          </div>
         </div>
+        {canRunContextualAction ? (
+          <LaneActionButton
+            action={viewModel.contextualAction}
+            onClick={onRunContextualAction}
+          />
+        ) : null}
       </section>
 
       <section className="assembler-assembly-lane__entries-panel">

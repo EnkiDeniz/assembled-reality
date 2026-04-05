@@ -146,6 +146,7 @@ export async function POST(request) {
               : "Receipt draft is held locally until you seal it.",
           echo: status.toLowerCase(),
           context: {
+            receiptId: draft.id,
             draftId: draft.id,
             documentKey: document.documentKey,
             primaryDocumentKey: document.documentKey,
@@ -327,8 +328,10 @@ export async function PUT(request) {
           ? `${previousState || "declare-root"} -> ${nextStateSummary.current}`
           : "state unchanged",
       context: {
+        receiptId: draftId,
         draftId,
         documentKey: draft.documentKey,
+        primaryDocumentKey: draft.documentKey,
         deltaStatement,
         evidenceBlockCount: evidenceSnapshot.blockCount,
         evidenceDomains: evidenceSnapshot.domains,

@@ -213,6 +213,46 @@ function getLaneRoleWeight(kind = "") {
   return LANE_ROLE_ORDER[kind] ?? 999;
 }
 
+function getProtocolPosition({ hasLiveSeed = false, draftCount = 0 } = {}) {
+  if (draftCount > 0) return "proving";
+  if (hasLiveSeed) return "shaping";
+  return "collecting";
+}
+
+function buildLaneContextualAction({
+  realSourceCount = 0,
+  hasLiveSeed = false,
+  latestDraft = null,
+  draftCount = 0,
+} = {}) {
+  if (realSourceCount <= 0) return null;
+
+  if (!hasLiveSeed) {
+    return {
+      kind: "open-create",
+      label: "Shape seed",
+    };
+  }
+
+  const latestDraftStatus = String(latestDraft?.status || "").trim().toUpperCase();
+  if (latestDraft?.id && latestDraftStatus && latestDraftStatus !== "SEALED") {
+    return {
+      kind: "open-seal",
+      label: "Seal",
+      draftId: String(latestDraft.id),
+    };
+  }
+
+  if (hasLiveSeed && draftCount === 0) {
+    return {
+      kind: "run-operate",
+      label: "Run Operate",
+    };
+  }
+
+  return null;
+}
+
 export function getLaneStageStatusLabel(stageStatus = "selected", certaintyKind = "inferred", kind = "source") {
   if (stageStatus === "sealed") {
     return LANE_STAGE_LABELS.sealed;
@@ -1148,6 +1188,16 @@ export function buildBoxAssemblyLaneViewModel({
     projectDocuments: documents,
     projectDrafts,
   });
+  const protocolPosition = getProtocolPosition({
+    hasLiveSeed: Boolean(seedDocument?.documentKey),
+    draftCount: receiptSummary.draftCount,
+  });
+  const contextualAction = buildLaneContextualAction({
+    realSourceCount: realSourceDocuments.length,
+    hasLiveSeed: Boolean(seedDocument?.documentKey),
+    latestDraft: receiptSummary.latestDraft,
+    draftCount: receiptSummary.draftCount,
+  });
   const meta = normalizeProjectArchitectureMeta(
     activeProject?.metadataJson || activeProject?.architectureMeta || null,
   );
@@ -1378,7 +1428,7 @@ export function buildBoxAssemblyLaneViewModel({
         orderKind: getTimestamp(seedDocument.updatedAt || seedDocument.createdAt) ? "explicit" : "inferred",
         stageStatus: "advanced",
         proofStatus:
-          receiptSummary.sealedDraftCount > 0
+          String(linkedSeedReceipt?.stageStatus || "").trim().toLowerCase() === "sealed"
             ? "supported"
             : seedSourceDocumentKeys.size > 0
               ? "witness"
@@ -1528,6 +1578,9 @@ export function buildBoxAssemblyLaneViewModel({
     confirmationCount: confirmationQueue.length,
     root,
     stateSummary,
+    protocolPosition,
+    protocolStateLabel: stateSummary?.chipLabel || "",
+    contextualAction,
     receiptSummary,
     liveEdge,
     resumeTarget,

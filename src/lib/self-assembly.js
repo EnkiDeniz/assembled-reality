@@ -880,7 +880,7 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
         proofStatus,
         evidenceBasis: source.evidenceBasis,
         evidenceBasisLabel: source.evidenceBasisLabel,
-        certaintyKind: source.sourceRole === "platform-history" ? "event_backed" : "inferred",
+        certaintyKind: "inferred",
         trustSummary: source.trustProfile.summary,
         linkedEntryIds: [],
         linkedSourceKeys: [source.id],
@@ -917,7 +917,7 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
             : "open",
       evidenceBasis: "curated-move",
       evidenceBasisLabel: "Curated move",
-      certaintyKind: milestone.id === "sealed-receipt" ? "event_backed" : "inferred",
+      certaintyKind: "inferred",
       trustSummary: milestone.sealedSummary,
       linkedEntryIds: [],
       linkedSourceKeys: [
@@ -1012,7 +1012,7 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
       proofStatus: "sealed",
       evidenceBasis: "proof-closure",
       evidenceBasisLabel: "Proof closure",
-      certaintyKind: "event_backed",
+      certaintyKind: "inferred",
       trustSummary: seed.sealed,
       linkedEntryIds: [],
       linkedSourceKeys: ["loegos-origin-receipt-arc", historySource?.id].filter(Boolean),
@@ -1098,6 +1098,9 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     stateSummary: {
       chipLabel: "Curated demo",
     },
+    protocolPosition: "proving",
+    protocolStateLabel: "Curated demo",
+    contextualAction: null,
     receiptSummary: {
       sealedDraftCount: 1,
     },

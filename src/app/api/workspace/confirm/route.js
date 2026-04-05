@@ -150,6 +150,8 @@ export async function POST(request) {
           : "state unchanged",
       context: {
         documentKey,
+        primaryDocumentKey: documentKey,
+        relatedSourceDocumentKeys: [documentKey],
         blockId,
         primaryTag: resolvedPrimaryTag,
         domain: resolvedDomain,

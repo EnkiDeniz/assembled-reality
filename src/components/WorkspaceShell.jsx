@@ -1762,6 +1762,7 @@ function WorkspaceLaunchpad({
   onOpenDocument,
   onOpenProject,
   onOpenRoot,
+  onRunContextualAction,
   onResumeProject,
   onOpenIntake,
   onInspectEvidence,
@@ -1813,6 +1814,7 @@ function WorkspaceLaunchpad({
   return (
     <AssemblyLane
       viewModel={assemblyLaneViewModel}
+      onRunContextualAction={onRunContextualAction}
       onOpenEntry={(entry) => {
         if (entry?.actionKind === "root") {
           onOpenRoot?.();
@@ -6266,6 +6268,34 @@ export default function WorkspaceShell({
     setReceiptSealAuditStatement("");
   }
 
+  function handleAssemblyLaneContextualAction(action) {
+    if (!action?.kind) return;
+
+    if (action.kind === "open-create") {
+      handleSelectBoxPhase(BOX_PHASES.create);
+      return;
+    }
+
+    if (action.kind === "run-operate") {
+      void runOperate();
+      return;
+    }
+
+    if (action.kind === "open-seal") {
+      const targetDraft =
+        projectDraftsState.find((draft) => String(draft?.id || "").trim() === String(action?.draftId || "").trim()) ||
+        receiptSummaryViewModel?.latestDraft ||
+        null;
+
+      if (targetDraft?.id) {
+        openReceiptSealDialog(targetDraft);
+        return;
+      }
+
+      openReceiptsSurface();
+    }
+  }
+
   function closeReceiptSealDialog() {
     if (receiptPending || receiptSealAuditPending) return;
     receiptSealAuditRequestIdRef.current += 1;
@@ -9994,6 +10024,7 @@ export default function WorkspaceShell({
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
               onOpenRoot={() => openRootEditorFor("voluntary")}
+              onRunContextualAction={handleAssemblyLaneContextualAction}
               onResumeProject={resumeProject}
               onInspectEvidence={openFocusedConfirmation}
               onOpenIntake={() => {
@@ -10271,6 +10302,7 @@ export default function WorkspaceShell({
                   ) : isLanePhase ? (
                     <AssemblyLane
                       viewModel={assemblyLaneViewModel}
+                      onRunContextualAction={handleAssemblyLaneContextualAction}
                       onOpenEntry={(entry) => {
                         if (entry?.actionKind === "root") {
                           openRootEditorFor("voluntary");

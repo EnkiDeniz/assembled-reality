@@ -4421,6 +4421,7 @@ main {
 }
 
 .assembler-assembly-lane__entry-detail,
+.assembler-assembly-lane__entry-meta-note,
 .assembler-assembly-lane__entry-trust,
 .assembler-assembly-lane__empty {
   margin: 0;
@@ -4431,7 +4432,8 @@ main {
 
 .assembler-assembly-lane__strip-meta,
 .assembler-assembly-lane__entry-badges,
-.assembler-assembly-lane__entry-actions {
+.assembler-assembly-lane__entry-actions,
+.assembler-assembly-lane__protocol-strip {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -4445,6 +4447,12 @@ main {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface-1);
+}
+
+.assembler-assembly-lane__meta-strip {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
 }
 
 .assembler-assembly-lane__strip-copy {
@@ -4466,6 +4474,42 @@ main {
   color: var(--text-primary);
   font-size: 1.05rem;
   line-height: 1.2;
+}
+
+.assembler-assembly-lane__protocol-strip {
+  gap: 6px;
+}
+
+.assembler-assembly-lane__protocol-step {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text-meta);
+  background: transparent;
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-assembly-lane__protocol-step.is-active {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+.assembler-assembly-lane__protocol-step.is-collecting {
+  border-color: var(--assembly-step-1-border);
+}
+
+.assembler-assembly-lane__protocol-step.is-shaping {
+  border-color: var(--assembly-step-3-border);
+}
+
+.assembler-assembly-lane__protocol-step.is-proving {
+  border-color: var(--assembly-step-4-border);
 }
 
 .assembler-assembly-lane__groups {
@@ -4535,7 +4579,7 @@ main {
   width: 32px;
   height: 32px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-secondary);
   background: var(--surface-2);
 }
@@ -4554,7 +4598,7 @@ main {
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-meta);
   background: transparent;
   font-family: var(--font-code);
@@ -4580,6 +4624,19 @@ main {
   line-height: 1.5;
 }
 
+.assembler-assembly-lane__entry-detail {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.assembler-assembly-lane__entry-meta-note {
+  color: var(--text-meta);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .assembler-assembly-lane__icon-button {
   display: inline-flex;
   align-items: center;
@@ -4587,7 +4644,7 @@ main {
   width: 32px;
   height: 32px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   color: var(--text-meta);
   cursor: pointer;
@@ -4600,6 +4657,31 @@ main {
 }
 
 .assembler-assembly-lane__icon-button:focus-visible {
+  outline: 2px solid var(--assembly-step-1-border);
+  outline-offset: 2px;
+}
+
+.assembler-assembly-lane__contextual-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out;
+}
+
+.assembler-assembly-lane__contextual-action:hover {
+  background: var(--surface-3);
+}
+
+.assembler-assembly-lane__contextual-action:focus-visible {
   outline: 2px solid var(--assembly-step-1-border);
   outline-offset: 2px;
 }
@@ -7589,6 +7671,21 @@ main {
 
   .assembler-assembly-lane__entry-head {
     grid-template-columns: 1fr;
+  }
+
+  .assembler-assembly-lane__meta-strip,
+  .assembler-assembly-lane__entries-panel,
+  .assembler-assembly-lane__entry {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .assembler-assembly-lane__meta-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .assembler-assembly-lane__contextual-action {
+    width: 100%;
   }
 
   .assembler-assembly-lane__strip-title-row,
