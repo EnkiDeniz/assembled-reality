@@ -4403,7 +4403,8 @@ main {
 
 .assembler-assembly-lane__meta-strip,
 .assembler-assembly-lane__entries-panel,
-.assembler-assembly-lane__word-layer {
+.assembler-assembly-lane__word-layer,
+.assembler-assembly-lane__word-layer-shell {
   display: grid;
   gap: 10px;
 }
@@ -4423,6 +4424,7 @@ main {
 
 .assembler-assembly-lane__entry-detail,
 .assembler-assembly-lane__entry-pivot,
+.assembler-assembly-lane__entry-note,
 .assembler-assembly-lane__entry-meta-note,
 .assembler-assembly-lane__entry-trust,
 .assembler-assembly-lane__empty,
@@ -4452,11 +4454,54 @@ main {
 .assembler-assembly-lane__meta-strip,
 .assembler-assembly-lane__entries-panel,
 .assembler-assembly-lane__entry,
-.assembler-assembly-lane__word-layer {
+.assembler-assembly-lane__word-layer,
+.assembler-assembly-lane__word-layer-shell {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface-1);
+}
+
+.assembler-assembly-lane__word-layer-shell {
+  padding: 0;
+  overflow: hidden;
+}
+
+.assembler-assembly-lane__word-layer-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.assembler-assembly-lane__word-layer-summary::-webkit-details-marker {
+  display: none;
+}
+
+.assembler-assembly-lane__word-layer-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assembler-assembly-lane__word-layer-shell[open] .assembler-assembly-lane__word-layer-summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.assembler-assembly-lane__word-layer-shell[open] .assembler-assembly-lane__word-layer {
+  border: 0;
+  border-radius: 0;
+  padding-top: 16px;
 }
 
 .assembler-assembly-lane__meta-strip {
@@ -4657,6 +4702,12 @@ main {
 
 .assembler-assembly-lane__entry-pivot {
   color: var(--assembly-step-3-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.assembler-assembly-lane__entry-note {
+  color: var(--text-meta);
   font-size: 12px;
   line-height: 1.5;
 }

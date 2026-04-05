@@ -167,6 +167,7 @@ function WordHypothesisList({ hypotheses = [] }) {
 
 function WordLayerSection({
   wordLayer,
+  defaultExpanded = false,
   onInterpretWordLayer,
   wordLayerHypotheses = [],
   wordLayerHypothesesPending = false,
@@ -177,106 +178,132 @@ function WordLayerSection({
     : [];
   const canInterpret =
     Boolean(wordLayer?.hypothesisReadyEvidence?.available) && typeof onInterpretWordLayer === "function";
+  const selectionPointCount = wordLayer?.hasEnoughChronology
+    ? Array.isArray(wordLayer?.divergenceMoments)
+      ? wordLayer.divergenceMoments.length
+      : 0
+    : 0;
+  const summaryItems = [
+    `${wordLayer?.termCount || 0} terms`,
+    `${selectionPointCount} ${selectionPointCount === 1 ? "selection point" : "selection points"}`,
+  ];
 
   return (
-    <section className="assembler-assembly-lane__word-layer" aria-label="Word layer">
-      <div className="assembler-assembly-lane__word-layer-head">
+    <details
+      className="assembler-assembly-lane__word-layer-shell"
+      open={defaultExpanded}
+    >
+      <summary className="assembler-assembly-lane__word-layer-summary">
         <div className="assembler-assembly-lane__word-layer-copy">
           <span className="assembler-assembly-lane__strip-label">Word layer</span>
           <strong className="assembler-assembly-lane__word-layer-title">Lexical archaeology</strong>
         </div>
-        {canInterpret ? (
-          <button
-            type="button"
-            className="assembler-assembly-lane__word-action"
-            onClick={onInterpretWordLayer}
-            disabled={wordLayerHypothesesPending}
-          >
-            <ScanLine size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-            <span>{wordLayerHypothesesPending ? "Reading…" : "Interpret with Seven"}</span>
-          </button>
-        ) : null}
-      </div>
+        <div className="assembler-assembly-lane__word-layer-summary-meta">
+          {summaryItems.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
+      </summary>
 
-      {wordLayer?.empty ? (
-        <p className="assembler-assembly-lane__word-empty">
-          Add more language to the box before reading for load-bearing words.
-        </p>
-      ) : (
-        <>
-          {classSummary.length ? (
-            <div className="assembler-assembly-lane__word-summary-row">
-              {classSummary.map((entry) => (
-                <span key={entry.id} className="assembler-assembly-lane__word-summary-pill">
-                  <strong>{entry.label}</strong>
-                  <span>{entry.count}</span>
-                </span>
-              ))}
-            </div>
+      <section className="assembler-assembly-lane__word-layer" aria-label="Word layer">
+        <div className="assembler-assembly-lane__word-layer-head">
+          <div className="assembler-assembly-lane__word-layer-copy">
+            <span className="assembler-assembly-lane__strip-label">Word layer</span>
+            <strong className="assembler-assembly-lane__word-layer-title">Lexical archaeology</strong>
+          </div>
+          {canInterpret ? (
+            <button
+              type="button"
+              className="assembler-assembly-lane__word-action"
+              onClick={onInterpretWordLayer}
+              disabled={wordLayerHypothesesPending}
+            >
+              <ScanLine size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+              <span>{wordLayerHypothesesPending ? "Reading…" : "Interpret with Seven"}</span>
+            </button>
           ) : null}
+        </div>
 
-          <div className="assembler-assembly-lane__word-grid">
-            <WordTermList
-              title="Invariant"
-              terms={wordLayer?.hasEnoughChronology ? wordLayer?.invariantTerms || [] : []}
-              emptyText={
-                wordLayer?.hasEnoughChronology
-                  ? "No invariant language is strong enough to show yet."
-                  : wordLayer?.lowHistoryNote || "More history is needed for time-based reading."
-              }
-            />
-            <WordTermList
-              title="Emerging"
-              terms={wordLayer?.hasEnoughChronology ? wordLayer?.emergentTerms || [] : []}
-              emptyText={
-                wordLayer?.hasEnoughChronology
-                  ? "No emerging terms are strong enough to show yet."
-                  : wordLayer?.lowHistoryNote || "More history is needed for time-based reading."
-              }
-            />
-            <WordTermList
-              title="Receding"
-              terms={wordLayer?.hasEnoughChronology ? wordLayer?.recedingTerms || [] : []}
-              emptyText={
-                wordLayer?.hasEnoughChronology
-                  ? "No receding terms are strong enough to show yet."
-                  : wordLayer?.lowHistoryNote || "More history is needed for time-based reading."
-              }
-            />
-          </div>
+        {wordLayer?.empty ? (
+          <p className="assembler-assembly-lane__word-empty">
+            Add more language to the box before reading for load-bearing words.
+          </p>
+        ) : (
+          <>
+            {classSummary.length ? (
+              <div className="assembler-assembly-lane__word-summary-row">
+                {classSummary.map((entry) => (
+                  <span key={entry.id} className="assembler-assembly-lane__word-summary-pill">
+                    <strong>{entry.label}</strong>
+                    <span>{entry.count}</span>
+                  </span>
+                ))}
+              </div>
+            ) : null}
 
-          <div className="assembler-assembly-lane__word-grid assembler-assembly-lane__word-grid--secondary">
-            <WordTermList
-              title="Carried"
-              terms={wordLayer?.carriedTerms || []}
-              emptyText="No carried terms are clear enough yet."
-            />
-            <WordTermList
-              title="Dropped"
-              terms={wordLayer?.droppedTerms || []}
-              emptyText="Nothing has clearly fallen away yet."
-            />
-            <WordSelectionList
-              moments={wordLayer?.hasEnoughChronology ? wordLayer?.divergenceMoments || [] : []}
-            />
-          </div>
-        </>
-      )}
+            <div className="assembler-assembly-lane__word-grid">
+              <WordTermList
+                title="Invariant"
+                terms={wordLayer?.hasEnoughChronology ? wordLayer?.invariantTerms || [] : []}
+                emptyText={
+                  wordLayer?.hasEnoughChronology
+                    ? "No invariant language is strong enough to show yet."
+                    : wordLayer?.lowHistoryNote || "More history is needed for time-based reading."
+                }
+              />
+              <WordTermList
+                title="Emerging"
+                terms={wordLayer?.hasEnoughChronology ? wordLayer?.emergentTerms || [] : []}
+                emptyText={
+                  wordLayer?.hasEnoughChronology
+                    ? "No emerging terms are strong enough to show yet."
+                    : wordLayer?.lowHistoryNote || "More history is needed for time-based reading."
+                }
+              />
+              <WordTermList
+                title="Receding"
+                terms={wordLayer?.hasEnoughChronology ? wordLayer?.recedingTerms || [] : []}
+                emptyText={
+                  wordLayer?.hasEnoughChronology
+                    ? "No receding terms are strong enough to show yet."
+                    : wordLayer?.lowHistoryNote || "More history is needed for time-based reading."
+                }
+              />
+            </div>
 
-      {wordLayerHypothesesError ? (
-        <p className="assembler-assembly-lane__word-error">{wordLayerHypothesesError}</p>
-      ) : null}
+            <div className="assembler-assembly-lane__word-grid assembler-assembly-lane__word-grid--secondary">
+              <WordTermList
+                title="Carried"
+                terms={wordLayer?.carriedTerms || []}
+                emptyText="No carried terms are clear enough yet."
+              />
+              <WordTermList
+                title="Dropped"
+                terms={wordLayer?.droppedTerms || []}
+                emptyText="Nothing has clearly fallen away yet."
+              />
+              <WordSelectionList
+                moments={wordLayer?.hasEnoughChronology ? wordLayer?.divergenceMoments || [] : []}
+              />
+            </div>
+          </>
+        )}
 
-      <WordHypothesisList hypotheses={wordLayerHypotheses} />
+        {wordLayerHypothesesError ? (
+          <p className="assembler-assembly-lane__word-error">{wordLayerHypothesesError}</p>
+        ) : null}
 
-      <p className="assembler-assembly-lane__word-disclaimer">
-        {wordLayer?.disclaimer || "Interpretations are hypotheses, not facts."}
-      </p>
-    </section>
+        <WordHypothesisList hypotheses={wordLayerHypotheses} />
+
+        <p className="assembler-assembly-lane__word-disclaimer">
+          {wordLayer?.disclaimer || "Interpretations are hypotheses, not facts."}
+        </p>
+      </section>
+    </details>
   );
 }
 
-function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
+function LaneEntry({ entry, onOpenEntry, onInspectEvidence, showLakinDefinition = false }) {
   const EntryKindIcon = ENTRY_KIND_ICONS[entry?.kind] || FileText;
   const canOpen = typeof onOpenEntry === "function" && (entry?.actionKind || entry?.documentKey);
   const canInspect = Boolean(entry?.canInspectEvidence) && typeof onInspectEvidence === "function";
@@ -348,6 +375,12 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
         ) : null}
       </div>
 
+      {showLakinDefinition ? (
+        <p className="assembler-assembly-lane__entry-note">
+          A Lakin moment is a turn where something fell away and something more durable was carried forward.
+        </p>
+      ) : null}
+
       {evidenceMeta.length ? (
         <p className="assembler-assembly-lane__entry-meta-note">{evidenceMeta.join(" · ")}</p>
       ) : null}
@@ -368,6 +401,10 @@ export default function AssemblyLane({
   const moveGroups = Array.isArray(viewModel?.moveGroups) ? viewModel.moveGroups : [];
   const entryCount = Array.isArray(viewModel?.entries) ? viewModel.entries.length : 0;
   const protocolPosition = viewModel?.protocolPosition || "collecting";
+  const firstLakinEntryId =
+    moveGroups
+      .flatMap((group) => (Array.isArray(group?.entries) ? group.entries : []))
+      .find((entry) => entry?.isLakinMoment)?.id || "";
   const metaItems = [
     viewModel?.protocolStateLabel || viewModel?.stateSummary?.chipLabel || "Collecting",
     `${viewModel?.realSourceCount || 0} sources`,
@@ -437,6 +474,7 @@ export default function AssemblyLane({
                         entry={entry}
                         onOpenEntry={onOpenEntry}
                         onInspectEvidence={onInspectEvidence}
+                        showLakinDefinition={entry.id === firstLakinEntryId}
                       />
                     </li>
                   ))}
@@ -453,6 +491,7 @@ export default function AssemblyLane({
 
       <WordLayerSection
         wordLayer={viewModel?.wordLayer}
+        defaultExpanded={Boolean(viewModel?.wordLayerDefaultExpanded)}
         onInterpretWordLayer={
           typeof onInterpretWordLayer === "function"
             ? () => onInterpretWordLayer(viewModel?.wordLayer)

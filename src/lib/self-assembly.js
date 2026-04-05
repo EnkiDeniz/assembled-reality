@@ -973,6 +973,7 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     protocolPosition: "proving",
     protocolStateLabel: "Curated demo",
     contextualAction: null,
+    wordLayerDefaultExpanded: true,
     wordLayer,
     receiptSummary: {
       sealedDraftCount: 1,

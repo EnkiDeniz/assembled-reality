@@ -1646,6 +1646,7 @@ export function buildBoxAssemblyLaneViewModel({
     boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
     boxSubtitle: activeProject?.boxSubtitle || activeProject?.subtitle || "",
     introLine: String(meta?.system?.introLine || "").trim(),
+    wordLayerDefaultExpanded: Boolean(activeProject?.isSystemExample),
     entryCount: entries.length,
     realSourceCount: realSourceDocuments.length,
     recentWitnessCount,
