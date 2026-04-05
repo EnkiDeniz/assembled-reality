@@ -723,7 +723,7 @@ export function buildAssemblyStateSummary({
   const phaseLabel = getAssemblyPhaseLabel(phase);
   const isLooping = unconfirmedCount > 15 && sealedDraftCount === 0;
   const loopMessage = isLooping
-    ? "The box is accumulating without sealing. Confirm some blocks or seal a receipt to close the loop."
+    ? "Accumulating without sealing."
     : "";
 
   return {

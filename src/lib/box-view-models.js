@@ -1,3 +1,4 @@
+import { cleanDisplayTitle } from "@/lib/document-blocks";
 import {
   buildBoxSource,
   buildOperateSourceSummary,
@@ -480,7 +481,7 @@ function buildLaneSourceRefs(document = null) {
   return [
     {
       documentKey: document.documentKey,
-      title: document.title || "Untitled document",
+      title: cleanDisplayTitle(document.title),
     },
   ];
 }
@@ -545,7 +546,7 @@ function buildLaneEventEntry(event = null, index = 0, documentsByKey = new Map()
       ? [
           {
             documentKey,
-            title: relatedDocument.title || "Related document",
+            title: cleanDisplayTitle(relatedDocument.title),
           },
         ]
       : [],
@@ -1366,7 +1367,7 @@ export function buildBoxAssemblyLaneViewModel({
       id: `lane-source-${document.documentKey}`,
       kind,
       kindLabel: LANE_KIND_LABELS[kind] || LANE_KIND_LABELS.source,
-      title: document.title || "Untitled source",
+      title: cleanDisplayTitle(document.title),
       detail,
       occurredAt: document.createdAt || document.updatedAt || null,
       orderKind: getTimestamp(document.createdAt || document.updatedAt) ? "explicit" : "inferred",

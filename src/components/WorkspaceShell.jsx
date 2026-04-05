@@ -3395,7 +3395,7 @@ function AiBar({
           })
         ) : (
           <p className="assembler-seven-sheet__empty">
-            Start a thread about this document. Seven keeps the conversation tied to what you are reading.
+            Ask Seven about this document.
           </p>
         )}
       </div>

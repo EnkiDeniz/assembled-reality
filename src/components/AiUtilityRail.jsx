@@ -145,7 +145,7 @@ export default function AiUtilityRail({
               </div>
             ) : (
               <p className="assembler-utility-rail__empty">
-                Start a thread about this document. Seven will keep the conversation tied to what you are reading in this box.
+                Ask Seven about this document.
               </p>
             )}
           </div>

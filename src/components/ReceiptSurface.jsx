@@ -75,10 +75,12 @@ export default function ReceiptSurface({
               label={summary.latestDraftStatusLabel || "Local only"}
               tone={summary.latestRemoteError ? "error" : summary.latestDraftStatus === "REMOTE_DRAFT" ? "success" : ""}
             />
-            <ReceiptStatusPill
-              label={summary.courthouseStatusLine || "Local only"}
-              tone={summary.courthouseStatusTone || ""}
-            />
+            {summary.courthouseStatusLine && summary.courthouseStatusLine !== summary.latestDraftStatusLabel ? (
+              <ReceiptStatusPill
+                label={summary.courthouseStatusLine}
+                tone={summary.courthouseStatusTone || ""}
+              />
+            ) : null}
           </div>
 
           <div className="assembler-receipt-surface__hero-actions">

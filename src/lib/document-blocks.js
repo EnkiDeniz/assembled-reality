@@ -65,6 +65,14 @@ function buildWorkspaceBlockId(documentKey, sourcePosition, extractionPassId = "
     : `${resolvedDocumentKey}:block:${positionLabel}`;
 }
 
+export function cleanDisplayTitle(title) {
+  return String(title || "")
+    .replace(/^\\?#{1,6}\s+/g, "")
+    .replace(/\\([#*_`~>])/g, "$1")
+    .replace(/^[-–—]\s+/, "")
+    .trim() || "Untitled";
+}
+
 export function stripMarkdownSyntax(markdown) {
   return String(markdown || "")
     .replace(/^#{1,6}\s+/gm, "")
@@ -200,7 +208,7 @@ function splitSectionIntoChunks(markdown) {
   });
 
   pushCurrent();
-  return chunks.length ? chunks : ["_No content yet._"];
+  return chunks.length ? chunks : ["No content yet."];
 }
 
 export function buildWorkspaceBlocksFromDocument(documentData, options = {}) {
@@ -298,7 +306,7 @@ export function buildWorkspaceMarkdown({
   const renderedBlocks = normalizeWorkspaceBlocks(blocks).map(renderWorkspaceBlockMarkdown).filter(Boolean);
 
   if (renderedBlocks.length === 0) {
-    lines.push("", "_No content yet._");
+    lines.push("", "No content yet.");
   } else {
     renderedBlocks.forEach((blockMarkdown) => {
       lines.push("", blockMarkdown);

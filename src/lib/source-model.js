@@ -220,7 +220,7 @@ export function buildSourceTrustProfile(document = null, assets = []) {
       basis: "captured-link",
       verification: primaryAsset?.canonicalUrl ? "captured" : "normalized",
       trustLevelHint: "L2",
-      summary: "Readable linked material captured into the box. Provenance is explicit; verification is separate.",
+      summary: "Link · captured",
     };
   }
 
@@ -246,7 +246,7 @@ export function buildSourceTrustProfile(document = null, assets = []) {
     basis: origin === SOURCE_ORIGINS.pasted ? "pasted-text" : "uploaded-text",
     verification: "normalized",
     trustLevelHint: "L2",
-    summary: "Source text preserved in the box. Normalization is separate from verification.",
+    summary: "Text · normalized",
   };
 }
 

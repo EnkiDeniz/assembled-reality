@@ -361,7 +361,7 @@ function buildCanonicalMarkdown({ title, introMarkdown = "", sections = [] }) {
       "",
       `## ${index + 1} · ${cleanHeadingText(section.title) || `Section ${index + 1}`}`,
       "",
-      String(section.markdown || "").trim() || "_No content yet._",
+      String(section.markdown || "").trim() || "No content yet.",
     );
   });
 
@@ -385,7 +385,7 @@ function structureLooseMarkdown(rawMarkdown = "", titleHint = "") {
       sections: [
         {
           title,
-          markdown: stripped || detectedTitle || normalized || "_No content yet._",
+          markdown: stripped || detectedTitle || normalized || "No content yet.",
         },
       ],
     };
@@ -444,7 +444,7 @@ function structureLooseMarkdown(rawMarkdown = "", titleHint = "") {
     sections: sections
       .map((section, index) => ({
         title: section.title || `Section ${index + 1}`,
-        markdown: section.markdown || "_No content yet._",
+        markdown: section.markdown || "No content yet.",
       }))
       .filter((section) => String(section.markdown || "").trim()),
   };

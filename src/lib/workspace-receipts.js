@@ -142,7 +142,7 @@ export function buildWorkspaceReceiptPayload({
     decision:
       mode === "assembly"
         ? "Keep the seed as a working draft, continue refining it, and preserve its lineage as a receipt."
-        : "Preserve the current workspace state as a draft receipt for later review and export.",
+        : "Local proof preserved.",
     owner: profile?.displayName || "Reader",
     temporal: "retrospective",
     visibility: "private",

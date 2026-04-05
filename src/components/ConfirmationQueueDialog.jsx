@@ -36,14 +36,11 @@ export default function ConfirmationQueueDialog({
   const preferredDomains = root?.applicableDomains?.length
     ? root.applicableDomains
     : root?.suggestedDomains || [];
-  const orderedDomains = [
-    ...preferredDomains,
-    ...ASSEMBLY_DOMAINS.map((entry) => entry.key).filter((key) => !preferredDomains.includes(key)),
-  ];
-  const domainOptions = orderedDomains.map((domainKey) => ({
-    key: domainKey,
-    label: ASSEMBLY_DOMAINS.find((entry) => entry.key === domainKey)?.label || domainKey,
-  }));
+  const domainOptions = (preferredDomains.length ? preferredDomains : ASSEMBLY_DOMAINS.map((entry) => entry.key))
+    .map((domainKey) => ({
+      key: domainKey,
+      label: ASSEMBLY_DOMAINS.find((entry) => entry.key === domainKey)?.label || domainKey,
+    }));
 
   if (!open) return null;
 

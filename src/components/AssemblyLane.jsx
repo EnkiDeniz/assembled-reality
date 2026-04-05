@@ -128,22 +128,10 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
 
       <div className="assembler-assembly-lane__entry-badges">
         <LaneBadge label={entry?.stageStatusLabel || "Present"} tone="stage" />
-        <LaneBadge label={entry?.proofStatusLabel || "Open"} tone="proof" />
       </div>
 
       {evidenceMeta.length ? (
         <p className="assembler-assembly-lane__entry-meta-note">{evidenceMeta.join(" · ")}</p>
-      ) : null}
-
-      {entry?.trustSummary ? (
-        <p className="assembler-assembly-lane__entry-trust">{entry.trustSummary}</p>
-      ) : null}
-
-      {entry?.linkedEntryIds?.length ? (
-        <p className="assembler-assembly-lane__entry-links">
-          Linked to {entry.linkedEntryIds.length} lane{" "}
-          {entry.linkedEntryIds.length === 1 ? "entry" : "entries"}.
-        </p>
       ) : null}
     </article>
   );

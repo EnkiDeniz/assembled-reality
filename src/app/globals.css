@@ -5640,8 +5640,22 @@ main {
 }
 
 .assembler-root-bar.is-compact {
-  padding: 10px 12px;
-  border-radius: 16px;
+  padding: 8px 12px;
+  border-radius: 14px;
+}
+
+.assembler-root-bar.is-compact .assembler-root-bar__eyebrow {
+  display: none;
+}
+
+.assembler-root-bar.is-compact .assembler-root-bar__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assembler-root-bar.is-compact .assembler-root-bar__text {
+  font-size: 13px;
 }
 
 .assembler-root-bar__main {
