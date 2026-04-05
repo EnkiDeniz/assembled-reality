@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { appEnv } from "@/lib/env";
 import { PRODUCT_NAME } from "@/lib/product-language";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -14,25 +15,44 @@ function getEmailHtml({ url, brandName }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Sign in to ${brandName}</title>
       </head>
-      <body style="margin:0;padding:0;background:#f3eee3;color:#1d1612;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-        <div style="max-width:640px;margin:0 auto;padding:40px 20px;">
-          <div style="border:1px solid rgba(68,46,26,0.12);border-radius:28px;background:#faf6ef;padding:32px 28px;box-shadow:0 20px 60px rgba(68,46,26,0.08);">
-            <p style="margin:0 0 12px 0;font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:#8b735f;">Lakin AI product</p>
-            <h1 style="margin:0 0 12px 0;font-family:'Source Serif 4',Georgia,serif;font-size:40px;line-height:1;color:#1d1612;">
-              ${brandName}
-            </h1>
-            <p style="margin:0 0 28px 0;font-size:17px;line-height:1.6;color:#4c4036;">
-              Use the link below to enter ${brandName}.
-            </p>
-            <a
-              href="${escapedUrl}"
-              style="display:inline-block;border-radius:999px;background:#1d1612;color:#faf6ef;text-decoration:none;padding:14px 22px;font-size:14px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;"
-            >
-              Enter the Reader
-            </a>
-            <p style="margin:28px 0 0 0;font-size:13px;line-height:1.6;color:#8b735f;">
-              If you did not request this sign-in link, you can safely ignore this email.
-            </p>
+      <body style="margin:0;padding:0;background:#121212;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;">
+        <div style="padding:32px 16px;background:radial-gradient(circle at top left, rgba(51, 156, 255, 0.12), transparent 30%), #121212;">
+          <div style="max-width:760px;margin:0 auto;border:1px solid rgba(255,255,255,0.08);border-radius:28px;background:#1f1f1f;box-shadow:0 14px 36px rgba(0,0,0,0.32);overflow:hidden;">
+            <div style="padding:36px 32px;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <p style="margin:0 0 20px 0;color:rgba(255,255,255,0.45);font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;letter-spacing:0.02em;">
+                Lœgos
+              </p>
+              <h1 style="max-width:420px;margin:0 0 18px 0;color:#ffffff;font-size:52px;line-height:0.96;font-weight:600;letter-spacing:-0.05em;">
+                Meaning is an assembled object.
+              </h1>
+              <p style="max-width:320px;margin:0;color:#339cff;font-size:24px;line-height:1.35;font-weight:500;">
+                Close the gap between what you think and what you do.
+              </p>
+            </div>
+            <div style="padding:32px;border-top:1px solid rgba(255,255,255,0.02);">
+              <p style="margin:0 0 10px 0;color:rgba(255,255,255,0.68);font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">
+                Email magic link
+              </p>
+              <p style="margin:0 0 26px 0;color:#ffffff;font-size:22px;line-height:1.4;">
+                Sign in to ${brandName} with a secure link.
+              </p>
+              <a
+                href="${escapedUrl}"
+                style="display:inline-block;min-width:240px;box-sizing:border-box;border:1px solid rgba(51,156,255,0.45);border-radius:18px;background:rgba(51,156,255,0.14);color:#ffffff;text-decoration:none;padding:16px 24px;font-size:16px;font-weight:500;text-align:center;"
+              >
+                Enter Loegos
+              </a>
+              <p style="margin:26px 0 0 0;color:rgba(255,255,255,0.68);font-size:14px;line-height:1.7;">
+                This sign-in link expires shortly and only works once.
+              </p>
+              <p style="margin:12px 0 0 0;color:rgba(255,255,255,0.45);font-size:13px;line-height:1.7;">
+                If you did not request this email, you can safely ignore it.
+              </p>
+              <p style="margin:22px 0 0 0;color:rgba(255,255,255,0.45);font-size:12px;line-height:1.7;word-break:break-all;">
+                If the button does not work, open this link:<br />
+                <a href="${escapedUrl}" style="color:#7eb8ff;text-decoration:none;">${escapedUrl}</a>
+              </p>
+            </div>
           </div>
         </div>
       </body>
@@ -59,12 +79,7 @@ export async function sendVerificationRequest({ identifier, url, provider }) {
   }
 
   const brandName = provider?.brandName || PRODUCT_NAME;
-  const from = String(
-    provider?.from ||
-      process.env.NEXTAUTH_EMAIL_FROM ||
-      process.env.EMAIL_FROM ||
-      `${PRODUCT_NAME} <noreply@updates.getreceipts.com>`,
-  ).trim();
+  const from = String(provider?.from || appEnv.emailFrom).trim();
 
   const { error } = await resend.emails.send({
     from,

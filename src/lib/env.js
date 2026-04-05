@@ -2,6 +2,8 @@ function normalizeSecret(value) {
   return String(value || "").trim();
 }
 
+export const DEFAULT_EMAIL_FROM = "Loegos <noreply@loegos.com>";
+
 function getApplePrivateKey() {
   const raw = normalizeSecret(process.env.APPLE_PRIVATE_KEY);
   if (!raw) return "";
@@ -47,7 +49,7 @@ export const appEnv = {
   emailFrom:
     normalizeSecret(process.env.NEXTAUTH_EMAIL_FROM) ||
     normalizeSecret(process.env.EMAIL_FROM) ||
-    "Loegos <noreply@updates.getreceipts.com>",
+    DEFAULT_EMAIL_FROM,
   magicLinksEnabled: Boolean(
     process.env.RESEND_API_KEY && (process.env.NEXTAUTH_EMAIL_FROM || process.env.EMAIL_FROM),
   ),
