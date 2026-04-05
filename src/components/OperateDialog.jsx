@@ -194,7 +194,7 @@ export default function OperateDialog({
             onClick={onDraftReceipt}
             disabled={!result || pending || receiptPending}
           >
-            {receiptPending ? "Drafting…" : "Draft receipt"}
+            {receiptPending ? "Saving…" : "Save draft"}
           </button>
         </div>
       </div>

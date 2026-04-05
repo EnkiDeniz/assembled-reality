@@ -3,7 +3,10 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_PROJECT_KEY } from "@/lib/project-model";
-import { attachDocumentToProjectForUser } from "@/lib/reader-projects";
+import {
+  attachDocumentToProjectForUser,
+  markSystemExampleProjectTouchedByDocumentForUser,
+} from "@/lib/reader-projects";
 import { getParsedDocument, parseDocument, PRIMARY_DOCUMENT_KEY } from "@/lib/document";
 import { PRODUCT_MARK } from "@/lib/product-language";
 import { normalizeSeedMeta } from "@/lib/seed-model";
@@ -692,6 +695,7 @@ export async function saveWorkspaceDocumentForUser(
     },
   });
 
+  await markSystemExampleProjectTouchedByDocumentForUser(userId, updated.documentKey);
   return getWorkspaceDocumentForUser(userId, updated.documentKey);
 }
 
@@ -706,6 +710,7 @@ export async function createAssemblyDocumentForUser(
     createdAt = null,
     updatedAt = null,
     eventAt = "",
+    touchSystemExample = true,
   },
 ) {
   const normalizedTitle = String(title || "").trim() || "Assembly";
@@ -794,6 +799,7 @@ export async function createAssemblyDocumentForUser(
     documentKey,
     role: "ASSEMBLY",
     setAsCurrentAssembly: true,
+    touchSystemExample,
     appendEvents: normalizedSeedMeta.isSeed
         ? [
           buildAssemblyIndexEvent("seed_created", {
@@ -868,6 +874,7 @@ export async function updateWorkspaceDocumentMetadataForUser(
     },
   });
 
+  await markSystemExampleProjectTouchedByDocumentForUser(userId, documentKey);
   return getWorkspaceDocumentForUser(userId, documentKey);
 }
 

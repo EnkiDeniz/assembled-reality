@@ -1,3 +1,5 @@
+import { LOEGOS_ORIGIN_TEMPLATE_VERSION } from "@/lib/loegos-origin-template";
+
 export const PRIMARY_WORKSPACE_DOCUMENT_KEY = "assembled-reality-v07-final";
 export const DEFAULT_PROJECT_KEY = "default-project";
 export const DEFAULT_PROJECT_TITLE = "Untitled Box";
@@ -90,6 +92,26 @@ function getProjectSystemMeta(project = null) {
         ? project.architectureMeta.system
         : {};
   return system;
+}
+
+function getSystemVersionInfo(systemMeta = null) {
+  const nextSystem = systemMeta && typeof systemMeta === "object" ? systemMeta : {};
+  const isSystemExample = Boolean(nextSystem?.templateId);
+  const templateVersionApplied =
+    Number(nextSystem?.templateVersionApplied ?? nextSystem?.templateVersion) || 0;
+  const templateVersionLatest = isSystemExample ? LOEGOS_ORIGIN_TEMPLATE_VERSION : 0;
+  const dismissedTemplateVersion = Number(nextSystem?.dismissedTemplateVersion) || 0;
+  return {
+    isSystemExample,
+    templateVersionApplied,
+    templateVersionLatest,
+    updateAvailable:
+      isSystemExample &&
+      templateVersionLatest > 0 &&
+      templateVersionApplied < templateVersionLatest &&
+      dismissedTemplateVersion < templateVersionLatest,
+    userModifiedExample: Boolean(nextSystem?.userModifiedExample),
+  };
 }
 
 export function getProjectDisplayTitle(project = null) {
@@ -214,7 +236,8 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
     },
   );
   const systemMeta = getProjectSystemMeta(project);
-  const isSystemExample = Boolean(systemMeta?.templateId);
+  const systemVersionInfo = getSystemVersionInfo(systemMeta);
+  const isSystemExample = systemVersionInfo.isSystemExample;
 
   return {
     ...fallbackProject,
@@ -253,7 +276,11 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
     architectureMeta: project.architectureMeta || project.metadataJson || null,
     isSystemExample,
     systemTemplateId: String(systemMeta?.templateId || "").trim(),
-    systemTemplateVersion: Number(systemMeta?.templateVersion) || 0,
+    systemTemplateVersion:
+      systemVersionInfo.templateVersionLatest || Number(systemMeta?.templateVersion) || 0,
+    systemTemplateVersionApplied: systemVersionInfo.templateVersionApplied,
+    systemExampleUpdateAvailable: systemVersionInfo.updateAvailable,
+    systemExampleUserModified: systemVersionInfo.userModifiedExample,
     systemExampleLabel: isSystemExample
       ? String(systemMeta?.exampleLabel || "Example").trim() || "Example"
       : "",

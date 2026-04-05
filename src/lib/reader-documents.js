@@ -321,6 +321,7 @@ export async function createReaderDocumentForUser(
     createdAt = null,
     updatedAt = null,
     eventAt = "",
+    touchSystemExample = true,
   },
 ) {
   const readerDocumentModel = getReaderDocumentModel();
@@ -414,6 +415,7 @@ export async function createReaderDocumentForUser(
     projectKey,
     documentKey,
     role: "SOURCE",
+    touchSystemExample,
     appendEvents: buildSourceAssemblyEvents({
       documentKey,
       title: normalizedTitle,

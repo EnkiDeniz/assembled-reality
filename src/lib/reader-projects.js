@@ -15,6 +15,10 @@ import {
   mergeProjectArchitectureMeta,
   normalizeProjectArchitectureMeta,
 } from "@/lib/assembly-architecture";
+import {
+  LOEGOS_ORIGIN_TEMPLATE_VERSION,
+  normalizeProjectSystemMeta,
+} from "@/lib/loegos-origin-template";
 import { slugify } from "@/lib/text";
 
 function getReaderProjectModel() {
@@ -75,6 +79,43 @@ function getDefaultProjectSeed(currentAssemblyDocumentKey = null) {
     title: DEFAULT_PROJECT_TITLE,
     subtitle: DEFAULT_PROJECT_SUBTITLE,
     currentAssemblyDocumentKey: currentAssemblyDocumentKey || null,
+  };
+}
+
+function buildTouchedSystemExamplePatch(currentMeta = null) {
+  const normalizedMeta = normalizeProjectArchitectureMeta(currentMeta);
+  const systemMeta = normalizeProjectSystemMeta(normalizedMeta.system);
+  if (!String(systemMeta?.templateId || "").trim()) {
+    return null;
+  }
+
+  return {
+    ...systemMeta,
+    userModifiedExample: true,
+    userModifiedAt: systemMeta.userModifiedAt || new Date().toISOString(),
+    dismissedTemplateVersion: 0,
+  };
+}
+
+function buildSystemVersionInfo(systemMeta = null) {
+  const normalizedSystemMeta = normalizeProjectSystemMeta(systemMeta);
+  const isSystemExample = Boolean(normalizedSystemMeta?.templateId);
+  const templateVersionApplied =
+    Number(normalizedSystemMeta.templateVersionApplied ?? normalizedSystemMeta.templateVersion) || 0;
+  const templateVersionLatest = isSystemExample ? LOEGOS_ORIGIN_TEMPLATE_VERSION : 0;
+  const dismissedTemplateVersion = Number(normalizedSystemMeta.dismissedTemplateVersion) || 0;
+  const updateAvailable =
+    isSystemExample &&
+    templateVersionLatest > 0 &&
+    templateVersionApplied < templateVersionLatest &&
+    dismissedTemplateVersion < templateVersionLatest;
+
+  return {
+    isSystemExample,
+    templateVersionApplied,
+    templateVersionLatest,
+    updateAvailable,
+    userModifiedExample: Boolean(normalizedSystemMeta.userModifiedExample),
   };
 }
 
@@ -177,7 +218,8 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
     .map((membership) => membership.documentKey);
   const normalizedMeta = normalizeProjectArchitectureMeta(projectRecord?.metadataJson);
   const systemMeta = getProjectSystemMeta(normalizedMeta);
-  const isSystemExample = Boolean(systemMeta?.templateId);
+  const systemVersionInfo = buildSystemVersionInfo(systemMeta);
+  const isSystemExample = systemVersionInfo.isSystemExample;
   const serializedCreatedAt =
     (isSystemExample
       ? normalizedMeta?.root?.createdAt
@@ -218,7 +260,11 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
     architectureMeta: normalizedMeta,
     isSystemExample,
     systemTemplateId: String(systemMeta?.templateId || "").trim(),
-    systemTemplateVersion: Number(systemMeta?.templateVersion) || 0,
+    systemTemplateVersion:
+      systemVersionInfo.templateVersionLatest || Number(systemMeta?.templateVersion) || 0,
+    systemTemplateVersionApplied: systemVersionInfo.templateVersionApplied,
+    systemExampleUpdateAvailable: systemVersionInfo.updateAvailable,
+    systemExampleUserModified: systemVersionInfo.userModifiedExample,
     systemExampleLabel: isSystemExample
       ? String(systemMeta?.exampleLabel || "Example").trim() || "Example"
       : "",
@@ -529,6 +575,9 @@ export async function updateReaderProjectForUser(
     assemblyState,
     stateHistory,
     appendEvents = [],
+    touchSystemExample = false,
+    skipExampleTouch = false,
+    systemPatch = undefined,
   } = {},
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -561,6 +610,8 @@ export async function updateReaderProjectForUser(
     !hasDomainRationales &&
     !hasAssemblyState &&
     !hasStateHistory &&
+    !touchSystemExample &&
+    systemPatch === undefined &&
     !(Array.isArray(appendEvents) && appendEvents.length)
   ) {
     throw new Error("No box changes were provided.");
@@ -623,6 +674,17 @@ export async function updateReaderProjectForUser(
         : hasPinned
           ? Boolean(isPinned)
           : Boolean(project.isPinned);
+    const shouldTouchSystemExample =
+      !skipExampleTouch &&
+      (Boolean(touchSystemExample) || hasTitle || hasSubtitle || hasRootText || hasRootGloss);
+    const nextSystemPatch = shouldTouchSystemExample
+      ? buildTouchedSystemExamplePatch(currentMeta)
+      : systemPatch === undefined
+        ? null
+        : {
+            ...normalizeProjectSystemMeta(currentMeta.system),
+            ...(systemPatch || {}),
+          };
 
     return await readerProjectModel.update({
       where: {
@@ -651,7 +713,8 @@ export async function updateReaderProjectForUser(
           hasDomainRationales ||
           hasAssemblyState ||
           hasStateHistory ||
-          derivedAppendEvents.length > 0)
+          derivedAppendEvents.length > 0 ||
+          nextSystemPatch)
           ? {
               metadataJson: mergeProjectArchitectureMeta(currentMeta, {
                 ...(hasRootText || hasRootGloss ? { root: nextRootDraft } : {}),
@@ -659,6 +722,7 @@ export async function updateReaderProjectForUser(
                 ...(hasDomainRationales ? { domainRationales } : {}),
                 ...(hasAssemblyState ? { assemblyState } : {}),
                 ...(hasStateHistory ? { stateHistory } : {}),
+                ...(nextSystemPatch ? { system: nextSystemPatch } : {}),
                 ...(derivedAppendEvents.length > 0
                   ? { events: derivedAppendEvents }
                   : {}),
@@ -860,6 +924,7 @@ export async function attachDocumentToProjectForUser(
     role = "SOURCE",
     setAsCurrentAssembly = false,
     appendEvents = [],
+    touchSystemExample = true,
   },
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -909,8 +974,12 @@ export async function attachDocumentToProjectForUser(
       nextProjectData.currentAssemblyDocumentKey = documentKey;
     }
 
-    if (normalizedAppendEvents.length > 0) {
+    const nextSystemPatch =
+      touchSystemExample ? buildTouchedSystemExamplePatch(project.metadataJson) : null;
+
+    if (normalizedAppendEvents.length > 0 || nextSystemPatch) {
       nextProjectData.metadataJson = mergeProjectArchitectureMeta(project.metadataJson, {
+        ...(nextSystemPatch ? { system: nextSystemPatch } : {}),
         events: normalizedAppendEvents,
       });
     }
@@ -948,5 +1017,152 @@ export async function appendReaderProjectAssemblyEventForUser(
 
   return updateReaderProjectForUser(userId, projectKey, {
     appendEvents: [event],
+  });
+}
+
+export async function recordReaderProjectSessionCheckpointForUser(
+  userId,
+  projectKey,
+  {
+    seedDocumentKey = "",
+    reason = "activity",
+  } = {},
+) {
+  const normalizedProjectKey = String(projectKey || "").trim();
+  if (!normalizedProjectKey) return { created: false };
+
+  const project = await prisma.readerProject.findFirst({
+    where: {
+      userId,
+      projectKey: normalizedProjectKey,
+    },
+    select: {
+      projectKey: true,
+      currentAssemblyDocumentKey: true,
+      metadataJson: true,
+    },
+  });
+
+  if (!project?.projectKey) {
+    return { created: false };
+  }
+
+  const meta = normalizeProjectArchitectureMeta(project.metadataJson);
+  const events = Array.isArray(meta.assemblyIndexMeta?.events) ? meta.assemblyIndexMeta.events : [];
+  const meaningfulTypes = new Set([
+    "source_added",
+    "source_derived",
+    "history_export_imported",
+    "root_declared",
+    "block_confirmed",
+    "block_discarded",
+    "seed_created",
+    "seed_updated",
+    "operate_ran",
+    "receipt_drafted",
+    "receipt_sealed",
+    "state_advanced",
+  ]);
+  const lastCheckpoint = [...events]
+    .reverse()
+    .find((event) => String(event?.type || "").trim().toLowerCase() === "session_checkpoint");
+  const lastCheckpointAt = Date.parse(String(lastCheckpoint?.at || ""));
+  const meaningfulEvents = events.filter((event) =>
+    meaningfulTypes.has(String(event?.type || "").trim().toLowerCase()),
+  );
+  const recentMeaningfulEvents = meaningfulEvents.filter((event) => {
+    const eventAt = Date.parse(String(event?.at || ""));
+    if (Number.isNaN(eventAt)) return false;
+    if (Number.isNaN(lastCheckpointAt)) return true;
+    return eventAt > lastCheckpointAt;
+  });
+
+  if (!recentMeaningfulEvents.length) {
+    return { created: false };
+  }
+
+  const latestMeaningfulEvent = recentMeaningfulEvents[recentMeaningfulEvents.length - 1];
+  const latestMeaningfulAt = Date.parse(String(latestMeaningfulEvent?.at || ""));
+  const now = Date.now();
+  const withinCheckpointWindow =
+    Number.isFinite(lastCheckpointAt) && now - lastCheckpointAt < 30 * 60 * 1000;
+  const latestMeaningfulType = String(latestMeaningfulEvent?.type || "").trim().toLowerCase();
+
+  if (withinCheckpointWindow && latestMeaningfulType !== "receipt_sealed") {
+    return { created: false };
+  }
+
+  const checkpointEvent = buildAssemblyIndexEvent("session_checkpoint", {
+    at: new Date().toISOString(),
+    move: "Recorded a session checkpoint.",
+    return:
+      recentMeaningfulEvents.length === 1
+        ? `The box recorded ${latestMeaningfulType.replace(/_/g, " ")} since the last checkpoint.`
+        : `The box recorded ${recentMeaningfulEvents.length} meaningful changes since the last checkpoint.`,
+    echo: reason,
+    context: {
+      reason,
+      seedDocumentKey:
+        String(seedDocumentKey || "").trim() ||
+        String(project.currentAssemblyDocumentKey || "").trim() ||
+        "",
+      latestMeaningfulType,
+      latestMeaningfulAt: Number.isFinite(latestMeaningfulAt)
+        ? new Date(latestMeaningfulAt).toISOString()
+        : "",
+      meaningfulEventCount: recentMeaningfulEvents.length,
+    },
+  });
+
+  await updateReaderProjectForUser(userId, normalizedProjectKey, {
+    appendEvents: [checkpointEvent],
+  });
+
+  return {
+    created: true,
+    event: checkpointEvent,
+  };
+}
+
+export async function markSystemExampleProjectTouchedForUser(userId, projectKey) {
+  const normalizedProjectKey = String(projectKey || "").trim();
+  if (!normalizedProjectKey) return null;
+
+  return updateReaderProjectForUser(userId, normalizedProjectKey, {
+    touchSystemExample: true,
+  });
+}
+
+export async function markSystemExampleProjectTouchedByDocumentForUser(userId, documentKey) {
+  const normalizedDocumentKey = String(documentKey || "").trim();
+  if (!normalizedDocumentKey) return null;
+
+  const project = await prisma.readerProject.findFirst({
+    where: {
+      userId,
+      documents: {
+        some: {
+          documentKey: normalizedDocumentKey,
+        },
+      },
+    },
+    select: {
+      projectKey: true,
+      metadataJson: true,
+    },
+  });
+
+  if (!project?.projectKey) {
+    return null;
+  }
+
+  const normalizedMeta = normalizeProjectArchitectureMeta(project.metadataJson);
+  const systemMeta = normalizeProjectSystemMeta(normalizedMeta.system);
+  if (!String(systemMeta?.templateId || "").trim()) {
+    return null;
+  }
+
+  return updateReaderProjectForUser(userId, project.projectKey, {
+    touchSystemExample: true,
   });
 }

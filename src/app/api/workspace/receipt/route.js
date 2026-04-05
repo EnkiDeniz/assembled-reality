@@ -137,6 +137,7 @@ export async function POST(request) {
 
   if (projectKey) {
     await updateReaderProjectForUser(session.user.id, projectKey, {
+      touchSystemExample: true,
       appendEvents: [
         buildAssemblyIndexEvent("receipt_drafted", {
           move: `Drafted receipt ${draft.title || draft.id} for ${document.title || document.documentKey}.`,
@@ -369,6 +370,7 @@ export async function PUT(request) {
   }
 
   await updateReaderProjectForUser(session.user.id, projectKey, {
+    touchSystemExample: true,
     assemblyState: {
       current: nextStateSummary.current,
       updatedAt: new Date().toISOString(),

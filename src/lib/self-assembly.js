@@ -17,6 +17,7 @@ import {
   EVIDENCE_BASIS_LABELS,
   LOEGOS_ORIGIN_BOX_SUBTITLE,
   LOEGOS_ORIGIN_BOX_TITLE,
+  LOEGOS_ORIGIN_CURRENT_SEED_OCCURRED_AT,
   LOEGOS_ORIGIN_HISTORY_CLUSTER_DEFS,
   LOEGOS_ORIGIN_MILESTONE_DEFS,
   LOEGOS_ORIGIN_MOVE_DEFS,
@@ -609,11 +610,11 @@ function buildSeedOfSeeds(sources, historySource, milestones) {
 
   return {
     aim:
-      `Open ${PRODUCT_MARK}'s own box and show, in order, how the product moved from naming to release receipt.`,
+      `Open ${PRODUCT_MARK}'s own box and show, in order, how the product moved from naming to proof and then learned to read its own assembly.`,
     whatsHere:
-      `The box currently holds ${sourceCount} curated sources, a seven-step image-derived chronology, and ${historyCount} normalized Git commits clustered into corroborating software moves.`,
+      `The box currently holds ${sourceCount} curated sources, a seven-step image-derived chronology, ${historyCount} normalized Git commits clustered into corroborating software moves, and a later brief that turns vocabulary itself into evidence.`,
     gap:
-      "This remains a curated public reconstruction. The chronology is normalized from markdown witnesses and exports rather than computed from live connectors, and raw screenshots still carry stronger proof than their derived markdown digest.",
+      "This remains a curated public reconstruction. The origin chapter is strong, but the later continuation is still curated from witnesses and authored interpretation rather than auto-derived from a live historical connector.",
     sealed:
       milestoneCount > 0
         ? "The strongest seal in the public corpus is the prototype-share receipt loop: WhatsApp contact, GetReceipts ledger witness, and sealed receipt detail."
@@ -622,26 +623,28 @@ function buildSeedOfSeeds(sources, historySource, milestones) {
 }
 
 function buildSelfAssemblyWordLayer(sources = [], seed = {}) {
-  const operateMoment =
-    LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === "operate-and-seed-first")?.occurredAt || "";
+  const currentSeedMoment =
+    LOEGOS_ORIGIN_CURRENT_SEED_OCCURRED_AT ||
+    LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === "operate-and-seed-first")?.occurredAt ||
+    "";
   const seedArtifactTexts = [
     {
       id: "seed-aim",
       title: "Aim",
       text: seed.aim,
-      occurredAt: operateMoment,
+      occurredAt: currentSeedMoment,
     },
     {
       id: "seed-whats-here",
       title: "What's here",
       text: seed.whatsHere,
-      occurredAt: operateMoment,
+      occurredAt: currentSeedMoment,
     },
     {
       id: "seed-gap",
       title: "The gap",
       text: seed.gap,
-      occurredAt: operateMoment,
+      occurredAt: currentSeedMoment,
     },
     {
       id: "seed-sealed",
@@ -828,7 +831,7 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     kindLabel: LANE_KIND_LABELS.seed,
     title: "Seed of seeds",
     detail: seed.whatsHere,
-    occurredAt: LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === "operate-and-seed-first")?.occurredAt || "",
+    occurredAt: LOEGOS_ORIGIN_CURRENT_SEED_OCCURRED_AT || "",
     orderKind: "explicit",
     stageStatus: "advanced",
     proofStatus: "supported",

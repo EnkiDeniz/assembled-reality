@@ -174,10 +174,11 @@ export default async function WorkspacePage({ searchParams }) {
       exampleProjectKey: "",
       autoOpenProjectKey: "",
       dismissed: false,
+      refreshed: false,
     },
   );
   const hasExampleDocuments = documents.some((document) => isSystemExampleDocument(document));
-  if (exampleBootstrap.hasExampleProject && !hasExampleDocuments) {
+  if (exampleBootstrap.refreshed || (exampleBootstrap.hasExampleProject && !hasExampleDocuments)) {
     documents = await safeWorkspaceRead(
       "listReaderDocumentsForUser seeded example",
       () => listReaderDocumentsForUser(session.user.id),

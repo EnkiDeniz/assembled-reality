@@ -4243,13 +4243,6 @@ export default function WorkspaceShell({
   const isHomeSurface =
     launchpadOpen &&
     normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box;
-  const showMobileChromeRootBar =
-    isMobileLayout &&
-    Boolean(activeProject?.projectKey) &&
-    !isFirstTimeSurface &&
-    (!launchpadOpen ||
-      normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box);
-
   const recordSessionCheckpoint = useCallback(async (reason = "activity", { useBeacon = false } = {}) => {
     const projectKey = String(activeProjectKey || "").trim();
     if (!projectKey) return;
@@ -7367,10 +7360,6 @@ export default function WorkspaceShell({
     }
   }
 
-  function openLaunchpad() {
-    openBoxesIndex();
-  }
-
   function dismissSeedSuggestion() {
     seedSuggestFingerprintRef.current =
       seedSuggestion?.sourceFingerprint || seedSourceFingerprint || seedSuggestFingerprintRef.current;
@@ -10226,39 +10215,12 @@ export default function WorkspaceShell({
     setFeedback(`Exported receipts for ${activeDocument.title}.`, "success");
   }
 
-  const headerContextLabel = launchpadOpen
-    ? launchpadView === LAUNCHPAD_VIEWS.boxes
-      ? "Boxes"
-      : "Assembly lane"
-    : isFirstTimeSurface
-      ? "First Box"
-      : isListenMode
-        ? "Listen"
-      : isReceiptsPhase
-          ? "Receipts"
-        : isOperatePhase
-            ? "Operate"
-            : isCreatePhase
-              ? "Seed"
-              : isLanePhase
-                ? "Assembly lane"
-                : "Source";
   const mobileSourceDocument =
     !launchpadOpen && (isCreatePhase || isOperatePhase || isReceiptsPhase)
       ? currentSeedDocument || activeDocument
       : !launchpadOpen
         ? activeDocument
         : null;
-  const showMobileSourcePill =
-    isMobileLayout &&
-    !isFirstTimeSurface &&
-    !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes) &&
-    Boolean(mobileSourceDocument?.documentKey);
-  const mobileSourceLabel = showMobileSourcePill
-    ? mobileSourceDocument?.isAssembly || mobileSourceDocument?.documentType === "assembly"
-      ? "Seed"
-      : mobileSourceDocument?.title || "Source"
-    : "";
   const canOpenMobileSeed = Boolean(currentSeedDocument?.documentKey || realProjectSourceDocuments.length);
   const showMobileBottomNav =
     isMobileLayout &&

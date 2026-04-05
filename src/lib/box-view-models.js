@@ -677,6 +677,28 @@ function buildLaneEventEntry(event = null, index = 0, documentsByKey = new Map()
     });
   }
 
+  if (type === "operate_ran") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: "assembly",
+      title: "Operate ran",
+      stageStatus: "advanced",
+      proofStatus: "witness",
+      detail: event?.detail?.return || base.detail,
+      actionKind: documentKey
+        ? relatedDocument && isAssemblyDocument(relatedDocument)
+          ? "seed"
+          : "source"
+        : base.actionKind,
+      nextAction: documentKey
+        ? {
+            kind: relatedDocument && isAssemblyDocument(relatedDocument) ? "open-seed" : "open-source",
+            label: relatedDocument && isAssemblyDocument(relatedDocument) ? "Open seed" : "Open source",
+          }
+        : base.nextAction,
+    });
+  }
+
   if (type === "block_confirmed" || type === "block_discarded") {
     return finalizeLaneEntry({
       ...base,

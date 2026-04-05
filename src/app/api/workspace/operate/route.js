@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { appEnv } from "@/lib/env";
+import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
 import { getReaderDocumentDataForUser, listReaderDocumentsForUser } from "@/lib/reader-documents";
 import { PRODUCT_NAME } from "@/lib/product-language";
 import {
@@ -8,7 +9,7 @@ import {
   listOperateIncludedDocuments,
 } from "@/lib/operate";
 import { getProjectByKey, getProjectDocuments } from "@/lib/project-model";
-import { listReaderProjectsForUser } from "@/lib/reader-projects";
+import { listReaderProjectsForUser, updateReaderProjectForUser } from "@/lib/reader-projects";
 import { getRequiredSession } from "@/lib/server-session";
 import { buildBoxSource, buildOperateSourceSummary } from "@/lib/source-model";
 
@@ -381,6 +382,44 @@ export async function POST(request) {
         },
         { status: 502 },
       );
+    }
+
+    try {
+      await updateReaderProjectForUser(session.user.id, activeProject.projectKey, {
+        appendEvents: [
+          buildAssemblyIndexEvent("operate_ran", {
+            at: ranAt,
+            move: `Operate ran across ${result.includedSourceCount} source${result.includedSourceCount === 1 ? "" : "s"}.`,
+            return: result.nextMove,
+            echo: `${result.convergence} · gradient ${result.gradient}`,
+            context: {
+              documentKey:
+                currentAssemblyDocument?.documentKey ||
+                documentKey ||
+                resolvedDocuments[0]?.documentKey ||
+                "",
+              primaryDocumentKey:
+                currentAssemblyDocument?.documentKey ||
+                documentKey ||
+                resolvedDocuments[0]?.documentKey ||
+                "",
+              gradient: result.gradient,
+              convergence: result.convergence,
+              trustFloor: result.trustFloor,
+              trustCeiling: result.trustCeiling,
+              nextMove: result.nextMove,
+              relatedSourceDocumentKeys: resolvedDocuments
+                .filter((document) => document.documentKey !== currentAssemblyDocument?.documentKey)
+                .map((document) => document.documentKey),
+            },
+          }),
+        ],
+      });
+    } catch (error) {
+      console.error("Operate event recording failed.", {
+        boxKey: activeProject.projectKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     return NextResponse.json({

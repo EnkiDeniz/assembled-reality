@@ -129,7 +129,7 @@ export default function OperateSurface({
             onClick={onDraftReceipt}
             disabled={!result || pending || receiptPending}
           >
-            {receiptPending ? "Drafting…" : "Draft receipt"}
+            {receiptPending ? "Saving…" : "Save draft"}
           </button>
         </div>
 

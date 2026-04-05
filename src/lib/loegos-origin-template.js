@@ -1,5 +1,5 @@
 export const LOEGOS_ORIGIN_TEMPLATE_ID = "loegos-origin-example";
-export const LOEGOS_ORIGIN_TEMPLATE_VERSION = 1;
+export const LOEGOS_ORIGIN_TEMPLATE_VERSION = 2;
 export const LOEGOS_ORIGIN_PROJECT_KEY = "loegos-origin-example";
 export const LOEGOS_ORIGIN_BOX_TITLE = "How Lœgos Assembled Itself";
 export const LOEGOS_ORIGIN_BOX_SUBTITLE =
@@ -130,6 +130,16 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
     evidenceBasis: "direct-text",
     chronologyAuthority: "contextual",
     occurredAt: "2026-04-05T09:00:00-04:00",
+  },
+  {
+    id: "whats-in-the-box",
+    title: "What’s In The Box",
+    relativePath: "docs/First seed/# What’s In The Box/# What’s In The Box.md",
+    sourceRole: "product-spec",
+    sourceClassification: "load_bearing",
+    evidenceBasis: "direct-text",
+    chronologyAuthority: "contextual",
+    occurredAt: "2026-04-05T16:11:57-04:00",
   },
   {
     id: "loegos-origin-receipt-arc",
@@ -412,7 +422,34 @@ export const LOEGOS_ORIGIN_MOVE_DEFS = Object.freeze([
     linkedSourceIds: ["loegos-origin-receipt-arc", "law-of-the-echo"],
     linkedReceiptId: "loegos-origin-sealed-receipt",
   },
+  {
+    id: "example-box-becomes-real",
+    title: "The product becomes its own example box",
+    detail: "The self-assembly idea stops being a future spec and becomes a real seeded box that every user can inspect, edit, and delete.",
+    occurredAt: "2026-04-05T16:10:22-04:00",
+    groupId: "assembly",
+    stageStatus: "advanced",
+    proofStatus: "witness",
+    linkedSourceIds: ["loegos-self-assembly-spec", "loegos-origin-receipt-arc"],
+  },
+  {
+    id: "word-layer-reads-the-box",
+    title: "The box begins to read its own language",
+    detail: "Vocabulary becomes evidence inside the lane: carried terms, dropped terms, selection points, and Lakin moments make the box's own turns readable.",
+    occurredAt: "2026-04-05T16:51:10-04:00",
+    groupId: "assembly",
+    stageStatus: "advanced",
+    proofStatus: "witness",
+    linkedSourceIds: ["whats-in-the-box", "ghost-operator", "operator-sentences"],
+  },
 ]);
+
+export const LOEGOS_ORIGIN_CURRENT_SEED_MOVE_ID = "word-layer-reads-the-box";
+export const LOEGOS_ORIGIN_CURRENT_SEED_OCCURRED_AT =
+  LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === LOEGOS_ORIGIN_CURRENT_SEED_MOVE_ID)
+    ?.occurredAt ||
+  LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === "operate-and-seed-first")?.occurredAt ||
+  "";
 
 export const LOEGOS_ORIGIN_RECEIPT_SEED = Object.freeze({
   id: "loegos-origin-sealed-receipt",
@@ -447,10 +484,21 @@ export function getLoegosSourceClassificationLabel(value = "") {
   return LOEGOS_SOURCE_CLASSIFICATION_LABELS[value] || "Source";
 }
 
+export function isLoegosOriginTemplateId(value = "") {
+  return String(value || "").trim() === LOEGOS_ORIGIN_TEMPLATE_ID;
+}
+
 export function normalizeProjectSystemMeta(system = null) {
   const nextSystem = system && typeof system === "object" ? system : {};
   return {
     ...nextSystem,
+    templateVersionApplied:
+      Number(nextSystem.templateVersionApplied ?? nextSystem.templateVersion) || 0,
+    userModifiedExample: Boolean(nextSystem.userModifiedExample),
+    userModifiedAt: String(nextSystem.userModifiedAt || "").trim() || null,
+    lastAutoRefreshedAt: String(nextSystem.lastAutoRefreshedAt || "").trim() || null,
+    dismissedTemplateVersion: Number(nextSystem.dismissedTemplateVersion) || 0,
+    primaryExample: nextSystem.primaryExample !== false,
     templates:
       nextSystem.templates && typeof nextSystem.templates === "object"
         ? nextSystem.templates

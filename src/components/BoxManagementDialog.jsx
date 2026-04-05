@@ -35,6 +35,9 @@ export default function BoxManagementDialog({
   onOpenProject,
   onTogglePin,
   onToggleArchive,
+  onCreateUpdatedExampleCopy,
+  onRefreshExample,
+  onDismissExampleUpdate,
 }) {
   if (!open) return null;
 
@@ -47,9 +50,14 @@ export default function BoxManagementDialog({
   const deleting = pendingAction === "__delete__";
   const mutating = Boolean(pendingAction);
   const selectedIsExample = Boolean(selectedProject?.isSystemExample);
+  const selectedExampleUpdateAvailable = Boolean(selectedProject?.systemExampleUpdateAvailable);
   const selectedCanDelete = selectedProject && !selectedProject.isDefaultBox;
   const selectedDescription = selectedProject?.isDefaultBox
     ? "Rename the default box here. It cannot be deleted or archived."
+    : selectedExampleUpdateAvailable
+      ? selectedProject?.systemExampleUserModified
+        ? "A newer Lœgos example is available. This copy has been edited, so it will not refresh silently."
+        : "A newer Lœgos example is available for this box."
     : selectedIsExample
       ? "This editable example was seeded from the real Lœgos origin corpus. Deleting it fully removes the example and anything you kept inside it, and it will not be recreated."
       : "Rename the box here. Deleting a non-default box moves its sources, seeds, and receipt drafts into the default box instead of deleting the work.";
@@ -168,6 +176,11 @@ export default function BoxManagementDialog({
                           {project.systemExampleLabel || "Example"}
                         </span>
                       ) : null}
+                      {project.systemExampleUpdateAvailable ? (
+                        <span className="assembler-box-management__row-pill">
+                          Update available
+                        </span>
+                      ) : null}
                     </span>
                     <span className="assembler-box-management__row-meta">
                       {formatBoxMeta(project)}
@@ -200,6 +213,11 @@ export default function BoxManagementDialog({
                     {selectedIsExample ? (
                       <span className="assembler-box-management__selected-pill">
                         {selectedProject.systemExampleLabel || "Example"}
+                      </span>
+                    ) : null}
+                    {selectedExampleUpdateAvailable ? (
+                      <span className="assembler-box-management__selected-pill">
+                        Update available
                       </span>
                     ) : null}
                   </strong>
@@ -247,6 +265,34 @@ export default function BoxManagementDialog({
                     >
                       {selectedProject.isPinned ? "Unpin" : "Pin"}
                     </button>
+                    {selectedExampleUpdateAvailable ? (
+                      <>
+                        <button
+                          type="button"
+                          className="assembler-box-management__secondary"
+                          onClick={onCreateUpdatedExampleCopy}
+                          disabled={mutating}
+                        >
+                          Create updated copy
+                        </button>
+                        <button
+                          type="button"
+                          className="assembler-box-management__secondary"
+                          onClick={onRefreshExample}
+                          disabled={mutating}
+                        >
+                          Refresh this example
+                        </button>
+                        <button
+                          type="button"
+                          className="assembler-box-management__secondary"
+                          onClick={onDismissExampleUpdate}
+                          disabled={mutating}
+                        >
+                          Dismiss
+                        </button>
+                      </>
+                    ) : null}
                     {selectedCanDelete ? (
                       <details className="assembler-box-management__danger-zone">
                         <summary>Danger zone</summary>

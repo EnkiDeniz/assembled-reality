@@ -165,6 +165,9 @@ function BoxRow({
               {project.systemExampleLabel || "Example"}
             </span>
           ) : null}
+          {project?.systemExampleUpdateAvailable ? (
+            <span className="assembler-boxes-index__row-badge">Update available</span>
+          ) : null}
           {project?.isPinned ? (
             <span className="assembler-boxes-index__row-badge">Pinned</span>
           ) : null}

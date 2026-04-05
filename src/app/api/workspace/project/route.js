@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import {
   createReaderProjectForUser,
   deleteReaderProjectForUser,
+  getReaderProjectForUser,
   updateReaderProjectForUser,
 } from "@/lib/reader-projects";
 import { validateRootText } from "@/lib/assembly-architecture";
-import { deleteLoegosOriginExampleForUser } from "@/lib/loegos-origin-example";
+import {
+  deleteLoegosOriginExampleForUser,
+  dismissLoegosOriginExampleUpdateForUser,
+  refreshLoegosOriginExampleForUser,
+} from "@/lib/loegos-origin-example";
 import { getRequiredSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +86,7 @@ export async function PUT(request) {
     Boolean(body) && Object.prototype.hasOwnProperty.call(body, "domainRationales");
   const hasAssemblyState =
     Boolean(body) && Object.prototype.hasOwnProperty.call(body, "assemblyState");
+  const exampleAction = String(body?.exampleAction || "").trim().toLowerCase();
   const title = String(body?.title || "").trim();
   const subtitle = hasSubtitle ? body?.subtitle : undefined;
   const isPinned = hasPinned ? Boolean(body?.isPinned) : undefined;
@@ -93,6 +99,53 @@ export async function PUT(request) {
 
   if (!projectKey) {
     return NextResponse.json({ error: "Box key is required." }, { status: 400 });
+  }
+
+  if (exampleAction) {
+    try {
+      const result =
+        exampleAction === "create-updated-copy"
+          ? await refreshLoegosOriginExampleForUser(session.user.id, projectKey, {
+              createUpdatedCopy: true,
+            })
+          : exampleAction === "refresh"
+            ? await refreshLoegosOriginExampleForUser(session.user.id, projectKey)
+            : exampleAction === "dismiss-update"
+              ? await dismissLoegosOriginExampleUpdateForUser(session.user.id, projectKey)
+              : null;
+
+      if (!result) {
+        return NextResponse.json({ error: "Unknown example action." }, { status: 400 });
+      }
+
+      const project =
+        result.projectKey
+          ? await getReaderProjectForUser(session.user.id, result.projectKey)
+          : null;
+
+      return NextResponse.json({
+        ok: true,
+        exampleAction: result.action,
+        projectKey: result.projectKey,
+        project: project
+          ? {
+              id: project.id,
+              projectKey: project.projectKey,
+              title: project.title,
+              subtitle: project.subtitle,
+              currentAssemblyDocumentKey: project.currentAssemblyDocumentKey || null,
+              isPinned: Boolean(project.isPinned),
+              isArchived: Boolean(project.isArchived),
+              metadataJson: project.metadataJson || null,
+            }
+          : null,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Could not update the example box." },
+        { status: 400 },
+      );
+    }
   }
 
   if (hasTitle && !title) {
