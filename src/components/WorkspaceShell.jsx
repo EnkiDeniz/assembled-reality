@@ -8,6 +8,7 @@ import AssemblyLane from "@/components/AssemblyLane";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
 import ConfirmationQueueDialog from "@/components/ConfirmationQueueDialog";
+import CloseMoveDialog from "@/components/CloseMoveDialog";
 import FirstBoxComposer from "@/components/FirstBoxComposer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import RealityInstrument from "@/components/RealityInstrument";
@@ -115,6 +116,25 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/gif",
 ]);
 const LAUNCH_SOURCE_HINT = "Supports PDF, DOCX, Markdown, TXT, link import, paste, and Speak note.";
+
+function isCloseMoveSealEligible(result = null) {
+  return (
+    String(result?.convergence || "").trim().toLowerCase() === "convergent" &&
+    Number(result?.gradient) >= 6
+  );
+}
+
+function getCloseMoveMode(result = null) {
+  return isCloseMoveSealEligible(result) ? "seal" : "reroute";
+}
+
+function buildCloseMoveDeltaStatement(result = null) {
+  return (
+    String(result?.nextMove || "").trim() ||
+    String(result?.bridge?.sentence || "").trim() ||
+    ""
+  );
+}
 
 function buildRootSuggestionDocumentSummary(document = null) {
   if (!document) return null;
@@ -3865,6 +3885,8 @@ export default function WorkspaceShell({
   const rateRef = useRef(1);
   const voiceChoiceRef = useRef(defaultVoiceChoice);
   const documentLogsRef = useRef(createInitialDocumentLogMap([initialDocument]));
+  const idleCheckpointTimeoutRef = useRef(null);
+  const exitCheckpointSentRef = useRef(false);
 
   const storageKey = `document-assembler:${userId}:workspace`;
 
@@ -3937,6 +3959,11 @@ export default function WorkspaceShell({
   const [operatePending, setOperatePending] = useState(false);
   const [operateError, setOperateError] = useState("");
   const [operateResult, setOperateResult] = useState(null);
+  const [closeMoveOpen, setCloseMoveOpen] = useState(false);
+  const [closeMoveResult, setCloseMoveResult] = useState(null);
+  const [closeMoveDelta, setCloseMoveDelta] = useState("");
+  const [closeMovePending, setCloseMovePending] = useState(false);
+  const [closeMoveError, setCloseMoveError] = useState("");
   const [pendingOperateAudit, setPendingOperateAudit] = useState(null);
   const [seedSuggestion, setSeedSuggestion] = useState(null);
   const [seedSuggestionPending, setSeedSuggestionPending] = useState(false);
@@ -3961,6 +3988,8 @@ export default function WorkspaceShell({
     initialProjectKey || DEFAULT_PROJECT_KEY,
   );
   const [createProjectTitle, setCreateProjectTitle] = useState("Untitled Box");
+  const [createProjectRootText, setCreateProjectRootText] = useState("");
+  const [createProjectRootGloss, setCreateProjectRootGloss] = useState("");
   const [renameProjectTitle, setRenameProjectTitle] = useState("");
   const [boxManagementError, setBoxManagementError] = useState("");
   const [rootPending, setRootPending] = useState(false);
@@ -4221,12 +4250,93 @@ export default function WorkspaceShell({
     (!launchpadOpen ||
       normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box);
 
+  const recordSessionCheckpoint = useCallback(async (reason = "activity", { useBeacon = false } = {}) => {
+    const projectKey = String(activeProjectKey || "").trim();
+    if (!projectKey) return;
+
+    const payload = JSON.stringify({
+      projectKey,
+      seedDocumentKey: String(currentSeedDocument?.documentKey || "").trim(),
+      reason,
+    });
+
+    if (useBeacon && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([payload], {
+        type: "application/json",
+      });
+      navigator.sendBeacon("/api/workspace/checkpoint", blob);
+      return;
+    }
+
+    await fetch("/api/workspace/checkpoint", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: payload,
+      keepalive: reason === "exit",
+    }).catch(() => null);
+  }, [activeProjectKey, currentSeedDocument?.documentKey]);
+
   useEffect(() => {
     if (!activeProject?.projectKey) {
       setRootEditorOpen(false);
       setPendingRootGate(null);
     }
   }, [activeProject?.projectKey]);
+
+  useEffect(() => {
+    setCloseMoveOpen(false);
+    setCloseMoveResult(null);
+    setCloseMoveDelta("");
+    setCloseMoveError("");
+  }, [activeProjectKey]);
+
+  useEffect(() => {
+    exitCheckpointSentRef.current = false;
+  }, [activeProjectKey]);
+
+  useEffect(() => {
+    if (idleCheckpointTimeoutRef.current) {
+      window.clearTimeout(idleCheckpointTimeoutRef.current);
+    }
+
+    const scheduleCheckpoint = () => {
+      if (idleCheckpointTimeoutRef.current) {
+        window.clearTimeout(idleCheckpointTimeoutRef.current);
+      }
+      idleCheckpointTimeoutRef.current = window.setTimeout(() => {
+        void recordSessionCheckpoint("idle");
+      }, 20 * 60 * 1000);
+    };
+
+    const handleActivity = () => {
+      exitCheckpointSentRef.current = false;
+      scheduleCheckpoint();
+    };
+
+    const handlePageHide = () => {
+      if (exitCheckpointSentRef.current) return;
+      exitCheckpointSentRef.current = true;
+      void recordSessionCheckpoint("exit", { useBeacon: true });
+    };
+
+    scheduleCheckpoint();
+    window.addEventListener("pointerdown", handleActivity, { passive: true });
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("focus", handleActivity);
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      if (idleCheckpointTimeoutRef.current) {
+        window.clearTimeout(idleCheckpointTimeoutRef.current);
+      }
+      window.removeEventListener("pointerdown", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("focus", handleActivity);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [recordSessionCheckpoint]);
   const focusedBlock =
     blocks.find((block) => block.id === focusBlockId) || blocks[0] || null;
   const playbackBlockId = playheadBlockId || focusBlockId || blocks[0]?.id || null;
@@ -5974,6 +6084,8 @@ export default function WorkspaceShell({
   function openProjectManagement(projectKey = activeProjectKey) {
     selectProjectForManagement(projectKey);
     setCreateProjectTitle("Untitled Box");
+    setCreateProjectRootText("");
+    setCreateProjectRootGloss("");
     setBoxManagementOpen(true);
   }
 
@@ -6172,6 +6284,73 @@ export default function WorkspaceShell({
     }
   }
 
+  async function runExampleAction(projectKey, exampleAction) {
+    const normalizedProjectKey = String(projectKey || "").trim();
+    if (!normalizedProjectKey || !exampleAction) return null;
+
+    setProjectActionPending(normalizedProjectKey);
+    setBoxManagementError("");
+
+    try {
+      const response = await fetch("/api/workspace/project", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: normalizedProjectKey,
+          exampleAction,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Could not update the example box.");
+      }
+
+      applyProjectPayloadRef.current?.(payload?.project);
+
+      if (payload?.exampleAction === "created-copy" && payload?.project?.projectKey) {
+        setBoxManagementOpen(false);
+        setFeedback("Created an updated example copy.", "success");
+        window.location.assign(
+          buildWorkspaceUrl("", payload.project.projectKey, {
+            launchpad: true,
+            launchpadView: LAUNCHPAD_VIEWS.box,
+          }),
+        );
+        return payload;
+      }
+
+      if (payload?.exampleAction === "refreshed" && payload?.project?.projectKey) {
+        setBoxManagementOpen(false);
+        setFeedback("Refreshed the example box to the latest template.", "success");
+        window.location.assign(
+          buildWorkspaceUrl("", payload.project.projectKey, {
+            launchpad: true,
+            launchpadView: LAUNCHPAD_VIEWS.box,
+          }),
+        );
+        return payload;
+      }
+
+      if (payload?.exampleAction === "dismissed") {
+        setFeedback("Dismissed this example update.", "success");
+        return payload;
+      }
+
+      return payload;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not update the example box.";
+      setBoxManagementError(message);
+      setFeedback(message, "error");
+      return null;
+    } finally {
+      setProjectActionPending("");
+    }
+  }
+
   async function resumePendingRootGate(rootGate = null) {
     const normalizedGate = rootGate && typeof rootGate === "object" ? rootGate : null;
     const gateKind = String(normalizedGate?.kind || "").trim().toLowerCase();
@@ -6195,6 +6374,11 @@ export default function WorkspaceShell({
 
     if (gateKind === "receipt-seal") {
       await sealReceiptDraft({ skipRootGate: true });
+      return;
+    }
+
+    if (gateKind === "close-move-seal") {
+      await handleCloseMovePrimaryAction();
     }
   }
 
@@ -6293,6 +6477,120 @@ export default function WorkspaceShell({
     setReceiptSealAudit(null);
     setReceiptSealAuditError("");
     setReceiptSealAuditStatement("");
+  }
+
+  function openCloseMoveDialog(result) {
+    if (!result) return;
+
+    setCloseMoveResult(result);
+    setCloseMoveDelta(buildCloseMoveDeltaStatement(result));
+    setCloseMoveError("");
+    setCloseMoveOpen(true);
+  }
+
+  function closeCloseMoveDialog() {
+    if (closeMovePending || receiptPending) return;
+
+    setCloseMoveOpen(false);
+    setCloseMoveResult(null);
+    setCloseMoveDelta("");
+    setCloseMoveError("");
+  }
+
+  async function handleCloseMovePrimaryAction() {
+    if (!closeMoveResult) return;
+
+    const closeMoveMode = getCloseMoveMode(closeMoveResult);
+    setCloseMovePending(true);
+    setCloseMoveError("");
+
+    try {
+      if (closeMoveMode === "seal") {
+        if (
+          requireRootFor("close-move-seal", {
+            operateResult: closeMoveResult,
+            deltaStatement: closeMoveDelta,
+          })
+        ) {
+          return;
+        }
+
+        const draft = await createReceiptDraft({
+          mode: "operate",
+          operateResult: closeMoveResult,
+          skipRootGate: true,
+          returnDraft: true,
+          silentFeedback: true,
+        });
+        if (!draft?.id) {
+          return;
+        }
+
+        const sealedDraft = await performSealReceiptDraft({
+          draft,
+          deltaStatement: closeMoveDelta,
+          skipRootGate: true,
+          silentFeedback: true,
+        });
+        if (!sealedDraft?.id) {
+          return;
+        }
+
+        setCloseMoveOpen(false);
+        setCloseMoveResult(null);
+        setCloseMoveDelta("");
+        setCloseMoveError("");
+        setBoxPhase(BOX_PHASES.receipts);
+        setFeedback("Operate closed as a sealed move.", "success");
+        return;
+      }
+
+      setCloseMoveOpen(false);
+      setCloseMoveResult(null);
+      setCloseMoveDelta("");
+      setCloseMoveError("");
+      setBoxPhase(BOX_PHASES.create);
+      setFeedback("Operate preserved the turn. Reroute the seed from here.", "success");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not close this move.";
+      setCloseMoveError(message);
+      setFeedback(message, "error");
+    } finally {
+      setCloseMovePending(false);
+    }
+  }
+
+  async function handleCloseMoveSaveDraft() {
+    if (!closeMoveResult) return;
+
+    setCloseMovePending(true);
+    setCloseMoveError("");
+    try {
+      const draft = await createReceiptDraft({
+        mode: "operate",
+        operateResult: closeMoveResult,
+        returnDraft: true,
+        silentFeedback: true,
+      });
+      if (!draft?.id) {
+        return;
+      }
+
+      setCloseMoveOpen(false);
+      setCloseMoveResult(null);
+      setCloseMoveDelta("");
+      setCloseMoveError("");
+      setBoxPhase(BOX_PHASES.receipts);
+      setFeedback("Operate draft saved. Seal it when the move is ready.", "success");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not save the receipt draft.";
+      setCloseMoveError(message);
+      setFeedback(message, "error");
+    } finally {
+      setCloseMovePending(false);
+    }
   }
 
   function handleAssemblyLaneContextualAction(action) {
@@ -6586,24 +6884,31 @@ export default function WorkspaceShell({
     });
   }, [getReceiptsConnectionStatus, projectDraftsState, retryReceiptRemoteSync]);
 
-  async function sealReceiptDraft({ skipRootGate = false } = {}) {
-    if (!receiptSealDraft?.id) return;
+  async function performSealReceiptDraft({
+    draft = receiptSealDraft,
+    deltaStatement: nextDeltaStatement = receiptSealDelta,
+    skipRootGate = false,
+    silentFeedback = false,
+  } = {}) {
+    if (!draft?.id) return null;
     if (!skipRootGate && requireRootFor("receipt-seal")) {
       return;
     }
 
-    const deltaStatement = String(receiptSealDelta || "").trim();
+    const deltaStatement = String(nextDeltaStatement || "").trim();
     if (!deltaStatement) {
       setReceiptSealAuditError("Write one operator sentence describing what changed.");
-      return;
+      return null;
     }
 
     const audit =
-      receiptSealAudit && receiptSealAuditStatement === deltaStatement
+      receiptSealAudit &&
+      receiptSealDraft?.id === draft.id &&
+      receiptSealAuditStatement === deltaStatement
         ? receiptSealAudit
-        : await runReceiptSealAudit(receiptSealDraft, deltaStatement);
+        : await runReceiptSealAudit(draft, deltaStatement);
     if (!audit) {
-      return;
+      return null;
     }
 
     const shouldOverride = Boolean(!audit.sealReady && audit.canOverride);
@@ -6615,7 +6920,7 @@ export default function WorkspaceShell({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          draftId: receiptSealDraft.id,
+          draftId: draft.id,
           deltaStatement,
           projectKey: activeProjectKey,
           overrideAudit: shouldOverride,
@@ -6646,17 +6951,31 @@ export default function WorkspaceShell({
             : remoteSealStatus === "failed"
               ? "Receipt sealed locally. Courthouse sync can retry from Receipts."
               : "Receipt sealed.";
-      setFeedback(sealMessage, "success");
-      setReceiptSealDraft(null);
-      setReceiptSealDelta("");
-      setReceiptSealAudit(null);
-      setReceiptSealAuditError("");
-      setReceiptSealAuditStatement("");
+      if (!silentFeedback) {
+        setFeedback(sealMessage, "success");
+      }
+      return payload.draft;
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Could not seal the receipt.", "error");
+      if (!silentFeedback) {
+        setFeedback(error instanceof Error ? error.message : "Could not seal the receipt.", "error");
+      }
+      return null;
     } finally {
       setReceiptPending(false);
     }
+  }
+
+  async function sealReceiptDraft({ skipRootGate = false } = {}) {
+    const sealedDraft = await performSealReceiptDraft({
+      skipRootGate,
+    });
+    if (!sealedDraft?.id) return;
+
+    setReceiptSealDraft(null);
+    setReceiptSealDelta("");
+    setReceiptSealAudit(null);
+    setReceiptSealAuditError("");
+    setReceiptSealAuditStatement("");
   }
 
   async function toggleProjectPinned(project, nextPinned) {
@@ -6693,6 +7012,8 @@ export default function WorkspaceShell({
 
   async function createProject() {
     const title = String(createProjectTitle || "").trim() || "Untitled Box";
+    const rootText = String(createProjectRootText || "").trim();
+    const rootGloss = String(createProjectRootGloss || "").trim();
 
     setProjectActionPending("__create__");
     setBoxManagementError("");
@@ -6703,7 +7024,7 @@ export default function WorkspaceShell({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, rootText, rootGloss }),
       });
       const payload = await response.json().catch(() => null);
 
@@ -6843,33 +7164,59 @@ export default function WorkspaceShell({
   function applyProjectPayload(projectPayload = null) {
     if (!projectPayload?.projectKey) return;
 
-    setProjectsState((previous) =>
-      previous.map((project) =>
-        project.projectKey === projectPayload.projectKey
-          ? {
-              ...project,
-              title: projectPayload.title || project.title,
-              boxTitle: projectPayload.title || project.boxTitle || project.title,
-              subtitle:
-                projectPayload.subtitle === undefined ? project.subtitle : projectPayload.subtitle,
-              boxSubtitle:
-                projectPayload.subtitle === undefined
-                  ? project.boxSubtitle || project.subtitle
-                  : projectPayload.subtitle,
-              currentAssemblyDocumentKey:
-                projectPayload.currentAssemblyDocumentKey ?? project.currentAssemblyDocumentKey,
-              isPinned:
-                projectPayload.isPinned === undefined
-                  ? Boolean(project.isPinned)
-                  : Boolean(projectPayload.isPinned),
-              isArchived:
-                projectPayload.isArchived === undefined
-                  ? Boolean(project.isArchived)
-                  : Boolean(projectPayload.isArchived),
-            }
-          : project,
-      ),
-    );
+    setProjectsState((previous) => {
+      const existing = previous.find((project) => project.projectKey === projectPayload.projectKey);
+      const nextProject = existing
+        ? {
+            ...existing,
+            title: projectPayload.title || existing.title,
+            boxTitle: projectPayload.title || existing.boxTitle || existing.title,
+            subtitle:
+              projectPayload.subtitle === undefined ? existing.subtitle : projectPayload.subtitle,
+            boxSubtitle:
+              projectPayload.subtitle === undefined
+                ? existing.boxSubtitle || existing.subtitle
+                : projectPayload.subtitle,
+            currentAssemblyDocumentKey:
+              projectPayload.currentAssemblyDocumentKey ?? existing.currentAssemblyDocumentKey,
+            isPinned:
+              projectPayload.isPinned === undefined
+                ? Boolean(existing.isPinned)
+                : Boolean(projectPayload.isPinned),
+            isArchived:
+              projectPayload.isArchived === undefined
+                ? Boolean(existing.isArchived)
+                : Boolean(projectPayload.isArchived),
+            metadataJson:
+              projectPayload.metadataJson === undefined
+                ? existing.metadataJson || null
+                : projectPayload.metadataJson,
+            architectureMeta:
+              projectPayload.metadataJson === undefined
+                ? existing.architectureMeta || existing.metadataJson || null
+                : projectPayload.metadataJson,
+          }
+        : {
+            projectKey: projectPayload.projectKey,
+            title: projectPayload.title || "Untitled Box",
+            boxTitle: projectPayload.title || "Untitled Box",
+            subtitle: projectPayload.subtitle || "",
+            boxSubtitle: projectPayload.subtitle || "",
+            currentAssemblyDocumentKey: projectPayload.currentAssemblyDocumentKey || null,
+            isPinned: Boolean(projectPayload.isPinned),
+            isArchived: Boolean(projectPayload.isArchived),
+            metadataJson: projectPayload.metadataJson || null,
+            architectureMeta: projectPayload.metadataJson || null,
+          };
+
+      if (existing) {
+        return previous.map((project) =>
+          project.projectKey === projectPayload.projectKey ? nextProject : project,
+        );
+      }
+
+      return [nextProject, ...previous];
+    });
   }
 
   const requestSeedOperation = useCallback(async (mode = "ensure", nextSuggestion = null) => {
@@ -9675,6 +10022,7 @@ export default function WorkspaceShell({
       };
 
       setOperateResult(nextResult);
+      openCloseMoveDialog(nextResult);
       appendLog(
         "OPERATED",
         `Operate read ${nextResult.boxTitle}: gradient ${nextResult.gradient}, floor ${nextResult.trustFloor}.`,
@@ -9749,9 +10097,11 @@ export default function WorkspaceShell({
     mode = "workspace",
     operateResult: nextOperateResult = null,
     skipRootGate = false,
+    returnDraft = false,
+    silentFeedback = false,
   } = {}) {
     if (!skipRootGate && requireRootFor("receipt-draft", { mode, operateResult: nextOperateResult })) {
-      return;
+      return null;
     }
 
     setReceiptPending(true);
@@ -9821,21 +10171,27 @@ export default function WorkspaceShell({
           documentKey: receiptDocument.documentKey,
         },
       );
-      setFeedback(
-        payload.remoteReceipt
-          ? isOperateMode
-            ? "Drafted Operate receipt and pushed it to GetReceipts."
-            : "Drafted receipt and pushed it to GetReceipts."
-          : isOperateMode
-            ? "Drafted Operate receipt locally. It has not been pushed to GetReceipts."
-            : "Drafted receipt locally. It has not been pushed to GetReceipts.",
-        "success",
-      );
+      if (!silentFeedback) {
+        setFeedback(
+          payload.remoteReceipt
+            ? isOperateMode
+              ? "Drafted Operate receipt and pushed it to GetReceipts."
+              : "Drafted receipt and pushed it to GetReceipts."
+            : isOperateMode
+              ? "Drafted Operate receipt locally. It has not been pushed to GetReceipts."
+              : "Drafted receipt locally. It has not been pushed to GetReceipts.",
+          "success",
+        );
+      }
+      return returnDraft ? payload.draft : payload;
     } catch (error) {
       trackWorkspaceEvent("receipt_draft_failed", {
         draft_scope: mode === "operate" ? "operate" : activeDocument?.documentKey ? "document" : "unknown",
       });
-      setFeedback(error instanceof Error ? error.message : "Could not draft the receipt.", "error");
+      if (!silentFeedback) {
+        setFeedback(error instanceof Error ? error.message : "Could not draft the receipt.", "error");
+      }
+      return null;
     } finally {
       setReceiptPending(false);
     }
@@ -9974,42 +10330,7 @@ export default function WorkspaceShell({
       />
 
       <div className="assembler-shell">
-        <header className={`assembler-header ${!launchpadOpen && !isListenMode ? "is-workspace" : ""}`}>
-          <div className="assembler-header__identity">
-            <span className="assembler-header__name">{PRODUCT_MARK}</span>
-            {activeProject ? (
-              isMobileLayout ? (
-                <button
-                  type="button"
-                  className="assembler-header__project assembler-header__project-button"
-                  onClick={() => setMobileBoxSheetOpen(true)}
-                >
-                  {activeBoxTitle}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="assembler-header__project assembler-header__project-button"
-                  onClick={() => openCurrentBoxHome(activeProject.projectKey)}
-                >
-                  {activeBoxTitle}
-                </button>
-              )
-            ) : null}
-            {showMobileSourcePill ? (
-              <button
-                type="button"
-                className="assembler-header__start assembler-header__start--source"
-                onClick={() => openWorkspacePicker("switch")}
-              >
-                {mobileSourceLabel}
-              </button>
-            ) : null}
-            {!isMobileLayout ? (
-              <span className="assembler-header__context">{headerContextLabel}</span>
-            ) : null}
-          </div>
-
+        <header className="assembler-header assembler-header--minimal">
           <div className="assembler-header__actions">
             {isMobileLayout ? (
               <>
@@ -10025,66 +10346,13 @@ export default function WorkspaceShell({
                   <WorkspaceActionIcon kind="account" />
                 </Link>
               </>
-            ) : isListenMode ? (
-              <button
-                type="button"
-                className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
-                onClick={() => openWorkspacePicker("switch")}
-              >
-                Sources
-              </button>
-            ) : launchpadOpen ? (
-              launchpadView === LAUNCHPAD_VIEWS.box ? (
-                <button type="button" className="assembler-header__start" onClick={openBoxesIndex}>
-                  All boxes
-                </button>
-              ) : activeProject?.projectKey ? (
-                <button
-                  type="button"
-                  className="assembler-header__start"
-                  onClick={() => openCurrentBoxHome(activeProject.projectKey)}
-                >
-                  Assembly lane
-                </button>
-              ) : null
-            ) : isFirstTimeSurface ? (
-              <button type="button" className="assembler-header__start" onClick={openLaunchpad}>
-                Boxes
-              </button>
-            ) : null}
-
-            {!isMobileLayout ? (
+            ) : (
               <Link href="/account" className="assembler-header__account" aria-label="Account">
                 <WorkspaceActionIcon kind="account" />
               </Link>
-            ) : null}
+            )}
           </div>
         </header>
-
-        {isMobileLayout && (showMobileChromeRootBar || realityInstrumentViewModel) ? (
-          <div className="assembler-header__instrument">
-            <div className="assembler-header__instrument-stack">
-              {showMobileChromeRootBar ? (
-                <RootBar
-                  rootText={rootViewModel?.text}
-                  hasRoot={rootViewModel?.hasRoot}
-                  stateSummary={controlSurfaceViewModel?.stateSummary}
-                  confirmationCount={controlSurfaceViewModel?.confirmationCount || 0}
-                  onOpen={() => openRootEditorFor("voluntary")}
-                  compact
-                />
-              ) : null}
-              {realityInstrumentViewModel ? (
-                <RealityInstrument
-                  viewModel={realityInstrumentViewModel}
-                  variant="compact"
-                  onMove={handleRealityInstrumentMove}
-                  onExpand={() => setRealityInstrumentOpen(true)}
-                />
-              ) : null}
-            </div>
-          </div>
-        ) : null}
 
         {launchpadOpen ? (
           <section className="assembler-surface assembler-surface--launchpad" style={assemblySurfaceStyle}>
@@ -10692,6 +10960,19 @@ export default function WorkspaceShell({
           onSeal={() => void sealReceiptDraft()}
         />
 
+        <CloseMoveDialog
+          open={closeMoveOpen}
+          result={closeMoveResult}
+          mode={getCloseMoveMode(closeMoveResult)}
+          deltaStatement={closeMoveDelta}
+          pending={closeMovePending || receiptPending}
+          errorMessage={closeMoveError}
+          onChangeDelta={setCloseMoveDelta}
+          onClose={closeCloseMoveDialog}
+          onPrimaryAction={() => void handleCloseMovePrimaryAction()}
+          onSaveDraft={() => void handleCloseMoveSaveDraft()}
+        />
+
         <RootEditor
           open={rootEditorOpen}
           root={rootViewModel}
@@ -10732,6 +11013,8 @@ export default function WorkspaceShell({
           projects={hydratedProjects}
           selectedProjectKey={selectedManagementProjectKey}
           createTitle={createProjectTitle}
+          createRootText={createProjectRootText}
+          createRootGloss={createProjectRootGloss}
           renameTitle={renameProjectTitle}
           pendingAction={projectActionPending}
           errorMessage={boxManagementError}
@@ -10742,6 +11025,8 @@ export default function WorkspaceShell({
           }}
           onSelectProject={selectProjectForManagement}
           onCreateTitleChange={setCreateProjectTitle}
+          onCreateRootTextChange={setCreateProjectRootText}
+          onCreateRootGlossChange={setCreateProjectRootGloss}
           onRenameTitleChange={setRenameProjectTitle}
           onCreate={() => void createProject()}
           onRename={() => void renameProject()}
@@ -10764,6 +11049,15 @@ export default function WorkspaceShell({
             if (!selectedProject || selectedProject.isDefaultBox) return;
             void toggleProjectArchived(selectedProject, !selectedProject.isArchived);
           }}
+          onCreateUpdatedExampleCopy={() =>
+            void runExampleAction(selectedManagementProjectKey, "create-updated-copy")
+          }
+          onRefreshExample={() =>
+            void runExampleAction(selectedManagementProjectKey, "refresh")
+          }
+          onDismissExampleUpdate={() =>
+            void runExampleAction(selectedManagementProjectKey, "dismiss-update")
+          }
         />
 
         <ImageIntakeChooser

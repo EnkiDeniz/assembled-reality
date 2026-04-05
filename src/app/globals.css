@@ -1354,6 +1354,22 @@ main {
   background: rgba(12, 13, 13, 0.96);
 }
 
+.assembler-header--minimal {
+  justify-content: flex-end;
+  padding: 6px 12px;
+  border-bottom: none;
+  background: transparent;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.assembler-header--minimal .assembler-header__actions {
+  pointer-events: auto;
+}
+
 .assembler-header.is-workspace {
   padding: 10px 14px;
   gap: 10px;
@@ -7362,6 +7378,75 @@ main {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.assembler-sheet__panel--close-move {
+  width: min(680px, calc(100vw - 32px));
+}
+
+.assembler-close-move {
+  display: grid;
+  gap: 16px;
+}
+
+.assembler-close-move__intro p,
+.assembler-close-move__sentence p,
+.assembler-close-move__next,
+.assembler-close-move__error {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.assembler-close-move__intro p,
+.assembler-close-move__next {
+  color: var(--white);
+}
+
+.assembler-close-move__sentences {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-close-move__sentence,
+.assembler-close-move__section {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+.assembler-close-move__sentence-label,
+.assembler-close-move__section-head span,
+.assembler-close-move__section-head strong {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-close-move__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.assembler-close-move__textarea {
+  min-height: 108px;
+}
+
+.assembler-close-move__error {
+  color: var(--danger-text);
+}
+
+.assembler-close-move__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .assembler-receipt-audit__check-head strong {
