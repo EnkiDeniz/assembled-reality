@@ -173,6 +173,9 @@ export default function AssemblyLane({
               ))}
             </div>
           </div>
+          {viewModel?.introLine ? (
+            <p className="assembler-assembly-lane__strip-intro">{viewModel.introLine}</p>
+          ) : null}
           <div
             className="assembler-assembly-lane__protocol-strip"
             aria-label="Assembly protocol position"

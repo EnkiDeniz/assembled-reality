@@ -500,6 +500,18 @@ export function normalizeProjectArchitectureMeta(meta = null) {
           lastUpdatedAt: null,
           events: [],
         };
+  const system =
+    nextMeta.system && typeof nextMeta.system === "object"
+      ? {
+          ...nextMeta.system,
+          templates:
+            nextMeta.system.templates && typeof nextMeta.system.templates === "object"
+              ? nextMeta.system.templates
+              : {},
+        }
+      : {
+          templates: {},
+        };
 
   return {
     root,
@@ -512,6 +524,7 @@ export function normalizeProjectArchitectureMeta(meta = null) {
     assemblyState,
     stateHistory,
     assemblyIndexMeta,
+    system,
   };
 }
 
@@ -537,6 +550,21 @@ export function mergeProjectArchitectureMeta(currentMeta = null, patch = {}) {
   const nextEvents = Array.isArray(patch.events)
     ? [...current.assemblyIndexMeta.events, ...patch.events].slice(-120)
     : current.assemblyIndexMeta.events;
+  const nextSystem =
+    patch.system === undefined
+      ? current.system
+      : {
+          ...current.system,
+          ...(patch.system || {}),
+          templates: {
+            ...(current.system?.templates && typeof current.system.templates === "object"
+              ? current.system.templates
+              : {}),
+            ...(patch.system?.templates && typeof patch.system.templates === "object"
+              ? patch.system.templates
+              : {}),
+          },
+        };
 
   return {
     root: nextRoot,
@@ -564,6 +592,7 @@ export function mergeProjectArchitectureMeta(currentMeta = null, patch = {}) {
           ? patch.events[patch.events.length - 1].at
           : current.assemblyIndexMeta.lastUpdatedAt),
     },
+    system: nextSystem,
   };
 }
 
@@ -761,13 +790,14 @@ export function buildAssemblyIndexEvent(type = "", detail = {}) {
       ? nextDetail.context
       : Object.fromEntries(
           Object.entries(nextDetail).filter(
-            ([key]) => !["declaration", "move", "return", "echo", "context"].includes(key),
+            ([key]) =>
+              !["at", "declaration", "move", "return", "echo", "context"].includes(key),
           ),
         );
 
   return {
     type: normalizedType,
-    at: new Date().toISOString(),
+    at: normalizeText(nextDetail.at) || new Date().toISOString(),
     detail: {
       declaration: normalizeText(nextDetail.declaration || ""),
       move: normalizeText(nextDetail.move || ""),

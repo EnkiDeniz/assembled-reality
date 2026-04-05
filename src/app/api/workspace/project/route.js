@@ -5,6 +5,7 @@ import {
   updateReaderProjectForUser,
 } from "@/lib/reader-projects";
 import { validateRootText } from "@/lib/assembly-architecture";
+import { deleteLoegosOriginExampleForUser } from "@/lib/loegos-origin-example";
 import { getRequiredSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -167,7 +168,10 @@ export async function DELETE(request) {
   }
 
   try {
-    const result = await deleteReaderProjectForUser(session.user.id, projectKey);
+    const exampleResult = await deleteLoegosOriginExampleForUser(session.user.id, projectKey);
+    const result =
+      exampleResult ||
+      (await deleteReaderProjectForUser(session.user.id, projectKey));
 
     return NextResponse.json({
       ok: true,

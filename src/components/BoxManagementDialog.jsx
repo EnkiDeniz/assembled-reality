@@ -46,6 +46,13 @@ export default function BoxManagementDialog({
   const renaming = pendingAction === "__rename__";
   const deleting = pendingAction === "__delete__";
   const mutating = Boolean(pendingAction);
+  const selectedIsExample = Boolean(selectedProject?.isSystemExample);
+  const selectedCanDelete = selectedProject && !selectedProject.isDefaultBox;
+  const selectedDescription = selectedProject?.isDefaultBox
+    ? "Rename the default box here. It cannot be deleted or archived."
+    : selectedIsExample
+      ? "This editable example was seeded from the real Lœgos origin corpus. Deleting it fully removes the example and anything you kept inside it, and it will not be recreated."
+      : "Rename the box here. Deleting a non-default box moves its sources, seeds, and receipt drafts into the default box instead of deleting the work.";
 
   return (
     <div className="assembler-sheet assembler-sheet--workspace is-open">
@@ -152,8 +159,15 @@ export default function BoxManagementDialog({
                   disabled={mutating}
                 >
                   <span className="assembler-box-management__row-copy">
-                    <span className="assembler-box-management__row-title">
-                      {project.boxTitle || project.title || "Untitled Box"}
+                    <span className="assembler-box-management__row-title-line">
+                      <span className="assembler-box-management__row-title">
+                        {project.boxTitle || project.title || "Untitled Box"}
+                      </span>
+                      {project.isSystemExample ? (
+                        <span className="assembler-box-management__row-pill">
+                          {project.systemExampleLabel || "Example"}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="assembler-box-management__row-meta">
                       {formatBoxMeta(project)}
@@ -170,16 +184,26 @@ export default function BoxManagementDialog({
             <section className="assembler-box-management__section">
               <div className="assembler-box-management__section-head">
                 <span>Selected Box</span>
-                <span>{selectedProject.isDefaultBox ? "Protected" : "Movable"}</span>
+                <span>
+                  {selectedProject.isDefaultBox
+                    ? "Protected"
+                    : selectedIsExample
+                      ? selectedProject.systemExampleLabel || "Example"
+                      : "Movable"}
+                </span>
               </div>
 
               <div className="assembler-box-management__selected">
                 <div className="assembler-box-management__selected-copy">
-                  <strong>{selectedProject.boxTitle || selectedProject.title || "Untitled Box"}</strong>
-                  <p>
-                    Rename the box here. Deleting a non-default box moves its sources, seeds,
-                    and receipt drafts into the default box instead of deleting the work.
-                  </p>
+                  <strong className="assembler-box-management__selected-title-line">
+                    <span>{selectedProject.boxTitle || selectedProject.title || "Untitled Box"}</span>
+                    {selectedIsExample ? (
+                      <span className="assembler-box-management__selected-pill">
+                        {selectedProject.systemExampleLabel || "Example"}
+                      </span>
+                    ) : null}
+                  </strong>
+                  <p>{selectedDescription}</p>
                 </div>
 
                 <div className="assembler-box-management__form">
@@ -223,7 +247,7 @@ export default function BoxManagementDialog({
                     >
                       {selectedProject.isPinned ? "Unpin" : "Pin"}
                     </button>
-                    {!selectedProject.isDefaultBox ? (
+                    {selectedCanDelete ? (
                       <details className="assembler-box-management__danger-zone">
                         <summary>Danger zone</summary>
                         <div className="assembler-box-management__danger-actions">
@@ -241,7 +265,13 @@ export default function BoxManagementDialog({
                             onClick={onDelete}
                             disabled={mutating}
                           >
-                            {deleting ? "Moving work…" : "Delete Box"}
+                            {deleting
+                              ? selectedIsExample
+                                ? "Deleting example…"
+                                : "Moving work…"
+                              : selectedIsExample
+                                ? "Delete Example"
+                                : "Delete Box"}
                           </button>
                         </div>
                       </details>

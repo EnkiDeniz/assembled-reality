@@ -23,6 +23,7 @@ import {
   getReaderProfileByUserId,
   listReadingReceiptDraftsForProjectForUser,
 } from "@/lib/reader-db";
+import { ensureLoegosOriginExampleForUser } from "@/lib/loegos-origin-example";
 import { buildResumeSessionSummaryForUser } from "@/lib/reader-workspace";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,36 @@ function listRealDocuments(documents = []) {
       !document?.isAssembly &&
       document?.documentType !== "assembly",
   );
+}
+
+function isSystemExampleDocument(document = null) {
+  return Boolean(
+    document?.sourceProvenance?.systemTemplateId || document?.seedMeta?.systemTemplateId,
+  );
+}
+
+function listRealHistoryDocuments(documents = []) {
+  return (Array.isArray(documents) ? documents : []).filter(
+    (document) =>
+      document?.documentType !== "builtin" &&
+      document?.sourceType !== "builtin" &&
+      !isSystemExampleDocument(document),
+  );
+}
+
+function isSystemExampleProject(project = null) {
+  return Boolean(
+    project?.isSystemExample ||
+      project?.metadataJson?.system?.templateId ||
+      project?.architectureMeta?.system?.templateId,
+  );
+}
+
+function getMostRecentWorkspaceProject(projects = []) {
+  const normalizedProjects = Array.isArray(projects) ? projects.filter(Boolean) : [];
+  const nonExampleProjects = normalizedProjects.filter((project) => !isSystemExampleProject(project));
+  const candidates = nonExampleProjects.length ? nonExampleProjects : normalizedProjects;
+  return [...candidates].sort((left, right) => getProjectTimestamp(right) - getProjectTimestamp(left))[0] || null;
 }
 
 function getLatestRealProjectDocumentKey(project = null, documents = []) {
@@ -129,18 +160,31 @@ export default async function WorkspacePage({ searchParams }) {
             tone: "error",
           }
         : null;
-  const initialLaunchpadView =
-    requestedLaunchpadView === "box" || requestedLaunchpadView === "boxes"
-      ? requestedLaunchpadView
-      : requestedProjectKey || !mobileRequest
-        ? "box"
-        : "boxes";
-
-  const documents = await safeWorkspaceRead(
+  let documents = await safeWorkspaceRead(
     "listReaderDocumentsForUser",
     () => listReaderDocumentsForUser(session.user.id),
     [],
   );
+  const exampleBootstrap = await safeWorkspaceRead(
+    "ensureLoegosOriginExampleForUser",
+    () => ensureLoegosOriginExampleForUser(session.user.id, { documents }),
+    {
+      hadRealHistory: listRealHistoryDocuments(documents).length > 0,
+      hasExampleProject: false,
+      exampleProjectKey: "",
+      autoOpenProjectKey: "",
+      dismissed: false,
+    },
+  );
+  const hasExampleDocuments = documents.some((document) => isSystemExampleDocument(document));
+  if (exampleBootstrap.hasExampleProject && !hasExampleDocuments) {
+    documents = await safeWorkspaceRead(
+      "listReaderDocumentsForUser seeded example",
+      () => listReaderDocumentsForUser(session.user.id),
+      documents,
+    );
+  }
+
   const projects = await safeWorkspaceRead(
     "listReaderProjectsForUser",
     () => listReaderProjectsForUser(session.user.id, documents),
@@ -150,16 +194,31 @@ export default async function WorkspacePage({ searchParams }) {
   const hasSeed = documents.some(
     (document) => document?.isAssembly || document?.documentType === "assembly",
   );
-  const isFirstTime = realDocuments.length === 0 && !hasSeed;
+  const shouldAutoOpenExample =
+    Boolean(exampleBootstrap.autoOpenProjectKey) &&
+    !requestedProjectKey &&
+    !requestedDocumentKey;
+  const isFirstTime =
+    !exampleBootstrap.hadRealHistory &&
+    !exampleBootstrap.hasExampleProject &&
+    realDocuments.length === 0 &&
+    !hasSeed;
+  const initialLaunchpadView =
+    requestedLaunchpadView === "box" || requestedLaunchpadView === "boxes"
+      ? requestedLaunchpadView
+      : requestedProjectKey || shouldAutoOpenExample || !mobileRequest
+        ? "box"
+        : "boxes";
   const resumeProject =
     getProjectForDocumentKey(projects, requestedDocumentKey) ||
     null;
-  const mostRecentProject =
-    [...projects].sort((left, right) => getProjectTimestamp(right) - getProjectTimestamp(left))[0] ||
-    null;
+  const mostRecentProject = getMostRecentWorkspaceProject(projects);
   const resolvedProject =
     getProjectByKey(projects, requestedProjectKey) ||
     resumeProject ||
+    (shouldAutoOpenExample
+      ? getProjectByKey(projects, exampleBootstrap.autoOpenProjectKey)
+      : null) ||
     mostRecentProject ||
     projects[0] ||
     null;
@@ -167,6 +226,10 @@ export default async function WorkspacePage({ searchParams }) {
   const initialProjectDocuments = documents.filter((document) =>
     Array.isArray(initialProject?.documentKeys) ? initialProject.documentKeys.includes(document.documentKey) : false,
   );
+  const shouldSuppressExampleResume =
+    Boolean(initialProject?.isSystemExample) &&
+    !exampleBootstrap.hadRealHistory &&
+    !shouldAutoOpenExample;
   const initialListenDocumentKey =
     getProjectListenDocumentKey(initialProject, documents) ||
     getProjectEntryDocumentKey(initialProject) ||
@@ -180,16 +243,20 @@ export default async function WorkspacePage({ searchParams }) {
   const resumeSessionSummary = await safeWorkspaceRead(
     "buildResumeSessionSummaryForUser",
     () =>
-      buildResumeSessionSummaryForUser(
-        session.user.id,
-        initialProject?.documentKeys || documents.map((document) => document.documentKey),
-      ),
+      shouldSuppressExampleResume
+        ? null
+        : buildResumeSessionSummaryForUser(
+            session.user.id,
+            initialProject?.documentKeys || documents.map((document) => document.documentKey),
+          ),
     null,
   );
   const mobileResumeDocumentKey =
-    String(resumeSessionSummary?.documentKey || "").trim() ||
-    getLatestRealProjectDocumentKey(initialProject, initialProjectDocuments) ||
-    "";
+    shouldSuppressExampleResume
+      ? ""
+      : String(resumeSessionSummary?.documentKey || "").trim() ||
+        getLatestRealProjectDocumentKey(initialProject, initialProjectDocuments) ||
+        "";
 
   const defaultMode =
     requestedMode === "listen" || requestedMode === "assemble"
@@ -201,7 +268,10 @@ export default async function WorkspacePage({ searchParams }) {
         : "listen";
   const showLaunchpadInitially =
     requestedLaunchpad ||
-    (!isFirstTime && !requestedDocumentKey && (!mobileRequest || !mobileResumeDocumentKey));
+    (!shouldAutoOpenExample &&
+      !isFirstTime &&
+      !requestedDocumentKey &&
+      (!mobileRequest || !mobileResumeDocumentKey));
   const fallbackDocumentKey =
     requestedDocumentKey ||
     (mobileRequest

@@ -64,6 +64,7 @@ function buildSearchText(project = null) {
     project?.boxSubtitle,
     project?.subtitle,
     project?.projectKey,
+    project?.systemExampleLabel,
   ]
     .filter(Boolean)
     .join(" ")
@@ -72,6 +73,10 @@ function buildSearchText(project = null) {
 
 function sortBoxes(projects = []) {
   return [...projects].sort((left, right) => {
+    const systemWeight =
+      (Number(right?.systemSortPriority) || 0) - (Number(left?.systemSortPriority) || 0);
+    if (systemWeight !== 0) return systemWeight;
+
     const pinWeight = Number(Boolean(right?.isPinned)) - Number(Boolean(left?.isPinned));
     if (pinWeight !== 0) return pinWeight;
 
@@ -155,6 +160,11 @@ function BoxRow({
 
       <div className="assembler-boxes-index__row-aside">
         <div className="assembler-boxes-index__row-badges">
+          {project?.isSystemExample ? (
+            <span className="assembler-boxes-index__row-badge">
+              {project.systemExampleLabel || "Example"}
+            </span>
+          ) : null}
           {project?.isPinned ? (
             <span className="assembler-boxes-index__row-badge">Pinned</span>
           ) : null}

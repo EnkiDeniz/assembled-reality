@@ -29,6 +29,9 @@ function SourceGroup({ group }) {
             </div>
             <p>{source.excerpt}</p>
             <div className="self-assembly-source-card__meta">
+              {source.sourceClassificationLabel ? (
+                <span>{source.sourceClassificationLabel}</span>
+              ) : null}
               <span>{source.evidenceBasisLabel}</span>
               <span>{source.chronologyAuthorityLabel}</span>
               {source.historyKind ? <span>{source.historyKind}</span> : null}

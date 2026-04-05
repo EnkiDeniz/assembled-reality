@@ -4460,6 +4460,13 @@ main {
   gap: 8px;
 }
 
+.assembler-assembly-lane__strip-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .assembler-assembly-lane__strip-title-row {
   display: flex;
   flex-wrap: wrap;
@@ -5169,6 +5176,28 @@ main {
 .assembler-box-management__row-title {
   color: var(--white);
   font-size: 14px;
+}
+
+.assembler-box-management__row-title-line,
+.assembler-box-management__selected-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.assembler-box-management__row-pill,
+.assembler-box-management__selected-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .assembler-project-home__row-aside,

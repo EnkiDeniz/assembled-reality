@@ -6666,7 +6666,10 @@ export default function WorkspaceShell({
         throw new Error(payload?.error || "Could not delete the box.");
       }
 
-      const successMessage = `Deleted ${targetProject.boxTitle || targetProject.title || "the box"}. Everything moved into ${payload.result.fallbackProjectTitle || "Untitled Box"}.`;
+      const successMessage =
+        payload.result.deleteMode === "purged-example"
+          ? "Deleted the Lœgos example box. It will not be recreated unless reset."
+          : `Deleted ${targetProject.boxTitle || targetProject.title || "the box"}. Everything moved into ${payload.result.fallbackProjectTitle || "Untitled Box"}.`;
       persistWorkspaceNotice(successMessage, "success");
 
       if (targetProject.projectKey === activeProjectKey) {

@@ -76,6 +76,7 @@ function buildSourceAssemblyEvents({
   derivationKind = "",
   derivationModel = "",
   contentMarkdown = "",
+  eventAt = "",
 } = {}) {
   const sourceLabel = getDocumentDisplayLabel({
     title,
@@ -90,6 +91,7 @@ function buildSourceAssemblyEvents({
   });
   const events = [
     buildAssemblyIndexEvent("source_added", {
+      at: eventAt,
       move: `Added ${sourceLabel} to the box.`,
       return: "A new source entered the assembly lane.",
       echo: "source entered",
@@ -105,6 +107,7 @@ function buildSourceAssemblyEvents({
   if (normalizedDerivationKind) {
     events.push(
       buildAssemblyIndexEvent("source_derived", {
+        at: eventAt,
         move: `Derived ${sourceLabel} into a working source.`,
         return:
           derivationModel
@@ -125,6 +128,7 @@ function buildSourceAssemblyEvents({
   if (historyKind) {
     events.push(
       buildAssemblyIndexEvent("history_export_imported", {
+        at: eventAt,
         move: `Imported ${historyKind} as a chronology witness.`,
         return: "History exports strengthen chronology without replacing the box as source of truth.",
         echo: historyKind,
@@ -314,6 +318,9 @@ export async function createReaderDocumentForUser(
     derivationKind = "",
     derivationModel = "",
     derivationStatus = "",
+    createdAt = null,
+    updatedAt = null,
+    eventAt = "",
   },
 ) {
   const readerDocumentModel = getReaderDocumentModel();
@@ -398,6 +405,8 @@ export async function createReaderDocumentForUser(
       contentMarkdown: storedContentMarkdown,
       wordCount: resolvedWordCount,
       sectionCount: resolvedSectionCount,
+      ...(createdAt ? { createdAt: new Date(createdAt) } : {}),
+      ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}),
     },
   });
 
@@ -413,6 +422,7 @@ export async function createReaderDocumentForUser(
       derivationKind,
       derivationModel,
       contentMarkdown: storedContentMarkdown,
+      eventAt,
     }),
   });
 

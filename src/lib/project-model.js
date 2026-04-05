@@ -82,6 +82,16 @@ function normalizeProjectDisplaySubtitle(
   return trimmedSubtitle;
 }
 
+function getProjectSystemMeta(project = null) {
+  const system =
+    project?.metadataJson?.system && typeof project.metadataJson.system === "object"
+      ? project.metadataJson.system
+      : project?.architectureMeta?.system && typeof project.architectureMeta.system === "object"
+        ? project.architectureMeta.system
+        : {};
+  return system;
+}
+
 export function getProjectDisplayTitle(project = null) {
   return normalizeProjectDisplayTitle(
     project?.boxTitle || project?.title || "",
@@ -203,6 +213,8 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
       currentAssemblyTitle: currentAssemblyDocument?.title || "",
     },
   );
+  const systemMeta = getProjectSystemMeta(project);
+  const isSystemExample = Boolean(systemMeta?.templateId);
 
   return {
     ...fallbackProject,
@@ -239,6 +251,14 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
     latestReceiptUpdatedAt: project.latestReceiptUpdatedAt || null,
     metadataJson: project.metadataJson || null,
     architectureMeta: project.architectureMeta || project.metadataJson || null,
+    isSystemExample,
+    systemTemplateId: String(systemMeta?.templateId || "").trim(),
+    systemTemplateVersion: Number(systemMeta?.templateVersion) || 0,
+    systemExampleLabel: isSystemExample
+      ? String(systemMeta?.exampleLabel || "Example").trim() || "Example"
+      : "",
+    systemSortPriority: Number(systemMeta?.sortPriority) || 0,
+    boxIntroLine: String(systemMeta?.introLine || "").trim(),
   };
 }
 

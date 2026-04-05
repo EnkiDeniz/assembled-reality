@@ -14,6 +14,7 @@ export function normalizeSeedMeta(seedMeta = null) {
     seedMeta && typeof seedMeta === "object" ? seedMeta : {};
 
   return {
+    ...nextSeedMeta,
     isSeed: Boolean(nextSeedMeta.isSeed),
     templateVersion:
       Number.isFinite(Number(nextSeedMeta.templateVersion))
@@ -193,4 +194,3 @@ export function buildVisualizationState({
     hasGapSignal: Boolean(hasGapSignal),
   };
 }
-

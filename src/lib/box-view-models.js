@@ -605,6 +605,37 @@ function buildLaneEventEntry(event = null, index = 0, documentsByKey = new Map()
     });
   }
 
+  if (type === "assembly_move") {
+    return finalizeLaneEntry({
+      ...base,
+      groupId: String(context?.groupId || "assembly").trim().toLowerCase() || "assembly",
+      title: String(context?.title || event?.detail?.move || "Assembly move").trim(),
+      detail: event?.detail?.move || base.detail,
+      stageStatus: String(context?.stageStatus || "advanced").trim().toLowerCase() || "advanced",
+      proofStatus: String(context?.proofStatus || "open").trim().toLowerCase() || "open",
+      linkedSeedDocumentKey:
+        String(context?.linkedSeedDocumentKey || "").trim() || base.linkedSeedDocumentKey,
+      actionKind: documentKey
+        ? relatedDocument && isAssemblyDocument(relatedDocument)
+          ? "seed"
+          : "source"
+        : receiptId
+          ? "receipt"
+          : base.actionKind,
+      nextAction: documentKey
+        ? {
+            kind: relatedDocument && isAssemblyDocument(relatedDocument) ? "open-seed" : "open-source",
+            label: relatedDocument && isAssemblyDocument(relatedDocument) ? "Open seed" : "Open source",
+          }
+        : receiptId
+          ? {
+              kind: "open-receipt",
+              label: "Open receipts",
+            }
+          : base.nextAction,
+    });
+  }
+
   if (type === "seed_created" || type === "seed_updated") {
     return finalizeLaneEntry({
       ...base,
@@ -1573,6 +1604,7 @@ export function buildBoxAssemblyLaneViewModel({
   return {
     boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
     boxSubtitle: activeProject?.boxSubtitle || activeProject?.subtitle || "",
+    introLine: String(meta?.system?.introLine || "").trim(),
     entryCount: entries.length,
     realSourceCount: realSourceDocuments.length,
     recentWitnessCount,

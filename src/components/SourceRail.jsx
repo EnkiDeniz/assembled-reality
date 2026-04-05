@@ -9,6 +9,7 @@ function buildSourceBadges(sourceSummary) {
   if (!sourceSummary) return [];
 
   return [
+    sourceSummary.trustProfile?.exampleSourceClassificationLabel || "",
     sourceSummary.badge || "",
     sourceSummary.originLabel || "",
     formatTrustLabel(sourceSummary.trustProfile?.trustLevelHint),

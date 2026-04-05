@@ -131,6 +131,35 @@ function sortMembershipsForMove(memberships = []) {
   });
 }
 
+function getProjectSystemMeta(metadataJson = null) {
+  const normalized = normalizeProjectArchitectureMeta(metadataJson);
+  return normalized.system && typeof normalized.system === "object"
+    ? normalized.system
+    : {};
+}
+
+function getProjectTimestamp(project = null) {
+  const parsed = Date.parse(String(project?.updatedAt || project?.createdAt || ""));
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function sortSerializedProjects(projects = []) {
+  return [...projects].sort((left, right) => {
+    const rightSystemPriority = Number(right?.systemSortPriority) || 0;
+    const leftSystemPriority = Number(left?.systemSortPriority) || 0;
+    if (rightSystemPriority !== leftSystemPriority) {
+      return rightSystemPriority - leftSystemPriority;
+    }
+
+    const pinWeight = Number(Boolean(right?.isPinned)) - Number(Boolean(left?.isPinned));
+    if (pinWeight !== 0) {
+      return pinWeight;
+    }
+
+    return getProjectTimestamp(right) - getProjectTimestamp(left);
+  });
+}
+
 function serializePersistedProject(projectRecord, allDocuments = []) {
   const documentMap = new Map(
     (Array.isArray(allDocuments) ? allDocuments : []).map((document) => [document.documentKey, document]),
@@ -146,6 +175,23 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
   const assemblyDocumentKeys = memberships
     .filter((membership) => membership.role === "ASSEMBLY")
     .map((membership) => membership.documentKey);
+  const normalizedMeta = normalizeProjectArchitectureMeta(projectRecord?.metadataJson);
+  const systemMeta = getProjectSystemMeta(normalizedMeta);
+  const isSystemExample = Boolean(systemMeta?.templateId);
+  const serializedCreatedAt =
+    (isSystemExample
+      ? normalizedMeta?.root?.createdAt
+      : "") ||
+    projectRecord.createdAt?.toISOString?.() ||
+    fallbackProject.createdAt ||
+    null;
+  const serializedUpdatedAt =
+    (isSystemExample
+      ? normalizedMeta?.assemblyState?.updatedAt
+      : "") ||
+    projectRecord.updatedAt?.toISOString?.() ||
+    fallbackProject.updatedAt ||
+    null;
 
   return {
     ...fallbackProject,
@@ -163,13 +209,21 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
     defaultDocumentKey:
       projectRecord.currentAssemblyDocumentKey ||
       fallbackProject.defaultDocumentKey,
-    createdAt: projectRecord.createdAt?.toISOString?.() || fallbackProject.createdAt || null,
-    updatedAt: projectRecord.updatedAt?.toISOString?.() || fallbackProject.updatedAt || null,
+    createdAt: serializedCreatedAt,
+    updatedAt: serializedUpdatedAt,
     receiptDraftCount: Number(projectRecord?._count?.readingReceiptDrafts) || 0,
     latestReceiptUpdatedAt:
       projectRecord?.readingReceiptDrafts?.[0]?.updatedAt?.toISOString?.() || null,
-    metadataJson: normalizeProjectArchitectureMeta(projectRecord?.metadataJson),
-    architectureMeta: normalizeProjectArchitectureMeta(projectRecord?.metadataJson),
+    metadataJson: normalizedMeta,
+    architectureMeta: normalizedMeta,
+    isSystemExample,
+    systemTemplateId: String(systemMeta?.templateId || "").trim(),
+    systemTemplateVersion: Number(systemMeta?.templateVersion) || 0,
+    systemExampleLabel: isSystemExample
+      ? String(systemMeta?.exampleLabel || "Example").trim() || "Example"
+      : "",
+    systemSortPriority: Number(systemMeta?.sortPriority) || 0,
+    boxIntroLine: String(systemMeta?.introLine || "").trim(),
   };
 }
 
@@ -344,8 +398,8 @@ export async function listReaderProjectsForUser(userId, documents = []) {
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     });
 
-    return projectRecords.map((projectRecord) =>
-      serializePersistedProject(projectRecord, documents),
+    return sortSerializedProjects(
+      projectRecords.map((projectRecord) => serializePersistedProject(projectRecord, documents)),
     );
   } catch (error) {
     if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {

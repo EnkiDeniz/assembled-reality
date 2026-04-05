@@ -12,6 +12,22 @@ import {
   normalizeHistoryExportEntries,
   SUPPORTED_HISTORY_EXPORTS,
 } from "@/lib/history-normalization";
+import {
+  CHRONOLOGY_AUTHORITY_LABELS,
+  EVIDENCE_BASIS_LABELS,
+  LOEGOS_ORIGIN_BOX_SUBTITLE,
+  LOEGOS_ORIGIN_BOX_TITLE,
+  LOEGOS_ORIGIN_HISTORY_CLUSTER_DEFS,
+  LOEGOS_ORIGIN_MILESTONE_DEFS,
+  LOEGOS_ORIGIN_MOVE_DEFS,
+  LOEGOS_ORIGIN_RECEIPT_SEED,
+  LOEGOS_ORIGIN_ROLE_ORDER,
+  LOEGOS_ORIGIN_SOURCE_DEFS,
+  LOEGOS_ORIGIN_TEMPLATE_ID,
+  LOEGOS_ORIGIN_TEMPLATE_VERSION,
+  SOURCE_ROLE_LABELS,
+  getLoegosSourceClassificationLabel,
+} from "@/lib/loegos-origin-template";
 import { PRODUCT_MARK } from "@/lib/product-language";
 import {
   createSourceProvenanceSeed,
@@ -24,242 +40,6 @@ import { finalizeLaneEntry, LANE_KIND_LABELS, LANE_GROUP_LABELS } from "@/lib/bo
 
 const CORPUS_ROOT_SEGMENTS = ["docs", "First seed"];
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
-
-const SOURCE_ROLE_LABELS = Object.freeze({
-  "origin-fragment": "Origin fragment",
-  theory: "Theory",
-  "product-spec": "Product spec",
-  "evidence-spine": "Evidence spine",
-  "platform-history": "Platform history",
-});
-
-const CHRONOLOGY_AUTHORITY_LABELS = Object.freeze({
-  primary: "Primary chronology",
-  corroborating: "Corroborating chronology",
-  contextual: "Contextual",
-});
-
-const EVIDENCE_BASIS_LABELS = Object.freeze({
-  "direct-text": "Direct text",
-  "image-derived-markdown": "Image-derived markdown",
-  "platform-export": "Platform export",
-});
-
-const SELF_ASSEMBLY_SOURCE_DEFS = Object.freeze([
-  {
-    id: "words-are-loegos",
-    title: "words are lœgos",
-    relativePath: "docs/First seed/words are lœgos/words are lœgos.md",
-    sourceRole: "origin-fragment",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "primary",
-  },
-  {
-    id: "assembled-reality",
-    title: "Assembled Reality",
-    relativePath: "docs/First seed/# ASSEMBLED REALITY/# ASSEMBLED REALITY.md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "operator-sentences",
-    title: "Operator Sentences",
-    relativePath: "docs/First seed/# Operator Sentences/# Operator Sentences.md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "ghost-operator",
-    title: "The Ghost Operator",
-    relativePath: "docs/First seed/# The Ghost Operator/# The Ghost Operator.md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "law-of-the-echo",
-    title: "The Law of the Echo",
-    relativePath: "docs/First seed/# The Law of the Echo/# The Law of the Echo.md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "meaning-operator",
-    title: "The Meaning Operator",
-    relativePath: "docs/First seed/# The Meaning Operator/# The Meaning Operator.md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "monolith-does-not-move",
-    title: "A monolith does not move.",
-    relativePath: "docs/First seed/A monolith does not move./A monolith does not move..md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "echo-canon",
-    title: "Echo Canon",
-    relativePath: "docs/First seed/ECHO CANON/ECHO CANON.md",
-    sourceRole: "theory",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "loegos-self-assembly-spec",
-    title: "Lœgos Self-Assembly Seed Spec",
-    relativePath: "docs/First seed/Loegos_Self_Assembly_Seed_Spec_v0.2.md",
-    sourceRole: "product-spec",
-    evidenceBasis: "direct-text",
-    chronologyAuthority: "contextual",
-  },
-  {
-    id: "loegos-origin-receipt-arc",
-    title: "Lœgos — Origin, Evolution, Feedback, and Receipt",
-    relativePath:
-      "docs/First seed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
-    sourceRole: "evidence-spine",
-    evidenceBasis: "image-derived-markdown",
-    chronologyAuthority: "primary",
-  },
-  {
-    id: "loegos-git-history",
-    title: "Loegos Git history export",
-    relativePath:
-      "docs/First seed/commit c71b1d6cf6c34916fbc85d08ecfd1bf05371aebf/commit c71b1d6cf6c34916fbc85d08ecfd1bf05371aebf.md",
-    sourceRole: "platform-history",
-    evidenceBasis: "platform-export",
-    chronologyAuthority: "corroborating",
-    historyKind: "git-log",
-    platform: "github",
-  },
-]);
-
-const HISTORY_CLUSTER_DEFS = Object.freeze([
-  {
-    id: "initial-scaffold",
-    title: "Initial scaffold and document viewer",
-    description:
-      "The earliest structural commits that establish the project shell and the first document-viewer form.",
-    milestoneIds: ["box-home"],
-  },
-  {
-    id: "collaborative-reader",
-    title: "Collaborative reader",
-    description:
-      "Reader-focused iterations that made the product feel like a shared reading surface rather than a static file.",
-    milestoneIds: ["box-home", "document-player"],
-  },
-  {
-    id: "receipt-integration",
-    title: "Receipt integration",
-    description:
-      "Commits that pull proof, GetReceipts, sealing, and receipt-oriented workflows into the product surface.",
-    milestoneIds: ["box-home", "receipt-feed", "sealed-receipt"],
-  },
-  {
-    id: "audio-seven-evolution",
-    title: "Audio and Seven evolution",
-    description:
-      "Commits that pushed the reader toward a player through listening, Seven, manuscript, and playback flows.",
-    milestoneIds: ["document-player"],
-  },
-  {
-    id: "box-architecture",
-    title: "Root, workspace, and box architecture",
-    description:
-      "Commits where root, workspace chrome, box architecture, and assembly surfaces become explicit product primitives.",
-    milestoneIds: ["declare-root"],
-  },
-]);
-
-const MILESTONE_DEFS = Object.freeze([
-  {
-    id: "naming",
-    label: "Image 1",
-    sectionPattern: /^Image 1\b/i,
-    supportingSourceIds: ["words-are-loegos"],
-    historyClusterIds: [],
-    stagedSummary:
-      "Select the naming fragment and stage the ligature explanation as the first live seed candidate.",
-    sealedSummary: "Not sealed yet. This remains an origin fragment, not a receipt.",
-  },
-  {
-    id: "box-home",
-    label: "Image 2",
-    sectionPattern: /^Image 2\b/i,
-    supportingSourceIds: ["assembled-reality", "loegos-self-assembly-spec"],
-    historyClusterIds: ["initial-scaffold", "collaborative-reader", "receipt-integration"],
-    stagedSummary:
-      "Stage the first visible box grammar: sources, assemblies, receipts, and a next move.",
-    sealedSummary: "Not sealed. This is product-state evidence rather than a proof artifact.",
-  },
-  {
-    id: "document-player",
-    label: "Image 3",
-    sectionPattern: /^Image 3\b/i,
-    supportingSourceIds: ["assembled-reality", "operator-sentences"],
-    historyClusterIds: ["collaborative-reader", "audio-seven-evolution"],
-    stagedSummary:
-      "Advance the reader into a player by staging block playback, voiced navigation, and operable source blocks.",
-    sealedSummary: "Not sealed. This move shows interaction form, not external proof.",
-  },
-  {
-    id: "declare-root",
-    label: "Image 4",
-    sectionPattern: /^Image 4\b/i,
-    supportingSourceIds: ["loegos-self-assembly-spec", "meaning-operator"],
-    historyClusterIds: ["box-architecture"],
-    stagedSummary:
-      "Stage the architectural turn where the box needs a fixed origin before assembly can move cleanly.",
-    sealedSummary: "Not sealed. This is an architectural move, not a receipt event.",
-  },
-  {
-    id: "investor-share",
-    label: "Image 5",
-    sectionPattern: /^Image 5\b/i,
-    supportingSourceIds: ["loegos-self-assembly-spec"],
-    historyClusterIds: [],
-    stagedSummary:
-      "Stage the first outside contact: the prototype is shared, the privacy posture is stated, and reality answers back.",
-    sealedSummary: "Contact happened here. The receipt closes in the following moves.",
-  },
-  {
-    id: "receipt-feed",
-    label: "Image 6",
-    sectionPattern: /^Image 6\b/i,
-    supportingSourceIds: ["assembled-reality", "law-of-the-echo"],
-    historyClusterIds: ["receipt-integration"],
-    stagedSummary:
-      "Stage the proof layer as an operational ledger where the share becomes countable, reviewable evidence.",
-    sealedSummary:
-      "The product share appears in the ledger as a sealed L3 receipt, but this view is still the feed-level witness.",
-  },
-  {
-    id: "sealed-receipt",
-    label: "Image 7",
-    sectionPattern: /^Image 7\b/i,
-    supportingSourceIds: ["assembled-reality", "law-of-the-echo", "loegos-self-assembly-spec"],
-    historyClusterIds: ["receipt-integration"],
-    stagedSummary:
-      "Seal the strongest public proof in the corpus: the tool receipted its own release with attached evidence and verification.",
-    sealedSummary:
-      "Sealed by the WhatsApp screenshot, AI verification, receipt status, and the visible receipt hash.",
-  },
-]);
-
-const ROLE_ORDER = Object.freeze([
-  "origin-fragment",
-  "evidence-spine",
-  "platform-history",
-  "product-spec",
-  "theory",
-]);
 
 const longDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -602,11 +382,16 @@ function buildSourceRecord(definition, file, normalized) {
     filePath: file.filePath,
     sourceRole: definition.sourceRole,
     sourceRoleLabel: SOURCE_ROLE_LABELS[definition.sourceRole] || "Source",
+    sourceClassification: definition.sourceClassification || "",
+    sourceClassificationLabel: getLoegosSourceClassificationLabel(
+      definition.sourceClassification,
+    ),
     evidenceBasis: definition.evidenceBasis,
     evidenceBasisLabel: EVIDENCE_BASIS_LABELS[definition.evidenceBasis] || definition.evidenceBasis,
     chronologyAuthority: definition.chronologyAuthority,
     chronologyAuthorityLabel:
       CHRONOLOGY_AUTHORITY_LABELS[definition.chronologyAuthority] || definition.chronologyAuthority,
+    occurredAt: definition.occurredAt || "",
     historyKind: normalized.historyKind || "",
     platform: normalized.platform || "",
     provenance,
@@ -664,7 +449,7 @@ function formatDateRange(from = "", to = "") {
 
 function buildHistoryClusters(historySource) {
   const byId = new Map(
-    HISTORY_CLUSTER_DEFS.map((cluster) => [cluster.id, { ...cluster, entries: [] }]),
+    LOEGOS_ORIGIN_HISTORY_CLUSTER_DEFS.map((cluster) => [cluster.id, { ...cluster, entries: [] }]),
   );
 
   (historySource?.historyEntries || []).forEach((entry) => {
@@ -673,7 +458,7 @@ function buildHistoryClusters(historySource) {
     byId.get(clusterId).entries.push(entry);
   });
 
-  const clusters = HISTORY_CLUSTER_DEFS.map((definition) => {
+  const clusters = LOEGOS_ORIGIN_HISTORY_CLUSTER_DEFS.map((definition) => {
     const cluster = byId.get(definition.id) || { ...definition, entries: [] };
     const first = cluster.entries[0] || null;
     const last = cluster.entries[cluster.entries.length - 1] || null;
@@ -806,7 +591,7 @@ function buildMilestone(definition, sourcesById, historyClustersById) {
 }
 
 function buildSourceGroups(sources = []) {
-  return ROLE_ORDER.map((role) => ({
+  return LOEGOS_ORIGIN_ROLE_ORDER.map((role) => ({
     id: role,
     label: SOURCE_ROLE_LABELS[role] || role,
     sources: sources.filter((source) => source.sourceRole === role),
@@ -874,14 +659,14 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
         kindLabel: LANE_KIND_LABELS[kind] || LANE_KIND_LABELS.source,
         title: source.title,
         detail: source.excerpt,
-        occurredAt: "",
-        orderKind: "inferred",
+        occurredAt: source.occurredAt || "",
+        orderKind: source.occurredAt ? "explicit" : "inferred",
         stageStatus,
         proofStatus,
         evidenceBasis: source.evidenceBasis,
         evidenceBasisLabel: source.evidenceBasisLabel,
         certaintyKind: "inferred",
-        trustSummary: source.trustProfile.summary,
+        trustSummary: `${source.sourceClassificationLabel} · ${source.trustProfile.summary}`,
         linkedEntryIds: [],
         linkedSourceKeys: [source.id],
         linkedSeedDocumentKey: carried ? "seed-of-seeds" : "",
@@ -899,42 +684,35 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     }),
   );
 
-  const assemblyEntries = milestones.map((milestone, index) =>
+  const moveEntries = LOEGOS_ORIGIN_MOVE_DEFS.map((move, index) =>
     finalizeLaneEntry({
-      id: `demo-move-${milestone.id}`,
+      id: `demo-move-${move.id}`,
       kind: "move",
       kindLabel: LANE_KIND_LABELS.move,
-      title: milestone.title,
-      detail: milestone.stagedSummary,
-      occurredAt: "",
-      orderKind: "inferred",
-      stageStatus: milestone.id === "sealed-receipt" ? "sealed" : "advanced",
-      proofStatus:
-        milestone.id === "sealed-receipt"
-          ? "sealed"
-          : milestone.id === "receipt-feed" || milestone.id === "investor-share"
-            ? "witness"
-            : "open",
+      title: move.title,
+      detail: move.detail,
+      occurredAt: move.occurredAt || "",
+      orderKind: move.occurredAt ? "explicit" : "inferred",
+      stageStatus: move.stageStatus || "advanced",
+      proofStatus: move.proofStatus || "open",
       evidenceBasis: "curated-move",
       evidenceBasisLabel: "Curated move",
       certaintyKind: "inferred",
-      trustSummary: milestone.sealedSummary,
+      trustSummary: move.detail,
       linkedEntryIds: [],
-      linkedSourceKeys: [
-        "loegos-origin-receipt-arc",
-        ...milestone.supportingSources.map((source) => source.id),
-      ],
+      linkedSourceKeys: Array.isArray(move.linkedSourceIds) ? move.linkedSourceIds : [],
       linkedSeedDocumentKey: "seed-of-seeds",
       linkedReceiptId:
-        milestone.id === "receipt-feed" || milestone.id === "sealed-receipt"
-          ? `demo-receipt-${milestone.id}`
+        move.linkedReceiptId === LOEGOS_ORIGIN_RECEIPT_SEED.id
+          ? `demo-receipt-${LOEGOS_ORIGIN_RECEIPT_SEED.id}`
           : "",
-      sourceRefs: [
-        {
-          documentKey: "loegos-origin-receipt-arc",
-          title: "Lœgos — Origin, Evolution, Feedback, and Receipt",
-        },
-      ],
+      sourceRefs: (Array.isArray(move.linkedSourceIds) ? move.linkedSourceIds : [])
+        .map((sourceId) => sources.find((source) => source.id === sourceId))
+        .filter(Boolean)
+        .map((source) => ({
+          documentKey: source.id,
+          title: source.title,
+        })),
       documentKey: "",
       actionKind: "",
       nextAction: null,
@@ -948,8 +726,8 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     kindLabel: LANE_KIND_LABELS.seed,
     title: "Seed of seeds",
     detail: seed.whatsHere,
-    occurredAt: "",
-    orderKind: "inferred",
+    occurredAt: LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === "operate-and-seed-first")?.occurredAt || "",
+    orderKind: "explicit",
     stageStatus: "advanced",
     proofStatus: "supported",
     evidenceBasis: "live-assembly",
@@ -959,7 +737,7 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     linkedEntryIds: [],
     linkedSourceKeys: [...sourceIdsCarriedBySeed],
     linkedSeedDocumentKey: "seed-of-seeds",
-    linkedReceiptId: "demo-receipt-sealed-receipt",
+    linkedReceiptId: `demo-receipt-${LOEGOS_ORIGIN_RECEIPT_SEED.id}`,
     sourceRefs: [
       {
         documentKey: "seed-of-seeds",
@@ -974,50 +752,23 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
 
   const proofEntries = [
     finalizeLaneEntry({
-      id: "demo-receipt-receipt-feed",
+      id: `demo-receipt-${LOEGOS_ORIGIN_RECEIPT_SEED.id}`,
       kind: "receipt",
       kindLabel: LANE_KIND_LABELS.receipt,
-      title: "Receipt feed witness",
-      detail:
-        milestones.find((milestone) => milestone.id === "receipt-feed")?.sealedSummary ||
-        "The share is visible in the receipt ledger.",
-      occurredAt: "",
-      orderKind: "inferred",
-      stageStatus: "advanced",
-      proofStatus: "witness",
-      evidenceBasis: "proof-witness",
-      evidenceBasisLabel: "Proof witness",
-      certaintyKind: "inferred",
-      trustSummary: "The receipt feed witnesses that the share entered a proof surface.",
-      linkedEntryIds: [],
-      linkedSourceKeys: ["loegos-origin-receipt-arc", historySource?.id].filter(Boolean),
-      linkedSeedDocumentKey: "seed-of-seeds",
-      linkedReceiptId: "demo-receipt-receipt-feed",
-      sourceRefs: [],
-      documentKey: "",
-      actionKind: "",
-      nextAction: null,
-    }),
-    finalizeLaneEntry({
-      id: "demo-receipt-sealed-receipt",
-      kind: "receipt",
-      kindLabel: LANE_KIND_LABELS.receipt,
-      title: "Sealed receipt",
-      detail:
-        milestones.find((milestone) => milestone.id === "sealed-receipt")?.sealedSummary ||
-        seed.sealed,
-      occurredAt: "",
-      orderKind: "inferred",
+      title: LOEGOS_ORIGIN_RECEIPT_SEED.title,
+      detail: LOEGOS_ORIGIN_RECEIPT_SEED.implications,
+      occurredAt: LOEGOS_ORIGIN_RECEIPT_SEED.occurredAt,
+      orderKind: "explicit",
       stageStatus: "sealed",
       proofStatus: "sealed",
       evidenceBasis: "proof-closure",
       evidenceBasisLabel: "Proof closure",
       certaintyKind: "inferred",
-      trustSummary: seed.sealed,
+      trustSummary: LOEGOS_ORIGIN_RECEIPT_SEED.historicalWitness.verifiedSummary,
       linkedEntryIds: [],
       linkedSourceKeys: ["loegos-origin-receipt-arc", historySource?.id].filter(Boolean),
       linkedSeedDocumentKey: "seed-of-seeds",
-      linkedReceiptId: "demo-receipt-sealed-receipt",
+      linkedReceiptId: `demo-receipt-${LOEGOS_ORIGIN_RECEIPT_SEED.id}`,
       sourceRefs: [],
       documentKey: "",
       actionKind: "",
@@ -1029,17 +780,20 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
     {
       id: "origin",
       label: LANE_GROUP_LABELS.origin,
-      entries: originEntries,
+      entries: [...originEntries, ...moveEntries.filter((entry) => entry.groupId === "origin")],
     },
     {
       id: "assembly",
       label: LANE_GROUP_LABELS.assembly,
-      entries: [...assemblyEntries, seedEntry],
+      entries: [...moveEntries.filter((entry) => entry.groupId === "assembly"), seedEntry],
     },
     {
       id: "proof",
       label: LANE_GROUP_LABELS.proof,
-      entries: proofEntries,
+      entries: [
+        ...moveEntries.filter((entry) => entry.groupId === "proof"),
+        ...proofEntries,
+      ],
     },
   ];
 
@@ -1117,18 +871,22 @@ function buildSelfAssemblyLane(sources, milestones, seed, historySource) {
 }
 
 export const getSelfAssemblyDemo = cache(() => {
-  const sources = SELF_ASSEMBLY_SOURCE_DEFS.map(normalizeSourceDocument);
+  const sources = LOEGOS_ORIGIN_SOURCE_DEFS.map(normalizeSourceDocument);
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
   const historySource = sourcesById.get("loegos-git-history") || null;
   const { clusters, clusterMap, unclusteredCount } = buildHistoryClusters(historySource);
-  const milestones = MILESTONE_DEFS.map((definition) =>
+  const milestones = LOEGOS_ORIGIN_MILESTONE_DEFS.map((definition) =>
     buildMilestone(definition, sourcesById, clusterMap),
   );
   const seed = buildSeedOfSeeds(sources, historySource, milestones);
   const assemblyLane = buildSelfAssemblyLane(sources, milestones, seed, historySource);
 
   return {
+    templateId: LOEGOS_ORIGIN_TEMPLATE_ID,
+    templateVersion: LOEGOS_ORIGIN_TEMPLATE_VERSION,
     title: `${PRODUCT_MARK} Self-Assembly Demo`,
+    exampleBoxTitle: LOEGOS_ORIGIN_BOX_TITLE,
+    exampleBoxSubtitle: LOEGOS_ORIGIN_BOX_SUBTITLE,
     corpusRoot: path.join(process.cwd(), ...CORPUS_ROOT_SEGMENTS),
     excludedPaths: ["full-commit-history.txt"],
     sources,

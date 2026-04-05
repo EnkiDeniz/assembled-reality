@@ -703,6 +703,9 @@ export async function createAssemblyDocumentForUser(
     projectKey = DEFAULT_PROJECT_KEY,
     blocks = [],
     seedMeta = null,
+    createdAt = null,
+    updatedAt = null,
+    eventAt = "",
   },
 ) {
   const normalizedTitle = String(title || "").trim() || "Assembly";
@@ -772,6 +775,8 @@ export async function createAssemblyDocumentForUser(
       contentMarkdown,
       wordCount: countWords(contentMarkdown),
       sectionCount: 1,
+      ...(createdAt ? { createdAt: new Date(createdAt) } : {}),
+      ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}),
     },
   });
 
@@ -790,8 +795,9 @@ export async function createAssemblyDocumentForUser(
     role: "ASSEMBLY",
     setAsCurrentAssembly: true,
     appendEvents: normalizedSeedMeta.isSeed
-      ? [
+        ? [
           buildAssemblyIndexEvent("seed_created", {
+            at: eventAt,
             move: `Created seed ${normalizedTitle}.`,
             return: `${relatedSourceDocumentKeys.length} source${
               relatedSourceDocumentKeys.length === 1 ? "" : "s"

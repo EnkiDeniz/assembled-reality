@@ -383,6 +383,8 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
     sourceSections: Array.isArray(draftInput.sourceSections) ? draftInput.sourceSections : [],
     sourceMarkIds: Array.isArray(draftInput.sourceMarkIds) ? draftInput.sourceMarkIds : [],
     payload: draftInput.payload || null,
+    ...(draftInput.createdAt ? { createdAt: new Date(draftInput.createdAt) } : {}),
+    ...(draftInput.updatedAt ? { updatedAt: new Date(draftInput.updatedAt) } : {}),
   };
 
   try {
