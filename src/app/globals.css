@@ -5762,6 +5762,220 @@ main {
   grid-column: 1 / -1;
 }
 
+/* ── Instrument Bar ── */
+
+.instrument-bar-wrapper {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.instrument-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  background: rgba(14, 16, 16, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.instrument-bar__mark {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 100ms ease-out;
+}
+
+.instrument-bar__mark:hover {
+  color: var(--text-secondary);
+}
+
+.instrument-bar__box-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 4px 8px 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 100ms ease-out, background-color 100ms ease-out;
+}
+
+.instrument-bar__box-pill:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.instrument-bar__box-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--assembly-tone-border, rgba(255, 255, 255, 0.18));
+  border-radius: 999px;
+  background: var(--assembly-tone, var(--text-meta));
+  box-shadow: 0 0 8px var(--assembly-tone-glow, transparent);
+}
+
+.instrument-bar__box-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instrument-bar__separator {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.instrument-bar__modes,
+.instrument-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.instrument-bar__icon-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-meta);
+  cursor: pointer;
+  transition: color 100ms ease-out, background-color 100ms ease-out, border-color 100ms ease-out;
+}
+
+.instrument-bar__icon-button:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.instrument-bar__icon-button.is-active {
+  color: var(--assembly-step-1-text);
+  background: var(--assembly-step-1-soft);
+  border-color: var(--assembly-step-1-border);
+}
+
+.instrument-bar__icon-button.is-primary {
+  color: var(--assembly-step-1-text);
+  background: var(--assembly-step-1-soft);
+  border-color: var(--assembly-step-1-border);
+}
+
+.instrument-bar__icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.instrument-bar__alert {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--assembly-step-6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+.instrument-bar__alert.is-error {
+  background: var(--accent-danger);
+}
+
+.instrument-bar__root {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background-color 100ms ease-out;
+}
+
+.instrument-bar__root:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.instrument-bar__root.is-empty {
+  color: var(--text-meta);
+  font-style: italic;
+}
+
+.instrument-bar__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 100ms ease-out;
+}
+
+.instrument-bar__badge:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.instrument-bar__badge.is-looping {
+  border-color: var(--assembly-step-6-border, rgba(225, 154, 63, 0.32));
+  background: var(--assembly-step-6-tint, rgba(225, 154, 63, 0.08));
+  color: var(--text-primary);
+  animation: assembler-loop-pulse 1.8s ease-in-out infinite;
+}
+
+@media (max-width: 1100px) {
+  .instrument-bar__root {
+    display: none;
+  }
+
+  .instrument-bar__separator:nth-of-type(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .instrument-bar {
+    display: none;
+  }
+}
+
 /* ── Popover ── */
 
 .assembler-popover-wrapper {
