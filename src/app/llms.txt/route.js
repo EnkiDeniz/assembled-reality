@@ -12,6 +12,7 @@ ${publicSite.mark} is built by ${publicSite.company.name}. It is an invite-only,
 
 - [Home](${siteUrl(publicPages.home.markdownPath)}): ${publicSite.llms.homeSummary}
 - [About](${siteUrl(publicPages.about.markdownPath)}): ${publicSite.llms.aboutSummary}
+- [Self-Assembly](${siteUrl(publicPages.selfAssembly.markdownPath)}): ${publicSite.llms.selfAssemblySummary}
 - [Trust](${siteUrl(publicPages.trust.markdownPath)}): ${publicSite.llms.trustSummary}
 - [Privacy](${siteUrl(publicPages.privacy.markdownPath)}): ${publicSite.llms.privacySummary}
 - [Terms](${siteUrl(publicPages.terms.markdownPath)}): ${publicSite.llms.termsSummary}

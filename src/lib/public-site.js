@@ -87,6 +87,7 @@ export const publicSite = {
     "Loegos",
     "Lœgos",
     "box workspace",
+    "self assembly",
     "source material",
     "operate",
     "receipts",
@@ -104,6 +105,8 @@ export const publicSite = {
       "What Loegos is, how Boxes and Operate work, and how the product relates to GetReceipts and PromiseMe.",
     trustSummary:
       "Public trust and provenance model, including L1-L3 trust levels and the rule that normalization is not verification.",
+    selfAssemblySummary:
+      "Curated self-assembly demo showing how Loegos can open its own box by combining source documents, image-derived chronology, and Git history exports.",
     privacySummary:
       "Draft privacy posture covering sign-in, analytics, uploads, AI processing, and optional GetReceipts sync.",
     termsSummary:
@@ -219,6 +222,43 @@ export const publicPages = {
           title: product.name,
           body: product.description,
         })),
+      },
+    ],
+  },
+  selfAssembly: {
+    id: "self-assembly",
+    path: "/self-assembly",
+    markdownPath: "/self-assembly.md",
+    label: "Self-Assembly",
+    title: "Self-Assembly",
+    metaTitle: "Loegos Self-Assembly",
+    description:
+      "Curated self-assembly demo showing how Loegos can open its own box using source documents, image-derived chronology, and Git history exports.",
+    quote: "The product opens its own box.",
+    lede:
+      "This public demo treats the project's own source library as a box and walks through how the seed-of-seeds would be assembled: what would be selected, what would be staged, what advances, and what actually seals.",
+    sections: [
+      {
+        title: "What this demo is",
+        paragraphs: [
+          "The self-assembly page is a curated reconstruction, not an automatic causal engine. It uses the same source, provenance, and block grammar as the product while staying honest about where interpretation is still editorial.",
+          "The page keeps the seven-image chronology as the public narrative spine and uses imported Git history as corroborating software chronology rather than flattening the whole story into a raw commit log.",
+        ],
+      },
+      {
+        title: "What counts as evidence here",
+        bullets: [
+          "Direct text sources in the corpus",
+          "Image-derived markdown witness of screenshots",
+          "Downloaded platform history export",
+          "Receipt evidence where the corpus actually contains proof",
+        ],
+      },
+      {
+        title: "What this implies for future boxes",
+        paragraphs: [
+          "Some boxes will have rich exported history from platforms like GitHub, email, chat, or task systems. Others will not. The self-assembly demo models history exports as optional corroborating sources, not as a requirement for assembly.",
+        ],
       },
     ],
   },
@@ -412,6 +452,7 @@ export const publicPages = {
 export const publicPageOrder = [
   publicPages.home,
   publicPages.about,
+  publicPages.selfAssembly,
   publicPages.trust,
   publicPages.privacy,
   publicPages.terms,
