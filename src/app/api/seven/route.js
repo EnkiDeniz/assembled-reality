@@ -19,6 +19,27 @@ export const runtime = "nodejs";
 
 const CHAT_UNAVAILABLE_MESSAGE = "Seven's chat is unavailable right now.";
 
+function buildOperatingPrinciple(surface = "", explicitPrinciple = "") {
+  const normalizedExplicit = String(explicitPrinciple || "").trim();
+  if (normalizedExplicit) return normalizedExplicit;
+
+  const normalizedSurface = String(surface || "").trim().toLowerCase();
+  if (normalizedSurface === "listen" || normalizedSurface === "think") {
+    return "Presence precedes interpretation. Stay with the source, let evidence lead, and keep the listener close to what is actually there.";
+  }
+  if (normalizedSurface === "seed") {
+    return "Aim chooses and action proves. Help the user tighten the line, release what does not belong, and keep the next move concrete.";
+  }
+  if (normalizedSurface === "operate") {
+    return "Read for pattern under constraint. Distinguish signal from noise, name the gradient honestly, and avoid inflating weak evidence.";
+  }
+  if (normalizedSurface === "receipts") {
+    return "Seal is where claim meets evidence and witnesses. Audit for proof, drift, and portability without shaming uncertainty.";
+  }
+
+  return "";
+}
+
 function buildInstruction(mode) {
   if (mode === "summary") {
     return [
@@ -96,6 +117,8 @@ export async function POST(request) {
     currentLabel = "",
     currentSectionTitle = "",
     currentSectionMarkdown = "",
+    surface = "",
+    operatingPrinciple = "",
   } = body || {};
 
   let resolvedDocumentTitle = documentTitle;
@@ -150,6 +173,7 @@ export async function POST(request) {
     }
   }
 
+  const resolvedOperatingPrinciple = buildOperatingPrinciple(surface, operatingPrinciple);
   const systemPrompt = [
     `You are Seven, the reading guide inside ${PRODUCT_NAME}.`,
     "Your job is to explain the authored document clearly, calmly, and concretely.",
@@ -159,6 +183,9 @@ export async function POST(request) {
     "When the writing is metaphorical, translate it into plain language without mocking it.",
     "Do not use markdown tables.",
     "Prefer language that works both on screen and when spoken aloud.",
+    resolvedOperatingPrinciple
+      ? `Operating principle for this surface: ${resolvedOperatingPrinciple}`
+      : "",
   ].join(" ");
 
   const userPrompt = [

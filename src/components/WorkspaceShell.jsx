@@ -11,6 +11,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import ProjectHome from "@/components/ProjectHome";
 import OperateSurface from "@/components/OperateSurface";
 import ReceiptSurface from "@/components/ReceiptSurface";
+import ReceiptSealDialog from "@/components/ReceiptSealDialog";
 import SeedSurface from "@/components/SeedSurface";
 import SourceRail from "@/components/SourceRail";
 import StagingPanel from "@/components/StagingPanel";
@@ -135,6 +136,13 @@ function getDefaultDesktopSidecarPanel(phase) {
   if (phase === BOX_PHASES.create) return DESKTOP_SIDECAR_PANELS.stage;
   if (phase === BOX_PHASES.think) return DESKTOP_SIDECAR_PANELS.seven;
   return DESKTOP_SIDECAR_PANELS.details;
+}
+
+function getSevenSurface({ boxPhase = BOX_PHASES.think, workspaceMode = WORKSPACE_MODES.assemble } = {}) {
+  if (boxPhase === BOX_PHASES.create) return "seed";
+  if (boxPhase === BOX_PHASES.operate) return "operate";
+  if (boxPhase === BOX_PHASES.receipts) return "receipts";
+  return workspaceMode === WORKSPACE_MODES.listen ? "listen" : "think";
 }
 
 function browserSupportsDeviceVoice() {
@@ -3793,6 +3801,7 @@ export default function WorkspaceShell({
   const pendingFocusBlockIdRef = useRef(null);
   const seedEnsureFingerprintRef = useRef("");
   const seedSuggestFingerprintRef = useRef("");
+  const receiptSealAuditRequestIdRef = useRef(0);
   const pendingSeedFocusRef = useRef(false);
   const attachDocumentToActiveProjectRef = useRef(() => {});
   const applyProjectPayloadRef = useRef(() => {});
@@ -3894,6 +3903,12 @@ export default function WorkspaceShell({
   const [rootPending, setRootPending] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationPending, setConfirmationPending] = useState(false);
+  const [receiptSealDraft, setReceiptSealDraft] = useState(null);
+  const [receiptSealDelta, setReceiptSealDelta] = useState("");
+  const [receiptSealAudit, setReceiptSealAudit] = useState(null);
+  const [receiptSealAuditPending, setReceiptSealAuditPending] = useState(false);
+  const [receiptSealAuditError, setReceiptSealAuditError] = useState("");
+  const [receiptSealAuditStatement, setReceiptSealAuditStatement] = useState("");
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [launchpadView, setLaunchpadView] = useState(
     normalizeLaunchpadView(initialLaunchpadView, LAUNCHPAD_VIEWS.boxes),
@@ -4049,6 +4064,7 @@ export default function WorkspaceShell({
     activeProject,
     currentAssemblyDocument: currentSeedDocument,
     projectDocuments,
+    projectDrafts: projectDraftsState,
     boxPhase,
     canRunOperate,
     aiOpen,
@@ -5369,22 +5385,123 @@ export default function WorkspaceShell({
     }
   }
 
-  async function sealReceiptDraft(draft) {
+  function openReceiptSealDialog(draft) {
     if (!draft?.id) return;
 
-    const deltaStatement = window.prompt(
-      "State the one operator sentence describing what changed.",
+    const nextDelta =
       draft?.payload?.deltaStatement ||
-        draft?.payload?.decision ||
-        draft?.payload?.learned ||
-        draft?.implications ||
-        "",
-    );
+      draft?.payload?.decision ||
+      draft?.payload?.learned ||
+      draft?.implications ||
+      "";
+    setReceiptSealDraft(draft);
+    setReceiptSealDelta(nextDelta);
+    setReceiptSealAudit(null);
+    setReceiptSealAuditError("");
+    setReceiptSealAuditStatement("");
+  }
 
-    if (!deltaStatement || !deltaStatement.trim()) {
+  function closeReceiptSealDialog() {
+    if (receiptPending || receiptSealAuditPending) return;
+    receiptSealAuditRequestIdRef.current += 1;
+    setReceiptSealDraft(null);
+    setReceiptSealDelta("");
+    setReceiptSealAudit(null);
+    setReceiptSealAuditError("");
+    setReceiptSealAuditStatement("");
+  }
+
+  const runReceiptSealAudit = useCallback(async (
+    draft = receiptSealDraft,
+    nextDelta = receiptSealDelta,
+  ) => {
+    if (!draft?.id) return null;
+
+    const deltaStatement = String(nextDelta || "").trim();
+    if (!deltaStatement) {
+      setReceiptSealAudit(null);
+      setReceiptSealAuditStatement("");
+      setReceiptSealAuditError("");
+      return null;
+    }
+
+    const requestId = receiptSealAuditRequestIdRef.current + 1;
+    receiptSealAuditRequestIdRef.current = requestId;
+    setReceiptSealAuditPending(true);
+    setReceiptSealAuditError("");
+
+    try {
+      const response = await fetch("/api/workspace/receipt/audit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          draftId: draft.id,
+          deltaStatement,
+          projectKey: activeProjectKey,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.audit) {
+        throw new Error(payload?.error || "Could not run the pre-seal audit.");
+      }
+
+      if (receiptSealAuditRequestIdRef.current === requestId) {
+        setReceiptSealAudit(payload.audit);
+        setReceiptSealAuditStatement(deltaStatement);
+      }
+      return payload.audit;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not run the pre-seal audit.";
+      if (receiptSealAuditRequestIdRef.current === requestId) {
+        setReceiptSealAuditError(message);
+      }
+      return null;
+    } finally {
+      if (receiptSealAuditRequestIdRef.current === requestId) {
+        setReceiptSealAuditPending(false);
+      }
+    }
+  }, [activeProjectKey, receiptSealDelta, receiptSealDraft]);
+
+  useEffect(() => {
+    if (!receiptSealDraft?.id) return undefined;
+
+    const normalizedDelta = String(receiptSealDelta || "").trim();
+    if (!normalizedDelta) {
+      setReceiptSealAudit(null);
+      setReceiptSealAuditStatement("");
+      setReceiptSealAuditError("");
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void runReceiptSealAudit(receiptSealDraft, normalizedDelta);
+    }, 320);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [receiptSealDelta, receiptSealDraft, runReceiptSealAudit]);
+
+  async function sealReceiptDraft() {
+    if (!receiptSealDraft?.id) return;
+
+    const deltaStatement = String(receiptSealDelta || "").trim();
+    if (!deltaStatement) {
+      setReceiptSealAuditError("Write one operator sentence describing what changed.");
       return;
     }
 
+    const audit =
+      receiptSealAudit && receiptSealAuditStatement === deltaStatement
+        ? receiptSealAudit
+        : await runReceiptSealAudit(receiptSealDraft, deltaStatement);
+    if (!audit) {
+      return;
+    }
+
+    const shouldOverride = Boolean(!audit.sealReady && audit.canOverride);
     setReceiptPending(true);
     try {
       const response = await fetch("/api/workspace/receipt", {
@@ -5393,19 +5510,34 @@ export default function WorkspaceShell({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          draftId: draft.id,
-          deltaStatement: deltaStatement.trim(),
+          draftId: receiptSealDraft.id,
+          deltaStatement,
           projectKey: activeProjectKey,
+          overrideAudit: shouldOverride,
         }),
       });
       const payload = await response.json().catch(() => null);
 
       if (!response.ok || !payload?.draft?.id) {
+        if (payload?.audit) {
+          setReceiptSealAudit(payload.audit);
+          setReceiptSealAuditStatement(deltaStatement);
+        }
+        setReceiptSealAuditError(payload?.error || "Could not seal the receipt.");
         throw new Error(payload?.error || "Could not seal the receipt.");
       }
 
+      if (payload?.audit) {
+        setReceiptSealAudit(payload.audit);
+        setReceiptSealAuditStatement(deltaStatement);
+      }
       upsertProjectDraft(payload.draft);
       setFeedback("Receipt sealed.", "success");
+      setReceiptSealDraft(null);
+      setReceiptSealDelta("");
+      setReceiptSealAudit(null);
+      setReceiptSealAuditError("");
+      setReceiptSealAuditStatement("");
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Could not seal the receipt.", "error");
     } finally {
@@ -8060,7 +8192,7 @@ export default function WorkspaceShell({
     setFeedback(`Playback rate ${nextRate.toFixed(2)}x.`);
   }
 
-  async function runAiOperation(explicitPrompt = "") {
+  async function runAiOperation(explicitPrompt = "", options = {}) {
     const prompt = String(explicitPrompt || aiInput || "").trim();
     if (!prompt || !sevenContextDocument?.documentKey) return;
 
@@ -8069,6 +8201,10 @@ export default function WorkspaceShell({
     const optimisticUserId = `seven-user-${Date.now()}`;
     const optimisticAssistantId = `seven-assistant-${Date.now()}`;
     const requestContext = buildSevenRequestContext(sevenContextDocument, sevenContextFocusedBlock);
+    const surface = String(options?.surface || "").trim() || getSevenSurface({
+      boxPhase,
+      workspaceMode,
+    });
 
     setAiPending(true);
     setAiInput("");
@@ -8119,6 +8255,7 @@ export default function WorkspaceShell({
         body: JSON.stringify({
           mode: "question",
           question: prompt,
+          surface,
           documentKey,
           documentTitle: sevenContextDocument.title,
           documentSubtitle: sevenContextDocument.subtitle || "",
@@ -8407,7 +8544,7 @@ export default function WorkspaceShell({
 
     setBoxPhase(BOX_PHASES.think);
     setAiOpen(true);
-    void runAiOperation(prompt);
+    void runAiOperation(prompt, { surface: "operate" });
   }
 
   async function createReceiptDraft({
@@ -8959,7 +9096,7 @@ export default function WorkspaceShell({
                           window.location.assign("/account");
                         }
                       }}
-                      onSealReceipt={sealReceiptDraft}
+                      onSealReceipt={openReceiptSealDialog}
                       root={seedViewModel?.root}
                       stateSummary={seedViewModel?.stateSummary}
                       confirmationCount={seedViewModel?.confirmationCount || 0}
@@ -9158,6 +9295,7 @@ export default function WorkspaceShell({
             canOpenSeed={canOpenMobileSeed}
             confirmationCount={seedViewModel?.confirmationCount || 0}
             stateTone={controlSurfaceViewModel?.stateColorTokens || null}
+            isLooping={Boolean(controlSurfaceViewModel?.isLooping)}
             onGoHome={() => openCurrentBoxHome(activeProjectKey)}
             onGoListen={openMobileListenSurface}
             onGoSeed={openMobileSeedSurface}
@@ -9228,6 +9366,20 @@ export default function WorkspaceShell({
             onClose={() => setAiOpen(false)}
           />
         ) : null}
+
+        <ReceiptSealDialog
+          open={Boolean(receiptSealDraft?.id)}
+          draft={receiptSealDraft}
+          deltaStatement={receiptSealDelta}
+          onChangeDelta={setReceiptSealDelta}
+          audit={receiptSealAudit}
+          auditPending={receiptSealAuditPending}
+          auditError={receiptSealAuditError}
+          pending={receiptPending}
+          onRefreshAudit={() => void runReceiptSealAudit()}
+          onClose={closeReceiptSealDialog}
+          onSeal={() => void sealReceiptDraft()}
+        />
 
         <ConfirmationQueueDialog
           open={confirmationOpen}

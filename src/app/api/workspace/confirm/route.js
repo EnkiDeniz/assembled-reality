@@ -130,15 +130,31 @@ export async function POST(request) {
   });
   const currentMeta = hydratedProject?.metadataJson || rawProject?.metadataJson || null;
   const previousState = String(currentMeta?.assemblyState?.current || "").trim().toLowerCase();
+  const declaration = String(nextStateSummary?.root?.text || "").trim();
+  const resolvedPrimaryTag =
+    action === "discard"
+      ? ASSEMBLY_PRIMARY_TAGS.unconfirmed
+      : primaryTag || targetBlock.suggestedPrimaryTag || ASSEMBLY_PRIMARY_TAGS.story;
+  const resolvedDomain = action === "discard" ? "" : domain || targetBlock.suggestedDomain || "vision";
   const nextEvents = [
     buildAssemblyIndexEvent(action === "discard" ? "block_discarded" : "block_confirmed", {
-      documentKey,
-      blockId,
-      primaryTag:
+      declaration,
+      move:
         action === "discard"
-          ? ASSEMBLY_PRIMARY_TAGS.unconfirmed
-          : primaryTag || targetBlock.suggestedPrimaryTag || ASSEMBLY_PRIMARY_TAGS.story,
-      domain: action === "discard" ? "" : domain || targetBlock.suggestedDomain || "vision",
+          ? `Discarded a queued block from ${currentDocument.title || "the source"}.`
+          : `Confirmed ${resolvedPrimaryTag} in ${resolvedDomain || "vision"} from ${currentDocument.title || "the source"}.`,
+      return: `${nextStateSummary.unconfirmedCount} unconfirmed block${nextStateSummary.unconfirmedCount === 1 ? "" : "s"} remain in the box.`,
+      echo:
+        nextStateSummary.current && nextStateSummary.current !== previousState
+          ? `${previousState || "declare-root"} -> ${nextStateSummary.current}`
+          : "state unchanged",
+      context: {
+        documentKey,
+        blockId,
+        primaryTag: resolvedPrimaryTag,
+        domain: resolvedDomain,
+        unconfirmedCount: nextStateSummary.unconfirmedCount,
+      },
     }),
   ];
   const nextStateHistory = Array.isArray(currentMeta?.stateHistory)
@@ -148,8 +164,15 @@ export async function POST(request) {
   if (nextStateSummary.current && nextStateSummary.current !== previousState) {
     nextEvents.push(
       buildAssemblyIndexEvent("state_advanced", {
-        from: previousState || "declare-root",
-        to: nextStateSummary.current,
+        declaration,
+        move: `Advanced the assembly state from ${previousState || "declare-root"} to ${nextStateSummary.current}.`,
+        return: nextStateSummary.nextRequirement,
+        echo: `${previousState || "declare-root"} -> ${nextStateSummary.current}`,
+        context: {
+          from: previousState || "declare-root",
+          to: nextStateSummary.current,
+          reason: action === "discard" ? "confirmation discard" : "block confirmation",
+        },
       }),
     );
     nextStateHistory.push({

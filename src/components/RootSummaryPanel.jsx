@@ -98,12 +98,12 @@ export default function RootSummaryPanel({
               "--assembly-tone-text": stateTone.text,
             }}
           >
-            {stateSummary?.label || "Declare Root"}
+            {stateSummary?.chipLabel || stateSummary?.label || "Declare Root"}
           </span>
           {confirmationCount > 0 ? (
             <button
               type="button"
-              className="assembler-root-panel__queue"
+              className={`assembler-root-panel__queue ${stateSummary?.isLooping ? "is-looping" : ""}`}
               onClick={onOpenConfirmation}
             >
               ⊘ {confirmationCount}

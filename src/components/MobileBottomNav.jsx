@@ -9,6 +9,7 @@ function NavItem({
   badge = "",
   onBadgeClick,
   tone = null,
+  looping = false,
 }) {
   return (
     <div className="assembler-mobile-nav__slot">
@@ -38,7 +39,7 @@ function NavItem({
       {badge ? (
         <button
           type="button"
-          className="assembler-mobile-nav__badge"
+          className={`assembler-mobile-nav__badge ${looping ? "is-looping" : ""}`}
           onClick={onBadgeClick}
           aria-label={`Open confirmation queue. ${badge} items waiting.`}
         >
@@ -54,6 +55,7 @@ export default function MobileBottomNav({
   canOpenSeed = false,
   confirmationCount = 0,
   stateTone = null,
+  isLooping = false,
   onGoHome,
   onGoListen,
   onGoSeed,
@@ -75,6 +77,7 @@ export default function MobileBottomNav({
           badge={badgeLabel}
           onBadgeClick={onOpenConfirmation}
           tone={stateTone}
+          looping={isLooping}
         />
         <NavItem
           active={activeTab === "listen"}

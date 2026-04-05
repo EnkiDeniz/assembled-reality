@@ -12,6 +12,11 @@ import {
   buildAssemblyStateSummary,
 } from "@/lib/assembly-architecture";
 import {
+  buildReceiptSealAudit,
+  buildEvidenceSnapshot,
+  listConfirmedEvidenceBlocksFromDocuments,
+} from "@/lib/receipt-seal-audit";
+import {
   createReadingReceiptDraftForUser,
   getReaderProfileByUserId,
   getReadingReceiptDraftByIdForUser,
@@ -30,61 +35,9 @@ import {
   buildWorkspaceReceiptDraftInput,
   buildWorkspaceReceiptPayload,
 } from "@/lib/workspace-receipts";
-import { buildExcerpt } from "@/lib/text";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function unique(values = []) {
-  return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
-}
-
-function listConfirmedEvidenceBlocksFromDocuments(documents = []) {
-  return (Array.isArray(documents) ? documents : [])
-    .filter(
-      (document) =>
-        document &&
-        !document.isAssembly &&
-        document.documentType !== "assembly" &&
-        document.documentType !== "builtin" &&
-        document.sourceType !== "builtin",
-    )
-    .flatMap((document) => {
-      const sourceTitle = document?.title || "Untitled document";
-      return (Array.isArray(document?.blocks) ? document.blocks : [])
-        .filter(
-          (block) =>
-            String(block?.confirmationStatus || "").trim().toLowerCase() === "confirmed" &&
-            String(block?.primaryTag || "").trim().toLowerCase() === "evidence",
-        )
-        .map((block) => ({
-          ...block,
-          sourceTitle: block?.sourceTitle || sourceTitle,
-          sourceDocumentKey: block?.sourceDocumentKey || document?.documentKey || "",
-        }));
-    });
-}
-
-function buildEvidenceSnapshot(blocks = []) {
-  const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
-  return {
-    blockCount: normalizedBlocks.length,
-    sourceDocumentKeys: unique(
-      normalizedBlocks.map((block) => block.sourceDocumentKey || block.documentKey),
-    ),
-    domains: unique(normalizedBlocks.map((block) => block.domain).filter(Boolean)),
-    blocks: normalizedBlocks.map((block, index) => ({
-      order: index,
-      blockId: block.id,
-      sourceDocumentKey: block.sourceDocumentKey || block.documentKey || "",
-      sourceTitle: block.sourceTitle || "",
-      sourcePosition: Number.isFinite(Number(block.sourcePosition)) ? Number(block.sourcePosition) : index,
-      extractionPassId: block.extractionPassId || null,
-      domain: block.domain || "",
-      sevenStage: Number.isFinite(Number(block.sevenStage)) ? Number(block.sevenStage) : null,
-      textExcerpt: buildExcerpt(block.plainText || block.text || "", 180),
-    })),
-  };
-}
 
 export async function POST(request) {
   const session = await getRequiredSession();
@@ -186,6 +139,7 @@ export async function PUT(request) {
   const draftId = String(body?.draftId || "").trim();
   const deltaStatement = String(body?.deltaStatement || "").trim();
   const projectKey = String(body?.projectKey || "").trim();
+  const overrideAudit = Boolean(body?.overrideAudit);
 
   if (!draftId || !deltaStatement) {
     return NextResponse.json(
@@ -209,23 +163,46 @@ export async function PUT(request) {
     : targetDocument
       ? [targetDocument]
       : [];
-  const confirmedEvidenceBlocks = listConfirmedEvidenceBlocksFromDocuments(evidenceDocuments);
+  const audit = await buildReceiptSealAudit({
+    project: hydratedProject || rawProject,
+    projectDocuments: evidenceDocuments,
+    targetDocument,
+    deltaStatement,
+  });
 
-  if (!confirmedEvidenceBlocks.length) {
+  if (!audit.canOverride) {
     return NextResponse.json(
       {
-        error: "Seal a receipt only after at least one confirmed evidence block is in the box.",
+        error: audit.summary || "The receipt is not ready to seal yet.",
+        audit,
       },
       { status: 400 },
     );
   }
 
-  const evidenceSnapshot = buildEvidenceSnapshot(confirmedEvidenceBlocks);
+  if (!audit.sealReady && !overrideAudit) {
+    return NextResponse.json(
+      {
+        error: audit.summary || "Review the pre-seal audit before sealing this receipt.",
+        audit,
+      },
+      { status: 409 },
+    );
+  }
+
+  const confirmedEvidenceBlocks = listConfirmedEvidenceBlocksFromDocuments(evidenceDocuments);
+  const evidenceSnapshot = audit.evidenceSnapshot || buildEvidenceSnapshot(confirmedEvidenceBlocks);
   const nextPayload = {
     ...(draft.payload && typeof draft.payload === "object" ? draft.payload : {}),
     deltaStatement,
     sealedAt: new Date().toISOString(),
     evidenceSnapshot,
+    sealAudit: {
+      summary: audit.summary,
+      checks: audit.checks,
+      usedFallback: audit.usedFallback,
+      overrideApplied: !audit.sealReady && overrideAudit,
+    },
   };
   const sealedDraft = await updateReadingReceiptDraftForUser(session.user.id, draftId, {
     status: "SEALED",
@@ -251,23 +228,42 @@ export async function PUT(request) {
   });
   const currentMeta = hydratedProject?.metadataJson || rawProject?.metadataJson || null;
   const previousState = String(currentMeta?.assemblyState?.current || "").trim().toLowerCase();
+  const declaration = String(nextStateSummary?.root?.text || "").trim();
   const nextStateHistory = Array.isArray(currentMeta?.stateHistory) ? [...currentMeta.stateHistory] : [];
   const nextEvents = [
     buildAssemblyIndexEvent("receipt_sealed", {
-      draftId,
-      documentKey: draft.documentKey,
-      deltaStatement,
-      evidenceBlockCount: evidenceSnapshot.blockCount,
-      evidenceDomains: evidenceSnapshot.domains,
-      evidenceSourceDocumentKeys: evidenceSnapshot.sourceDocumentKeys,
+      declaration,
+      move: `Sealed receipt ${draft.title || draft.id} for ${draft.documentKey || "the box"}.`,
+      return: `${evidenceSnapshot.blockCount} confirmed evidence block${evidenceSnapshot.blockCount === 1 ? "" : "s"} support this seal.`,
+      echo:
+        nextStateSummary.current && nextStateSummary.current !== previousState
+          ? `${previousState || "declare-root"} -> ${nextStateSummary.current}`
+          : "state unchanged",
+      context: {
+        draftId,
+        documentKey: draft.documentKey,
+        deltaStatement,
+        evidenceBlockCount: evidenceSnapshot.blockCount,
+        evidenceDomains: evidenceSnapshot.domains,
+        evidenceSourceDocumentKeys: evidenceSnapshot.sourceDocumentKeys,
+        overrideApplied: !audit.sealReady && overrideAudit,
+      },
     }),
   ];
 
   if (nextStateSummary.current && nextStateSummary.current !== previousState) {
     nextEvents.push(
       buildAssemblyIndexEvent("state_advanced", {
-        from: previousState || "declare-root",
-        to: nextStateSummary.current,
+        declaration,
+        move: `Advanced the assembly state from ${previousState || "declare-root"} to ${nextStateSummary.current}.`,
+        return: nextStateSummary.nextRequirement,
+        echo: `${previousState || "declare-root"} -> ${nextStateSummary.current}`,
+        context: {
+          from: previousState || "declare-root",
+          to: nextStateSummary.current,
+          reason: "receipt sealed",
+          receiptId: draftId,
+        },
       }),
     );
     nextStateHistory.push({
@@ -295,5 +291,6 @@ export async function PUT(request) {
     ok: true,
     draft: sealedDraft,
     state: nextStateSummary,
+    audit,
   });
 }

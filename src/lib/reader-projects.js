@@ -396,7 +396,13 @@ export async function createReaderProjectForUser(
           events: String(rootText || "").trim()
             ? [
                 buildAssemblyIndexEvent("root_declared", {
-                  rootText: String(rootText || "").trim(),
+                  declaration: String(rootText || "").trim(),
+                  move: "Declared the Root for this box.",
+                  return: "The box now has a fixed origin.",
+                  echo: "declare-root -> rooted",
+                  context: {
+                    rootText: String(rootText || "").trim(),
+                  },
                 }),
               ]
             : [],
@@ -541,6 +547,20 @@ export async function updateReaderProjectForUser(
     if (currentMeta.root.locked && hasRootText && String(rootText || "").trim() !== currentMeta.root.text) {
       throw new Error("The root text is immutable after declaration.");
     }
+    const derivedAppendEvents = Array.isArray(appendEvents) ? [...appendEvents] : [];
+    if (!currentMeta.root.text && nextRootDraft.text) {
+      derivedAppendEvents.push(
+        buildAssemblyIndexEvent("root_declared", {
+          declaration: nextRootDraft.text,
+          move: "Declared the Root for this box.",
+          return: "The box now has a fixed origin.",
+          echo: "declare-root -> rooted",
+          context: {
+            rootText: nextRootDraft.text,
+          },
+        }),
+      );
+    }
 
     const nextArchived = hasArchived ? Boolean(isArchived) : Boolean(project.isArchived);
     const nextPinned =
@@ -577,7 +597,7 @@ export async function updateReaderProjectForUser(
           hasDomainRationales ||
           hasAssemblyState ||
           hasStateHistory ||
-          (Array.isArray(appendEvents) && appendEvents.length > 0))
+          derivedAppendEvents.length > 0)
           ? {
               metadataJson: mergeProjectArchitectureMeta(currentMeta, {
                 ...(hasRootText || hasRootGloss ? { root: nextRootDraft } : {}),
@@ -585,8 +605,8 @@ export async function updateReaderProjectForUser(
                 ...(hasDomainRationales ? { domainRationales } : {}),
                 ...(hasAssemblyState ? { assemblyState } : {}),
                 ...(hasStateHistory ? { stateHistory } : {}),
-                ...(Array.isArray(appendEvents) && appendEvents.length > 0
-                  ? { events: appendEvents }
+                ...(derivedAppendEvents.length > 0
+                  ? { events: derivedAppendEvents }
                   : {}),
               }),
             }

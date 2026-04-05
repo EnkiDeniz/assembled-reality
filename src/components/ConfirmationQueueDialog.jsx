@@ -109,7 +109,11 @@ export default function ConfirmationQueueDialog({
               <span>{remaining} left</span>
             </div>
 
-            <div className="assembler-confirmation__card">
+            <div
+              className={`assembler-confirmation__card ${
+                currentItem?.relevance === "noise" ? "is-noise" : ""
+              }`}
+            >
               <p className="assembler-confirmation__text">{currentItem.plainText || currentItem.text}</p>
               <div className="assembler-confirmation__suggestion-row">
                 <div className="assembler-confirmation__suggestion">
@@ -127,6 +131,18 @@ export default function ConfirmationQueueDialog({
                 >
                   {currentItem?.confirmationColorUnknown ? "⊘ Unstaged" : `${currentItem.sevenStage} · ${stageLabel}`}
                 </span>
+              </div>
+              <div className="assembler-confirmation__relevance-row">
+                <span
+                  className={`assembler-confirmation__relevance ${
+                    currentItem?.relevance === "noise" ? "is-noise" : "is-relevant"
+                  }`}
+                >
+                  {currentItem?.relevanceLabel || "Relevant"}
+                </span>
+                <p className="assembler-confirmation__relevance-reason">
+                  {currentItem?.relevanceReason || "Keep what helps the Root and release what does not."}
+                </p>
               </div>
             </div>
 
@@ -176,7 +192,7 @@ export default function ConfirmationQueueDialog({
                 Skip
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleDiscard()} disabled={pending}>
-                Discard
+                {currentItem?.relevance === "noise" ? "Not mine" : "Discard"}
               </button>
             </div>
           </div>

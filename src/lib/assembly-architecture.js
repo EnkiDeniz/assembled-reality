@@ -78,6 +78,48 @@ const DOMAIN_KEYWORDS = Object.freeze({
   vision: ["want", "feel", "look", "vision", "dream", "north star", "aim", "should"],
 });
 
+const ROOT_RELEVANCE_STOPWORDS = new Set([
+  "about",
+  "after",
+  "again",
+  "around",
+  "before",
+  "being",
+  "build",
+  "building",
+  "could",
+  "from",
+  "have",
+  "into",
+  "just",
+  "like",
+  "made",
+  "make",
+  "more",
+  "much",
+  "need",
+  "only",
+  "over",
+  "root",
+  "said",
+  "some",
+  "than",
+  "that",
+  "their",
+  "them",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "want",
+  "were",
+  "what",
+  "when",
+  "with",
+  "would",
+]);
+
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
@@ -88,6 +130,16 @@ function hasKeywordMatch(text, keywords = []) {
 
 function unique(values = []) {
   return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
+}
+
+function extractMeaningfulTerms(value = "") {
+  return unique(
+    normalizeText(value)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length >= 4 && !ROOT_RELEVANCE_STOPWORDS.has(entry)),
+  );
 }
 
 function normalizeAssemblyColorStepValue(value = 0) {
@@ -316,6 +368,78 @@ export function normalizeAssemblyBlockFields(block = {}, options = {}) {
   };
 }
 
+export function getAssemblyPhase(stateKey = "declare-root") {
+  const normalized = String(stateKey || "").trim().toLowerCase();
+  if (["structured", "assembled", "sealed", "released"].includes(normalized)) {
+    return "committing";
+  }
+  return "assembling";
+}
+
+export function getAssemblyPhaseLabel(phase = "assembling") {
+  return phase === "committing" ? "Committing" : "Assembling";
+}
+
+export function assessBlockRelevance(block = {}, root = null) {
+  const normalizedTextValue = normalizeText(block?.plainText || block?.text || "");
+  if (!normalizedTextValue) {
+    return {
+      relevance: "noise",
+      relevanceLabel: "Noise",
+      relevanceReason: "This block is too thin to confirm yet.",
+    };
+  }
+
+  const rootText = normalizeText(root?.text || "");
+  const rootGloss = normalizeText(root?.gloss || "");
+  const rootTerms = extractMeaningfulTerms(`${rootText} ${rootGloss}`);
+  const rootDomains = unique(
+    [
+      ...(Array.isArray(root?.applicableDomains) ? root.applicableDomains : []),
+      ...(Array.isArray(root?.suggestedDomains) ? root.suggestedDomains : []),
+    ]
+      .map((domainKey) => normalizeAssemblyDomain(domainKey))
+      .filter(Boolean),
+  );
+  const normalizedBlock = normalizedTextValue.toLowerCase();
+  const matchingTerms = rootTerms.filter((term) => normalizedBlock.includes(term));
+  const fields = normalizeAssemblyBlockFields(block, { root });
+  const directDomain = normalizeAssemblyDomain(fields.domain || fields.suggestedDomain || "");
+  const domainMatch = Boolean(directDomain && rootDomains.includes(directDomain));
+
+  if (!rootText && !rootGloss) {
+    return {
+      relevance: "relevant",
+      relevanceLabel: "Relevant",
+      relevanceReason: "No Root is declared yet, so the block stays in play.",
+    };
+  }
+
+  if (matchingTerms.length > 0) {
+    return {
+      relevance: "relevant",
+      relevanceLabel: "Relevant",
+      relevanceReason: `Touches the Root through ${matchingTerms.slice(0, 2).join(", ")}.`,
+    };
+  }
+
+  if (domainMatch) {
+    const domainLabel =
+      ASSEMBLY_DOMAINS.find((domain) => domain.key === directDomain)?.label || directDomain;
+    return {
+      relevance: "relevant",
+      relevanceLabel: "Relevant",
+      relevanceReason: `Touches the ${domainLabel} domain already carried by the Root.`,
+    };
+  }
+
+  return {
+    relevance: "noise",
+    relevanceLabel: "Noise",
+    relevanceReason: "No clear link to the current Root or its active domains yet.",
+  };
+}
+
 export function listApplicableDomains(meta = null) {
   const nextMeta = normalizeProjectArchitectureMeta(meta);
   return nextMeta.applicableDomains;
@@ -479,6 +603,7 @@ export function listConfirmationQueueItems(documents = [], root = null) {
     .map((block) => {
       const fields = normalizeAssemblyBlockFields(block, { root });
       const stageTone = getSevenStageColorStep(fields.sevenStage);
+      const relevance = assessBlockRelevance({ ...block, ...fields }, root);
       return {
         ...block,
         ...fields,
@@ -486,11 +611,25 @@ export function listConfirmationQueueItems(documents = [], root = null) {
         suggestedDomainLabel:
           ASSEMBLY_DOMAINS.find((domain) => domain.key === fields.suggestedDomain)?.label ||
           "Vision",
+        relevance: relevance.relevance,
+        relevanceLabel: relevance.relevanceLabel,
+        relevanceReason: relevance.relevanceReason,
         confirmationColorStep: stageTone.step,
         confirmationColorLabel: getSevenStageLabel(fields.sevenStage) || "Unconfirmed",
         confirmationColorUnknown: stageTone.isUnknown,
         confirmationColorTokens: getAssemblyColorTokens(stageTone),
       };
+    })
+    .sort((left, right) => {
+      const leftWeight = left.relevance === "relevant" ? 0 : 1;
+      const rightWeight = right.relevance === "relevant" ? 0 : 1;
+      if (leftWeight !== rightWeight) {
+        return leftWeight - rightWeight;
+      }
+
+      const leftPosition = Number.isFinite(Number(left?.sourcePosition)) ? Number(left.sourcePosition) : 0;
+      const rightPosition = Number.isFinite(Number(right?.sourcePosition)) ? Number(right.sourcePosition) : 0;
+      return leftPosition - rightPosition;
     });
 }
 
@@ -580,16 +719,30 @@ export function buildAssemblyStateSummary({
     (domain) => !confirmedEvidenceDomains.includes(domain),
   );
   const colorStep = getAssemblyStateColorStep(currentState);
+  const phase = getAssemblyPhase(currentState);
+  const phaseLabel = getAssemblyPhaseLabel(phase);
+  const isLooping = unconfirmedCount > 15 && sealedDraftCount === 0;
+  const loopMessage = isLooping
+    ? "The box is accumulating without sealing. Confirm some blocks or seal a receipt to close the loop."
+    : "";
 
   return {
     hasRoot,
     root: meta.root,
     current: currentState,
     label: getAssemblyStateLabel(currentState),
+    chipLabel:
+      currentState === "declare-root"
+        ? getAssemblyStateLabel(currentState)
+        : `${getAssemblyStateLabel(currentState)} · ${phaseLabel}`,
+    phase,
+    phaseLabel,
     colorStep,
     colorLabel: getAssemblyStateLabel(currentState),
     colorTokens: getAssemblyColorTokens(colorStep),
-    nextRequirement,
+    nextRequirement: loopMessage || nextRequirement,
+    isLooping,
+    loopMessage,
     unconfirmedCount,
     sealedDraftCount,
     confirmedEvidenceDomains,
@@ -602,9 +755,25 @@ export function buildAssemblyStateSummary({
 
 export function buildAssemblyIndexEvent(type = "", detail = {}) {
   const normalizedType = normalizeText(type).toLowerCase() || "event";
+  const nextDetail = detail && typeof detail === "object" ? detail : {};
+  const normalizedContext =
+    nextDetail.context && typeof nextDetail.context === "object"
+      ? nextDetail.context
+      : Object.fromEntries(
+          Object.entries(nextDetail).filter(
+            ([key]) => !["declaration", "move", "return", "echo", "context"].includes(key),
+          ),
+        );
+
   return {
     type: normalizedType,
     at: new Date().toISOString(),
-    detail: detail && typeof detail === "object" ? detail : {},
+    detail: {
+      declaration: normalizeText(nextDetail.declaration || ""),
+      move: normalizeText(nextDetail.move || ""),
+      return: normalizeText(nextDetail.return || ""),
+      echo: normalizeText(nextDetail.echo || ""),
+      context: normalizedContext,
+    },
   };
 }

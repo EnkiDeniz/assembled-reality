@@ -187,10 +187,7 @@ export function buildBoxViewModel({
     connectionLastError,
   });
   const rootViewModel = buildRootViewModel(activeProject);
-  const confirmationQueue = listConfirmationQueueItems(projectDocuments, {
-    applicableDomains: rootViewModel.applicableDomains,
-    suggestedDomains: rootViewModel.suggestedDomains,
-  });
+  const confirmationQueue = listConfirmationQueueItems(projectDocuments, rootViewModel);
   const stateSummary = buildAssemblyStateSummary({
     project: activeProject,
     projectDocuments,
@@ -438,6 +435,7 @@ export function buildControlSurfaceViewModel({
   activeProject = null,
   currentAssemblyDocument = null,
   projectDocuments = [],
+  projectDrafts = [],
   boxPhase = BOX_PHASES.think,
   canRunOperate = false,
   aiOpen = false,
@@ -449,11 +447,12 @@ export function buildControlSurfaceViewModel({
   const stageCount = Math.max(0, Number(clipboardCount) || 0) + Math.max(0, Number(stagedCount) || 0);
   const rootViewModel = buildRootViewModel(activeProject);
   const confirmationCount = listConfirmationQueueItems(projectDocuments, rootViewModel).length;
-  const stateColorStep = getAssemblyStateColorStep(
-    activeProject?.architectureMeta?.assemblyState?.current ||
-      activeProject?.metadataJson?.assemblyState?.current ||
-      (rootViewModel.hasRoot ? "rooted" : "declare-root"),
-  );
+  const stateSummary = buildAssemblyStateSummary({
+    project: activeProject,
+    projectDocuments,
+    projectDrafts,
+  });
+  const stateColorStep = getAssemblyStateColorStep(stateSummary.current);
 
   return {
     currentBoxTitle,
@@ -464,9 +463,11 @@ export function buildControlSurfaceViewModel({
     stageCount,
     rootText: rootViewModel.text,
     hasRoot: rootViewModel.hasRoot,
+    stateSummary,
     stateColorStep,
-    stateColorTokens: getAssemblyColorTokens(stateColorStep),
+    stateColorTokens: stateSummary.colorTokens || getAssemblyColorTokens(stateColorStep),
     confirmationCount,
+    isLooping: Boolean(stateSummary.isLooping),
     primaryActionLabel:
       boxPhase === BOX_PHASES.create
         ? stageCount > 0
