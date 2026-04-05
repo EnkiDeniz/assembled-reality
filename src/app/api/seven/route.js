@@ -19,6 +19,10 @@ export const runtime = "nodejs";
 
 const CHAT_UNAVAILABLE_MESSAGE = "Seven's chat is unavailable right now.";
 
+function normalizeText(value = "") {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
 function buildOperatingPrinciple(surface = "", explicitPrinciple = "") {
   const normalizedExplicit = String(explicitPrinciple || "").trim();
   if (normalizedExplicit) return normalizedExplicit;
@@ -36,8 +40,127 @@ function buildOperatingPrinciple(surface = "", explicitPrinciple = "") {
   if (normalizedSurface === "receipts") {
     return "Seal is where claim meets evidence and witnesses. Audit for proof, drift, and portability without shaming uncertainty.";
   }
+  if (normalizedSurface === "root") {
+    return "Presence precedes aim. Help the user compress the declared line until it is portable, concrete, and small enough to build from.";
+  }
 
   return "";
+}
+
+function parseJsonObject(text = "") {
+  const normalized = String(text || "").trim();
+  if (!normalized) return null;
+
+  try {
+    return JSON.parse(normalized);
+  } catch {
+    // Ignore and try to recover wrapped JSON.
+  }
+
+  const start = normalized.indexOf("{");
+  const end = normalized.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  try {
+    return JSON.parse(normalized.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+function buildInstrumentSystemPrompt(intent = "") {
+  const normalizedIntent = normalizeText(intent).toLowerCase();
+
+  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+    return [
+      `You are Seven, the Root shaper inside ${PRODUCT_NAME}.`,
+      "Help compress or rewrite a box Root without changing its intent.",
+      "Return strict JSON only.",
+      "Use this shape: {\"summary\":\"...\",\"candidates\":[{\"rootText\":\"...\",\"gloss\":\"...\",\"rationale\":\"...\"}]}",
+      "Return 2 or 3 candidates.",
+      "Every rootText must be seven words or fewer.",
+      "Keep the language operational, portable, and concrete.",
+      "Do not include markdown fences.",
+    ].join(" ");
+  }
+
+  return [
+    `You are Seven, the reality interpreter inside ${PRODUCT_NAME}.`,
+    "Name the current reality state, explain the pressure honestly, and give the smallest concrete next move.",
+    "Stay factual, brief, and oriented toward action.",
+  ].join(" ");
+}
+
+function buildInstrumentUserPrompt(intent = "", context = {}) {
+  const normalizedIntent = normalizeText(intent).toLowerCase();
+
+  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+    return [
+      `Intent: ${normalizedIntent}`,
+      `Current Root: ${normalizeText(context?.rootText) || "(missing)"}`,
+      `Current gloss: ${normalizeText(context?.rootGloss) || "(missing)"}`,
+      `Suggested domains: ${(Array.isArray(context?.suggestedDomains) ? context.suggestedDomains : []).join(", ") || "(none)"}`,
+      `Applicable domains: ${(Array.isArray(context?.applicableDomains) ? context.applicableDomains : []).join(", ") || "(none)"}`,
+      "Keep the declared aim intact while making the Root smaller and more buildable.",
+    ].join("\n\n");
+  }
+
+  return [
+    `Intent: ${normalizedIntent || "warning-interpret"}`,
+    `Reality state: ${normalizeText(context?.summary || context?.warning || context?.errorMessage || context?.conflictMessage) || "(unspecified)"}`,
+    context?.documentTitle ? `Document: ${normalizeText(context.documentTitle)}` : "",
+    context?.draftTitle ? `Receipt draft: ${normalizeText(context.draftTitle)}` : "",
+    Array.isArray(context?.checks) && context.checks.length
+      ? `Checks:\n${context.checks.map((check) => `- ${normalizeText(check?.label)}: ${normalizeText(check?.message)}`).join("\n")}`
+      : "",
+    "Interpret the pressure and name the smallest honest move.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function normalizeInstrumentResult(intent = "", rawResult = null) {
+  const normalizedIntent = normalizeText(intent).toLowerCase();
+  if (!rawResult || typeof rawResult !== "object") return null;
+
+  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+    const candidates = (Array.isArray(rawResult.candidates) ? rawResult.candidates : [])
+      .map((candidate) => ({
+        rootText: normalizeText(candidate?.rootText),
+        gloss: normalizeText(candidate?.gloss),
+        rationale: normalizeText(candidate?.rationale),
+      }))
+      .filter((candidate) => candidate.rootText)
+      .slice(0, 3);
+
+    if (!candidates.length) return null;
+
+    return {
+      summary: normalizeText(rawResult.summary),
+      candidates,
+    };
+  }
+
+  return null;
+}
+
+function formatInstrumentAnswer(intent = "", instrumentResult = null, fallbackAnswer = "") {
+  const normalizedIntent = normalizeText(intent).toLowerCase();
+  if (!instrumentResult) return normalizeText(fallbackAnswer);
+
+  if (normalizedIntent === "root-compress" || normalizedIntent === "root-rewrite") {
+    return [
+      instrumentResult.summary || "Seven found a smaller Root shape.",
+      ...instrumentResult.candidates.map(
+        (candidate, index) =>
+          `${index + 1}. ${candidate.rootText}${candidate.gloss ? ` — ${candidate.gloss}` : ""}`,
+      ),
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return normalizeText(fallbackAnswer);
 }
 
 function buildInstruction(mode) {
@@ -119,6 +242,8 @@ export async function POST(request) {
     currentSectionMarkdown = "",
     surface = "",
     operatingPrinciple = "",
+    instrumentIntent = "",
+    instrumentContext = null,
   } = body || {};
 
   let resolvedDocumentTitle = documentTitle;
@@ -174,35 +299,48 @@ export async function POST(request) {
   }
 
   const resolvedOperatingPrinciple = buildOperatingPrinciple(surface, operatingPrinciple);
-  const systemPrompt = [
-    `You are Seven, the reading guide inside ${PRODUCT_NAME}.`,
-    "Your job is to explain the authored document clearly, calmly, and concretely.",
-    "Treat the text as a document to interpret, not as unquestionable fact.",
-    "Stay close to the provided context and do not invent claims, sections, or authorities.",
-    "When relevant context from elsewhere in the manuscript is provided, use it explicitly rather than guessing.",
-    "When the writing is metaphorical, translate it into plain language without mocking it.",
-    "Do not use markdown tables.",
-    "Prefer language that works both on screen and when spoken aloud.",
-    resolvedOperatingPrinciple
-      ? `Operating principle for this surface: ${resolvedOperatingPrinciple}`
-      : "",
-  ].join(" ");
+  const normalizedInstrumentIntent = normalizeText(instrumentIntent).toLowerCase();
+  const isInstrumentRequest = Boolean(normalizedInstrumentIntent);
+  const systemPrompt = isInstrumentRequest
+    ? [
+        buildInstrumentSystemPrompt(normalizedInstrumentIntent),
+        resolvedOperatingPrinciple
+          ? `Operating principle for this surface: ${resolvedOperatingPrinciple}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : [
+        `You are Seven, the reading guide inside ${PRODUCT_NAME}.`,
+        "Your job is to explain the authored document clearly, calmly, and concretely.",
+        "Treat the text as a document to interpret, not as unquestionable fact.",
+        "Stay close to the provided context and do not invent claims, sections, or authorities.",
+        "When relevant context from elsewhere in the manuscript is provided, use it explicitly rather than guessing.",
+        "When the writing is metaphorical, translate it into plain language without mocking it.",
+        "Do not use markdown tables.",
+        "Prefer language that works both on screen and when spoken aloud.",
+        resolvedOperatingPrinciple
+          ? `Operating principle for this surface: ${resolvedOperatingPrinciple}`
+          : "",
+      ].join(" ");
 
-  const userPrompt = [
-    `Document: ${resolvedDocumentTitle}`,
-    resolvedDocumentSubtitle ? `Subtitle: ${resolvedDocumentSubtitle}` : "",
-    `Current section: ${resolvedCurrentLabel || resolvedCurrentSectionTitle}`,
-    resolvedSectionOutline ? `Section outline:\n${resolvedSectionOutline}` : "",
-    resolvedIntroMarkdown ? `Opening context:\n${resolvedIntroMarkdown}` : "",
-    `Current section markdown:\n${resolvedCurrentSectionMarkdown}`,
-    relevantSectionsContext
-      ? `Relevant sections from elsewhere in the document:\n${relevantSectionsContext}`
-      : "",
-    `Instruction: ${buildInstruction(mode)}`,
-    question ? `User question: ${question}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const userPrompt = isInstrumentRequest
+    ? buildInstrumentUserPrompt(normalizedInstrumentIntent, instrumentContext || {})
+    : [
+        `Document: ${resolvedDocumentTitle}`,
+        resolvedDocumentSubtitle ? `Subtitle: ${resolvedDocumentSubtitle}` : "",
+        `Current section: ${resolvedCurrentLabel || resolvedCurrentSectionTitle}`,
+        resolvedSectionOutline ? `Section outline:\n${resolvedSectionOutline}` : "",
+        resolvedIntroMarkdown ? `Opening context:\n${resolvedIntroMarkdown}` : "",
+        `Current section markdown:\n${resolvedCurrentSectionMarkdown}`,
+        relevantSectionsContext
+          ? `Relevant sections from elsewhere in the document:\n${relevantSectionsContext}`
+          : "",
+        `Instruction: ${buildInstruction(mode)}`,
+        question ? `User question: ${question}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
 
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -266,7 +404,16 @@ export async function POST(request) {
       );
     }
 
-    const answer = extractMessageText(payload);
+    const rawAnswer = extractMessageText(payload);
+    const instrumentResult = normalizeInstrumentResult(
+      normalizedInstrumentIntent,
+      isInstrumentRequest ? parseJsonObject(rawAnswer) : null,
+    );
+    const answer = formatInstrumentAnswer(
+      normalizedInstrumentIntent,
+      instrumentResult,
+      rawAnswer,
+    );
     if (!answer) {
       return NextResponse.json(
         {
@@ -295,6 +442,7 @@ export async function POST(request) {
       userMessageId: exchange?.userMessage?.id || null,
       messageId: exchange?.assistantMessage?.id || null,
       provider: "openai",
+      instrumentResult,
     });
   } catch (error) {
     console.error("Seven chat request crashed.", {

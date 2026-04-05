@@ -174,6 +174,8 @@ export default function ProjectHome({
   onOpenIntake,
   onOpenConfirmation,
   onSaveRoot,
+  onRootInstrumentChange,
+  onRunRootAssist,
   rootPending = false,
   ActionIcon,
   getDocumentBlockCountLabel,
@@ -307,6 +309,8 @@ export default function ProjectHome({
           compact
           onSaveRoot={onSaveRoot}
           onOpenConfirmation={onOpenConfirmation}
+          onInstrumentChange={onRootInstrumentChange}
+          onRunSevenAssist={onRunRootAssist}
         />
 
         <section className="assembler-project-home__panel">
@@ -464,6 +468,8 @@ export default function ProjectHome({
         pending={rootPending}
         onSaveRoot={onSaveRoot}
         onOpenConfirmation={onOpenConfirmation}
+        onInstrumentChange={onRootInstrumentChange}
+        onRunSevenAssist={onRunRootAssist}
       />
 
       <section className="assembler-project-home__overview">

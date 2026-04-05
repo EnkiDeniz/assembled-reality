@@ -1,3 +1,5 @@
+import RealityInstrument from "@/components/RealityInstrument";
+
 function ModeButton({ active = false, label, onClick }) {
   return (
     <button
@@ -33,6 +35,8 @@ export default function WorkspaceControlSurface({
   onOpenSpeak,
   onManageBox,
   onOpenConfirmation,
+  instrument = null,
+  onInstrumentMove,
 }) {
   return (
     <div className={`assembler-control-surface ${isMobileLayout ? "is-mobile" : ""}`}>
@@ -96,6 +100,14 @@ export default function WorkspaceControlSurface({
           <ActionButton label="Box" onClick={onManageBox} />
         ) : null}
       </div>
+
+      {instrument ? (
+        <RealityInstrument
+          viewModel={instrument}
+          variant="compact"
+          onMove={onInstrumentMove}
+        />
+      ) : null}
     </div>
   );
 }

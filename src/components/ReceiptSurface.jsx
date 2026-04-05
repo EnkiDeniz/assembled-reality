@@ -26,6 +26,8 @@ export default function ReceiptSurface({
   confirmationCount = 0,
   onOpenConfirmation,
   onSaveRoot,
+  onRootInstrumentChange,
+  onRunRootAssist,
   rootPending = false,
   isMobileLayout = false,
 }) {
@@ -139,6 +141,8 @@ export default function ReceiptSurface({
           compact={isMobileLayout}
           onSaveRoot={onSaveRoot}
           onOpenConfirmation={onOpenConfirmation}
+          onInstrumentChange={onRootInstrumentChange}
+          onRunSevenAssist={onRunRootAssist}
         />
 
         <section className="assembler-receipt-surface__status-grid">

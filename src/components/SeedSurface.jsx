@@ -15,6 +15,8 @@ export default function SeedSurface({
   onAssemble,
   onOpenConfirmation,
   onSaveRoot,
+  onRootInstrumentChange,
+  onRunRootAssist,
   onApplySuggestion,
   onEditSuggestion,
   onDismissSuggestion,
@@ -104,6 +106,8 @@ export default function SeedSurface({
         compact={isMobileLayout}
         onSaveRoot={onSaveRoot}
         onOpenConfirmation={onOpenConfirmation}
+        onInstrumentChange={onRootInstrumentChange}
+        onRunSevenAssist={onRunRootAssist}
       />
 
       <SeedUpdatePanel

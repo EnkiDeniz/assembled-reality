@@ -1263,6 +1263,10 @@ main {
   cursor: default;
 }
 
+.assembler-header__instrument {
+  margin-top: 10px;
+}
+
 .assembler-header__account {
   display: inline-flex;
   align-items: center;
@@ -4949,6 +4953,153 @@ main {
   cursor: default;
 }
 
+.assembler-control-surface > .assembler-reality {
+  grid-column: 1 / -1;
+}
+
+.assembler-reality {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--reality-tone-border, rgba(255, 255, 255, 0.08));
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 74%),
+    var(--reality-tone-soft, rgba(255, 255, 255, 0.02));
+  box-shadow: 0 14px 36px var(--reality-tone-glow, transparent);
+}
+
+.assembler-reality--compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 12px 14px;
+}
+
+.assembler-reality__compact-copy,
+.assembler-reality__copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.assembler-reality__compact-meta,
+.assembler-reality__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assembler-reality__eyebrow,
+.assembler-reality__position,
+.assembler-reality__evidence-label {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assembler-reality__compact-headline,
+.assembler-reality__headline {
+  color: var(--white);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.assembler-reality__compact-summary,
+.assembler-reality__summary {
+  margin: 0;
+  color: var(--reality-tone-text, var(--muted));
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.assembler-reality__compact-actions,
+.assembler-reality__moves {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assembler-reality__moves-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assembler-reality__move {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--reality-tone-border, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: rgba(10, 12, 12, 0.88);
+  color: var(--white);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-reality__move.is-primary {
+  background: var(--reality-tone, rgba(255, 255, 255, 0.12));
+  color: var(--white);
+}
+
+.assembler-reality__move:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.assembler-reality__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assembler-reality__close {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.assembler-reality__evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assembler-reality__evidence-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.assembler-reality__evidence-value {
+  color: var(--white);
+}
+
+.assembler-reality__state-chip {
+  min-height: 24px;
+}
+
 .assembler-first-box {
   position: relative;
   width: min(880px, 100%);
@@ -5303,6 +5454,72 @@ main {
   color: var(--red);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.assembler-root-panel__assist {
+  display: grid;
+  gap: 12px;
+}
+
+.assembler-root-panel__assist-head {
+  display: grid;
+  gap: 4px;
+}
+
+.assembler-root-panel__assist-label {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.assembler-root-panel__assist-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-root-panel__assist-list {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-root-panel__assist-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(12, 14, 14, 0.88);
+  color: inherit;
+  text-align: left;
+}
+
+.assembler-root-panel__assist-card strong {
+  color: var(--white);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.assembler-root-panel__assist-card span,
+.assembler-root-panel__assist-card em {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-root-panel__assist-card em {
+  font-style: normal;
+}
+
+.assembler-root-panel__assist-apply {
+  color: var(--white) !important;
+  font-family: var(--font-code);
+  font-size: 11px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .assembler-confirmation {

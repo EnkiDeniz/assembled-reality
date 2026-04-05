@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AiUtilityRail from "@/components/AiUtilityRail";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
@@ -9,6 +9,7 @@ import ConfirmationQueueDialog from "@/components/ConfirmationQueueDialog";
 import FirstBoxComposer from "@/components/FirstBoxComposer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProjectHome from "@/components/ProjectHome";
+import RealityInstrument from "@/components/RealityInstrument";
 import OperateSurface from "@/components/OperateSurface";
 import ReceiptSurface from "@/components/ReceiptSurface";
 import ReceiptSealDialog from "@/components/ReceiptSealDialog";
@@ -67,6 +68,10 @@ import {
   getSeedDocument,
   listRealSourceDocuments,
 } from "@/lib/seed-model";
+import {
+  buildRealityInstrumentIssue,
+  buildRealityInstrumentViewModel,
+} from "@/lib/reality-instrument";
 import {
   deleteVoiceMemoDraft,
   loadVoiceMemoDraft,
@@ -294,6 +299,69 @@ function buildSevenRequestContext(document, focusedBlock = null) {
     currentSectionTitle: focusedBlock?.sectionLabel || document?.title || "Current document",
     currentSectionMarkdown: focusBlocks.map(formatSevenContextBlock).join("\n\n"),
   };
+}
+
+function normalizeInstrumentText(value = "") {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function buildFeedbackInstrumentIssue(message, tone = "", options = {}) {
+  const normalizedMessage = normalizeInstrumentText(message);
+  if (!normalizedMessage || tone !== "error") return null;
+
+  const recovery =
+    normalizedMessage.toLowerCase().includes("preserved") ||
+    normalizedMessage.toLowerCase().includes("kept on this device") ||
+    normalizedMessage.toLowerCase().includes("try again");
+
+  return buildRealityInstrumentIssue({
+    key: options?.issueKey || `feedback:${options?.surfaceKey || "workspace"}:${normalizedMessage}`,
+    surfaceKey: options?.surfaceKey || "workspace",
+    severity: recovery ? "recovery" : "blocked",
+    priority: recovery ? 62 : 82,
+    label: recovery ? "Recovery" : "Constraint",
+    headline:
+      normalizeInstrumentText(options?.headline) ||
+      (recovery ? "The box preserved your place." : "The box hit a hard stop."),
+    summary: normalizedMessage,
+    compactSummary: normalizedMessage,
+    evidence: Array.isArray(options?.evidence) ? options.evidence : [],
+    moveSpace: Array.isArray(options?.moveSpace)
+      ? options.moveSpace
+      : [
+          {
+            key: recovery ? "instrument-interpret" : "instrument-interpret",
+            label: "Interpret with Seven",
+            disabled: Boolean(options?.disableInterpret),
+          },
+          { key: "instrument-dismiss", label: "Dismiss" },
+        ],
+    sevenAssist: options?.sevenAssist || {
+      intent: options?.instrumentIntent || "warning-interpret",
+      context: options?.instrumentContext || {},
+      surface: options?.surfaceKey || "workspace",
+    },
+  });
+}
+
+function buildInstrumentAssistPrompt(intent = "", context = {}) {
+  const normalizedIntent = normalizeInstrumentText(intent).toLowerCase();
+  if (normalizedIntent === "root-compress") {
+    return `Compress this Root into up to three seven-word-or-fewer declarations: ${normalizeInstrumentText(context?.rootText)}`;
+  }
+  if (normalizedIntent === "root-rewrite") {
+    return `Rewrite this Root and gloss into a cleaner operator form without changing the intent: ${normalizeInstrumentText(context?.rootText)} ${normalizeInstrumentText(context?.rootGloss)}`;
+  }
+  if (normalizedIntent === "receipt-interpret") {
+    return "Interpret this pre-seal audit and name the smallest honest move before sealing.";
+  }
+  if (normalizedIntent === "conflict-orient") {
+    return "Interpret this save conflict and name the safest next move.";
+  }
+  if (normalizedIntent === "voice-recovery") {
+    return "Interpret this preserved voice memo state and name the clearest recovery move.";
+  }
+  return "Interpret this reality state and name the clearest next move.";
 }
 
 function buildSevenSuggestions(focusedBlock = null) {
@@ -1670,6 +1738,8 @@ function WorkspaceLaunchpad({
   onOpenIntake,
   onOpenConfirmation,
   onSaveRoot,
+  onRootInstrumentChange,
+  onRunRootAssist,
   rootPending = false,
   uploading = false,
   pastePendingMode = "",
@@ -1820,6 +1890,8 @@ function WorkspaceLaunchpad({
       onOpenIntake={onOpenIntake}
       onOpenConfirmation={onOpenConfirmation}
       onSaveRoot={onSaveRoot}
+      onRootInstrumentChange={onRootInstrumentChange}
+      onRunRootAssist={onRunRootAssist}
       rootPending={rootPending}
       ActionIcon={WorkspaceActionIcon}
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
@@ -1902,6 +1974,7 @@ function ListenPicker({
 function ListenSurface({
   activeDocument,
   activeDocumentWarning,
+  instrumentViewModel = null,
   blocks,
   currentBlockId,
   focusedBlockId,
@@ -1912,6 +1985,7 @@ function ListenSurface({
   onTogglePicker,
   onOpenProjectHome,
   onOpenDocument,
+  onInstrumentMove,
   projectDocuments,
   loadingDocumentKey,
   onOpenLog,
@@ -2023,12 +2097,18 @@ function ListenSurface({
 
       <section className="assembler-surface assembler-surface--listen">
         <div className="assembler-listen">
-          {activeDocument.subtitle || activeDocumentWarning ? (
+          {activeDocument.subtitle || activeDocumentWarning || instrumentViewModel ? (
             <div className="assembler-listen__lead">
               {activeDocument.subtitle ? (
                 <p className="assembler-listen__subtitle">{activeDocument.subtitle}</p>
               ) : null}
-              {activeDocumentWarning ? (
+              {instrumentViewModel ? (
+                <RealityInstrument
+                  viewModel={instrumentViewModel}
+                  variant="inline"
+                  onMove={onInstrumentMove}
+                />
+              ) : activeDocumentWarning ? (
                 <p className="assembler-listen__warning">{activeDocumentWarning}</p>
               ) : null}
             </div>
@@ -2545,6 +2625,7 @@ function VoiceRecorderDialog({
   errorMessage = "",
   hasSavedDraft = false,
   draftFilename = "",
+  instrumentViewModel = null,
   onClose,
   onStart,
   onPause,
@@ -2553,6 +2634,7 @@ function VoiceRecorderDialog({
   onRetryDraft,
   onSaveDraft,
   onDiscardDraft,
+  onInstrumentMove,
 }) {
   if (!open) return null;
 
@@ -2614,13 +2696,19 @@ function VoiceRecorderDialog({
               style={{ transform: `scaleX(${meterLevel})` }}
             />
           </div>
-          {errorMessage ? (
+          {instrumentViewModel ? (
+            <RealityInstrument
+              viewModel={instrumentViewModel}
+              variant="inline"
+              onMove={onInstrumentMove}
+            />
+          ) : errorMessage ? (
             <p className="assembler-voice-screen__detail is-error">{errorMessage}</p>
           ) : null}
         </div>
 
         <div className="assembler-voice-screen__controls">
-          {phase === "idle" && hasSavedDraft ? (
+          {phase === "idle" && hasSavedDraft && !instrumentViewModel ? (
             <div className="assembler-voice-screen__recovery">
               <button
                 type="button"
@@ -2781,6 +2869,7 @@ function SourceCleanupTray({
 
 function WorkspaceToolbar({
   viewModel,
+  instrument = null,
   activeSidecar = "",
   onSetBoxPhase,
   onOpenBoxes,
@@ -2793,11 +2882,13 @@ function WorkspaceToolbar({
   onOpenReceipts,
   onManageBox,
   onOpenConfirmation,
+  onInstrumentMove,
   isMobileLayout = false,
 }) {
   return (
     <WorkspaceControlSurface
       viewModel={viewModel}
+      instrument={instrument}
       isMobileLayout={isMobileLayout}
       activeSidecar={activeSidecar}
       onOpenBoxes={onOpenBoxes}
@@ -2811,6 +2902,7 @@ function WorkspaceToolbar({
       onOpenReceipts={onOpenReceipts}
       onManageBox={onManageBox}
       onOpenConfirmation={onOpenConfirmation}
+      onInstrumentMove={onInstrumentMove}
     />
   );
 }
@@ -3232,6 +3324,8 @@ function LogView({
   confirmationCount = 0,
   onOpenConfirmation,
   onSaveRoot,
+  onRootInstrumentChange,
+  onRunRootAssist,
   rootPending = false,
   isMobileLayout = false,
 }) {
@@ -3253,6 +3347,8 @@ function LogView({
       confirmationCount={confirmationCount}
       onOpenConfirmation={onOpenConfirmation}
       onSaveRoot={onSaveRoot}
+      onRootInstrumentChange={onRootInstrumentChange}
+      onRunRootAssist={onRunRootAssist}
       rootPending={rootPending}
       isMobileLayout={isMobileLayout}
     />
@@ -3888,7 +3984,10 @@ export default function WorkspaceShell({
   const [cleanupFind, setCleanupFind] = useState("");
   const [cleanupReplace, setCleanupReplace] = useState("");
   const [status, setStatus] = useState("");
-  const [, setStatusTone] = useState("");
+  const [statusTone, setStatusTone] = useState("");
+  const [globalInstrumentIssue, setGlobalInstrumentIssue] = useState(null);
+  const [rootInstrumentIssue, setRootInstrumentIssue] = useState(null);
+  const [dismissedInstrumentKeys, setDismissedInstrumentKeys] = useState({});
   const [lastModeByProjectKey, setLastModeByProjectKey] = useState({});
   const [blockSaveStates, setBlockSaveStates] = useState({});
   const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
@@ -3916,6 +4015,7 @@ export default function WorkspaceShell({
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [mobileBoxSheetOpen, setMobileBoxSheetOpen] = useState(false);
+  const [realityInstrumentOpen, setRealityInstrumentOpen] = useState(false);
   const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
   const [photoIntakeOpen, setPhotoIntakeOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
@@ -4100,6 +4200,409 @@ export default function WorkspaceShell({
     thinkViewModel?.activeSource?.operateSummary ||
     thinkViewModel?.activeSource?.metaLine ||
     "";
+  const canInterpretInstrument = Boolean(activeDocument?.documentKey || currentSeedDocument?.documentKey);
+  const activeSurfaceKey = isListenMode
+    ? "listen"
+    : isOperatePhase
+      ? "operate"
+      : isReceiptsPhase
+        ? "receipts"
+        : isCreatePhase
+          ? "seed"
+          : "think";
+  const defaultRealityMoveSpace = useMemo(() => {
+    if (isOperatePhase) {
+      return [{ key: "run-operate", label: "Run Operate", disabled: !canRunOperate || operatePending }];
+    }
+    if (isReceiptsPhase) {
+      return [{ key: "draft-receipt", label: "Draft receipt", disabled: receiptPending }];
+    }
+    if (isCreatePhase) {
+      return [
+        {
+          key: desktopStageCount > 0 ? "open-stage" : "open-add",
+          label: desktopStageCount > 0 ? `Stage ${desktopStageCount}` : "Add source",
+        },
+      ];
+    }
+    return [{ key: "open-add", label: "Add source" }];
+  }, [
+    canRunOperate,
+    desktopStageCount,
+    isCreatePhase,
+    isOperatePhase,
+    isReceiptsPhase,
+    operatePending,
+    receiptPending,
+  ]);
+  const documentWarningInstrumentIssue = useMemo(() => {
+    if (!activeDocumentWarning) return null;
+
+    return buildRealityInstrumentIssue({
+      key: `document-warning:${activeDocument.documentKey}:${activeDocumentWarning}`,
+      surfaceKey: activeSurfaceKey,
+      severity: "warning",
+      priority: 64,
+      label: "Source warning",
+      headline: `${activeDocument.title} needs attention.`,
+      summary: activeDocumentWarning,
+      compactSummary: activeDocumentWarning,
+      evidence: [
+        { label: "Document", value: activeDocument.title || "Current document" },
+      ],
+      moveSpace: [
+        {
+          key: "instrument-interpret",
+          label: "Interpret with Seven",
+          disabled: !canInterpretInstrument,
+        },
+        { key: "instrument-dismiss", label: "Dismiss" },
+      ],
+      sevenAssist: {
+        intent: "warning-interpret",
+        surface: activeSurfaceKey,
+        context: {
+          warning: activeDocumentWarning,
+          documentTitle: activeDocument.title,
+          documentKey: activeDocument.documentKey,
+        },
+      },
+    });
+  }, [activeDocument.documentKey, activeDocument.title, activeDocumentWarning, activeSurfaceKey, canInterpretInstrument]);
+  const receiptInstrumentIssue = useMemo(() => {
+    if (!receiptSealDraft?.id) return null;
+
+    const hardFailure = (receiptSealAudit?.checks || []).find(
+      (check) => check.hardBlock && check.status === "fail",
+    );
+    const warningCheck = (receiptSealAudit?.checks || []).find(
+      (check) => check.status === "warn" || (!check.hardBlock && check.status === "fail"),
+    );
+
+    if (receiptSealAuditError) {
+      return buildRealityInstrumentIssue({
+        key: "receipt-audit-error",
+        surfaceKey: "receipts",
+        severity: "blocked",
+        priority: 88,
+        label: "Seal audit",
+        headline: "The pre-seal audit could not complete.",
+        summary: receiptSealAuditError,
+        compactSummary: receiptSealAuditError,
+        moveSpace: [
+          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending },
+          {
+            key: "instrument-interpret",
+            label: "Interpret with Seven",
+            disabled: !canInterpretInstrument,
+          },
+        ],
+        sevenAssist: {
+          intent: "receipt-interpret",
+          surface: "receipts",
+          context: {
+            auditError: receiptSealAuditError,
+            draftTitle: receiptSealDraft.title || "",
+            deltaStatement: receiptSealDelta,
+          },
+        },
+      });
+    }
+
+    if (!receiptSealDelta.trim()) {
+      return buildRealityInstrumentIssue({
+        key: "receipt-delta-missing",
+        surfaceKey: "receipts",
+        severity: "constraint",
+        priority: 72,
+        label: "Delta",
+        headline: "The seal needs one operator sentence.",
+        summary: "State what changed before sealing so the receipt can carry a portable line.",
+        compactSummary: "Write the delta before sealing",
+        moveSpace: [
+          { key: "receipt-focus-delta", label: "Write delta" },
+          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending },
+        ],
+      });
+    }
+
+    if (!receiptSealAudit) {
+      return buildRealityInstrumentIssue({
+        key: "receipt-audit-missing",
+        surfaceKey: "receipts",
+        severity: "constraint",
+        priority: 68,
+        label: "Seal audit",
+        headline: "Run the pre-seal audit before sealing.",
+        summary: "The audit checks Root alignment, evidence contact, and Seed alignment before the seal closes the line.",
+        compactSummary: "Run the pre-seal audit",
+        moveSpace: [
+          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending },
+        ],
+      });
+    }
+
+    if (hardFailure) {
+      return buildRealityInstrumentIssue({
+        key: "receipt-hard-block",
+        surfaceKey: "receipts",
+        severity: "blocked",
+        priority: 86,
+        label: "Seal blocked",
+        headline: "The seal is blocked by reality.",
+        summary: hardFailure.message,
+        compactSummary: hardFailure.message,
+        evidence: [{ label: "Check", value: hardFailure.label }],
+        moveSpace: [
+          { key: "receipt-focus-delta", label: "Revise delta" },
+          { key: "open-confirmation", label: "Inspect evidence" },
+          {
+            key: "instrument-interpret",
+            label: "Interpret with Seven",
+            disabled: !canInterpretInstrument,
+          },
+        ],
+        sevenAssist: {
+          intent: "receipt-interpret",
+          surface: "receipts",
+          context: {
+            summary: receiptSealAudit.summary,
+            checks: receiptSealAudit.checks,
+            draftTitle: receiptSealDraft.title || "",
+            deltaStatement: receiptSealDelta,
+          },
+        },
+      });
+    }
+
+    if (warningCheck) {
+      return buildRealityInstrumentIssue({
+        key: "receipt-warning",
+        surfaceKey: "receipts",
+        severity: "warning",
+        priority: 74,
+        label: "Seal warning",
+        headline: "The seal can proceed, but the line needs interpretation.",
+        summary: warningCheck.message,
+        compactSummary: warningCheck.message,
+        evidence: [{ label: "Check", value: warningCheck.label }],
+        moveSpace: [
+          { key: "receipt-focus-delta", label: "Revise delta" },
+          { key: "open-confirmation", label: "Inspect evidence" },
+          { key: "receipt-seal", label: "Seal anyway", disabled: receiptPending || !receiptSealAudit?.canOverride },
+          {
+            key: "instrument-interpret",
+            label: "Interpret with Seven",
+            disabled: !canInterpretInstrument,
+          },
+        ],
+        sevenAssist: {
+          intent: "receipt-interpret",
+          surface: "receipts",
+          context: {
+            summary: receiptSealAudit.summary,
+            checks: receiptSealAudit.checks,
+            draftTitle: receiptSealDraft.title || "",
+            deltaStatement: receiptSealDelta,
+          },
+        },
+      });
+    }
+
+    return null;
+  }, [
+    receiptPending,
+    receiptSealAudit,
+    receiptSealAuditError,
+    receiptSealAuditPending,
+    receiptSealDelta,
+    receiptSealDraft,
+    canInterpretInstrument,
+  ]);
+  const receiptInstrumentViewModel = useMemo(
+    () =>
+      receiptSealDraft?.id
+        ? buildRealityInstrumentViewModel({
+            surfaceKey: "receipts",
+            boxTitle: activeBoxTitle,
+            documentTitle: receiptSealDraft.title || "Receipt draft",
+            stateSummary: seedViewModel?.stateSummary,
+            issues: receiptInstrumentIssue ? [receiptInstrumentIssue] : [],
+            defaultSummary:
+              receiptSealAudit?.summary ||
+              "Check the Root, evidence, and Seed before sealing.",
+            defaultMoveSpace: receiptSealAudit?.sealReady
+              ? [{ key: "receipt-seal", label: "Seal receipt", disabled: receiptPending }]
+              : [{ key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending }],
+          })
+        : null,
+    [
+      activeBoxTitle,
+      receiptPending,
+      receiptInstrumentIssue,
+      receiptSealAudit,
+      receiptSealAuditPending,
+      receiptSealDraft,
+      seedViewModel?.stateSummary,
+    ],
+  );
+  const voiceInstrumentIssue = useMemo(() => {
+    if (!voiceRecorderOpen) return null;
+    const hasDraft = Boolean(voiceMemoDraft?.id || voiceMemoDraft?.blob);
+
+    if (hasDraft && voiceRecorderError) {
+      return buildRealityInstrumentIssue({
+        key: "voice-recovery",
+        surfaceKey: "voice",
+        severity: "recovery",
+        priority: 76,
+        label: "Voice recovery",
+        headline: "The voice memo is preserved on this device.",
+        summary: voiceRecorderError,
+        compactSummary: voiceRecorderError,
+        evidence: [
+          { label: "Draft", value: voiceMemoDraft?.filename || "Voice memo" },
+        ],
+        moveSpace: [
+          { key: "voice-retry", label: "Retry" },
+          { key: "voice-save", label: "Save recording" },
+          { key: "voice-discard", label: "Discard" },
+          {
+            key: "instrument-interpret",
+            label: "Interpret with Seven",
+            disabled: !canInterpretInstrument,
+          },
+        ],
+        sevenAssist: {
+          intent: "voice-recovery",
+          surface: "voice",
+          context: {
+            errorMessage: voiceRecorderError,
+            filename: voiceMemoDraft?.filename || "",
+          },
+        },
+      });
+    }
+
+    if (voiceRecorderError) {
+      return buildRealityInstrumentIssue({
+        key: "voice-blocked",
+        surfaceKey: "voice",
+        severity: "blocked",
+        priority: 80,
+        label: "Speak",
+        headline: "The voice path hit a hard stop.",
+        summary: voiceRecorderError,
+        compactSummary: voiceRecorderError,
+        moveSpace: [
+          { key: "voice-close", label: "Close recorder" },
+          {
+            key: "instrument-interpret",
+            label: "Interpret with Seven",
+            disabled: !canInterpretInstrument,
+          },
+        ],
+      });
+    }
+
+    return null;
+  }, [
+    canInterpretInstrument,
+    voiceMemoDraft?.blob,
+    voiceMemoDraft?.filename,
+    voiceMemoDraft?.id,
+    voiceRecorderError,
+    voiceRecorderOpen,
+  ]);
+  const voiceInstrumentViewModel = useMemo(
+    () =>
+      voiceRecorderOpen && voiceInstrumentIssue
+        ? buildRealityInstrumentViewModel({
+            surfaceKey: "voice",
+            boxTitle: activeBoxTitle,
+            documentTitle: activeDocument.title,
+            stateSummary: controlSurfaceViewModel?.stateSummary,
+            issues: [voiceInstrumentIssue],
+            defaultSummary:
+              voiceRecorderPhase === "recording"
+                ? "The recorder is listening for a voice memo source."
+                : "Speak note becomes a recoverable source path.",
+            defaultMoveSpace:
+              voiceRecorderPhase === "idle"
+                ? [{ key: "voice-start", label: "Start recording" }]
+                : [],
+          })
+        : null,
+    [
+      activeBoxTitle,
+      activeDocument.title,
+      controlSurfaceViewModel?.stateSummary,
+      voiceInstrumentIssue,
+      voiceRecorderPhase,
+      voiceRecorderOpen,
+    ],
+  );
+  const realityInstrumentViewModel = useMemo(
+    () =>
+      buildRealityInstrumentViewModel({
+        surfaceKey: activeSurfaceKey,
+        boxTitle: activeBoxTitle,
+        documentTitle: activeDocument.title,
+        stateSummary: controlSurfaceViewModel?.stateSummary,
+        issues: [
+          voiceInstrumentIssue,
+          receiptInstrumentIssue,
+          rootInstrumentIssue,
+          globalInstrumentIssue,
+          documentWarningInstrumentIssue,
+        ].filter((issue) => issue && !dismissedInstrumentKeys[issue.key]),
+        defaultSummary:
+          controlSurfaceViewModel?.stateSummary?.nextRequirement ||
+          "Reality is currently legible.",
+        defaultMoveSpace: defaultRealityMoveSpace,
+      }),
+    [
+      activeBoxTitle,
+      activeDocument.title,
+      activeSurfaceKey,
+      controlSurfaceViewModel?.stateSummary,
+      defaultRealityMoveSpace,
+      dismissedInstrumentKeys,
+      documentWarningInstrumentIssue,
+      globalInstrumentIssue,
+      receiptInstrumentIssue,
+      rootInstrumentIssue,
+      voiceInstrumentIssue,
+    ],
+  );
+  const documentInstrumentViewModel = useMemo(
+    () =>
+      documentWarningInstrumentIssue
+        && !dismissedInstrumentKeys[documentWarningInstrumentIssue.key]
+        ? buildRealityInstrumentViewModel({
+            surfaceKey: activeSurfaceKey,
+            boxTitle: activeBoxTitle,
+            documentTitle: activeDocument.title,
+            stateSummary: controlSurfaceViewModel?.stateSummary,
+            issues: [documentWarningInstrumentIssue],
+          })
+        : null,
+    [
+      activeBoxTitle,
+      activeDocument.title,
+      activeSurfaceKey,
+      controlSurfaceViewModel?.stateSummary,
+      dismissedInstrumentKeys,
+      documentWarningInstrumentIssue,
+    ],
+  );
+
+  useEffect(() => {
+    if (!realityInstrumentViewModel?.hasIssue) {
+      setRealityInstrumentOpen(false);
+    }
+  }, [realityInstrumentViewModel?.hasIssue]);
+
   const documentWorkbench = (
     <div className="assembler-document">
       <div className="assembler-document__header">
@@ -4214,8 +4717,12 @@ export default function WorkspaceShell({
               ) : null}
             </div>
           ) : null}
-          {activeDocumentWarning ? (
-            <div className="assembler-document__note">{activeDocumentWarning}</div>
+          {documentInstrumentViewModel ? (
+            <RealityInstrument
+              viewModel={documentInstrumentViewModel}
+              variant="inline"
+              onMove={handleRealityInstrumentMove}
+            />
           ) : null}
         </div>
       </div>
@@ -4810,10 +5317,11 @@ export default function WorkspaceShell({
     const timeoutId = window.setTimeout(() => {
       setStatus("");
       setStatusTone("");
+      setGlobalInstrumentIssue(null);
     }, STATUS_TIMEOUT_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [status]);
+  }, [status, statusTone]);
 
   useEffect(() => {
     if (workspaceMode !== WORKSPACE_MODES.listen) return undefined;
@@ -4872,6 +5380,11 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && realityInstrumentOpen) {
+        setRealityInstrumentOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && dropAnythingOpen) {
         setDropAnythingOpen(false);
         return;
@@ -4907,7 +5420,7 @@ export default function WorkspaceShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, mobileBoxSheetOpen, dropAnythingOpen, photoIntakeOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, mobileBoxSheetOpen, realityInstrumentOpen, dropAnythingOpen, photoIntakeOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
     async function handlePaste(event) {
@@ -4938,9 +5451,168 @@ export default function WorkspaceShell({
     });
   }
 
-  function setFeedback(message, tone = "") {
+  function setFeedback(message, tone = "", options = {}) {
     setStatus(message);
     setStatusTone(tone);
+    if (options?.issue) {
+      setGlobalInstrumentIssue(buildRealityInstrumentIssue(options.issue));
+      return;
+    }
+    if (tone !== "error") {
+      setGlobalInstrumentIssue(null);
+      return;
+    }
+    setGlobalInstrumentIssue(buildFeedbackInstrumentIssue(message, tone, options));
+  }
+
+  async function runInstrumentAssist({
+    intent = "",
+    context = {},
+    surface = "",
+    openAi = true,
+  } = {}) {
+    const targetDocument =
+      sevenContextDocument?.documentKey
+        ? sevenContextDocument
+        : currentSeedDocument?.documentKey
+          ? currentSeedDocument
+          : activeDocument;
+
+    if (!targetDocument?.documentKey) {
+      setFeedback("Open a source or seed before asking Seven to interpret this state.", "error");
+      return null;
+    }
+
+    const prompt = buildInstrumentAssistPrompt(intent, context);
+    const payload = await runAiOperation(prompt, {
+      surface: surface || activeSurfaceKey,
+      instrumentIntent: intent,
+      instrumentContext: context,
+      openAi,
+      documentOverride: targetDocument,
+    });
+
+    return payload?.instrumentResult || null;
+  }
+
+  function handleRealityInstrumentMove(move) {
+    if (!move) return;
+
+    if (move.key === "instrument-dismiss") {
+      const activeIssueKey = realityInstrumentViewModel?.activeIssue?.key;
+      if (activeIssueKey) {
+        setDismissedInstrumentKeys((previous) => ({
+          ...previous,
+          [activeIssueKey]: true,
+        }));
+      }
+      setGlobalInstrumentIssue(null);
+      setRealityInstrumentOpen(false);
+      setStatus("");
+      setStatusTone("");
+      return;
+    }
+
+    if (move.key === "open-add") {
+      if (isMobileLayout) {
+        setWorkspacePickerOpen(true);
+        return;
+      }
+      setDropAnythingOpen(true);
+      return;
+    }
+
+    if (move.key === "open-stage") {
+      openStageSidecar();
+      return;
+    }
+
+    if (move.key === "run-operate") {
+      void runOperate();
+      return;
+    }
+
+    if (move.key === "draft-receipt") {
+      void createReceiptDraft();
+      return;
+    }
+
+    if (move.key === "open-confirmation") {
+      setConfirmationOpen(true);
+      return;
+    }
+
+    if (move.key === "receipt-refresh-audit") {
+      void runReceiptSealAudit();
+      return;
+    }
+
+    if (move.key === "receipt-focus-delta") {
+      if (typeof document !== "undefined") {
+        document.querySelector(".assembler-receipt-audit__textarea")?.focus();
+      }
+      return;
+    }
+
+    if (move.key === "receipt-seal") {
+      void sealReceiptDraft();
+      return;
+    }
+
+    if (move.key === "voice-retry") {
+      void retryVoiceMemoDraft();
+      return;
+    }
+
+    if (move.key === "voice-save") {
+      saveVoiceMemoDraftToDisk();
+      return;
+    }
+
+    if (move.key === "voice-discard") {
+      void discardVoiceMemoDraft();
+      return;
+    }
+
+    if (move.key === "voice-close") {
+      closeVoiceRecorderRef.current?.();
+      return;
+    }
+
+    if (move.key === "voice-start") {
+      void startVoiceRecorder();
+      return;
+    }
+
+    if (move.key === "root-compress" || move.key === "root-rewrite") {
+      const sevenAssist = realityInstrumentViewModel?.activeIssue?.sevenAssist || null;
+      void runInstrumentAssist({
+        intent: move.key,
+        context: sevenAssist?.context || {},
+        surface: "root",
+        openAi: true,
+      });
+      return;
+    }
+
+    if (move.key === "instrument-interpret") {
+      const sevenAssist = realityInstrumentViewModel?.activeIssue?.sevenAssist || null;
+      void runInstrumentAssist({
+        intent: sevenAssist?.intent || "warning-interpret",
+        context: sevenAssist?.context || {},
+        surface: sevenAssist?.surface || activeSurfaceKey,
+        openAi: true,
+      });
+      return;
+    }
+
+    if (move.key === "conflict-load-latest") {
+      setGlobalInstrumentIssue(null);
+      void loadDocument(activeDocument.documentKey, {
+        mode: workspaceMode,
+        phase: boxPhase,
+      });
+    }
   }
 
   function setDesktopSidecar(nextPanel) {
@@ -7085,7 +7757,36 @@ export default function WorkspaceShell({
           message: "Newer version saved elsewhere",
           serverDocument: error.currentDocument || null,
         });
-        setFeedback("A newer version exists. Your cleanup changes are still local. Load latest before saving again.", "error");
+        setFeedback("A newer version exists. Your cleanup changes are still local. Load latest before saving again.", "error", {
+          issue: {
+            key: "cleanup-conflict",
+            surfaceKey: activeSurfaceKey,
+            severity: "recovery",
+            priority: 84,
+            label: "Revision conflict",
+            headline: "A newer version exists on the source.",
+            summary: "Your cleanup changes are still local. Load the latest version before saving again so the source stays factual.",
+            compactSummary: "Newer version exists · cleanup preserved",
+            moveSpace: [
+              { key: "conflict-load-latest", label: "Load latest" },
+              {
+                key: "instrument-interpret",
+                label: "Interpret with Seven",
+                disabled: !sevenContextDocument?.documentKey,
+              },
+              { key: "instrument-dismiss", label: "Keep local cleanup" },
+            ],
+            sevenAssist: {
+              intent: "conflict-orient",
+              surface: activeSurfaceKey,
+              context: {
+                conflictMessage: "A newer version exists. Your cleanup changes are still local. Load latest before saving again.",
+                documentTitle: activeDocument.title,
+                documentKey: activeDocument.documentKey,
+              },
+            },
+          },
+        });
         return false;
       }
 
@@ -7722,7 +8423,36 @@ export default function WorkspaceShell({
           message: "Newer version saved elsewhere",
           serverDocument: error.currentDocument || null,
         });
-        setFeedback("A newer version exists. Your edit is still here locally. Load latest before saving again.", "error");
+        setFeedback("A newer version exists. Your edit is still here locally. Load latest before saving again.", "error", {
+          issue: {
+            key: "edit-conflict",
+            surfaceKey: activeSurfaceKey,
+            severity: "recovery",
+            priority: 84,
+            label: "Revision conflict",
+            headline: "A newer version exists on the source.",
+            summary: "Your local edit is still here. Load the latest version before saving again so the line stays anchored in reality.",
+            compactSummary: "Newer version exists · local edit preserved",
+            moveSpace: [
+              { key: "conflict-load-latest", label: "Load latest" },
+              {
+                key: "instrument-interpret",
+                label: "Interpret with Seven",
+                disabled: !sevenContextDocument?.documentKey,
+              },
+              { key: "instrument-dismiss", label: "Keep local edit" },
+            ],
+            sevenAssist: {
+              intent: "conflict-orient",
+              surface: activeSurfaceKey,
+              context: {
+                conflictMessage: "A newer version exists. Your edit is still here locally. Load latest before saving again.",
+                documentTitle: activeDocument.title,
+                documentKey: activeDocument.documentKey,
+              },
+            },
+          },
+        });
         return;
       }
 
@@ -8194,21 +8924,28 @@ export default function WorkspaceShell({
 
   async function runAiOperation(explicitPrompt = "", options = {}) {
     const prompt = String(explicitPrompt || aiInput || "").trim();
-    if (!prompt || !sevenContextDocument?.documentKey) return;
+    const targetDocument = options?.documentOverride || sevenContextDocument || null;
+    if (!prompt || !targetDocument?.documentKey) return null;
 
-    const documentKey = sevenContextDocument.documentKey;
+    const documentKey = targetDocument.documentKey;
     const sentAt = new Date().toISOString();
     const optimisticUserId = `seven-user-${Date.now()}`;
     const optimisticAssistantId = `seven-assistant-${Date.now()}`;
-    const requestContext = buildSevenRequestContext(sevenContextDocument, sevenContextFocusedBlock);
+    const requestContext = buildSevenRequestContext(
+      targetDocument,
+      targetDocument.documentKey === sevenContextDocument?.documentKey ? sevenContextFocusedBlock : null,
+    );
     const surface = String(options?.surface || "").trim() || getSevenSurface({
       boxPhase,
       workspaceMode,
     });
+    const openAi = options?.openAi !== false;
 
     setAiPending(true);
     setAiInput("");
-    setAiOpen(true);
+    if (openAi) {
+      setAiOpen(true);
+    }
     setSevenThreadError("");
     setSevenThreads((previous) => {
       const currentThread =
@@ -8256,9 +8993,11 @@ export default function WorkspaceShell({
           mode: "question",
           question: prompt,
           surface,
+          instrumentIntent: String(options?.instrumentIntent || "").trim(),
+          instrumentContext: options?.instrumentContext || null,
           documentKey,
-          documentTitle: sevenContextDocument.title,
-          documentSubtitle: sevenContextDocument.subtitle || "",
+          documentTitle: targetDocument.title,
+          documentSubtitle: targetDocument.subtitle || "",
           ...requestContext,
         }),
       });
@@ -8305,9 +9044,11 @@ export default function WorkspaceShell({
           },
         };
       });
-      appendLog("SEVEN_ANSWER", `Seven replied in ${sevenContextDocument.title}.`, {
+      appendLog("SEVEN_ANSWER", `Seven replied in ${targetDocument.title}.`, {
         documentKey,
       });
+      setFeedback("Seven replied.", "success");
+      return payload;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Seven couldn't answer right now.";
@@ -8344,12 +9085,10 @@ export default function WorkspaceShell({
         };
       });
       setFeedback(message, "error");
-      return;
+      return null;
     } finally {
       setAiPending(false);
     }
-
-    setFeedback("Seven replied.", "success");
   }
 
   function stageSevenMessage(message) {
@@ -8854,6 +9593,17 @@ export default function WorkspaceShell({
           </div>
         </header>
 
+        {isMobileLayout && realityInstrumentViewModel ? (
+          <div className="assembler-header__instrument">
+            <RealityInstrument
+              viewModel={realityInstrumentViewModel}
+              variant="compact"
+              onMove={handleRealityInstrumentMove}
+              onExpand={() => setRealityInstrumentOpen(true)}
+            />
+          </div>
+        ) : null}
+
         {launchpadOpen ? (
           <section className="assembler-surface assembler-surface--launchpad">
             <WorkspaceLaunchpad
@@ -8883,6 +9633,15 @@ export default function WorkspaceShell({
               onOpenSpeak={openVoiceRecorder}
               onOpenConfirmation={() => setConfirmationOpen(true)}
               onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
+              onRootInstrumentChange={setRootInstrumentIssue}
+              onRunRootAssist={(payload) =>
+                runInstrumentAssist({
+                  intent: payload?.intent || "root-compress",
+                  context: payload || {},
+                  surface: "root",
+                  openAi: false,
+                })
+              }
               onOpenIntake={() => {
                 if (isMobileLayout) {
                   setWorkspacePickerOpen(true);
@@ -8958,10 +9717,12 @@ export default function WorkspaceShell({
                   phase: BOX_PHASES.receipts,
                 });
               }}
+              instrumentViewModel={documentInstrumentViewModel}
               onExportDocument={exportDocument}
               lastUsedMode={lastUsedMode}
               aiOpen={aiOpen}
               isMobileLayout={isMobileLayout}
+              onInstrumentMove={handleRealityInstrumentMove}
             />
 
             <PlayerBar
@@ -9059,6 +9820,7 @@ export default function WorkspaceShell({
                 {!isMobileLayout ? (
                   <WorkspaceToolbar
                     viewModel={controlSurfaceViewModel}
+                    instrument={realityInstrumentViewModel}
                     activeSidecar={activeDesktopSidecar}
                     onSetBoxPhase={handleSelectBoxPhase}
                     onOpenBoxes={openBoxesIndex}
@@ -9071,6 +9833,7 @@ export default function WorkspaceShell({
                     onOpenReceipts={openReceiptsSurface}
                     onManageBox={() => openProjectManagement(activeProjectKey)}
                     onOpenConfirmation={() => setConfirmationOpen(true)}
+                    onInstrumentMove={handleRealityInstrumentMove}
                     isMobileLayout={false}
                   />
                 ) : null}
@@ -9102,6 +9865,15 @@ export default function WorkspaceShell({
                       confirmationCount={seedViewModel?.confirmationCount || 0}
                       onOpenConfirmation={() => setConfirmationOpen(true)}
                       onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
+                      onRootInstrumentChange={setRootInstrumentIssue}
+                      onRunRootAssist={(payload) =>
+                        runInstrumentAssist({
+                          intent: payload?.intent || "root-compress",
+                          context: payload || {},
+                          surface: "root",
+                          openAi: false,
+                        })
+                      }
                       rootPending={rootPending}
                       isMobileLayout={isMobileLayout}
                     />
@@ -9150,6 +9922,15 @@ export default function WorkspaceShell({
                       onDismissSuggestion={dismissSeedSuggestion}
                       onOpenConfirmation={() => setConfirmationOpen(true)}
                       onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
+                      onRootInstrumentChange={setRootInstrumentIssue}
+                      onRunRootAssist={(payload) =>
+                        runInstrumentAssist({
+                          intent: payload?.intent || "root-compress",
+                          context: payload || {},
+                          surface: "root",
+                          openAi: false,
+                        })
+                      }
                       rootPending={rootPending}
                       isMobileLayout={isMobileLayout}
                     >
@@ -9306,6 +10087,24 @@ export default function WorkspaceShell({
         ) : null}
 
         {isMobileLayout ? (
+          <div className={`assembler-sheet assembler-sheet--workspace ${realityInstrumentOpen ? "is-open" : ""}`}>
+            {realityInstrumentOpen ? (
+              <>
+                <div className="assembler-sheet__backdrop" onClick={() => setRealityInstrumentOpen(false)} aria-hidden="true" />
+                <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--reality">
+                  <RealityInstrument
+                    viewModel={realityInstrumentViewModel}
+                    variant="panel"
+                    onMove={handleRealityInstrumentMove}
+                    onClose={() => setRealityInstrumentOpen(false)}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        {isMobileLayout ? (
           <MobileSourceSheet
             open={workspacePickerOpen}
             boxTitle={activeBoxTitle}
@@ -9376,6 +10175,8 @@ export default function WorkspaceShell({
           auditPending={receiptSealAuditPending}
           auditError={receiptSealAuditError}
           pending={receiptPending}
+          instrument={receiptInstrumentViewModel}
+          onInstrumentMove={handleRealityInstrumentMove}
           onRefreshAudit={() => void runReceiptSealAudit()}
           onClose={closeReceiptSealDialog}
           onSeal={() => void sealReceiptDraft()}
@@ -9531,8 +10332,9 @@ export default function WorkspaceShell({
           elapsedSeconds={voiceRecorderElapsed}
           level={voiceRecorderLevel}
           errorMessage={voiceRecorderError}
-          hasSavedDraft={Boolean(voiceMemoDraft?.file)}
-          draftFilename={voiceMemoDraft?.file?.name || ""}
+          hasSavedDraft={Boolean(voiceMemoDraft?.file || voiceMemoDraft?.blob || voiceMemoDraft?.id)}
+          draftFilename={voiceMemoDraft?.file?.name || voiceMemoDraft?.filename || ""}
+          instrumentViewModel={voiceInstrumentViewModel}
           onClose={closeVoiceRecorder}
           onStart={() => void startVoiceRecorder()}
           onPause={pauseVoiceRecorder}
@@ -9541,6 +10343,7 @@ export default function WorkspaceShell({
           onRetryDraft={() => void retryVoiceMemoDraft()}
           onSaveDraft={saveVoiceMemoDraftToDisk}
           onDiscardDraft={() => void discardVoiceMemoDraft()}
+          onInstrumentMove={handleRealityInstrumentMove}
         />
       </div>
       {dropActive ? (
