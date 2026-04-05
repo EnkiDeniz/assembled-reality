@@ -562,6 +562,17 @@ export async function updateReadingReceiptDraftForUser(
   if (updates.getReceiptsReceiptId !== undefined) {
     data.getReceiptsReceiptId = updates.getReceiptsReceiptId || null;
   }
+  if (updates.linkedEvidenceItemIds !== undefined) {
+    data.linkedEvidenceItemIds = Array.isArray(updates.linkedEvidenceItemIds)
+      ? updates.linkedEvidenceItemIds
+      : [];
+  }
+  if (updates.sourceSections !== undefined) {
+    data.sourceSections = Array.isArray(updates.sourceSections) ? updates.sourceSections : [];
+  }
+  if (updates.sourceMarkIds !== undefined) {
+    data.sourceMarkIds = Array.isArray(updates.sourceMarkIds) ? updates.sourceMarkIds : [];
+  }
   if (updates.payload !== undefined) data.payload = updates.payload || null;
 
   if (!Object.keys(data).length) {

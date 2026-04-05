@@ -56,6 +56,15 @@ function toLines(text) {
     .map((line) => line.trimEnd());
 }
 
+function buildWorkspaceBlockId(documentKey, sourcePosition, extractionPassId = "") {
+  const resolvedDocumentKey = String(documentKey || "document").trim() || "document";
+  const positionLabel = String(sourcePosition).padStart(4, "0");
+  const extractionLabel = String(extractionPassId || "").trim();
+  return extractionLabel
+    ? `${resolvedDocumentKey}:block:${extractionLabel}:${positionLabel}`
+    : `${resolvedDocumentKey}:block:${positionLabel}`;
+}
+
 export function stripMarkdownSyntax(markdown) {
   return String(markdown || "")
     .replace(/^#{1,6}\s+/gm, "")
@@ -120,7 +129,7 @@ export function normalizeWorkspaceBlock(input, options = {}) {
   return {
     id:
       String(input?.id || "").trim() ||
-      `${documentKey || sourceDocumentKey}:block:${String(sourcePosition).padStart(4, "0")}`,
+      buildWorkspaceBlockId(documentKey || sourceDocumentKey, sourcePosition, architectureFields.extractionPassId),
     documentKey,
     sourceDocumentKey,
     sourcePosition,
@@ -199,10 +208,15 @@ export function buildWorkspaceBlocksFromDocument(documentData, options = {}) {
   let runningIndex = 0;
 
   return sections.flatMap((section) =>
-    splitSectionIntoChunks(section.markdown).map((chunk, chunkIndex) => {
+    splitSectionIntoChunks(section.markdown).map((chunk) => {
+      const sourcePosition = runningIndex;
       const block = normalizeWorkspaceBlock(
         {
-          id: `${options.documentKey || documentData?.documentKey || "document"}:${section.slug}:${chunkIndex + 1}`,
+          id: buildWorkspaceBlockId(
+            options.documentKey || documentData?.documentKey || "document",
+            sourcePosition,
+            options.defaultExtractionPassId,
+          ),
           text: chunk,
           kind: normalizeWorkspaceBlockKind("", chunk),
           operation: options.defaultOperation || "imported",
@@ -216,9 +230,10 @@ export function buildWorkspaceBlocksFromDocument(documentData, options = {}) {
           documentKey: options.documentKey || documentData?.documentKey || "",
           defaultSourceDocumentKey:
             options.defaultSourceDocumentKey || options.documentKey || documentData?.documentKey || "",
-          fallbackSourcePosition: runningIndex,
+          fallbackSourcePosition: sourcePosition,
           defaultIsEditable: options.defaultIsEditable,
           defaultIsAssemblyBlock: options.defaultIsAssemblyBlock,
+          defaultExtractionPassId: options.defaultExtractionPassId,
         },
       );
 

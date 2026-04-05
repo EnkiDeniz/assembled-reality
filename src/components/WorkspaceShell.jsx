@@ -2784,6 +2784,7 @@ function WorkspaceToolbar({
   onRunOperate,
   onOpenReceipts,
   onManageBox,
+  onOpenConfirmation,
   isMobileLayout = false,
 }) {
   return (
@@ -2801,6 +2802,7 @@ function WorkspaceToolbar({
       onRunOperate={onRunOperate}
       onOpenReceipts={onOpenReceipts}
       onManageBox={onManageBox}
+      onOpenConfirmation={onOpenConfirmation}
     />
   );
 }
@@ -8931,6 +8933,7 @@ export default function WorkspaceShell({
                     onRunOperate={() => void runOperate()}
                     onOpenReceipts={openReceiptsSurface}
                     onManageBox={() => openProjectManagement(activeProjectKey)}
+                    onOpenConfirmation={() => setConfirmationOpen(true)}
                     isMobileLayout={false}
                   />
                 ) : null}
@@ -9153,11 +9156,14 @@ export default function WorkspaceShell({
           <MobileBottomNav
             activeTab={activeMobileTab}
             canOpenSeed={canOpenMobileSeed}
+            confirmationCount={seedViewModel?.confirmationCount || 0}
+            stateTone={controlSurfaceViewModel?.stateColorTokens || null}
             onGoHome={() => openCurrentBoxHome(activeProjectKey)}
             onGoListen={openMobileListenSurface}
             onGoSeed={openMobileSeedSurface}
             onGoReceipts={openReceiptsSurface}
             onOpenAdd={() => setWorkspacePickerOpen(true)}
+            onOpenConfirmation={() => setConfirmationOpen(true)}
           />
         ) : null}
 

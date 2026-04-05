@@ -237,6 +237,7 @@ export async function createReaderDocumentForUser(
   const normalizedSubtitle = String(subtitle || "").trim();
   const baseKey = slugify(normalizedTitle) || slugify(originalFilename) || "uploaded-document";
   const documentKey = await ensureUniqueDocumentKey(baseKey);
+  const extractionPassId = `extract-${randomUUID()}`;
   const parsedDocument =
     Array.isArray(blocks) && blocks.length > 0
       ? null
@@ -246,6 +247,9 @@ export async function createReaderDocumentForUser(
       ? normalizeWorkspaceBlocks(
           blocks.map((block, index) => ({
             ...block,
+            id: `${documentKey}:block:${extractionPassId}:${String(
+              Number.isFinite(Number(block.sourcePosition)) ? Number(block.sourcePosition) : index,
+            ).padStart(4, "0")}`,
             documentKey,
             sourceDocumentKey: block.sourceDocumentKey || documentKey,
             sourcePosition:
@@ -257,6 +261,7 @@ export async function createReaderDocumentForUser(
             defaultSourceDocumentKey: documentKey,
             defaultIsEditable: true,
             defaultConfirmationStatus: "unconfirmed",
+            defaultExtractionPassId: extractionPassId,
             defaultSourceType: "source",
           },
         )
@@ -265,6 +270,7 @@ export async function createReaderDocumentForUser(
           defaultSourceDocumentKey: documentKey,
           defaultIsEditable: true,
           defaultConfirmationStatus: "unconfirmed",
+          defaultExtractionPassId: extractionPassId,
           defaultSourceType: "source",
         });
   const persistedLogEntries = normalizeWorkspaceLogEntries(logEntries, documentKey);

@@ -183,11 +183,14 @@ export default function RootSummaryPanel({
           </div>
         </div>
       ) : (
-        <div className="assembler-root-panel__body">
+        <div className="assembler-root-panel__body assembler-root-panel__body--summary">
           <p className="assembler-root-panel__gloss">{root?.gloss || "No gloss yet."}</p>
-          <p className="assembler-root-panel__requirement">
-            {stateSummary?.nextRequirement || "The root is the fixed origin for this box."}
-          </p>
+          <div className="assembler-root-panel__status-line">
+            <span className="assembler-root-panel__status-label">Next</span>
+            <p className="assembler-root-panel__requirement">
+              {stateSummary?.nextRequirement || "The root is the fixed origin for this box."}
+            </p>
+          </div>
           <div className="assembler-root-panel__domains">
             {(root?.applicableDomainLabels || root?.applicableDomains || []).map((domainLabel) => (
               <span key={domainLabel} className="assembler-root-panel__domain is-active">
@@ -203,15 +206,6 @@ export default function RootSummaryPanel({
             >
               Edit gloss
             </button>
-            {confirmationCount > 0 ? (
-              <button
-                type="button"
-                className="terminal-button"
-                onClick={onOpenConfirmation}
-              >
-                Review ⊘
-              </button>
-            ) : null}
           </div>
         </div>
       )}

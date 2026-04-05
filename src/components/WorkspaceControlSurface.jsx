@@ -41,9 +41,20 @@ export default function WorkspaceControlSurface({
           Boxes
         </button>
         <button type="button" className="assembler-control-surface__title" onClick={onOpenBoxHome}>
-          <span className="assembler-control-surface__title-label">{viewModel?.currentBoxTitle || "Untitled Box"}</span>
+          <span
+            className="assembler-control-surface__title-dot"
+            aria-hidden="true"
+            style={{
+              "--assembly-tone": viewModel?.stateColorTokens?.fill,
+              "--assembly-tone-border": viewModel?.stateColorTokens?.border,
+              "--assembly-tone-glow": viewModel?.stateColorTokens?.glow,
+            }}
+          />
+          <span className="assembler-control-surface__title-copy">
+            <span className="assembler-control-surface__title-label">{viewModel?.currentBoxTitle || "Untitled Box"}</span>
           <span className="assembler-control-surface__title-subtitle">
             {viewModel?.currentSeedTitle || "Seed"}
+          </span>
           </span>
         </button>
       </div>
