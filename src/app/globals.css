@@ -5762,6 +5762,97 @@ main {
   grid-column: 1 / -1;
 }
 
+/* ── Popover ── */
+
+.assembler-popover-wrapper {
+  position: relative;
+}
+
+.assembler-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  min-width: 200px;
+  max-width: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-panel);
+  animation: assembler-popover-enter 150ms ease-out;
+}
+
+.assembler-popover.is-end {
+  left: auto;
+  right: 0;
+}
+
+.assembler-popover.is-center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@keyframes assembler-popover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.assembler-popover__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 100ms ease-out;
+}
+
+.assembler-popover__item:hover {
+  background: var(--surface-2);
+}
+
+.assembler-popover__item-meta {
+  color: var(--text-meta);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.assembler-popover__separator {
+  height: 1px;
+  margin: 6px 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.assembler-popover__label {
+  padding: 6px 10px 4px;
+  color: var(--text-meta);
+  font-size: 10px;
+  font-family: var(--font-code);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assembler-popover {
+    animation: none;
+  }
+}
+
 /* ── Inline Assist (+7 pattern) ── */
 
 .assembler-inline-assist {
