@@ -1,3 +1,9 @@
+import { useSyncExternalStore } from "react";
+
+function subscribeToHydration() {
+  return () => {};
+}
+
 function RealityMoveButton({
   move,
   onMove,
@@ -26,7 +32,13 @@ export default function RealityInstrument({
   onClose,
   children = null,
 }) {
-  if (!viewModel) return null;
+  const mounted = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
+
+  if (!mounted || !viewModel) return null;
 
   const tone = viewModel.tone || {};
   const stateTone = viewModel?.stateSummary?.colorTokens || null;

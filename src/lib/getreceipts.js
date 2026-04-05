@@ -10,6 +10,14 @@ const DEFAULT_SCOPES = [
   "receipts:update",
   "evidence:upload",
 ];
+const RETRYABLE_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+
+function normalizeReturnTo(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "workspace-receipts") return "workspace-receipts";
+  if (normalized === "workspace") return "workspace";
+  return "";
+}
 
 function base64url(value) {
   return Buffer.from(value).toString("base64url");
@@ -22,13 +30,110 @@ function signValue(value) {
     .digest("base64url");
 }
 
-export function createSignedIntegrationState(userId) {
+function buildGetReceiptsError(message, status = 0, retryable = false, payload = null) {
+  const error = new Error(message);
+  error.name = "GetReceiptsApiError";
+  error.status = Number(status) || 0;
+  error.retryable = Boolean(retryable);
+  error.payload = payload;
+  return error;
+}
+
+function isRetryableStatus(status) {
+  return RETRYABLE_STATUS_CODES.has(Number(status) || 0);
+}
+
+function getConnectionAccessToken(connection) {
+  const accessToken = decryptSecret(connection?.accessTokenEncrypted || "");
+  if (!accessToken) {
+    throw buildGetReceiptsError(
+      "Connected GetReceipts access token is unavailable.",
+      401,
+      false,
+    );
+  }
+  return accessToken;
+}
+
+async function parseGetReceiptsResponse(response) {
+  const text = await response.text().catch(() => "");
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function requestGetReceipts(
+  connection,
+  path,
+  {
+    method = "GET",
+    body,
+    headers = {},
+    rawBody = false,
+  } = {},
+) {
+  const accessToken = getConnectionAccessToken(connection);
+  const requestHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    ...headers,
+  };
+
+  let requestBody = body;
+  const isFormData =
+    typeof FormData !== "undefined" && requestBody instanceof FormData;
+
+  if (!rawBody && requestBody !== undefined && requestBody !== null && !isFormData) {
+    requestHeaders["Content-Type"] = "application/json";
+    requestBody = JSON.stringify(requestBody);
+  }
+
+  let response;
+  try {
+    response = await fetch(`${appEnv.getReceipts.baseUrl}${path}`, {
+      method,
+      headers: requestHeaders,
+      body: requestBody,
+      cache: "no-store",
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : `GetReceipts request failed for ${path}.`;
+    throw buildGetReceiptsError(message, 0, true);
+  }
+
+  const payload = await parseGetReceiptsResponse(response);
+  if (!response.ok) {
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      (typeof payload === "string" && payload) ||
+      `GetReceipts request failed (${response.status})`;
+    throw buildGetReceiptsError(
+      message,
+      response.status,
+      isRetryableStatus(response.status),
+      payload,
+    );
+  }
+
+  return payload;
+}
+
+export function createSignedIntegrationState(userId, context = {}) {
   if (!appEnv.integrationsStateSecret) {
     throw new Error("INTEGRATIONS_STATE_SECRET or NEXTAUTH_SECRET is required.");
   }
 
   const payload = JSON.stringify({
     userId,
+    returnTo: normalizeReturnTo(context?.returnTo) || null,
+    projectKey: String(context?.projectKey || "").trim() || null,
     issuedAt: Date.now(),
   });
   const encoded = base64url(payload);
@@ -46,8 +151,8 @@ export function readSignedIntegrationState(state) {
   return payload;
 }
 
-export function buildGetReceiptsConnectUrl(userId) {
-  const state = createSignedIntegrationState(userId);
+export function buildGetReceiptsConnectUrl(userId, context = {}) {
+  const state = createSignedIntegrationState(userId, context);
   const url = new URL(`/connect/${appEnv.getReceipts.appSlug}`, appEnv.getReceipts.baseUrl);
   url.searchParams.set("redirect_uri", appEnv.getReceipts.redirectUri);
   url.searchParams.set("state", state);
@@ -120,34 +225,93 @@ export async function getGetReceiptsConnectionForUser(userId) {
 }
 
 export async function createRemoteReadingReceiptDraft(connection, payload) {
-  const accessToken = decryptSecret(connection?.accessTokenEncrypted || "");
-  if (!accessToken) {
-    throw new Error("Connected GetReceipts access token is unavailable.");
-  }
-
-  const response = await fetch(`${appEnv.getReceipts.baseUrl}/api/v1/receipts`, {
+  return requestGetReceipts(connection, "/api/v1/receipts", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+    body: {
       ...payload,
       status: "draft",
-    }),
-    cache: "no-store",
+    },
   });
+}
 
-  const json = await response.json().catch(() => null);
-  if (!response.ok) {
-    const message =
-      json?.error?.message ||
-      json?.message ||
-      `GetReceipts receipt creation failed (${response.status})`;
-    throw new Error(message);
+export async function sealRemoteReceipt(connection, receiptId, payload = undefined) {
+  const normalizedReceiptId = String(receiptId || "").trim();
+  if (!normalizedReceiptId) {
+    throw buildGetReceiptsError("Remote receipt id is required before sealing.", 400, false);
   }
 
-  return json;
+  return requestGetReceipts(connection, `/api/v1/receipts/${normalizedReceiptId}/seal`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function buildGetReceiptsVerifyUrl(sealHash = "") {
+  const normalized = String(sealHash || "").trim();
+  if (!normalized) return "";
+  return `${appEnv.getReceipts.baseUrl}/api/v1/verify/${normalized}`;
+}
+
+export async function uploadRemoteReceiptEvidence(connection, assets = []) {
+  const uploads = [];
+
+  for (const [index, asset] of (Array.isArray(assets) ? assets : []).entries()) {
+    const assetUrl = asset?.url || asset?.blobUrl || asset?.sourceUrl || asset?.canonicalUrl;
+    if (!assetUrl) continue;
+
+    let fileResponse;
+    try {
+      fileResponse = await fetch(assetUrl, { cache: "no-store" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : `Could not read evidence asset ${asset?.originalFilename || asset?.label || index + 1}.`;
+      throw buildGetReceiptsError(message, 0, true);
+    }
+
+    if (!fileResponse.ok) {
+      throw buildGetReceiptsError(
+        `Could not fetch evidence asset (${fileResponse.status}).`,
+        fileResponse.status,
+        isRetryableStatus(fileResponse.status),
+      );
+    }
+
+    const mimeType =
+      asset?.mimeType ||
+      fileResponse.headers.get("content-type") ||
+      "application/octet-stream";
+    const filename =
+      asset?.originalFilename ||
+      asset?.label ||
+      `${asset?.documentKey || "evidence"}-${index + 1}`;
+    const arrayBuffer = await fileResponse.arrayBuffer();
+    const formData = new FormData();
+    formData.set("file", new Blob([arrayBuffer], { type: mimeType }), filename);
+    if (asset?.documentKey) formData.set("document_key", asset.documentKey);
+    if (asset?.kind) formData.set("kind", asset.kind);
+
+    const payload = await requestGetReceipts(connection, "/api/v1/evidence/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    uploads.push({
+      url: payload?.url || payload?.data?.url || null,
+      contentHash: payload?.content_hash || payload?.data?.content_hash || null,
+      mimeType: payload?.mime_type || payload?.data?.mime_type || mimeType,
+      size:
+        Number(payload?.size || payload?.data?.size) ||
+        Number(asset?.byteSize) ||
+        arrayBuffer.byteLength,
+      originalName: payload?.original_name || payload?.data?.original_name || filename,
+      kind: asset?.kind || null,
+      documentKey: asset?.documentKey || null,
+    });
+  }
+
+  return uploads;
 }
 
 export function buildReadingReceiptPayload({

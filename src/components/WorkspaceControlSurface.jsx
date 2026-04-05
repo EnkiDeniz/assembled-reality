@@ -1,13 +1,19 @@
 import RealityInstrument from "@/components/RealityInstrument";
 
-function ModeButton({ active = false, label, onClick }) {
+function ModeButton({ active = false, label, onClick, attentionTone = "" }) {
   return (
     <button
       type="button"
       className={`assembler-control-surface__mode ${active ? "is-active" : ""}`}
       onClick={onClick}
     >
-      {label}
+      <span>{label}</span>
+      {attentionTone ? (
+        <span
+          className={`assembler-control-surface__mode-alert is-${attentionTone}`}
+          aria-hidden="true"
+        />
+      ) : null}
     </button>
   );
 }
@@ -37,6 +43,7 @@ export default function WorkspaceControlSurface({
   onOpenConfirmation,
   instrument = null,
   onInstrumentMove,
+  receiptAttentionTone = "",
 }) {
   return (
     <div className={`assembler-control-surface ${isMobileLayout ? "is-mobile" : ""}`}>
@@ -83,6 +90,7 @@ export default function WorkspaceControlSurface({
           active={viewModel?.boxPhase === "receipts"}
           label="Receipts"
           onClick={() => onSelectPhase("receipts")}
+          attentionTone={receiptAttentionTone}
         />
       </div>
 

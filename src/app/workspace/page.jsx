@@ -72,6 +72,14 @@ function isMobileRequest(userAgent = "") {
   return /iphone|ipad|ipod|android|mobile|blackberry|opera mini|windows phone/.test(normalized);
 }
 
+function decodeNoticeValue(value = "") {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return String(value || "");
+  }
+}
+
 async function safeWorkspaceRead(label, action, fallback) {
   try {
     return await action();
@@ -93,8 +101,34 @@ export default async function WorkspacePage({ searchParams }) {
   const requestedLaunchpad = String(resolvedSearchParams?.launchpad || "").trim() === "1";
   const requestedLaunchpadView = String(resolvedSearchParams?.launchpadView || "").trim().toLowerCase();
   const requestedMode = String(resolvedSearchParams?.mode || "").trim().toLowerCase();
+  const requestedPhase = String(resolvedSearchParams?.phase || "").trim().toLowerCase();
+  const connectedIntegration = String(resolvedSearchParams?.connected || "").trim().toLowerCase();
+  const integrationError = String(resolvedSearchParams?.error || "").trim();
   const headerStore = await headers();
   const mobileRequest = isMobileRequest(headerStore.get("user-agent") || "");
+  const initialBoxPhase =
+    requestedPhase === "receipts"
+      ? "receipts"
+      : requestedPhase === "operate"
+        ? "operate"
+        : "";
+  const initialWorkspaceNotice =
+    connectedIntegration === "getreceipts"
+      ? {
+          message: "Connected. Your next sealed receipt will be stamped by GetReceipts.",
+          tone: "success",
+        }
+      : integrationError
+        ? {
+            message:
+              integrationError === "access_denied"
+                ? "GetReceipts connection was canceled. Local proof still works."
+                : integrationError === "getreceipts-state"
+                  ? "GetReceipts could not restore the workspace return path. Reconnect from Receipts."
+                  : decodeNoticeValue(integrationError),
+            tone: "error",
+          }
+        : null;
   const initialLaunchpadView =
     requestedLaunchpadView === "box" || requestedLaunchpadView === "boxes"
       ? requestedLaunchpadView
@@ -238,6 +272,8 @@ export default async function WorkspacePage({ searchParams }) {
       initialLaunchpadView={initialLaunchpadView}
       resumeSessionSummary={resumeSessionSummary}
       initialEntryState={isFirstTime ? "first-time" : "returning"}
+      initialBoxPhase={initialBoxPhase}
+      initialWorkspaceNotice={initialWorkspaceNotice}
     />
   );
 }

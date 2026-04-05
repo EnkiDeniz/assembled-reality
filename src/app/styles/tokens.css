@@ -51,6 +51,11 @@
   --accent-ai: #339cff;
   --accent-warning: #339cff;
   --accent-danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.12);
+  --danger-fill: rgba(255, 107, 107, 0.22);
+  --danger-border: rgba(255, 107, 107, 0.38);
+  --danger-glow: rgba(255, 107, 107, 0.26);
+  --danger-text: #ffc9c9;
   --focus-ring: 0 0 0 1px rgba(51, 156, 255, 0.46), 0 0 0 4px rgba(51, 156, 255, 0.14);
   --space-1: 4px;
   --space-2: 8px;

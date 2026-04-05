@@ -165,18 +165,23 @@ export default function ConfirmationQueueDialog({
                 ))}
               </div>
 
-              <select
-                className="assembler-confirmation__select"
-                value={resolvedDomain}
-                onChange={(event) => setDomain(event.target.value)}
-                disabled={pending}
-              >
+              <div className="assembler-confirmation__domains" role="radiogroup" aria-label="Confirmation domain">
                 {domainOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
+                  <button
+                    key={option.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={resolvedDomain === option.key}
+                    className={`assembler-confirmation__domain ${
+                      resolvedDomain === option.key ? "is-active" : ""
+                    }`}
+                    onClick={() => setDomain(option.key)}
+                    disabled={pending}
+                  >
                     {option.label}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div className="assembler-confirmation__actions">

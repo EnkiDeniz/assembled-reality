@@ -352,7 +352,12 @@ export default function ProjectHome({
             <strong className="assembler-project-home__compact-title">
               {receiptSummary.latestDraftStatusLabel || "No proof yet"}
             </strong>
-            <p className="assembler-project-home__compact-detail">{receiptSummary.syncLine}</p>
+            <p className="assembler-project-home__compact-detail">
+              {[
+                receiptSummary.courthouseStatusLine || "",
+                receiptSummary.syncLine || "",
+              ].filter(Boolean).join(" · ")}
+            </p>
           </div>
         </section>
 
@@ -503,6 +508,7 @@ export default function ProjectHome({
           title={receiptSummary.latestDraftTitle || receiptSummary.latestDraftStatusLabel || "No proof drafted yet"}
           detail={[
             receiptSummary.latestDraftStatusLabel || "",
+            receiptSummary.courthouseStatusLine || "",
             receiptSummary.syncLine || "",
           ].filter(Boolean).join(" · ")}
           action={{ label: "Open Receipts", onClick: onOpenReceipts, disabled: false }}

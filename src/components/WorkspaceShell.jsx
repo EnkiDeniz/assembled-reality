@@ -70,6 +70,7 @@ import {
 } from "@/lib/seed-model";
 import {
   buildRealityInstrumentIssue,
+  buildWorkspaceRealityIssues,
   buildRealityInstrumentViewModel,
 } from "@/lib/reality-instrument";
 import {
@@ -108,7 +109,7 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
-const LAUNCH_SOURCE_HINT = "Version 1.0 supports PDF, DOCX, Markdown, TXT, link import, paste, and Speak note.";
+const LAUNCH_SOURCE_HINT = "Supports PDF, DOCX, Markdown, TXT, link import, paste, and Speak note.";
 
 function normalizeImageDerivationMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase();
@@ -1467,6 +1468,7 @@ function MobileSheetAction({
 
 function MobileSourceSheet({
   open = false,
+  intent = "switch",
   boxTitle = "Untitled Box",
   activeDocument = null,
   currentSeedDocument = null,
@@ -1488,6 +1490,155 @@ function MobileSourceSheet({
   if (!open) return null;
 
   const normalizedLink = extractSingleUrlText(manualLink);
+  const title = intent === "add" ? "Add source" : "Switch source";
+  const activeSeedDocument =
+    activeDocument?.documentKey && activeDocument.documentKey === currentSeedDocument?.documentKey
+      ? currentSeedDocument
+      : null;
+  const isActiveAssemblyContext = Boolean(
+    activeSeedDocument ||
+      activeDocument?.isAssembly ||
+      activeDocument?.documentType === "assembly",
+  );
+  const summaryEntries = [];
+
+  if (activeDocument?.documentKey) {
+    summaryEntries.push({
+      key: `summary-${activeDocument.documentKey}`,
+      eyebrow: activeSeedDocument ? "Current seed" : "Current",
+      title: activeDocument.title,
+      meta: `${getDocumentKindLabel(activeSeedDocument || activeDocument)} · ${getDocumentBlockCountLabel(activeSeedDocument || activeDocument)}`,
+      onClick: () => {
+        onClose();
+        onOpenDocument(
+          activeDocument.documentKey,
+          isActiveAssemblyContext ? WORKSPACE_MODES.assemble : WORKSPACE_MODES.listen,
+          {
+            phase: isActiveAssemblyContext ? BOX_PHASES.create : BOX_PHASES.think,
+          },
+        );
+      },
+    });
+  }
+
+  if (currentSeedDocument?.documentKey && currentSeedDocument.documentKey !== activeDocument?.documentKey) {
+    summaryEntries.push({
+      key: `summary-${currentSeedDocument.documentKey}`,
+      eyebrow: "Seed",
+      title: currentSeedDocument.title,
+      meta: `${getDocumentKindLabel(currentSeedDocument)} · ${getDocumentBlockCountLabel(currentSeedDocument)}`,
+      onClick: () => {
+        onClose();
+        onOpenDocument(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
+          phase: BOX_PHASES.create,
+        });
+      },
+    });
+  }
+
+  const addSection = (
+    <section className="assembler-mobile-sheet__section" aria-label="Add source">
+      <span className="assembler-mobile-sheet__section-label">Add</span>
+      <div className="assembler-mobile-sheet__panel-group assembler-mobile-sheet__panel-group--actions">
+        <MobileSheetAction
+          icon="upload"
+          label="Upload file"
+          detail="PDF, DOCX, Markdown, TXT"
+          onClick={() => {
+            onClose();
+            onUpload();
+          }}
+          disabled={uploading || linkPending}
+        />
+        <MobileSheetAction
+          icon="photo"
+          label="Photo"
+          detail="Camera or library"
+          onClick={() => {
+            onClose();
+            onOpenPhoto();
+          }}
+          disabled={uploading || linkPending}
+        />
+        <MobileSheetAction
+          icon="clipboard"
+          label="Paste text"
+          detail="Keep raw text as a source"
+          onClick={() => {
+            onClose();
+            onPasteSource();
+          }}
+          disabled={uploading || linkPending}
+        />
+        <MobileSheetAction
+          icon="speak"
+          label="Speak note"
+          detail="Record a voice memo"
+          onClick={() => {
+            onClose();
+            onOpenSpeak();
+          }}
+          disabled={uploading || linkPending}
+        />
+
+        <div className="assembler-mobile-sheet__link">
+          <label className="assembler-mobile-sheet__section-label" htmlFor="mobile-source-link">
+            Add link
+          </label>
+          <div className="assembler-mobile-sheet__link-row">
+            <input
+              id="mobile-source-link"
+              name="mobile-source-link"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              className="assembler-mobile-sheet__input"
+              value={manualLink}
+              onChange={(event) => setManualLink(event.target.value)}
+              placeholder="Paste a URL…"
+              disabled={uploading || linkPending}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && normalizedLink && !uploading && !linkPending) {
+                  event.preventDefault();
+                  onClose();
+                  onImportLink(normalizedLink);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="assembler-mobile-sheet__submit"
+              disabled={!normalizedLink || uploading || linkPending}
+              onClick={() => {
+                if (!normalizedLink) return;
+                onClose();
+                onImportLink(normalizedLink);
+              }}
+            >
+              Add link
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  const switchSection = (
+    <section className="assembler-mobile-sheet__section" aria-label="Switch source">
+      <ListenPicker
+        documents={documents}
+        activeDocumentKey={activeDocumentKey}
+        loadingDocumentKey={loadingDocumentKey}
+        onOpenDocument={(documentKey, mode, options = {}) => {
+          onClose();
+          onOpenDocument(documentKey, mode, options);
+        }}
+        variant="source-sheet"
+      />
+    </section>
+  );
 
   return (
     <div className="assembler-sheet assembler-sheet--workspace is-open">
@@ -1496,7 +1647,7 @@ function MobileSourceSheet({
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">{boxTitle}</span>
-            <span className="assembler-sheet__title">Switch or add</span>
+            <span className="assembler-sheet__title">{title}</span>
           </div>
 
           <button type="button" className="assembler-sheet__close" onClick={onClose}>
@@ -1504,138 +1655,29 @@ function MobileSourceSheet({
           </button>
         </div>
 
-        <div className="assembler-mobile-sheet__summary">
-          {activeDocument?.documentKey ? (
-            <button
-              type="button"
-              className="assembler-mobile-sheet__summary-card"
-              onClick={() => {
-                onClose();
-                onOpenDocument(
-                  activeDocument.documentKey,
-                  activeDocument.isAssembly || activeDocument.documentType === "assembly"
-                    ? WORKSPACE_MODES.assemble
-                    : WORKSPACE_MODES.listen,
-                  {
-                    phase:
-                      activeDocument.isAssembly || activeDocument.documentType === "assembly"
-                        ? BOX_PHASES.create
-                        : BOX_PHASES.think,
-                  },
-                );
-              }}
-            >
-              <span className="assembler-mobile-sheet__summary-eyebrow">Current</span>
-              <strong>{activeDocument.title}</strong>
-            </button>
-          ) : null}
-          {currentSeedDocument?.documentKey ? (
-            <button
-              type="button"
-              className="assembler-mobile-sheet__summary-card"
-              onClick={() => {
-                onClose();
-                onOpenDocument(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
-                  phase: BOX_PHASES.create,
-                });
-              }}
-            >
-              <span className="assembler-mobile-sheet__summary-eyebrow">Seed</span>
-              <strong>{currentSeedDocument.title}</strong>
-            </button>
-          ) : null}
-        </div>
-
         <div className="assembler-mobile-sheet__layout">
-          <div className="assembler-mobile-sheet__content">
-            <ListenPicker
-              documents={documents}
-              activeDocumentKey={activeDocumentKey}
-              loadingDocumentKey={loadingDocumentKey}
-              onOpenDocument={(documentKey, mode, options = {}) => {
-                onClose();
-                onOpenDocument(documentKey, mode, options);
-              }}
-            />
-          </div>
-
-          <aside className="assembler-mobile-sheet__rail">
-            <MobileSheetAction
-              icon="open"
-              label="Upload file"
-              detail="PDF, DOCX, Markdown, TXT"
-              onClick={() => {
-                onClose();
-                onUpload();
-              }}
-              disabled={uploading || linkPending}
-            />
-            <MobileSheetAction
-              icon="photo"
-              label="Photo"
-              detail="Take photo or open library"
-              onClick={() => {
-                onClose();
-                onOpenPhoto();
-              }}
-              disabled={uploading || linkPending}
-            />
-            <MobileSheetAction
-              icon="paste"
-              label="Paste text"
-              detail="Keep raw text as a source"
-              onClick={() => {
-                onClose();
-                onPasteSource();
-              }}
-              disabled={uploading || linkPending}
-            />
-            <MobileSheetAction
-              icon="speak"
-              label="Speak note"
-              detail="Record a voice memo"
-              onClick={() => {
-                onClose();
-                onOpenSpeak();
-              }}
-              disabled={uploading || linkPending}
-            />
-
-            <div className="assembler-mobile-sheet__link">
-              <label className="assembler-mobile-sheet__summary-eyebrow" htmlFor="mobile-source-link">
-                Add link
-              </label>
-              <div className="assembler-mobile-sheet__link-row">
-                <input
-                  id="mobile-source-link"
-                  className="assembler-mobile-sheet__input"
-                  value={manualLink}
-                  onChange={(event) => setManualLink(event.target.value)}
-                  placeholder="https://example.com/article"
-                  disabled={uploading || linkPending}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && normalizedLink && !uploading && !linkPending) {
-                      event.preventDefault();
-                      onClose();
-                      onImportLink(normalizedLink);
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="assembler-mobile-sheet__submit"
-                  disabled={!normalizedLink || uploading || linkPending}
-                  onClick={() => {
-                    if (!normalizedLink) return;
-                    onClose();
-                    onImportLink(normalizedLink);
-                  }}
-                >
-                  Add link
-                </button>
+          {summaryEntries.length ? (
+            <section className="assembler-mobile-sheet__section" aria-label="Current context">
+              <span className="assembler-mobile-sheet__section-label">Context</span>
+              <div className="assembler-mobile-sheet__panel-group assembler-mobile-sheet__panel-group--summary">
+                {summaryEntries.map((entry) => (
+                  <button
+                    key={entry.key}
+                    type="button"
+                    className="assembler-mobile-sheet__summary-card"
+                    onClick={entry.onClick}
+                  >
+                    <span className="assembler-mobile-sheet__summary-eyebrow">{entry.eyebrow}</span>
+                    <strong>{entry.title}</strong>
+                    <span className="assembler-mobile-sheet__summary-meta">{entry.meta}</span>
+                  </button>
+                ))}
               </div>
-            </div>
-          </aside>
+            </section>
+          ) : null}
+
+          {intent === "add" ? addSection : switchSection}
+          {intent === "add" ? switchSection : addSection}
         </div>
       </div>
     </div>
@@ -1678,34 +1720,39 @@ function MobileBoxSheet({
           <span>{receiptCount} proof draft{receiptCount === 1 ? "" : "s"}</span>
         </div>
 
-        <div className="assembler-mobile-sheet__rail assembler-mobile-sheet__rail--box">
-          <MobileSheetAction
-            icon="box"
-            label="Go Home"
-            detail="Return to Box Home"
-            onClick={() => {
-              onClose();
-              onGoHome();
-            }}
-          />
-          <MobileSheetAction
-            icon="open"
-            label="All boxes"
-            detail="Switch or create a box"
-            onClick={() => {
-              onClose();
-              onOpenBoxes();
-            }}
-          />
-          <MobileSheetAction
-            icon="manage"
-            label="Manage box"
-            detail="Rename, pin, archive, or delete"
-            onClick={() => {
-              onClose();
-              onManageBox();
-            }}
-          />
+        <div className="assembler-mobile-sheet__layout">
+          <section className="assembler-mobile-sheet__section" aria-label="Box actions">
+            <span className="assembler-mobile-sheet__section-label">Actions</span>
+            <div className="assembler-mobile-sheet__panel-group">
+              <MobileSheetAction
+                icon="box"
+                label="Go Home"
+                detail="Return to Box Home"
+                onClick={() => {
+                  onClose();
+                  onGoHome();
+                }}
+              />
+              <MobileSheetAction
+                icon="open"
+                label="All boxes"
+                detail="Switch or create a box"
+                onClick={() => {
+                  onClose();
+                  onOpenBoxes();
+                }}
+              />
+              <MobileSheetAction
+                icon="manage"
+                label="Manage box"
+                detail="Rename, pin, archive, or delete"
+                onClick={() => {
+                  onClose();
+                  onManageBox();
+                }}
+              />
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -1908,6 +1955,7 @@ function ListenPicker({
   activeDocumentKey,
   loadingDocumentKey,
   onOpenDocument,
+  variant = "default",
 }) {
   const grouped = groupedDocuments(documents);
 
@@ -1927,7 +1975,7 @@ function ListenPicker({
           onClick={() => onOpenDocument(document.documentKey, WORKSPACE_MODES.listen)}
           aria-label={`Listen to ${document.title}`}
         >
-          <WorkspaceActionIcon kind="listen" />
+          <WorkspaceGlyph kind="listen" />
         </button>
         <button
           type="button"
@@ -1953,19 +2001,23 @@ function ListenPicker({
   }
 
   return (
-    <div className="assembler-listen-picker">
+    <div className={`assembler-listen-picker ${variant === "source-sheet" ? "assembler-listen-picker--sheet" : ""}`}>
       <div className="assembler-listen-picker__section">
         <span className="assembler-listen-picker__label">Sources</span>
-        {grouped.sources.length
-          ? grouped.sources.map((document) => renderDocumentRow(document))
-          : <span className="assembler-listen-picker__empty">No visible sources.</span>}
+        <div className="assembler-listen-picker__panel">
+          {grouped.sources.length
+            ? grouped.sources.map((document) => renderDocumentRow(document))
+            : <span className="assembler-listen-picker__empty">No visible sources.</span>}
+        </div>
       </div>
 
       <div className="assembler-listen-picker__section">
         <span className="assembler-listen-picker__label">Seeds</span>
-        {grouped.assemblies.length
-          ? grouped.assemblies.map((document) => renderDocumentRow(document))
-          : <span className="assembler-listen-picker__empty">No seed yet.</span>}
+        <div className="assembler-listen-picker__panel">
+          {grouped.assemblies.length
+            ? grouped.assemblies.map((document) => renderDocumentRow(document))
+            : <span className="assembler-listen-picker__empty">No seed yet.</span>}
+        </div>
       </div>
     </div>
   );
@@ -2447,7 +2499,7 @@ function DropAnythingSheet({
             disabled={pending}
           >
             <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="upload" />
+              <WorkspaceGlyph kind="upload" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Upload file</span>
@@ -2461,7 +2513,7 @@ function DropAnythingSheet({
             disabled={pending}
           >
             <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="photo" />
+              <WorkspaceGlyph kind="photo" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Photo library</span>
@@ -2475,7 +2527,7 @@ function DropAnythingSheet({
             disabled={pending}
           >
             <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="clipboard" />
+              <WorkspaceGlyph kind="clipboard" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Paste text</span>
@@ -2489,7 +2541,7 @@ function DropAnythingSheet({
             disabled={pending}
           >
             <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="speak" />
+              <WorkspaceGlyph kind="speak" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Speak note</span>
@@ -2504,10 +2556,16 @@ function DropAnythingSheet({
           <div className="assembler-drop-sheet__link-row">
             <input
               id="manual-link-input"
+              name="manual-link-input"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
               className="assembler-drop-sheet__input"
               value={manualLink}
               onChange={(event) => setManualLink(event.target.value)}
-              placeholder="https://example.com/article"
+              placeholder="Paste a URL…"
               disabled={pending}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && normalizedLink && !pending) {
@@ -2526,14 +2584,10 @@ function DropAnythingSheet({
                 }
               }}
             >
-              Import
+              Add link
             </button>
           </div>
         </div>
-
-        <p className="assembler-drop-sheet__note assembler-drop-sheet__note--beta">
-          Folder import and arbitrary audio uploads stay secondary here. Photo is now a first-class mobile path.
-        </p>
       </div>
     </div>
   );
@@ -2591,7 +2645,7 @@ function PhotoSourceSheet({
             disabled={pending}
           >
             <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="photo" />
+              <WorkspaceGlyph kind="photo" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Take photo</span>
@@ -2605,7 +2659,7 @@ function PhotoSourceSheet({
             disabled={pending}
           >
             <span className="assembler-drop-sheet__action-icon" aria-hidden="true">
-              <WorkspaceActionIcon kind="upload" />
+              <WorkspaceGlyph kind="upload" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
               <span className="assembler-drop-sheet__action-title">Photo library</span>
@@ -2884,6 +2938,7 @@ function WorkspaceToolbar({
   onOpenConfirmation,
   onInstrumentMove,
   isMobileLayout = false,
+  receiptAttentionTone = "",
 }) {
   return (
     <WorkspaceControlSurface
@@ -2903,6 +2958,7 @@ function WorkspaceToolbar({
       onManageBox={onManageBox}
       onOpenConfirmation={onOpenConfirmation}
       onInstrumentMove={onInstrumentMove}
+      receiptAttentionTone={receiptAttentionTone}
     />
   );
 }
@@ -3867,6 +3923,8 @@ export default function WorkspaceShell({
   initialLaunchpadView = LAUNCHPAD_VIEWS.boxes,
   resumeSessionSummary = null,
   initialEntryState = "returning",
+  initialBoxPhase = "",
+  initialWorkspaceNotice = null,
 }) {
   const fileInputRef = useRef(null);
   const photoCameraInputRef = useRef(null);
@@ -3898,6 +3956,8 @@ export default function WorkspaceShell({
   const seedEnsureFingerprintRef = useRef("");
   const seedSuggestFingerprintRef = useRef("");
   const receiptSealAuditRequestIdRef = useRef(0);
+  const receiptSealImmediateAuditDraftRef = useRef("");
+  const remoteSyncAttemptedRef = useRef({});
   const pendingSeedFocusRef = useRef(false);
   const attachDocumentToActiveProjectRef = useRef(() => {});
   const applyProjectPayloadRef = useRef(() => {});
@@ -3916,6 +3976,9 @@ export default function WorkspaceShell({
     Array.isArray(projects) && projects.length ? projects : buildProjectsFromDocuments(documents),
   );
   const requestedWorkspaceMode = normalizeWorkspaceMode(initialMode || "", "");
+  const requestedBoxPhase = Object.values(BOX_PHASES).includes(initialBoxPhase)
+    ? initialBoxPhase
+    : "";
   const [activeProjectKey, setActiveProjectKey] = useState(
     initialProjectKey || projects?.[0]?.projectKey || DEFAULT_PROJECT_KEY,
   );
@@ -3932,11 +3995,12 @@ export default function WorkspaceShell({
     normalizeWorkspaceMode(requestedWorkspaceMode, WORKSPACE_MODES.assemble),
   );
   const [boxPhase, setBoxPhase] = useState(
-    requestedWorkspaceMode === WORKSPACE_MODES.assemble ||
+    requestedBoxPhase ||
+      (requestedWorkspaceMode === WORKSPACE_MODES.assemble ||
       initialDocument?.isAssembly ||
       initialDocument?.documentType === "assembly"
-      ? BOX_PHASES.create
-      : BOX_PHASES.think,
+        ? BOX_PHASES.create
+        : BOX_PHASES.think),
   );
   const [editMode, setEditMode] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -4014,6 +4078,7 @@ export default function WorkspaceShell({
   );
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
+  const [workspacePickerIntent, setWorkspacePickerIntent] = useState("switch");
   const [mobileBoxSheetOpen, setMobileBoxSheetOpen] = useState(false);
   const [realityInstrumentOpen, setRealityInstrumentOpen] = useState(false);
   const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
@@ -4043,6 +4108,13 @@ export default function WorkspaceShell({
   const [entryStateOverride, setEntryStateOverride] = useState(
     initialEntryState === "first-time" ? "first-time" : "",
   );
+  const openWorkspacePicker = useCallback((intent = "switch") => {
+    setWorkspacePickerIntent(intent === "add" ? "add" : "switch");
+    setWorkspacePickerOpen(true);
+  }, []);
+  const closeWorkspacePicker = useCallback(() => {
+    setWorkspacePickerOpen(false);
+  }, []);
 
   const hydratedProjects = hydrateProjectsWithDocuments(projectsState, documentsState);
   const activeProject =
@@ -4081,6 +4153,13 @@ export default function WorkspaceShell({
     connectionStatus: getReceiptsConnectionStatus,
     connectionLastError: getReceiptsConnectionLastError,
   });
+  const latestRemoteSealStatus = String(receiptSummaryViewModel?.latestRemoteSealStatus || "").trim().toLowerCase();
+  const receiptPhaseAttentionTone = receiptSummaryViewModel?.latestCanRetryRemoteSync
+    && (latestRemoteSealStatus === "failed" || latestRemoteSealStatus === "pending_create" || latestRemoteSealStatus === "pending_seal")
+    ? receiptSummaryViewModel.courthouseStatusTone || "warning"
+    : getReceiptsConnectionStatus === "EXPIRED" || getReceiptsConnectionStatus === "ERROR"
+      ? "warning"
+      : "";
   const canRunOperate = operateViewModel.canRunOperate;
   const availableVoiceCatalog = voiceCatalog.filter(
     (entry) =>
@@ -4290,7 +4369,7 @@ export default function WorkspaceShell({
         summary: receiptSealAuditError,
         compactSummary: receiptSealAuditError,
         moveSpace: [
-          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending },
+          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Refresh audit", disabled: receiptSealAuditPending || receiptPending },
           {
             key: "instrument-interpret",
             label: "Interpret with Seven",
@@ -4321,7 +4400,6 @@ export default function WorkspaceShell({
         compactSummary: "Write the delta before sealing",
         moveSpace: [
           { key: "receipt-focus-delta", label: "Write delta" },
-          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending },
         ],
       });
     }
@@ -4333,11 +4411,15 @@ export default function WorkspaceShell({
         severity: "constraint",
         priority: 68,
         label: "Seal audit",
-        headline: "Run the pre-seal audit before sealing.",
-        summary: "The audit checks Root alignment, evidence contact, and Seed alignment before the seal closes the line.",
-        compactSummary: "Run the pre-seal audit",
+        headline: receiptSealAuditPending
+          ? "The pre-seal audit is reading the current line."
+          : "The pre-seal audit will update as you write.",
+        summary: receiptSealAuditPending
+          ? "Root alignment, evidence contact, and Seed alignment are being read right now."
+          : "The audit updates continuously once the delta statement is present.",
+        compactSummary: receiptSealAuditPending ? "Auditing the current line" : "Audit updates as you write",
         moveSpace: [
-          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending },
+          { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Refresh audit", disabled: receiptSealAuditPending || receiptPending },
         ],
       });
     }
@@ -4433,7 +4515,7 @@ export default function WorkspaceShell({
               "Check the Root, evidence, and Seed before sealing.",
             defaultMoveSpace: receiptSealAudit?.sealReady
               ? [{ key: "receipt-seal", label: "Seal receipt", disabled: receiptPending }]
-              : [{ key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Run audit", disabled: receiptSealAuditPending || receiptPending }],
+              : [{ key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Refresh audit", disabled: receiptSealAuditPending || receiptPending }],
           })
         : null,
     [
@@ -4542,6 +4624,91 @@ export default function WorkspaceShell({
       voiceRecorderOpen,
     ],
   );
+  const courthouseInstrumentIssue = useMemo(() => {
+    if (!receiptSummaryViewModel?.latestDraft?.id) return null;
+    const latestRemoteSealStatus = String(receiptSummaryViewModel.latestRemoteSealStatus || "").trim().toLowerCase();
+
+    if (
+      receiptSummaryViewModel.latestCanRetryRemoteSync &&
+      (latestRemoteSealStatus === "failed" ||
+        latestRemoteSealStatus === "pending_create" ||
+        latestRemoteSealStatus === "pending_seal")
+    ) {
+      return buildRealityInstrumentIssue({
+        key: `courthouse-retry:${receiptSummaryViewModel.latestDraft.id}`,
+        surfaceKey: "receipts",
+        severity: latestRemoteSealStatus === "failed" ? "warning" : "constraint",
+        priority: 66,
+        label: "Courthouse",
+        headline:
+          latestRemoteSealStatus === "failed"
+            ? "The last seal did not reach the courthouse."
+            : "The latest seal is still waiting for the courthouse.",
+        summary:
+          receiptSummaryViewModel.courthouseStatusDetail ||
+          receiptSummaryViewModel.syncLine ||
+          "Retry when you want the portable courthouse record to catch up.",
+        compactSummary: receiptSummaryViewModel.courthouseStatusLine || "Retry courthouse sync",
+        moveSpace: [
+          { key: "retry-remote-sync", label: "Retry sync" },
+          {
+            key: "open-getreceipts-connect",
+            label: "Reconnect",
+            disabled: getReceiptsConnectionStatus === "CONNECTED",
+          },
+        ],
+      });
+    }
+
+    if (
+      (getReceiptsConnectionStatus === "EXPIRED" || getReceiptsConnectionStatus === "ERROR") &&
+      receiptSummaryViewModel.courthouseAction?.kind === "connect"
+    ) {
+      return buildRealityInstrumentIssue({
+        key: "courthouse-reconnect",
+        surfaceKey: "receipts",
+        severity: "warning",
+        priority: 62,
+        label: "Courthouse",
+        headline: "Reconnect GetReceipts to resume courthouse sealing.",
+        summary:
+          receiptSummaryViewModel.courthouseStatusDetail ||
+          "Local proof is preserved. Reconnect when you want the courthouse leg back online.",
+        compactSummary: receiptSummaryViewModel.courthouseStatusLine || "Reconnect GetReceipts",
+        moveSpace: [
+          { key: "open-getreceipts-connect", label: "Reconnect" },
+        ],
+      });
+    }
+
+    return null;
+  }, [
+    getReceiptsConnectionStatus,
+    receiptSummaryViewModel,
+  ]);
+  const workspaceRealityIssues = useMemo(
+    () =>
+      buildWorkspaceRealityIssues({
+        issues: [
+          voiceInstrumentIssue,
+          receiptInstrumentIssue,
+          courthouseInstrumentIssue,
+          rootInstrumentIssue,
+          globalInstrumentIssue,
+          documentWarningInstrumentIssue,
+        ],
+        dismissedIssueKeys: dismissedInstrumentKeys,
+      }),
+    [
+      courthouseInstrumentIssue,
+      dismissedInstrumentKeys,
+      documentWarningInstrumentIssue,
+      globalInstrumentIssue,
+      receiptInstrumentIssue,
+      rootInstrumentIssue,
+      voiceInstrumentIssue,
+    ],
+  );
   const realityInstrumentViewModel = useMemo(
     () =>
       buildRealityInstrumentViewModel({
@@ -4549,13 +4716,7 @@ export default function WorkspaceShell({
         boxTitle: activeBoxTitle,
         documentTitle: activeDocument.title,
         stateSummary: controlSurfaceViewModel?.stateSummary,
-        issues: [
-          voiceInstrumentIssue,
-          receiptInstrumentIssue,
-          rootInstrumentIssue,
-          globalInstrumentIssue,
-          documentWarningInstrumentIssue,
-        ].filter((issue) => issue && !dismissedInstrumentKeys[issue.key]),
+        issues: workspaceRealityIssues.issues,
         defaultSummary:
           controlSurfaceViewModel?.stateSummary?.nextRequirement ||
           "Reality is currently legible.",
@@ -4567,12 +4728,7 @@ export default function WorkspaceShell({
       activeSurfaceKey,
       controlSurfaceViewModel?.stateSummary,
       defaultRealityMoveSpace,
-      dismissedInstrumentKeys,
-      documentWarningInstrumentIssue,
-      globalInstrumentIssue,
-      receiptInstrumentIssue,
-      rootInstrumentIssue,
-      voiceInstrumentIssue,
+      workspaceRealityIssues.issues,
     ],
   );
   const documentInstrumentViewModel = useMemo(
@@ -4933,6 +5089,28 @@ export default function WorkspaceShell({
       // Ignore invalid stored notices.
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !initialWorkspaceNotice?.message) return;
+
+    setStatus(initialWorkspaceNotice.message);
+    setStatusTone(initialWorkspaceNotice.tone || "");
+    if (initialWorkspaceNotice.tone === "error") {
+      setGlobalInstrumentIssue(
+        buildFeedbackInstrumentIssue(
+          initialWorkspaceNotice.message,
+          initialWorkspaceNotice.tone || "",
+        ),
+      );
+    } else {
+      setGlobalInstrumentIssue(null);
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("connected");
+    url.searchParams.delete("error");
+    window.history.replaceState({}, "", url.toString());
+  }, [initialWorkspaceNotice]);
 
   useEffect(() => {
     if (!boxManagementOpen) return;
@@ -5515,7 +5693,7 @@ export default function WorkspaceShell({
 
     if (move.key === "open-add") {
       if (isMobileLayout) {
-        setWorkspacePickerOpen(true);
+        openWorkspacePicker("add");
         return;
       }
       setDropAnythingOpen(true);
@@ -5556,6 +5734,27 @@ export default function WorkspaceShell({
 
     if (move.key === "receipt-seal") {
       void sealReceiptDraft();
+      return;
+    }
+
+    if (move.key === "retry-remote-sync") {
+      void retryReceiptRemoteSync(receiptSummaryViewModel?.latestDraft || receiptSealDraft);
+      return;
+    }
+
+    if (move.key === "open-verify") {
+      const verifyUrl =
+        receiptSummaryViewModel?.latestVerifyUrl ||
+        realityInstrumentViewModel?.activeIssue?.sevenAssist?.context?.verifyUrl ||
+        "";
+      if (verifyUrl && typeof window !== "undefined") {
+        window.open(verifyUrl, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+
+    if (move.key === "open-getreceipts-connect") {
+      openGetReceiptsConnection();
       return;
     }
 
@@ -5763,14 +5962,14 @@ export default function WorkspaceShell({
     );
   }
 
-  function upsertProjectDraft(draft) {
+  const upsertProjectDraft = useCallback((draft) => {
     if (!draft?.id) return;
 
     setProjectDraftsState((previous) => {
       const remaining = previous.filter((entry) => entry.id !== draft.id);
       return [draft, ...remaining].slice(0, 6);
     });
-  }
+  }, []);
 
   function persistWorkspaceNotice(message, tone = "success") {
     if (typeof window === "undefined" || !message) return;
@@ -6083,6 +6282,61 @@ export default function WorkspaceShell({
     setReceiptSealAuditStatement("");
   }
 
+  function openGetReceiptsConnection(returnTo = "workspace-receipts") {
+    if (typeof window === "undefined") return;
+
+    const url = new URL("/connect/getreceipts", window.location.origin);
+    if (activeProjectKey) {
+      url.searchParams.set("project", activeProjectKey);
+    }
+    url.searchParams.set("returnTo", returnTo);
+    window.location.assign(url.toString());
+  }
+
+  const retryReceiptRemoteSync = useCallback(async (draft, { silent = false } = {}) => {
+    if (!draft?.id) return null;
+
+    try {
+      const response = await fetch("/api/workspace/receipt/remote-sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          draftId: draft.id,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (payload?.draft?.id) {
+        upsertProjectDraft(payload.draft);
+      }
+
+      if (!response.ok || !payload?.draft?.id || payload?.remoteSync?.ok === false) {
+        throw new Error(payload?.error || "Could not sync this receipt to GetReceipts.");
+      }
+      if (!silent) {
+        const remoteSealStatus = String(payload?.draft?.payload?.remoteSeal?.status || "").trim().toLowerCase();
+        setFeedback(
+          remoteSealStatus === "sealed"
+            ? "Courthouse sync complete."
+            : "Courthouse sync updated.",
+          "success",
+        );
+      }
+
+      return payload.draft;
+    } catch (error) {
+      if (!silent) {
+        setFeedback(
+          error instanceof Error ? error.message : "Could not sync this receipt to GetReceipts.",
+          "error",
+        );
+      }
+      return null;
+    }
+  }, [upsertProjectDraft]);
+
   const runReceiptSealAudit = useCallback(async (
     draft = receiptSealDraft,
     nextDelta = receiptSealDelta,
@@ -6139,6 +6393,23 @@ export default function WorkspaceShell({
   }, [activeProjectKey, receiptSealDelta, receiptSealDraft]);
 
   useEffect(() => {
+    const draftId = String(receiptSealDraft?.id || "").trim();
+    if (!draftId) {
+      receiptSealImmediateAuditDraftRef.current = "";
+      return undefined;
+    }
+    if (receiptSealImmediateAuditDraftRef.current === draftId) {
+      return undefined;
+    }
+
+    receiptSealImmediateAuditDraftRef.current = draftId;
+    const normalizedDelta = String(receiptSealDelta || "").trim();
+    if (!normalizedDelta) return undefined;
+
+    void runReceiptSealAudit(receiptSealDraft, normalizedDelta);
+  }, [receiptSealDelta, receiptSealDraft, runReceiptSealAudit]);
+
+  useEffect(() => {
     if (!receiptSealDraft?.id) return undefined;
 
     const normalizedDelta = String(receiptSealDelta || "").trim();
@@ -6148,13 +6419,44 @@ export default function WorkspaceShell({
       setReceiptSealAuditError("");
       return undefined;
     }
+    if (
+      normalizedDelta === receiptSealAuditStatement &&
+      (receiptSealAudit || receiptSealAuditPending)
+    ) {
+      return undefined;
+    }
 
     const timeoutId = window.setTimeout(() => {
       void runReceiptSealAudit(receiptSealDraft, normalizedDelta);
     }, 320);
 
     return () => window.clearTimeout(timeoutId);
-  }, [receiptSealDelta, receiptSealDraft, runReceiptSealAudit]);
+  }, [
+    receiptSealAudit,
+    receiptSealAuditPending,
+    receiptSealAuditStatement,
+    receiptSealDelta,
+    receiptSealDraft,
+    runReceiptSealAudit,
+  ]);
+
+  useEffect(() => {
+    if (getReceiptsConnectionStatus !== "CONNECTED") return;
+
+    const retryableDrafts = projectDraftsState.filter((draft) => {
+      const remoteStatus = String(draft?.payload?.remoteSeal?.status || "").trim().toLowerCase();
+      return (
+        Boolean(draft?.id) &&
+        (remoteStatus === "pending_create" || remoteStatus === "pending_seal")
+      );
+    });
+
+    retryableDrafts.forEach((draft) => {
+      if (remoteSyncAttemptedRef.current[draft.id]) return;
+      remoteSyncAttemptedRef.current[draft.id] = true;
+      void retryReceiptRemoteSync(draft, { silent: true });
+    });
+  }, [getReceiptsConnectionStatus, projectDraftsState, retryReceiptRemoteSync]);
 
   async function sealReceiptDraft() {
     if (!receiptSealDraft?.id) return;
@@ -6204,7 +6506,16 @@ export default function WorkspaceShell({
         setReceiptSealAuditStatement(deltaStatement);
       }
       upsertProjectDraft(payload.draft);
-      setFeedback("Receipt sealed.", "success");
+      const remoteSealStatus = String(payload?.draft?.payload?.remoteSeal?.status || "").trim().toLowerCase();
+      const sealMessage =
+        remoteSealStatus === "sealed"
+          ? "Receipt sealed and verified."
+          : remoteSealStatus === "pending_create" || remoteSealStatus === "pending_seal"
+            ? "Receipt sealed locally. Courthouse sync is still pending."
+            : remoteSealStatus === "failed"
+              ? "Receipt sealed locally. Courthouse sync can retry from Receipts."
+              : "Receipt sealed.";
+      setFeedback(sealMessage, "success");
       setReceiptSealDraft(null);
       setReceiptSealDelta("");
       setReceiptSealAudit(null);
@@ -9532,7 +9843,7 @@ export default function WorkspaceShell({
               <button
                 type="button"
                 className="assembler-header__start assembler-header__start--source"
-                onClick={() => setWorkspacePickerOpen(true)}
+                onClick={() => openWorkspacePicker("switch")}
               >
                 {mobileSourceLabel}
               </button>
@@ -9561,7 +9872,7 @@ export default function WorkspaceShell({
               <button
                 type="button"
                 className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
-                onClick={() => setWorkspacePickerOpen(true)}
+                onClick={() => openWorkspacePicker("switch")}
               >
                 Sources
               </button>
@@ -9644,7 +9955,7 @@ export default function WorkspaceShell({
               }
               onOpenIntake={() => {
                 if (isMobileLayout) {
-                  setWorkspacePickerOpen(true);
+                  openWorkspacePicker("add");
                   return;
                 }
                 setDropAnythingOpen(true);
@@ -9835,6 +10146,7 @@ export default function WorkspaceShell({
                     onOpenConfirmation={() => setConfirmationOpen(true)}
                     onInstrumentMove={handleRealityInstrumentMove}
                     isMobileLayout={false}
+                    receiptAttentionTone={receiptPhaseAttentionTone}
                   />
                 ) : null}
 
@@ -9854,9 +10166,11 @@ export default function WorkspaceShell({
                       onRunOperate={() => void runOperate()}
                       onExportReceipt={exportReceipt}
                       onExportDocument={exportDocument}
-                      onOpenGetReceipts={() => {
-                        if (typeof window !== "undefined") {
-                          window.location.assign("/account");
+                      onOpenGetReceipts={() => openGetReceiptsConnection()}
+                      onRetryRemoteSync={(draft) => void retryReceiptRemoteSync(draft)}
+                      onOpenVerifyUrl={(url) => {
+                        if (url && typeof window !== "undefined") {
+                          window.open(url, "_blank", "noopener,noreferrer");
                         }
                       }}
                       onSealReceipt={openReceiptSealDialog}
@@ -10081,7 +10395,7 @@ export default function WorkspaceShell({
             onGoListen={openMobileListenSurface}
             onGoSeed={openMobileSeedSurface}
             onGoReceipts={openReceiptsSurface}
-            onOpenAdd={() => setWorkspacePickerOpen(true)}
+            onOpenAdd={() => openWorkspacePicker("add")}
             onOpenConfirmation={() => setConfirmationOpen(true)}
           />
         ) : null}
@@ -10107,6 +10421,7 @@ export default function WorkspaceShell({
         {isMobileLayout ? (
           <MobileSourceSheet
             open={workspacePickerOpen}
+            intent={workspacePickerIntent}
             boxTitle={activeBoxTitle}
             activeDocument={mobileSourceDocument || sevenContextDocument}
             currentSeedDocument={currentSeedDocument}
@@ -10123,7 +10438,7 @@ export default function WorkspaceShell({
             onImportLink={(url) => {
               void importLinkFromIntake(url);
             }}
-            onClose={() => setWorkspacePickerOpen(false)}
+            onClose={closeWorkspacePicker}
             uploading={uploading}
             linkPending={Boolean(pastePendingMode)}
           />

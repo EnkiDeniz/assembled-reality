@@ -8,6 +8,10 @@ import {
   getGetReceiptsConnectionForUser,
 } from "@/lib/getreceipts";
 import {
+  buildRemoteSealState,
+  syncReceiptDraftToCourthouse,
+} from "@/lib/receipt-remote-sync";
+import {
   buildAssemblyIndexEvent,
   buildAssemblyStateSummary,
 } from "@/lib/assembly-architecture";
@@ -90,14 +94,23 @@ export async function POST(request) {
 
   let remoteReceipt = null;
   let remoteError = null;
+  let remoteSeal = null;
   let status = "LOCAL_DRAFT";
 
   if (connection?.status === "CONNECTED" && connection?.accessTokenEncrypted) {
     try {
       remoteReceipt = await createRemoteReadingReceiptDraft(connection, payload);
       status = "REMOTE_DRAFT";
+      remoteSeal = buildRemoteSealState({
+        status: "pending_seal",
+        receiptId: remoteReceipt?.id || null,
+      });
     } catch (error) {
       remoteError = error instanceof Error ? error.message : "getreceipts-create-failed";
+      remoteSeal = buildRemoteSealState({
+        status: error?.retryable ? "pending_create" : "failed",
+        error,
+      });
     }
   }
 
@@ -118,6 +131,7 @@ export async function POST(request) {
       ...payload,
       remoteReceipt,
       remoteError,
+      remoteSeal,
     },
   });
 
@@ -126,6 +140,7 @@ export async function POST(request) {
     draft,
     remoteReceipt,
     remoteError,
+    remoteSeal,
   });
 }
 
@@ -192,10 +207,11 @@ export async function PUT(request) {
 
   const confirmedEvidenceBlocks = listConfirmedEvidenceBlocksFromDocuments(evidenceDocuments);
   const evidenceSnapshot = audit.evidenceSnapshot || buildEvidenceSnapshot(confirmedEvidenceBlocks);
+  const localSealedAt = new Date().toISOString();
   const nextPayload = {
     ...(draft.payload && typeof draft.payload === "object" ? draft.payload : {}),
     deltaStatement,
-    sealedAt: new Date().toISOString(),
+    sealedAt: localSealedAt,
     evidenceSnapshot,
     sealAudit: {
       summary: audit.summary,
@@ -204,15 +220,55 @@ export async function PUT(request) {
       overrideApplied: !audit.sealReady && overrideAudit,
     },
   };
-  const sealedDraft = await updateReadingReceiptDraftForUser(session.user.id, draftId, {
+  let sealedDraft = await updateReadingReceiptDraftForUser(session.user.id, draftId, {
     status: "SEALED",
     sourceSections: evidenceSnapshot.sourceDocumentKeys,
     sourceMarkIds: evidenceSnapshot.blocks.map((block) => block.blockId),
     payload: nextPayload,
   });
+  let remoteSync = null;
+
+  const connection = await getGetReceiptsConnectionForUser(session.user.id);
+  if (connection?.status === "CONNECTED" && connection?.accessTokenEncrypted) {
+    remoteSync = await syncReceiptDraftToCourthouse({
+      userId: session.user.id,
+      connection,
+      draft: {
+        ...sealedDraft,
+        payload: nextPayload,
+      },
+      remotePayload: nextPayload,
+      evidenceSnapshot,
+    });
+
+    const remoteSeal = remoteSync?.remoteSeal || null;
+    const remotePayload = {
+      ...nextPayload,
+      sealedAt: remoteSeal?.sealedAt || nextPayload.sealedAt,
+      remoteReceipt:
+        remoteSync?.remoteReceipt ||
+        nextPayload.remoteReceipt ||
+        null,
+      remoteError: remoteSync?.ok
+        ? null
+        : remoteSync?.error instanceof Error
+          ? remoteSync.error.message
+          : nextPayload.remoteError || null,
+      remoteSeal,
+    };
+
+    sealedDraft = await updateReadingReceiptDraftForUser(session.user.id, draftId, {
+      status: "SEALED",
+      getReceiptsReceiptId:
+        remoteSync?.remoteReceiptId ||
+        sealedDraft.getReceiptsReceiptId ||
+        null,
+      payload: remotePayload,
+    });
+  }
 
   if (!projectKey) {
-    return NextResponse.json({ ok: true, draft: sealedDraft });
+    return NextResponse.json({ ok: true, draft: sealedDraft, audit, remoteSync });
   }
 
   const projectDocuments = getProjectDocuments(allDocuments, hydratedProject);
@@ -229,12 +285,15 @@ export async function PUT(request) {
   const currentMeta = hydratedProject?.metadataJson || rawProject?.metadataJson || null;
   const previousState = String(currentMeta?.assemblyState?.current || "").trim().toLowerCase();
   const declaration = String(nextStateSummary?.root?.text || "").trim();
+  const remoteSeal = sealedDraft?.payload?.remoteSeal || nextPayload.remoteSeal || null;
   const nextStateHistory = Array.isArray(currentMeta?.stateHistory) ? [...currentMeta.stateHistory] : [];
   const nextEvents = [
     buildAssemblyIndexEvent("receipt_sealed", {
       declaration,
       move: `Sealed receipt ${draft.title || draft.id} for ${draft.documentKey || "the box"}.`,
-      return: `${evidenceSnapshot.blockCount} confirmed evidence block${evidenceSnapshot.blockCount === 1 ? "" : "s"} support this seal.`,
+      return: remoteSeal?.sealHash
+        ? `${evidenceSnapshot.blockCount} confirmed evidence block${evidenceSnapshot.blockCount === 1 ? "" : "s"} support this seal. Courthouse verification is available.`
+        : `${evidenceSnapshot.blockCount} confirmed evidence block${evidenceSnapshot.blockCount === 1 ? "" : "s"} support this seal.`,
       echo:
         nextStateSummary.current && nextStateSummary.current !== previousState
           ? `${previousState || "declare-root"} -> ${nextStateSummary.current}`
@@ -247,6 +306,10 @@ export async function PUT(request) {
         evidenceDomains: evidenceSnapshot.domains,
         evidenceSourceDocumentKeys: evidenceSnapshot.sourceDocumentKeys,
         overrideApplied: !audit.sealReady && overrideAudit,
+        remoteSealStatus: remoteSeal?.status || null,
+        sealHash: remoteSeal?.sealHash || null,
+        verifyUrl: remoteSeal?.verifyUrl || null,
+        remoteLevel: remoteSeal?.level || null,
       },
     }),
   ];
@@ -292,5 +355,6 @@ export async function PUT(request) {
     draft: sealedDraft,
     state: nextStateSummary,
     audit,
+    remoteSync,
   });
 }

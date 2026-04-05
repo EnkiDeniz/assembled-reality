@@ -7,6 +7,7 @@ export default function ReceiptSealDialog({
   onChangeDelta,
   audit = null,
   auditPending = false,
+  auditError = "",
   pending = false,
   onRefreshAudit,
   instrument = null,
@@ -26,6 +27,13 @@ export default function ReceiptSealDialog({
       : audit?.canOverride
         ? "Seal anyway"
         : "Seal blocked";
+  const auditButtonLabel = auditPending
+    ? "Auditing…"
+    : audit
+      ? "Refresh audit"
+      : deltaStatement.trim()
+        ? "Refresh audit"
+        : "Audit will update as you write";
 
   return (
     <div className="assembler-sheet assembler-sheet--workspace is-open">
@@ -75,9 +83,9 @@ export default function ReceiptSealDialog({
                 type="button"
                 className="terminal-button"
                 onClick={pending || auditPending ? undefined : onRefreshAudit}
-                disabled={pending || auditPending}
+                disabled={pending || auditPending || !deltaStatement.trim()}
               >
-                {auditPending ? "Auditing…" : audit ? "Refresh audit" : "Run audit"}
+                {auditButtonLabel}
               </button>
             </div>
 
@@ -90,10 +98,16 @@ export default function ReceiptSealDialog({
                   </p>
                 ) : null}
               </div>
+            ) : auditError ? (
+              <div className="assembler-receipt-audit__summary is-empty">
+                <p className="assembler-receipt-audit__summary-text">{auditError}</p>
+              </div>
             ) : (
               <div className="assembler-receipt-audit__summary is-empty">
                 <p className="assembler-receipt-audit__summary-text">
-                  Run the audit to check Root alignment, evidence contact, and Seed alignment before sealing.
+                  {deltaStatement.trim()
+                    ? "The audit is reading Root alignment, evidence contact, and Seed alignment as you write."
+                    : "Audit will update as you write the delta statement."}
                 </p>
               </div>
             )}

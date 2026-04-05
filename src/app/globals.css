@@ -1923,7 +1923,7 @@ main {
 
 .assembler-listen-picker__section {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .assembler-listen-picker__label {
@@ -1933,35 +1933,31 @@ main {
   text-transform: uppercase;
 }
 
-.assembler-listen-picker__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 38px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(16, 18, 18, 0.82);
-  color: var(--text);
-  text-align: left;
+.assembler-listen-picker__panel {
+  display: grid;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 76%),
+    rgba(12, 14, 15, 0.88);
 }
 
-.assembler-listen-picker__item.is-active {
-  border-color: rgba(34, 197, 94, 0.28);
+.assembler-listen-picker__panel > * + * {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.assembler-listen-picker__item-title {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.assembler-listen-picker__item-meta,
 .assembler-listen-picker__empty {
+  padding: 14px 8px 12px;
   color: var(--soft);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.assembler-listen-picker--sheet {
+  gap: 16px;
+  padding: 0;
+  border-top: 0;
 }
 
 .assembler-listen {
@@ -3114,6 +3110,44 @@ main {
   text-transform: uppercase;
 }
 
+.assembler-document-row--picker {
+  padding: 10px 4px;
+  border-radius: 16px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.assembler-document-row--picker .assembler-document-row__quick {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.assembler-document-row--picker .assembler-document-row__body {
+  padding: 4px 0;
+}
+
+.assembler-document-row--picker .assembler-document-row__meta {
+  font-size: 12px;
+}
+
+.assembler-document-row--picker .assembler-document-row__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
 .assembler-document-row__aside {
   display: grid;
   justify-items: end;
@@ -3148,6 +3182,25 @@ main {
   padding: 0 12px;
   border-radius: 14px;
   background: rgba(34, 197, 94, 0.05);
+}
+
+.assembler-document-row--picker.is-active {
+  padding: 10px 10px;
+  border: 1px solid rgba(51, 156, 255, 0.24);
+  background: rgba(51, 156, 255, 0.08);
+  box-shadow: 0 0 18px rgba(51, 156, 255, 0.08);
+}
+
+.assembler-document-row--picker.is-active .assembler-document-row__quick {
+  border-color: rgba(51, 156, 255, 0.26);
+  background: rgba(51, 156, 255, 0.12);
+  color: var(--white);
+}
+
+.assembler-document-row--picker.is-active .assembler-document-row__badge {
+  border-color: rgba(51, 156, 255, 0.22);
+  background: rgba(51, 156, 255, 0.1);
+  color: var(--white);
 }
 
 .assembler-home__project-row.is-active,
@@ -4281,20 +4334,11 @@ main {
   line-height: 1.55;
 }
 
-.assembler-mobile-sheet__summary,
-.assembler-mobile-sheet__layout,
-.assembler-mobile-sheet__rail,
-.assembler-mobile-sheet__box-summary {
-  display: grid;
-  gap: 12px;
-}
-
 .assembler-sheet__panel--mobile-source {
   grid-template-rows: auto auto minmax(0, 1fr);
   padding-bottom: calc(20px + var(--safe-bottom));
 }
 
-.assembler-mobile-sheet__summary,
 .assembler-mobile-sheet__box-summary,
 .assembler-mobile-sheet__layout {
   padding-left: 18px;
@@ -4302,49 +4346,71 @@ main {
 }
 
 .assembler-mobile-sheet__layout {
+  display: grid;
+  gap: 16px;
   min-height: 0;
   overflow-y: auto;
   align-content: start;
   padding-top: 14px;
+  overscroll-behavior: contain;
 }
 
-.assembler-mobile-sheet__summary {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+.assembler-mobile-sheet__section {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-mobile-sheet__section-label,
+.assembler-mobile-sheet__summary-eyebrow {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-mobile-sheet__panel-group,
+.assembler-mobile-sheet__box-summary {
+  display: grid;
+  gap: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 78%),
+    rgba(12, 14, 15, 0.88);
+}
+
+.assembler-mobile-sheet__panel-group > * + * {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .assembler-mobile-sheet__summary-card {
   display: grid;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 4px;
+  padding: 12px 6px;
+  border: 0;
   border-radius: 16px;
-  background: rgba(12, 14, 15, 0.84);
+  background: transparent;
   color: var(--white);
   text-align: left;
+  transition: background 160ms ease;
 }
 
-.assembler-mobile-sheet__summary-eyebrow {
-  color: var(--soft);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.assembler-mobile-sheet__summary-card:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.assembler-mobile-sheet__layout {
-  grid-template-columns: minmax(0, 1fr) 190px;
-  align-items: start;
+.assembler-mobile-sheet__summary-card strong {
+  color: var(--white);
+  font-size: 16px;
+  line-height: 1.15;
 }
 
-.assembler-mobile-sheet__content {
-  min-width: 0;
-}
-
-.assembler-mobile-sheet__rail {
-  align-content: start;
-}
-
-.assembler-mobile-sheet__rail--box {
-  grid-template-columns: minmax(0, 1fr);
+.assembler-mobile-sheet__summary-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .assembler-mobile-sheet__action {
@@ -4352,12 +4418,19 @@ main {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 64px;
+  padding: 12px 6px;
+  border: 0;
   border-radius: 16px;
-  background: rgba(12, 14, 15, 0.86);
+  background: transparent;
   color: var(--text);
   text-align: left;
+  touch-action: manipulation;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.assembler-mobile-sheet__action:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .assembler-mobile-sheet__action:disabled {
@@ -4369,11 +4442,17 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  color: var(--white);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--soft);
+}
+
+.assembler-mobile-sheet__action-icon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .assembler-mobile-sheet__action-copy {
@@ -4383,46 +4462,44 @@ main {
 
 .assembler-mobile-sheet__action-label {
   color: var(--white);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.3;
 }
 
 .assembler-mobile-sheet__action-detail {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
 .assembler-mobile-sheet__link {
   display: grid;
   gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(12, 14, 15, 0.86);
+  padding: 14px 6px 6px;
 }
 
 .assembler-mobile-sheet__link-row {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .assembler-mobile-sheet__input,
 .assembler-mobile-sheet__submit {
-  min-height: 42px;
-  border-radius: 14px;
+  min-height: 46px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .assembler-mobile-sheet__input {
   width: 100%;
-  padding: 0 12px;
-  background: rgba(8, 9, 10, 0.92);
+  padding: 0 14px;
+  background: rgba(8, 9, 10, 0.88);
   color: var(--white);
 }
 
 .assembler-mobile-sheet__submit {
-  background: rgba(51, 156, 255, 0.12);
+  background: rgba(51, 156, 255, 0.1);
   color: var(--white);
 }
 
@@ -4759,10 +4836,31 @@ main {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+.assembler-receipt-surface__pill.is-warning {
+  color: var(--assembly-step-6-text);
+  border-color: var(--assembly-step-6-border);
+  background: var(--assembly-step-6-soft);
+}
+
 .assembler-receipt-surface__status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.assembler-receipt-surface__courthouse-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assembler-receipt-surface__draft-meta,
+.assembler-receipt-surface__draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .assembler-box-management {
@@ -4916,6 +5014,10 @@ main {
 
 .assembler-control-surface__mode,
 .assembler-control-surface__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -4925,6 +5027,22 @@ main {
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.assembler-control-surface__mode-alert {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--assembly-step-6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.assembler-control-surface__mode-alert.is-error {
+  background: var(--accent-danger);
+}
+
+.assembler-control-surface__mode-alert.is-warning {
+  background: var(--assembly-step-6);
 }
 
 .assembler-control-surface__mode.is-active,
@@ -5643,12 +5761,25 @@ main {
   color: var(--white);
 }
 
-.assembler-confirmation__select {
-  min-height: 42px;
+.assembler-confirmation__domains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assembler-confirmation__domain {
+  min-height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  background: rgba(10, 11, 11, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.assembler-confirmation__domain.is-active {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--white);
 }
 
@@ -6900,17 +7031,9 @@ main {
     justify-content: flex-start;
   }
 
-  .assembler-mobile-sheet__layout {
-    grid-template-columns: 1fr;
-  }
-
   .assembler-mobile-sheet__box-summary {
     grid-template-columns: 1fr;
     gap: 6px;
-  }
-
-  .assembler-mobile-sheet__summary {
-    grid-template-columns: 1fr;
   }
 
   .assembler-seed-surface__hero,

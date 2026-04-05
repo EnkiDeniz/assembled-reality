@@ -21,6 +21,8 @@ export default function ReceiptSurface({
   onExportReceipt,
   onExportDocument,
   onOpenGetReceipts,
+  onRetryRemoteSync,
+  onOpenVerifyUrl,
   root = null,
   stateSummary = null,
   confirmationCount = 0,
@@ -44,12 +46,11 @@ export default function ReceiptSurface({
   };
   const latestDraft = summary.latestDraft || null;
   const hasLatestProof = Boolean(latestDraft);
-  const showConnectAction = summary.connectionStatus !== "CONNECTED";
-  const syncTone = summary.latestRemoteError
-    ? "error"
-    : summary.connectionStatus === "CONNECTED"
-      ? "success"
-      : "";
+  const showConnectAction =
+    summary.connectionStatus !== "CONNECTED" &&
+    summary.courthouseAction?.kind === "connect";
+  const canRetryLatest = Boolean(summary.latestCanRetryRemoteSync && latestDraft?.id);
+  const canVerifyLatest = Boolean(summary.latestVerifyUrl && latestDraft?.id);
   const rootPanelKey = [
     root?.text || "",
     root?.gloss || "",
@@ -92,8 +93,17 @@ export default function ReceiptSurface({
               label={summary.latestDraftStatusLabel || "Local only"}
               tone={summary.latestRemoteError ? "error" : summary.latestDraftStatus === "REMOTE_DRAFT" ? "success" : ""}
             />
-            <ReceiptStatusPill label={summary.connectionStatusLabel || "Not connected"} tone={syncTone} />
+            <ReceiptStatusPill
+              label={summary.courthouseStatusLine || "Local only"}
+              tone={summary.courthouseStatusTone || ""}
+            />
           </div>
+
+          {summary.courthouseStatusDetail ? (
+            <p className="assembler-receipt-surface__courthouse-line">
+              {summary.courthouseStatusDetail}
+            </p>
+          ) : null}
 
           <div className="assembler-receipt-surface__hero-actions">
             <button
@@ -109,9 +119,27 @@ export default function ReceiptSurface({
                 Operate
               </button>
             ) : null}
+            {canRetryLatest ? (
+              <button
+                type="button"
+                className="terminal-button"
+                onClick={() => onRetryRemoteSync?.(latestDraft)}
+              >
+                Retry sync
+              </button>
+            ) : null}
+            {canVerifyLatest ? (
+              <button
+                type="button"
+                className="terminal-button"
+                onClick={() => onOpenVerifyUrl?.(summary.latestVerifyUrl)}
+              >
+                Verify
+              </button>
+            ) : null}
             {showConnectAction ? (
               <button type="button" className="terminal-button" onClick={onOpenGetReceipts}>
-                Connect GetReceipts
+                {summary.courthouseAction?.label || "Connect GetReceipts"}
               </button>
             ) : null}
             {!isMobileLayout ? (
@@ -145,32 +173,6 @@ export default function ReceiptSurface({
           onRunSevenAssist={onRunRootAssist}
         />
 
-        <section className="assembler-receipt-surface__status-grid">
-          <article className="assembler-receipt-surface__status-card">
-            <span className="assembler-receipt-surface__status-label">Receipt draft status</span>
-            <strong className="assembler-receipt-surface__status-value">
-              {summary.latestDraftStatusLabel || "No draft yet"}
-            </strong>
-            <p className="assembler-receipt-surface__status-detail">
-              {summary.syncLine}
-            </p>
-          </article>
-
-          <article className="assembler-receipt-surface__status-card">
-            <span className="assembler-receipt-surface__status-label">GetReceipts</span>
-            <strong className="assembler-receipt-surface__status-value">
-              {summary.connectionStatusLabel || "Not connected"}
-            </strong>
-            <p className="assembler-receipt-surface__status-detail">
-              {summary.latestRemoteError
-                ? `${summary.latestRemoteError} Local proof is still preserved.`
-                : showConnectAction
-                  ? "Connection is optional. Local drafts stay first-class."
-                  : "Connected for optional remote proof pushes."}
-            </p>
-          </article>
-        </section>
-
         <section className="assembler-receipt-surface__panel">
           <div className="assembler-receipt-surface__panel-head">
             <span>Recent receipt drafts</span>
@@ -183,7 +185,15 @@ export default function ReceiptSurface({
                 <article key={draft.id} className="assembler-receipt-surface__draft">
                   <div className="assembler-receipt-surface__draft-head">
                     <strong>{draft.title || "Untitled receipt"}</strong>
-                    <ReceiptStatusPill label={draft.statusLabel || "Local only"} />
+                    <div className="assembler-receipt-surface__draft-meta">
+                      <ReceiptStatusPill label={draft.statusLabel || "Local only"} />
+                      {draft.courthouseStatusLine ? (
+                        <ReceiptStatusPill
+                          label={draft.courthouseStatusLine}
+                          tone={draft.courthouseStatusTone || ""}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                   <p className="assembler-receipt-surface__draft-body">
                     {draft.payload?.decision ||
@@ -192,6 +202,28 @@ export default function ReceiptSurface({
                       draft.interpretation ||
                       "Receipt draft preserved for later review."}
                   </p>
+                  {draft.courthouseAction?.kind || draft.verifyUrl ? (
+                    <div className="assembler-receipt-surface__draft-actions">
+                      {draft.canRetryRemoteSync ? (
+                        <button
+                          type="button"
+                          className="terminal-button"
+                          onClick={() => onRetryRemoteSync?.(draft)}
+                        >
+                          Retry sync
+                        </button>
+                      ) : null}
+                      {draft.verifyUrl ? (
+                        <button
+                          type="button"
+                          className="terminal-button"
+                          onClick={() => onOpenVerifyUrl?.(draft.verifyUrl)}
+                        >
+                          Verify
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </article>
               ))
             ) : (

@@ -55,6 +55,185 @@ function formatConnectionStatus(status = "") {
   return "Not connected";
 }
 
+function normalizeRemoteSealStatus(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (
+    normalized === "pending_create" ||
+    normalized === "pending_seal" ||
+    normalized === "sealed" ||
+    normalized === "failed"
+  ) {
+    return normalized;
+  }
+  return "";
+}
+
+function formatRemoteSealLevel(value = "") {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  return normalized.toLowerCase().startsWith("l") ? normalized.toUpperCase() : `L${normalized}`;
+}
+
+function getDraftRemoteSeal(draft = null) {
+  return draft?.payload?.remoteSeal && typeof draft.payload.remoteSeal === "object"
+    ? draft.payload.remoteSeal
+    : null;
+}
+
+function buildCourthouseStatusViewModel(
+  draft = null,
+  connectionStatus = "DISCONNECTED",
+  connectionLastError = "",
+) {
+  const normalizedConnectionStatus = String(connectionStatus || "DISCONNECTED")
+    .trim()
+    .toUpperCase();
+  const remoteSeal = getDraftRemoteSeal(draft);
+  const remoteStatus = normalizeRemoteSealStatus(remoteSeal?.status);
+  const remoteLevel = formatRemoteSealLevel(remoteSeal?.level);
+  const verifyUrl = String(remoteSeal?.verifyUrl || "").trim();
+  const errorMessage =
+    String(remoteSeal?.lastError || draft?.payload?.remoteError || connectionLastError || "").trim() ||
+    "";
+  const isSealed = String(draft?.status || "").trim().toUpperCase() === "SEALED";
+  const hasRemoteDraft = Boolean(
+    draft?.getReceiptsReceiptId || draft?.payload?.remoteReceipt?.id || remoteSeal?.receiptId,
+  );
+
+  if (remoteStatus === "sealed") {
+    return {
+      line: `Verified${remoteLevel ? ` · ${remoteLevel}` : ""}`,
+      detail: verifyUrl
+        ? "GetReceipts stamped and verified this seal."
+        : "GetReceipts stamped this seal.",
+      tone: "success",
+      action: verifyUrl
+        ? {
+            kind: "verify",
+            label: "Verify",
+            href: verifyUrl,
+          }
+        : null,
+      remoteStatus,
+      verifyUrl,
+      remoteLevel,
+      canRetry: false,
+      isPending: false,
+      hasError: false,
+    };
+  }
+
+  if (isSealed) {
+    if (remoteStatus === "failed" || errorMessage) {
+      return {
+        line: "Sync failed · Retry",
+        detail: "The local seal succeeded, but the courthouse sync failed.",
+        tone: "error",
+        action:
+          normalizedConnectionStatus === "CONNECTED"
+            ? { kind: "retry", label: "Retry sync" }
+            : { kind: "connect", label: "Reconnect" },
+        remoteStatus: remoteStatus || "failed",
+        verifyUrl: "",
+        remoteLevel: "",
+        canRetry: normalizedConnectionStatus === "CONNECTED",
+        isPending: false,
+        hasError: true,
+      };
+    }
+
+    if (
+      remoteStatus === "pending_create" ||
+      remoteStatus === "pending_seal" ||
+      (normalizedConnectionStatus === "CONNECTED" && hasRemoteDraft)
+    ) {
+      return {
+        line: "Sealed locally · Pending courthouse",
+        detail:
+          normalizedConnectionStatus === "CONNECTED"
+            ? "The local seal is complete. Retry when you want the courthouse stamp."
+            : "Reconnect GetReceipts when you want to finish the courthouse step.",
+        tone: "warning",
+        action:
+          normalizedConnectionStatus === "CONNECTED"
+            ? { kind: "retry", label: "Retry sync" }
+            : { kind: "connect", label: "Connect GetReceipts" },
+        remoteStatus: remoteStatus || "pending_seal",
+        verifyUrl: "",
+        remoteLevel: "",
+        canRetry: normalizedConnectionStatus === "CONNECTED",
+        isPending: true,
+        hasError: false,
+      };
+    }
+
+    return {
+      line: "Sealed locally",
+      detail:
+        normalizedConnectionStatus === "CONNECTED"
+          ? "Local proof is first-class. Retry when you want the courthouse stamp."
+          : "Local proof stays first-class until you choose to connect the courthouse.",
+      tone: "",
+      action:
+        normalizedConnectionStatus === "CONNECTED"
+          ? { kind: "retry", label: "Retry sync" }
+          : { kind: "connect", label: "Connect GetReceipts" },
+      remoteStatus: "",
+      verifyUrl: "",
+      remoteLevel: "",
+      canRetry: normalizedConnectionStatus === "CONNECTED",
+      isPending: false,
+      hasError: false,
+    };
+  }
+
+  if (errorMessage) {
+    return {
+      line: "Sync failed · Retry",
+      detail: "The last courthouse push failed, but the local draft is still safe.",
+      tone: "error",
+      action:
+        normalizedConnectionStatus === "CONNECTED"
+          ? { kind: "retry", label: "Retry sync" }
+          : { kind: "connect", label: "Reconnect" },
+      remoteStatus: remoteStatus || "failed",
+      verifyUrl: "",
+      remoteLevel: "",
+      canRetry: normalizedConnectionStatus === "CONNECTED",
+      isPending: false,
+      hasError: true,
+    };
+  }
+
+  if (normalizedConnectionStatus === "CONNECTED") {
+    return {
+      line: "GetReceipts connected",
+      detail: "The courthouse is ready when you want portable verification.",
+      tone: "",
+      action: null,
+      remoteStatus,
+      verifyUrl,
+      remoteLevel,
+      canRetry: false,
+      isPending: false,
+      hasError: false,
+    };
+  }
+
+  return {
+    line: "Local only",
+    detail: "Local proof remains first-class until you connect the courthouse.",
+    tone: "",
+    action: { kind: "connect", label: "Connect GetReceipts" },
+    remoteStatus,
+    verifyUrl,
+    remoteLevel,
+    canRetry: false,
+    isPending: false,
+    hasError: false,
+  };
+}
+
 function buildRootViewModel(activeProject = null) {
   const meta = normalizeProjectArchitectureMeta(
     activeProject?.metadataJson || activeProject?.architectureMeta || null,
@@ -113,9 +292,16 @@ export function buildReceiptSummaryViewModel(
   const normalizedConnectionStatus = String(connectionStatus || "DISCONNECTED")
     .trim()
     .toUpperCase();
+  const courthouseStatus = buildCourthouseStatusViewModel(
+    latestDraft,
+    normalizedConnectionStatus,
+    connectionLastError,
+  );
 
   let syncLine = "Draft a local receipt when the box is ready.";
-  if (normalizedConnectionStatus !== "CONNECTED") {
+  if (courthouseStatus?.detail) {
+    syncLine = courthouseStatus.detail;
+  } else if (normalizedConnectionStatus !== "CONNECTED") {
     syncLine = "Local proof still works. Connect GetReceipts when you want remote proof.";
   } else if (latestRemoteError) {
     syncLine = "The last push failed, but the local draft was preserved.";
@@ -136,14 +322,37 @@ export function buildReceiptSummaryViewModel(
     latestDraftMode,
     latestDraftSummary,
     latestRemoteError,
+    courthouseStatusLine: courthouseStatus.line,
+    courthouseStatusDetail: courthouseStatus.detail,
+    courthouseStatusTone: courthouseStatus.tone,
+    courthouseAction: courthouseStatus.action,
+    latestVerifyUrl: courthouseStatus.verifyUrl,
+    latestRemoteLevel: courthouseStatus.remoteLevel,
+    latestRemoteSealStatus: courthouseStatus.remoteStatus,
+    latestCanRetryRemoteSync: courthouseStatus.canRetry,
     connectionStatus: normalizedConnectionStatus,
     connectionStatusLabel: formatConnectionStatus(normalizedConnectionStatus),
     syncLine,
-    recentDrafts: drafts.slice(0, 4).map((draft) => ({
-      ...draft,
-      statusLabel: formatReceiptStatus(draft?.status),
-      mode: String(draft?.payload?.mode || "").trim().toLowerCase(),
-    })),
+    recentDrafts: drafts.slice(0, 4).map((draft) => {
+      const draftCourthouseStatus = buildCourthouseStatusViewModel(
+        draft,
+        normalizedConnectionStatus,
+        connectionLastError,
+      );
+
+      return {
+        ...draft,
+        statusLabel: formatReceiptStatus(draft?.status),
+        mode: String(draft?.payload?.mode || "").trim().toLowerCase(),
+        courthouseStatusLine: draftCourthouseStatus.line,
+        courthouseStatusTone: draftCourthouseStatus.tone,
+        courthouseAction: draftCourthouseStatus.action,
+        verifyUrl: draftCourthouseStatus.verifyUrl,
+        remoteLevel: draftCourthouseStatus.remoteLevel,
+        remoteSealStatus: draftCourthouseStatus.remoteStatus,
+        canRetryRemoteSync: draftCourthouseStatus.canRetry,
+      };
+    }),
     hasReceipts: drafts.length > 0,
   };
 }

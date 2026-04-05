@@ -1,3 +1,5 @@
+import { getAssemblyColorTokens } from "@/lib/assembly-architecture";
+
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
@@ -58,56 +60,30 @@ function normalizeMove(move = {}, index = 0) {
   };
 }
 
+function getSeverityAssemblyStep(
+  severity = REALITY_INSTRUMENT_SEVERITIES.orientation,
+) {
+  const normalized = normalizeSeverity(severity);
+  if (normalized === REALITY_INSTRUMENT_SEVERITIES.constraint) return 5;
+  if (normalized === REALITY_INSTRUMENT_SEVERITIES.warning) return 6;
+  if (normalized === REALITY_INSTRUMENT_SEVERITIES.recovery) return 2;
+  return 0;
+}
+
 export function getRealityInstrumentTone(severity = REALITY_INSTRUMENT_SEVERITIES.orientation) {
   const normalized = normalizeSeverity(severity);
 
-  if (normalized === REALITY_INSTRUMENT_SEVERITIES.constraint) {
-    return {
-      fill: "rgba(245, 196, 112, 0.22)",
-      soft: "rgba(245, 196, 112, 0.12)",
-      border: "rgba(245, 196, 112, 0.38)",
-      glow: "rgba(245, 196, 112, 0.24)",
-      text: "rgba(255, 230, 184, 0.96)",
-    };
-  }
-
-  if (normalized === REALITY_INSTRUMENT_SEVERITIES.warning) {
-    return {
-      fill: "rgba(235, 183, 86, 0.24)",
-      soft: "rgba(235, 183, 86, 0.14)",
-      border: "rgba(235, 183, 86, 0.44)",
-      glow: "rgba(235, 183, 86, 0.26)",
-      text: "rgba(255, 232, 189, 0.96)",
-    };
-  }
-
   if (normalized === REALITY_INSTRUMENT_SEVERITIES.blocked) {
     return {
-      fill: "rgba(225, 95, 95, 0.22)",
-      soft: "rgba(225, 95, 95, 0.12)",
-      border: "rgba(225, 95, 95, 0.4)",
-      glow: "rgba(225, 95, 95, 0.28)",
-      text: "rgba(255, 211, 211, 0.96)",
+      fill: "var(--danger-fill)",
+      soft: "var(--danger-soft)",
+      border: "var(--danger-border)",
+      glow: "var(--danger-glow)",
+      text: "var(--danger-text)",
     };
   }
 
-  if (normalized === REALITY_INSTRUMENT_SEVERITIES.recovery) {
-    return {
-      fill: "rgba(90, 164, 224, 0.2)",
-      soft: "rgba(90, 164, 224, 0.12)",
-      border: "rgba(90, 164, 224, 0.36)",
-      glow: "rgba(90, 164, 224, 0.22)",
-      text: "rgba(215, 234, 255, 0.96)",
-    };
-  }
-
-  return {
-    fill: "rgba(122, 138, 156, 0.18)",
-    soft: "rgba(122, 138, 156, 0.08)",
-    border: "rgba(122, 138, 156, 0.24)",
-    glow: "rgba(122, 138, 156, 0.14)",
-    text: "rgba(224, 231, 240, 0.94)",
-  };
+  return getAssemblyColorTokens(getSeverityAssemblyStep(normalized));
 }
 
 export function buildRealityInstrumentIssue(issue = {}) {
@@ -133,6 +109,29 @@ export function buildRealityInstrumentIssue(issue = {}) {
   };
 }
 
+export function buildWorkspaceRealityIssues({
+  issues = [],
+  dismissedIssueKeys = {},
+} = {}) {
+  const dismissed = dismissedIssueKeys && typeof dismissedIssueKeys === "object"
+    ? dismissedIssueKeys
+    : {};
+  const normalizedIssues = (Array.isArray(issues) ? issues : [])
+    .map((entry) => buildRealityInstrumentIssue(entry))
+    .filter(
+      (entry) =>
+        !dismissed[entry.key] &&
+        (entry.headline || entry.summary || entry.moveSpace.length > 0),
+    )
+    .sort((left, right) => right.priority - left.priority);
+
+  return {
+    issues: normalizedIssues,
+    activeIssue: normalizedIssues[0] || null,
+    secondaryIssues: normalizedIssues.slice(1, 3),
+  };
+}
+
 export function buildRealityInstrumentViewModel({
   surfaceKey = "",
   boxTitle = "",
@@ -142,10 +141,7 @@ export function buildRealityInstrumentViewModel({
   defaultMoveSpace = [],
   issues = [],
 } = {}) {
-  const normalizedIssues = (Array.isArray(issues) ? issues : [])
-    .map((entry) => buildRealityInstrumentIssue(entry))
-    .filter((entry) => entry.headline || entry.summary || entry.moveSpace.length > 0)
-    .sort((left, right) => right.priority - left.priority);
+  const normalizedIssues = buildWorkspaceRealityIssues({ issues }).issues;
   const activeIssue = normalizedIssues[0] || null;
   const severity = activeIssue?.severity || REALITY_INSTRUMENT_SEVERITIES.orientation;
   const tone = getRealityInstrumentTone(severity);

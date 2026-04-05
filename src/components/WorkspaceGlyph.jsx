@@ -19,6 +19,16 @@ export default function WorkspaceGlyph({ kind = "box" }) {
     );
   }
 
+  if (kind === "upload") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+        <path d="M12 16V5" />
+        <path d="m7.5 9.5 4.5-4.5 4.5 4.5" />
+        <path d="M5 18.5h14" />
+      </svg>
+    );
+  }
+
   if (kind === "seed") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
@@ -28,13 +38,13 @@ export default function WorkspaceGlyph({ kind = "box" }) {
     );
   }
 
-  if (kind === "paste") {
+  if (kind === "paste" || kind === "clipboard") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-        <rect x="7" y="4.5" width="10" height="15" rx="1.8" />
-        <path d="M9.5 3.5h5" />
-        <path d="M9.5 9.5h5" />
-        <path d="M9.5 13h5" />
+        <path d="M9 5.5h6" />
+        <rect x="6.5" y="4" width="11" height="15.5" rx="2" />
+        <path d="M10 8.5h4" />
+        <path d="M9.5 12h5" />
       </svg>
     );
   }

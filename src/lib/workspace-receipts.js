@@ -147,15 +147,15 @@ export function buildWorkspaceReceiptPayload({
     temporal: "retrospective",
     visibility: "private",
     tags: unique([
-      "document-assembler",
+      "loegos",
       mode,
       project?.projectKey ? "project-scoped" : null,
       normalizedBlocks.length > 0 ? "lineage" : null,
     ]),
     metadata: {
-      source_app: "document_assembler",
-      source_flow: "document_assembler_workspace_v1",
-      document_assembler: {
+      source_app: "loegos",
+      source_flow: "loegos_workspace_v2",
+      loegos_workspace: {
         mode,
         project_id: project?.id || null,
         project_key: project?.projectKey || null,
