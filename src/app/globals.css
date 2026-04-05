@@ -3732,6 +3732,11 @@ main {
   background: var(--panel-2);
 }
 
+.assembler-operate__sentence {
+  border-left: 3px solid var(--sentence-trust-tone, var(--surface-4));
+  padding-left: var(--space-4);
+}
+
 .assembler-operate__sentence-head,
 .assembler-operate__included-row {
   grid-template-columns: minmax(0, 1fr) auto;

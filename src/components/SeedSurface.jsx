@@ -57,15 +57,10 @@ export default function SeedSurface({
           <h3 className="assembler-seed-surface__title">
             {seedViewModel?.seedTitle || currentSeedDocument?.title || "No seed yet"}
           </h3>
-          <p className="assembler-seed-surface__body">
-            {currentSeedDocument
-              ? "Aim. What's here. The gap."
-              : "The first real source creates the first seed."}
-          </p>
           {isMobileLayout ? (
             <div className="assembler-seed-surface__hero-actions">
               <button type="button" className="terminal-button" onClick={onOpenStage}>
-                {stageCount ? `Stage ${stageCount}` : "Stage"}
+                Stage
               </button>
               <button
                 type="button"
@@ -99,8 +94,8 @@ export default function SeedSurface({
             </h3>
             <p className="assembler-phase__empty-text">
               {currentSeedDocument
-                ? "Open the seed. Keep shaping."
-                : "Keep staging. The first real source creates the seed."}
+                ? "Open seed."
+                : "Stage. Shape. Seal."}
             </p>
           </div>
 

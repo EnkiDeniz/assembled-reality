@@ -39,6 +39,9 @@ export default function BoxObjectVisualization({
   const fill = Math.max(0.06, Math.min(1, Number(state?.fill) || 0));
   const stage = String(state?.stage || "dormant").trim().toLowerCase();
   const colorTokens = state?.colorTokens || getAssemblyColorTokens(state?.colorStep);
+  const stepNormalized = Math.min(1, (Number(state?.colorStep) || 0) / 7);
+  const circleOpacity = stage === "dormant" ? 0.22 : 0.22 + stepNormalized * 0.68;
+  const circleScale = stage === "dormant" ? 0.82 : 0.82 + stepNormalized * 0.24;
   const transition = prefersReducedMotion
     ? { duration: 0 }
     : { duration: 0.8, ease: "easeInOut" };
@@ -189,13 +192,8 @@ export default function BoxObjectVisualization({
             fill={colorTokens.text}
             initial={false}
             animate={{
-              opacity: stage === "solid" || stage === "tension" ? 0.9 : 0.22,
-              scale:
-                stage === "solid"
-                  ? 1.06
-                  : stage === "tension"
-                    ? 0.94
-                    : 0.82,
+              opacity: circleOpacity,
+              scale: circleScale,
             }}
             transition={transition}
           />

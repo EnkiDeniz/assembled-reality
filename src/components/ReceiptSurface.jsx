@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatWorkspaceLogTime, getWorkspaceLogActionColor } from "@/lib/document-blocks";
 
 function ReceiptStatusPill({ label, tone = "" }) {
@@ -42,6 +43,7 @@ export default function ReceiptSurface({
     summary.courthouseAction?.kind === "connect";
   const canRetryLatest = Boolean(summary.latestCanRetryRemoteSync && latestDraft?.id);
   const canVerifyLatest = Boolean(summary.latestVerifyUrl && latestDraft?.id);
+  const [showMore, setShowMore] = useState(false);
   return (
     <section className="assembler-phase assembler-phase--receipts">
       <header className="assembler-phase__header">
@@ -79,12 +81,6 @@ export default function ReceiptSurface({
             />
           </div>
 
-          {summary.courthouseStatusDetail ? (
-            <p className="assembler-receipt-surface__courthouse-line">
-              {summary.courthouseStatusDetail}
-            </p>
-          ) : null}
-
           <div className="assembler-receipt-surface__hero-actions">
             <button
               type="button"
@@ -94,9 +90,9 @@ export default function ReceiptSurface({
             >
               {receiptPending ? "Drafting…" : "Draft receipt"}
             </button>
-            {isMobileLayout && onRunOperate ? (
-              <button type="button" className="terminal-button" onClick={onRunOperate}>
-                Operate
+            {hasLatestProof && summary.latestDraftStatus !== "SEALED" && onSealReceipt ? (
+              <button type="button" className="terminal-button" onClick={() => onSealReceipt(summary.latestDraft)}>
+                Seal receipt
               </button>
             ) : null}
             {canRetryLatest ? (
@@ -111,30 +107,42 @@ export default function ReceiptSurface({
             {canVerifyLatest ? (
               <button
                 type="button"
-                className="terminal-button"
+                className="assembler-inline-assist__apply"
                 onClick={() => onOpenVerifyUrl?.(summary.latestVerifyUrl)}
               >
                 Verify
               </button>
             ) : null}
-            {showConnectAction ? (
-              <button type="button" className="terminal-button" onClick={onOpenGetReceipts}>
-                {summary.courthouseAction?.label || "Connect GetReceipts"}
+            {isMobileLayout && onRunOperate ? (
+              <button type="button" className="terminal-button" onClick={onRunOperate}>
+                Operate
               </button>
             ) : null}
-            {!isMobileLayout ? (
-              <button type="button" className="terminal-button" onClick={onExportReceipt}>
-                Export receipts
-              </button>
-            ) : null}
-            {!isMobileLayout ? (
-              <button type="button" className="terminal-button" onClick={onExportDocument}>
-                Export doc
-              </button>
-            ) : null}
-            {hasLatestProof && summary.latestDraftStatus !== "SEALED" && onSealReceipt ? (
-              <button type="button" className="terminal-button" onClick={() => onSealReceipt(summary.latestDraft)}>
-                Seal receipt
+            {showMore ? (
+              <>
+                {showConnectAction ? (
+                  <button type="button" className="terminal-button" onClick={onOpenGetReceipts}>
+                    {summary.courthouseAction?.label || "Connect GetReceipts"}
+                  </button>
+                ) : null}
+                {!isMobileLayout ? (
+                  <button type="button" className="terminal-button" onClick={onExportReceipt}>
+                    Export receipts
+                  </button>
+                ) : null}
+                {!isMobileLayout ? (
+                  <button type="button" className="terminal-button" onClick={onExportDocument}>
+                    Export doc
+                  </button>
+                ) : null}
+              </>
+            ) : (showConnectAction || !isMobileLayout) ? (
+              <button
+                type="button"
+                className="assembler-inline-assist__apply"
+                onClick={() => setShowMore(true)}
+              >
+                More
               </button>
             ) : null}
           </div>

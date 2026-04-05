@@ -19,12 +19,46 @@ function formatConvergenceLabel(value = "") {
   return "Convergent";
 }
 
+function getTrustLevelStep(level) {
+  const normalized = String(level || "").trim().toUpperCase();
+  if (normalized === "L1") return 1;
+  if (normalized === "L2") return 3;
+  if (normalized === "L3") return 5;
+  return 0;
+}
+
+function getConvergenceTone(convergence) {
+  const normalized = String(convergence || "").trim().toLowerCase();
+  if (normalized === "convergent") return getAssemblyColorTokens(4);
+  if (normalized === "divergent") return getAssemblyColorTokens(6);
+  return {
+    fill: "var(--danger-fill)", soft: "var(--danger-soft)",
+    border: "var(--danger-border)", glow: "var(--danger-glow)",
+    text: "var(--danger-text)",
+  };
+}
+
 function OperateSentenceCard({ label, sentence }) {
+  const trustTone = getAssemblyColorTokens(getTrustLevelStep(sentence?.level));
   return (
-    <article className="assembler-operate__sentence">
+    <article
+      className="assembler-operate__sentence"
+      style={{ "--sentence-trust-tone": trustTone.fill }}
+    >
       <div className="assembler-operate__sentence-head">
         <span className="assembler-operate__sentence-label">{label}</span>
-        <span className="assembler-operate__sentence-level">{sentence?.level || "L1"}</span>
+        <span
+          className="assembler-assembly-chip"
+          style={{
+            "--assembly-tone": trustTone.fill,
+            "--assembly-tone-soft": trustTone.soft,
+            "--assembly-tone-border": trustTone.border,
+            "--assembly-tone-glow": trustTone.glow,
+            "--assembly-tone-text": trustTone.text,
+          }}
+        >
+          {sentence?.level || "L1"}
+        </span>
       </div>
       <p className="assembler-operate__sentence-text">{sentence?.sentence || ""}</p>
       <p className="assembler-operate__sentence-rationale">{sentence?.rationale || ""}</p>
@@ -137,16 +171,68 @@ export default function OperateSurface({
               <div className="assembler-operate__summary-card">
                 <span className="assembler-operate__summary-label">Convergence</span>
                 <strong className="assembler-operate__summary-value">
-                  {formatConvergenceLabel(result.convergence)}
+                  {(() => {
+                    const cTone = getConvergenceTone(result.convergence);
+                    return (
+                      <span
+                        className="assembler-assembly-chip"
+                        style={{
+                          "--assembly-tone": cTone.fill,
+                          "--assembly-tone-soft": cTone.soft,
+                          "--assembly-tone-border": cTone.border,
+                          "--assembly-tone-glow": cTone.glow,
+                          "--assembly-tone-text": cTone.text,
+                        }}
+                      >
+                        {formatConvergenceLabel(result.convergence)}
+                      </span>
+                    );
+                  })()}
                 </strong>
               </div>
               <div className="assembler-operate__summary-card">
                 <span className="assembler-operate__summary-label">Floor</span>
-                <strong className="assembler-operate__summary-value">{result.trustFloor}</strong>
+                <strong className="assembler-operate__summary-value">
+                  {(() => {
+                    const fTone = getAssemblyColorTokens(getTrustLevelStep(result.trustFloor));
+                    return (
+                      <span
+                        className="assembler-assembly-chip"
+                        style={{
+                          "--assembly-tone": fTone.fill,
+                          "--assembly-tone-soft": fTone.soft,
+                          "--assembly-tone-border": fTone.border,
+                          "--assembly-tone-glow": fTone.glow,
+                          "--assembly-tone-text": fTone.text,
+                        }}
+                      >
+                        {result.trustFloor}
+                      </span>
+                    );
+                  })()}
+                </strong>
               </div>
               <div className="assembler-operate__summary-card">
                 <span className="assembler-operate__summary-label">Ceiling</span>
-                <strong className="assembler-operate__summary-value">{result.trustCeiling}</strong>
+                <strong className="assembler-operate__summary-value">
+                  {(() => {
+                    const ceilTone = getAssemblyColorTokens(getTrustLevelStep(result.trustCeiling));
+                    return (
+                      <span
+                        className="assembler-assembly-chip"
+                        style={{
+                          "--assembly-tone": ceilTone.fill,
+                          "--assembly-tone-soft": ceilTone.soft,
+                          "--assembly-tone-border": ceilTone.border,
+                          "--assembly-tone-glow": ceilTone.glow,
+                          "--assembly-tone-text": ceilTone.text,
+                        }}
+                      >
+                        {result.trustCeiling}
+                      </span>
+                    );
+                  })()}
+                </strong>
               </div>
             </div>
 
