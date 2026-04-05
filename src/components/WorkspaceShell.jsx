@@ -1755,21 +1755,16 @@ function WorkspaceLaunchpad({
   getReceiptsConnectionStatus = "DISCONNECTED",
   getReceiptsConnectionLastError = "",
   projectActionPending = "",
-  loadingDocumentKey: _loadingDocumentKey,
-  onEnterMode,
-  onBrowseBoxes,
   onManageProjects,
   onToggleProjectPinned,
   onToggleProjectArchived,
   onOpenReceipts,
   onOpenDocument,
   onOpenProject,
+  onOpenRoot,
   onResumeProject,
   onOpenIntake,
   onInspectEvidence,
-  uploading = false,
-  pastePendingMode = "",
-  recordingVoice = false,
   resumeSessionSummary = null,
 }) {
   const grouped = groupedDocuments(documents);
@@ -1778,7 +1773,6 @@ function WorkspaceLaunchpad({
       documents.find((document) => document.documentKey === activeProject.currentAssemblyDocumentKey)) ||
     grouped.assemblies[0] ||
     null;
-  const busy = uploading || Boolean(pastePendingMode) || recordingVoice;
   const boxViewModel = buildBoxViewModel({
     activeProject,
     projectDocuments: documents,
@@ -1798,20 +1792,6 @@ function WorkspaceLaunchpad({
     connectionLastError: getReceiptsConnectionLastError,
   });
   const resumeTarget = boxViewModel?.resumeTarget || null;
-  const currentPositionAction = resumeTarget?.documentKey
-    ? {
-        label: resumeTarget.actionLabel || "Resume",
-        disabled: busy,
-        onClick: () =>
-          onEnterMode(
-            resumeTarget.mode === "assemble" ? WORKSPACE_MODES.assemble : WORKSPACE_MODES.listen,
-            resumeTarget.documentKey,
-            {
-              phase: resumeTarget.phase || BOX_PHASES.think,
-            },
-          ),
-      }
-    : null;
   if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.boxes) {
     return (
       <BoxesIndex
@@ -1833,9 +1813,12 @@ function WorkspaceLaunchpad({
   return (
     <AssemblyLane
       viewModel={assemblyLaneViewModel}
-      currentPositionAction={currentPositionAction}
-      onBrowseBoxes={onBrowseBoxes}
       onOpenEntry={(entry) => {
+        if (entry?.actionKind === "root") {
+          onOpenRoot?.();
+          return;
+        }
+
         if (entry?.actionKind === "receipt") {
           onOpenReceipts();
           return;
@@ -10004,16 +9987,13 @@ export default function WorkspaceShell({
               getReceiptsConnectionLastError={getReceiptsConnectionLastError}
               projectActionPending={projectActionPending}
               loadingDocumentKey={loadingDocumentKey}
-              uploading={uploading}
-              pastePendingMode={pastePendingMode}
-              onEnterMode={openMode}
-              onBrowseBoxes={openBoxesIndex}
               onManageProjects={() => openProjectManagement(activeProjectKey)}
               onToggleProjectPinned={toggleProjectPinned}
               onToggleProjectArchived={toggleProjectArchived}
               onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
+              onOpenRoot={() => openRootEditorFor("voluntary")}
               onResumeProject={resumeProject}
               onInspectEvidence={openFocusedConfirmation}
               onOpenIntake={() => {
@@ -10023,7 +10003,6 @@ export default function WorkspaceShell({
                 }
                 setDropAnythingOpen(true);
               }}
-              recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               resumeSessionSummary={resumeSessionSummaryState}
             />
           </section>
@@ -10292,26 +10271,6 @@ export default function WorkspaceShell({
                   ) : isLanePhase ? (
                     <AssemblyLane
                       viewModel={assemblyLaneViewModel}
-                      currentPositionAction={
-                        assemblyLaneViewModel?.resumeTarget?.documentKey
-                          ? {
-                              label: assemblyLaneViewModel.resumeTarget.label || "Open",
-                              disabled: false,
-                              onClick: () =>
-                                void enterWorkspace(
-                                  assemblyLaneViewModel.resumeTarget.documentKey,
-                                  assemblyLaneViewModel.resumeTarget.mode === "listen"
-                                    ? WORKSPACE_MODES.listen
-                                    : WORKSPACE_MODES.assemble,
-                                  {
-                                    phase:
-                                      assemblyLaneViewModel.resumeTarget.phase || BOX_PHASES.lane,
-                                  },
-                                ),
-                            }
-                          : null
-                      }
-                      onBrowseBoxes={openBoxesIndex}
                       onOpenEntry={(entry) => {
                         if (entry?.actionKind === "root") {
                           openRootEditorFor("voluntary");

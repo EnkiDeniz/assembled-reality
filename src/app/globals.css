@@ -982,14 +982,11 @@ main {
 .self-assembly-page__shell {
   width: min(1120px, 100%);
   display: grid;
-  gap: 28px;
+  gap: 24px;
   padding: clamp(28px, 4vw, 42px);
   border: 1px solid var(--line);
   border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, var(--assembly-tone-soft, rgba(51, 156, 255, 0.12)), transparent 30%),
-    radial-gradient(circle at top left, var(--assembly-step-6-tint, rgba(245, 158, 11, 0.1)), transparent 26%),
-    var(--surface-1);
+  background: var(--surface-1);
   box-shadow: var(--shadow-panel);
 }
 
@@ -1006,18 +1003,19 @@ main {
   text-transform: uppercase;
 }
 
-.self-assembly-hero {
-  display: grid;
-  gap: 14px;
+.self-assembly-page__home-link:hover {
+  color: var(--text-secondary);
 }
 
-.self-assembly-hero__eyebrow,
+.self-assembly-page__preface {
+  display: grid;
+  gap: 10px;
+}
+
+.self-assembly-page__label,
 .self-assembly-section__header > span,
-.self-assembly-seed-card__label,
-.self-assembly-flow-card__label,
 .self-assembly-group__label,
-.self-assembly-milestone__subhead,
-.self-assembly-stage-item__label {
+.self-assembly-seed-card__label {
   color: var(--text-meta);
   font-family: var(--font-code);
   font-size: 11px;
@@ -1025,96 +1023,63 @@ main {
   text-transform: uppercase;
 }
 
-.self-assembly-hero h1 {
+.self-assembly-page__title {
   margin: 0;
-  color: var(--white);
-  font-family: var(--font-editorial);
-  font-size: clamp(2.7rem, 5vw, 5rem);
-  line-height: 0.92;
-  letter-spacing: -0.04em;
+  color: var(--text-primary);
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
-.self-assembly-hero__lede,
+.self-assembly-page__lede,
 .self-assembly-section__lede,
 .self-assembly-seed-card p,
-.self-assembly-milestone__narrative p,
-.self-assembly-flow-card p,
-.self-assembly-stage-item p,
-.self-assembly-history-card p,
 .self-assembly-source-card p,
 .self-assembly-adapter-card p,
 .self-assembly-footer__line,
 .self-assembly-history-footnote {
   margin: 0;
-  color: var(--block-paragraph);
-  line-height: 1.75;
+  color: var(--text-secondary);
+  line-height: 1.7;
 }
 
-.self-assembly-hero__lede,
+.self-assembly-page__lede,
 .self-assembly-section__lede {
   max-width: 72ch;
-  font-size: 1.04rem;
+  font-size: 0.98rem;
 }
 
-.self-assembly-hero__metrics,
-.self-assembly-support__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.self-assembly-pill,
-.self-assembly-support__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.self-assembly-pill {
-  color: var(--soft);
-  font-size: 12px;
-}
-
-.self-assembly-pill strong,
 .self-assembly-section__header strong,
-.self-assembly-history-card__topline strong {
-  color: var(--white);
+.self-assembly-group__header strong {
+  color: var(--text-primary);
   font-weight: 600;
 }
 
-.self-assembly-hero__note,
-.self-assembly-milestone__path,
 .self-assembly-source-card__path,
 .self-assembly-source-card__trust,
-.self-assembly-history-card__range,
 .self-assembly-adapter-card__meta {
   margin: 0;
-  color: var(--soft);
-  font-size: 0.94rem;
-  line-height: 1.65;
+  color: var(--text-meta);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .self-assembly-section,
-.self-assembly-group,
-.self-assembly-milestone__card {
+.self-assembly-group {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .self-assembly-section {
-  padding-top: 22px;
-  border-top: 1px solid var(--line);
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-1);
 }
 
 .self-assembly-section__header,
 .self-assembly-group__header,
 .self-assembly-source-card__topline,
-.self-assembly-history-card__topline,
 .self-assembly-adapter-card__topline {
   display: flex;
   flex-wrap: wrap;
@@ -1125,7 +1090,6 @@ main {
 
 .self-assembly-seed-grid,
 .self-assembly-source-grid,
-.self-assembly-history-list,
 .self-assembly-adapter-grid {
   display: grid;
   gap: 14px;
@@ -1137,91 +1101,21 @@ main {
 
 .self-assembly-seed-card,
 .self-assembly-source-card,
-.self-assembly-history-card,
-.self-assembly-adapter-card,
-.self-assembly-flow-card,
-.self-assembly-milestone__narrative {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: rgba(17, 19, 19, 0.78);
-}
-
-.self-assembly-timeline {
-  display: grid;
-  gap: 18px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.self-assembly-milestone__header {
-  display: grid;
-  gap: 8px;
-}
-
-.self-assembly-milestone__header span {
-  color: var(--accent-ready);
-  font-family: var(--font-code);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.self-assembly-milestone__header h2,
-.self-assembly-source-card h3,
-.self-assembly-adapter-card h3 {
-  margin: 0;
-  color: var(--white);
-  font-family: var(--font-editorial);
-  font-size: clamp(1.5rem, 2.2vw, 2rem);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-}
-
-.self-assembly-source-card h3,
-.self-assembly-adapter-card h3 {
-  font-size: 1.25rem;
-}
-
-.self-assembly-flow-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.self-assembly-stage-list {
+.self-assembly-adapter-card {
   display: grid;
   gap: 10px;
-}
-
-.self-assembly-stage-item {
-  display: grid;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 18px;
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-2);
 }
 
-.self-assembly-stage-item.is-advanced {
-  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.18));
-  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
-}
-
-.self-assembly-history-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.self-assembly-history-card__samples {
-  display: grid;
-  gap: 8px;
+.self-assembly-source-card h3,
+.self-assembly-adapter-card h3 {
   margin: 0;
-  padding-left: 18px;
-  color: var(--block-paragraph);
-  line-height: 1.6;
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.3;
 }
 
 .self-assembly-source-grid {
@@ -1240,22 +1134,14 @@ main {
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--soft);
+  border-radius: 8px;
+  color: var(--text-meta);
+  background: transparent;
   font-size: 12px;
 }
 
 .self-assembly-adapter-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.self-assembly-support {
-  display: grid;
-  gap: 12px;
-}
-
-.self-assembly-muted {
-  color: var(--soft);
 }
 
 .self-assembly-footer {
@@ -4515,146 +4401,71 @@ main {
   gap: 16px;
 }
 
-.assembler-assembly-lane__masthead {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at top right, var(--assembly-step-1-soft, rgba(138, 193, 255, 0.12)), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 72%),
-    rgba(15, 17, 17, 0.94);
-}
-
-.assembler-assembly-lane__copy,
-.assembler-assembly-lane__entries-panel,
-.assembler-assembly-lane__summary-card {
+.assembler-assembly-lane__meta-strip,
+.assembler-assembly-lane__entries-panel {
   display: grid;
   gap: 10px;
 }
 
-.assembler-assembly-lane__eyebrow,
-.assembler-assembly-lane__summary-label,
+.assembler-assembly-lane__meta-strip,
 .assembler-assembly-lane__entry-kind,
 .assembler-assembly-lane__entry-time,
-.assembler-assembly-lane__section-head {
-  color: var(--soft);
+.assembler-assembly-lane__group-head,
+.assembler-assembly-lane__strip-label,
+.assembler-assembly-lane__strip-meta {
+  color: var(--text-meta);
+  font-family: var(--font-code);
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.assembler-assembly-lane__title {
-  margin: 0;
-  color: var(--white);
-  font-size: clamp(2rem, 4vw, 2.9rem);
-  line-height: 0.94;
-  letter-spacing: -0.04em;
-}
-
-.assembler-assembly-lane__lede,
-.assembler-assembly-lane__note,
-.assembler-assembly-lane__summary-detail,
 .assembler-assembly-lane__entry-detail,
 .assembler-assembly-lane__entry-trust,
 .assembler-assembly-lane__empty {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.6;
 }
 
-.assembler-assembly-lane__meta,
+.assembler-assembly-lane__strip-meta,
 .assembler-assembly-lane__entry-badges,
-.assembler-assembly-lane__masthead-actions {
+.assembler-assembly-lane__entry-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
 
-.assembler-assembly-lane__meta {
-  color: var(--soft);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.assembler-assembly-lane__masthead-actions {
-  align-content: start;
-  justify-content: flex-end;
-}
-
-.assembler-assembly-lane__primary-button,
-.assembler-assembly-lane__secondary-button {
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--white);
-  font-size: 12px;
-}
-
-.assembler-assembly-lane__primary-button {
-  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
-  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.1));
-}
-
-.assembler-assembly-lane__summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.assembler-assembly-lane__summary-card,
+.assembler-assembly-lane__meta-strip,
 .assembler-assembly-lane__entries-panel,
 .assembler-assembly-lane__entry {
   padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(15, 17, 17, 0.92);
+  background: var(--surface-1);
 }
 
-.assembler-assembly-lane__summary-card.is-root {
-  background:
-    linear-gradient(180deg, var(--assembly-step-1-tint, rgba(138, 193, 255, 0.08)), transparent 72%),
-    rgba(15, 17, 17, 0.94);
+.assembler-assembly-lane__strip-copy {
+  display: grid;
+  gap: 8px;
 }
 
-.assembler-assembly-lane__summary-card.is-live {
-  background:
-    linear-gradient(180deg, var(--assembly-step-6-tint, rgba(245, 158, 11, 0.08)), transparent 72%),
-    rgba(15, 17, 17, 0.94);
-}
-
-.assembler-assembly-lane__summary-card.is-proof {
-  background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.08), transparent 72%),
-    rgba(15, 17, 17, 0.94);
-}
-
-.assembler-assembly-lane__summary-title,
-.assembler-assembly-lane__entry-title {
-  margin: 0;
-  color: var(--white);
-  font-size: 1.05rem;
-  line-height: 1.2;
-}
-
-.assembler-assembly-lane__section-head {
+.assembler-assembly-lane__strip-title-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
-.assembler-assembly-lane__section-head strong {
-  color: var(--white);
-  font-size: 12px;
-  letter-spacing: normal;
+.assembler-assembly-lane__strip-title,
+.assembler-assembly-lane__entry-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.2;
 }
 
 .assembler-assembly-lane__groups {
@@ -4672,16 +4483,13 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  color: var(--soft);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .assembler-assembly-lane__group-head strong {
-  color: var(--white);
+  color: var(--text-primary);
   font-size: 12px;
   letter-spacing: normal;
+  font-family: var(--font-sans);
 }
 
 .assembler-assembly-lane__entries {
@@ -4699,24 +4507,37 @@ main {
   text-align: left;
 }
 
-.assembler-assembly-lane__entry.is-openable {
-  cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-}
-
-.assembler-assembly-lane__entry.is-openable:hover {
-  transform: translateY(-1px);
-  border-color: var(--assembly-step-1-border, rgba(138, 193, 255, 0.18));
-  background:
-    linear-gradient(180deg, var(--assembly-step-1-tint, rgba(138, 193, 255, 0.05)), transparent 72%),
-    rgba(15, 17, 17, 0.94);
-}
-
 .assembler-assembly-lane__entry.is-leading-edge {
-  border-color: var(--assembly-step-6-glow, rgba(245, 158, 11, 0.22));
-  background:
-    linear-gradient(180deg, var(--assembly-step-6-tint, rgba(245, 158, 11, 0.08)), transparent 72%),
-    rgba(15, 17, 17, 0.94);
+  border-color: var(--assembly-step-6-border);
+}
+
+.assembler-assembly-lane__entry-head,
+.assembler-assembly-lane__entry-title-row,
+.assembler-assembly-lane__entry-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.assembler-assembly-lane__entry-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.assembler-assembly-lane__entry-title-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.assembler-assembly-lane__entry-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
 }
 
 .assembler-assembly-lane__entry-topline {
@@ -4732,54 +4553,55 @@ main {
   align-items: center;
   min-height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  color: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-meta);
+  background: transparent;
+  font-family: var(--font-code);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .assembler-assembly-lane__badge.is-stage {
-  border-color: var(--assembly-step-1-border, rgba(138, 193, 255, 0.24));
-  background: var(--assembly-step-1-tint, rgba(138, 193, 255, 0.08));
-  color: var(--white);
+  border-color: var(--assembly-step-1-border);
+  color: var(--text-primary);
 }
 
 .assembler-assembly-lane__badge.is-proof {
-  border-color: rgba(34, 197, 94, 0.26);
-  background: rgba(34, 197, 94, 0.08);
-  color: var(--white);
+  border-color: var(--assembly-step-4-border);
+  color: var(--text-primary);
 }
 
 .assembler-assembly-lane__entry-links {
   margin: 0;
-  color: var(--soft);
+  color: var(--text-meta);
   font-size: 12px;
   line-height: 1.5;
 }
 
-.assembler-assembly-lane__entry-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.assembler-assembly-lane__icon-button {
+  display: inline-flex;
   align-items: center;
-}
-
-.assembler-assembly-lane__entry-button {
-  min-height: 34px;
-  padding: 0 12px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
-  color: var(--white);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--text-meta);
+  cursor: pointer;
+  transition: background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out;
 }
 
-.assembler-assembly-lane__entry-button.is-secondary {
-  color: var(--soft);
+.assembler-assembly-lane__icon-button:hover {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+.assembler-assembly-lane__icon-button:focus-visible {
+  outline: 2px solid var(--assembly-step-1-border);
+  outline-offset: 2px;
 }
 
 .assembler-project-home__masthead {
@@ -7743,8 +7565,7 @@ main {
     gap: 14px;
   }
 
-  .assembler-assembly-lane__masthead,
-  .assembler-assembly-lane__summary-card,
+  .assembler-assembly-lane__meta-strip,
   .assembler-assembly-lane__entries-panel,
   .assembler-assembly-lane__entry,
   .assembler-boxes-index__masthead,
@@ -7760,21 +7581,17 @@ main {
     border-radius: 16px;
   }
 
-  .assembler-assembly-lane__masthead,
-  .assembler-boxes-index__masthead,
-  .assembler-project-home__masthead {
-    grid-template-columns: 1fr;
-  }
-
-  .assembler-assembly-lane__meta,
-  .assembler-assembly-lane__masthead-actions,
+  .assembler-assembly-lane__strip-title-row,
   .assembler-boxes-index__secondary-actions,
   .assembler-project-home__masthead-actions {
     min-width: 0;
   }
 
-  .assembler-assembly-lane__meta,
-  .assembler-assembly-lane__masthead-actions,
+  .assembler-assembly-lane__entry-head {
+    grid-template-columns: 1fr;
+  }
+
+  .assembler-assembly-lane__strip-title-row,
   .assembler-boxes-index__meta,
   .assembler-boxes-index__secondary-actions,
   .assembler-boxes-index__row-aside,
@@ -7789,8 +7606,6 @@ main {
     align-items: stretch;
   }
 
-  .assembler-assembly-lane__primary-button,
-  .assembler-assembly-lane__secondary-button,
   .assembler-boxes-index__primary-button,
   .assembler-boxes-index__secondary-button,
   .assembler-boxes-index__row-action,
@@ -7804,7 +7619,6 @@ main {
     width: 100%;
   }
 
-  .assembler-assembly-lane__summary-grid,
   .assembler-project-home__summary-grid,
   .assembler-project-home__layout {
     grid-template-columns: 1fr;
@@ -8448,15 +8262,13 @@ main {
     border-radius: 22px;
   }
 
-  .self-assembly-hero h1 {
-    font-size: clamp(2.2rem, 9vw, 3.4rem);
+  .self-assembly-page__title {
+    font-size: clamp(2rem, 8vw, 2.8rem);
   }
 
   .self-assembly-seed-grid,
-  .self-assembly-history-list,
   .self-assembly-source-grid,
-  .self-assembly-adapter-grid,
-  .self-assembly-flow-grid {
+  .self-assembly-adapter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

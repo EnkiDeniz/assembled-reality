@@ -2,16 +2,6 @@ import Link from "next/link";
 import AssemblyLane from "@/components/AssemblyLane";
 import PublicFooterLinks from "@/components/PublicFooterLinks";
 import { publicSite } from "@/lib/public-site";
-import { PRODUCT_CHAIN_LABEL, PRODUCT_CHAIN_NOTE, PRODUCT_SENTENCE } from "@/lib/product-language";
-
-function MetricPill({ label, value }) {
-  return (
-    <div className="self-assembly-pill">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
 
 function SeedCard({ title, body }) {
   return (
@@ -95,21 +85,12 @@ export default function SelfAssemblyPage({ page, demo, jsonLd = null }) {
           </Link>
         </div>
 
-        <header className="self-assembly-hero">
-          <span className="self-assembly-hero__eyebrow">{page.label}</span>
-          <h1>{page.title}</h1>
-          <p className="self-assembly-hero__lede">{page.lede}</p>
-          <p className="self-assembly-hero__note">
-            {PRODUCT_CHAIN_LABEL}: {PRODUCT_SENTENCE}
-          </p>
-          <div className="self-assembly-hero__metrics">
-            <MetricPill label="Curated sources" value={demo.sources.length} />
-            <MetricPill label="Assembly milestones" value={demo.milestones.length} />
-            <MetricPill label="Normalized commits" value={demo.history.commitCount} />
-          </div>
-          <p className="self-assembly-hero__note">
-            The seven-image chronology stays primary. Git history sits underneath it as a
-            corroborating chronology witness, and the lane stays accountable to proof. {PRODUCT_CHAIN_NOTE}
+        <header className="self-assembly-page__preface">
+          <span className="self-assembly-page__label">{page.label}</span>
+          <h1 className="self-assembly-page__title">{page.title}</h1>
+          <p className="self-assembly-page__lede">
+            {page.lede} The seven-image chronology stays primary, and imported Git history remains a
+            corroborating witness beneath the same lane grammar.
           </p>
         </header>
 
@@ -134,11 +115,7 @@ export default function SelfAssemblyPage({ page, demo, jsonLd = null }) {
             The public demo now renders the same lane entry shape and certainty grammar as the
             workspace. The chronology stays curated, but the box is described in the same evidence language.
           </p>
-          <AssemblyLane
-            viewModel={demo.assemblyLane}
-            showMasthead={false}
-            showSummary={false}
-          />
+          <AssemblyLane viewModel={demo.assemblyLane} />
         </section>
 
         <section className="self-assembly-section">
