@@ -407,6 +407,37 @@ export async function createReadingReceiptDraftForUser(userId, draftInput) {
   }
 }
 
+export async function getReadingReceiptDraftByIdForUser(userId, draftId) {
+  const normalizedDraftId = String(draftId || "").trim();
+  if (!normalizedDraftId) return null;
+
+  try {
+    const draft = await prisma.readingReceiptDraft.findFirst({
+      where: {
+        id: normalizedDraftId,
+        userId,
+      },
+      select: readingReceiptDraftSelection,
+    });
+
+    return normalizeReadingReceiptDraft(draft);
+  } catch (error) {
+    if (!isMissingReceiptProjectIdColumnError(error)) {
+      throw error;
+    }
+
+    const draft = await prisma.readingReceiptDraft.findFirst({
+      where: {
+        id: normalizedDraftId,
+        userId,
+      },
+      select: readingReceiptDraftSelectionBase,
+    });
+
+    return normalizeReadingReceiptDraft(draft, { includeProjectId: false });
+  }
+}
+
 export async function listReadingReceiptDraftsForUser(userId) {
   try {
     const drafts = await prisma.readingReceiptDraft.findMany({
@@ -509,6 +540,83 @@ export async function listReadingReceiptDraftsForProjectForUser(
     });
 
     return normalizeReadingReceiptDraftList(drafts, { includeProjectId: false });
+  }
+}
+
+export async function updateReadingReceiptDraftForUser(
+  userId,
+  draftId,
+  updates = {},
+) {
+  const normalizedDraftId = String(draftId || "").trim();
+  if (!normalizedDraftId) {
+    throw new Error("Receipt draft id is required.");
+  }
+
+  const data = {};
+  if (updates.status !== undefined) data.status = updates.status;
+  if (updates.title !== undefined) data.title = updates.title || null;
+  if (updates.interpretation !== undefined) data.interpretation = updates.interpretation || null;
+  if (updates.implications !== undefined) data.implications = updates.implications || null;
+  if (updates.stance !== undefined) data.stance = updates.stance;
+  if (updates.getReceiptsReceiptId !== undefined) {
+    data.getReceiptsReceiptId = updates.getReceiptsReceiptId || null;
+  }
+  if (updates.payload !== undefined) data.payload = updates.payload || null;
+
+  if (!Object.keys(data).length) {
+    throw new Error("No receipt draft changes were provided.");
+  }
+
+  try {
+    const updated = await prisma.readingReceiptDraft.updateMany({
+      where: {
+        id: normalizedDraftId,
+        userId,
+      },
+      data,
+    });
+
+    if (!updated?.count) {
+      throw new Error("Receipt draft not found.");
+    }
+
+    const draft = await prisma.readingReceiptDraft.findFirst({
+      where: {
+        id: normalizedDraftId,
+        userId,
+      },
+      select: readingReceiptDraftSelection,
+    });
+
+    return normalizeReadingReceiptDraft(draft);
+  } catch (error) {
+    if (!isMissingReceiptProjectIdColumnError(error)) {
+      throw error;
+    }
+
+    const { projectId: _projectId, ...legacySelection } = readingReceiptDraftSelectionBase;
+    const updated = await prisma.readingReceiptDraft.updateMany({
+      where: {
+        id: normalizedDraftId,
+        userId,
+      },
+      data,
+    });
+
+    if (!updated?.count) {
+      throw new Error("Receipt draft not found.");
+    }
+
+    const draft = await prisma.readingReceiptDraft.findFirst({
+      where: {
+        id: normalizedDraftId,
+        userId,
+      },
+      select: legacySelection,
+    });
+
+    return normalizeReadingReceiptDraft(draft, { includeProjectId: false });
   }
 }
 

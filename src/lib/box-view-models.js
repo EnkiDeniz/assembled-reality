@@ -9,6 +9,15 @@ import {
   getSeedSectionsFromDocument,
   listRealSourceDocuments,
 } from "@/lib/seed-model";
+import {
+  ASSEMBLY_DOMAINS,
+  buildAssemblyStateSummary,
+  getAssemblyColorTokens,
+  getAssemblyStateColorStep,
+  getGradientColorStep,
+  listConfirmationQueueItems,
+  normalizeProjectArchitectureMeta,
+} from "@/lib/assembly-architecture";
 
 export const BOX_PHASES = Object.freeze({
   think: "think",
@@ -44,6 +53,24 @@ function formatConnectionStatus(status = "") {
   if (normalized === "EXPIRED") return "Reconnect needed";
   if (normalized === "ERROR") return "Connection problem";
   return "Not connected";
+}
+
+function buildRootViewModel(activeProject = null) {
+  const meta = normalizeProjectArchitectureMeta(
+    activeProject?.metadataJson || activeProject?.architectureMeta || null,
+  );
+
+  return {
+    ...meta.root,
+    hasRoot: Boolean(meta.root.text),
+    suggestedDomains: meta.suggestedDomains,
+    applicableDomains: meta.applicableDomains,
+    applicableDomainLabels: meta.applicableDomains.map(
+      (domainKey) =>
+        ASSEMBLY_DOMAINS.find((domain) => domain.key === domainKey)?.label || domainKey,
+    ),
+    domainRationales: meta.domainRationales,
+  };
 }
 
 export function normalizeBoxPhase(value, fallback = BOX_PHASES.think) {
@@ -122,11 +149,16 @@ export function buildReceiptSummaryViewModel(
 }
 
 export function buildOperateViewModel(operateState = {}, activeProject = null) {
+  const gradientTone = getGradientColorStep(operateState?.gradient);
+
   return {
     canRunOperate: Boolean(operateState?.canOperate),
     includedSourceCount: Number(operateState?.includedSourceCount) || 0,
     includesAssembly: Boolean(operateState?.includesAssembly),
     title: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
+    gradientColorStep: gradientTone.step,
+    gradientColorUnknown: gradientTone.isUnknown,
+    gradientColorTokens: getAssemblyColorTokens(gradientTone),
   };
 }
 
@@ -154,6 +186,16 @@ export function buildBoxViewModel({
     connectionStatus,
     connectionLastError,
   });
+  const rootViewModel = buildRootViewModel(activeProject);
+  const confirmationQueue = listConfirmationQueueItems(projectDocuments, {
+    applicableDomains: rootViewModel.applicableDomains,
+    suggestedDomains: rootViewModel.suggestedDomains,
+  });
+  const stateSummary = buildAssemblyStateSummary({
+    project: activeProject,
+    projectDocuments,
+    projectDrafts,
+  });
   const sevenDiagnostic = receiptSummary.draftCount > 0
     ? "Seven can compare sources, seed, and proof from this box."
     : realSources.length >= 2
@@ -167,6 +209,11 @@ export function buildBoxViewModel({
     hasGapSignal: Boolean(seedDocument && !receiptSummary.draftCount),
     suggestionPending: Boolean(seedDocument?.seedMeta?.suggestionPending),
   });
+  const coloredVisualizationState = {
+    ...visualizationState,
+    colorStep: stateSummary.colorStep,
+    colorTokens: stateSummary.colorTokens,
+  };
   const strongestNextMove = seedDocument
     ? {
         label: "Open Seed",
@@ -247,8 +294,12 @@ export function buildBoxViewModel({
     latestRealSource,
     latestTouchedSource,
     currentAssemblyDocument: seedDocument,
-    visualizationState,
+    visualizationState: coloredVisualizationState,
     receiptSummary,
+    root: rootViewModel,
+    stateSummary,
+    confirmationQueue,
+    confirmationCount: confirmationQueue.length,
     sevenDiagnostic,
     strongestNextMove,
     resumeTarget,
@@ -274,6 +325,7 @@ export function buildThinkViewModel({
     guideSource: buildSourceSummaryViewModel(guideDocument),
     sourceSummaries,
     nonGuideSourceCount,
+    confirmationCount: listConfirmationQueueItems(projectDocuments, buildRootViewModel(activeProject)).length,
   };
 }
 
@@ -289,6 +341,7 @@ export function buildCreateViewModel({
     hasSeed: Boolean(currentAssemblyDocument),
     selectedBlockCount: Array.isArray(clipboard) ? clipboard.length : 0,
     stagedReplyCount: Array.isArray(stagedAiBlocks) ? stagedAiBlocks.length : 0,
+    root: buildRootViewModel(activeProject),
   };
 }
 
@@ -303,6 +356,13 @@ export function buildSeedViewModel({
   const receiptSummary = buildReceiptSummaryViewModel(projectDrafts);
   const realSourceCount = listRealSourceDocuments(projectDocuments).length;
   const sections = getSeedSectionsFromDocument(seedDocument);
+  const rootViewModel = buildRootViewModel(activeProject);
+  const stateSummary = buildAssemblyStateSummary({
+    project: activeProject,
+    projectDocuments,
+    projectDrafts,
+  });
+  const confirmationQueue = listConfirmationQueueItems(projectDocuments, rootViewModel);
   const visualizationState = buildVisualizationState({
     realSourceCount,
     hasSeed: Boolean(seedDocument),
@@ -311,6 +371,11 @@ export function buildSeedViewModel({
     hasGapSignal: Boolean(seedDocument && !receiptSummary.draftCount),
     suggestionPending: Boolean(pendingSuggestion),
   });
+  const coloredVisualizationState = {
+    ...visualizationState,
+    colorStep: stateSummary.colorStep,
+    colorTokens: stateSummary.colorTokens,
+  };
 
   return {
     boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
@@ -318,8 +383,12 @@ export function buildSeedViewModel({
     seedTitle: seedDocument?.title || "Seed",
     sections,
     receiptSummary,
-    visualizationState,
+    visualizationState: coloredVisualizationState,
     pendingSuggestion,
+    root: rootViewModel,
+    stateSummary,
+    confirmationQueue,
+    confirmationCount: confirmationQueue.length,
   };
 }
 
@@ -368,6 +437,7 @@ export function buildEntryStateViewModel({
 export function buildControlSurfaceViewModel({
   activeProject = null,
   currentAssemblyDocument = null,
+  projectDocuments = [],
   boxPhase = BOX_PHASES.think,
   canRunOperate = false,
   aiOpen = false,
@@ -377,6 +447,13 @@ export function buildControlSurfaceViewModel({
   const currentBoxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
   const currentSeedTitle = currentAssemblyDocument?.title || currentBoxTitle;
   const stageCount = Math.max(0, Number(clipboardCount) || 0) + Math.max(0, Number(stagedCount) || 0);
+  const rootViewModel = buildRootViewModel(activeProject);
+  const confirmationCount = listConfirmationQueueItems(projectDocuments, rootViewModel).length;
+  const stateColorStep = getAssemblyStateColorStep(
+    activeProject?.architectureMeta?.assemblyState?.current ||
+      activeProject?.metadataJson?.assemblyState?.current ||
+      (rootViewModel.hasRoot ? "rooted" : "declare-root"),
+  );
 
   return {
     currentBoxTitle,
@@ -385,6 +462,11 @@ export function buildControlSurfaceViewModel({
     canRunOperate: Boolean(canRunOperate),
     aiOpen: Boolean(aiOpen),
     stageCount,
+    rootText: rootViewModel.text,
+    hasRoot: rootViewModel.hasRoot,
+    stateColorStep,
+    stateColorTokens: getAssemblyColorTokens(stateColorStep),
+    confirmationCount,
     primaryActionLabel:
       boxPhase === BOX_PHASES.create
         ? stageCount > 0

@@ -1,3 +1,5 @@
+import { getAssemblyColorTokens, getGradientColorStep } from "@/lib/assembly-architecture";
+
 function formatOperateTimestamp(value) {
   const parsed = Date.parse(String(value || ""));
   if (Number.isNaN(parsed)) return "Just now";
@@ -51,6 +53,9 @@ export default function OperateSurface({
         result.includesAssembly ? "seed included" : "no seed",
       ].join(" · ")
     : "";
+  const gradientTone =
+    viewModel?.gradientColorTokens ||
+    getAssemblyColorTokens(getGradientColorStep(result?.gradient));
 
   return (
     <section className="assembler-phase assembler-phase--operate">
@@ -117,9 +122,20 @@ export default function OperateSurface({
             </div>
 
             <div className="assembler-operate__summary-grid">
-              <div className="assembler-operate__summary-card">
+              <div
+                className="assembler-operate__summary-card assembler-operate__summary-card--gradient"
+                style={{
+                  "--assembly-tone": gradientTone.fill,
+                  "--assembly-tone-soft": gradientTone.soft,
+                  "--assembly-tone-border": gradientTone.border,
+                  "--assembly-tone-glow": gradientTone.glow,
+                  "--assembly-tone-text": gradientTone.text,
+                }}
+              >
                 <span className="assembler-operate__summary-label">Gradient</span>
-                <strong className="assembler-operate__summary-value">{result.gradient}</strong>
+                <strong className="assembler-operate__summary-value assembler-operate__summary-value--gradient">
+                  <span className="assembler-operate__gradient-badge">{result.gradient}</span>
+                </strong>
               </div>
               <div className="assembler-operate__summary-card">
                 <span className="assembler-operate__summary-label">Convergence</span>

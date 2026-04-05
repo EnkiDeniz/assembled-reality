@@ -257,6 +257,7 @@ model ReaderProject {
   title                     String
   subtitle                  String?
   currentAssemblyDocumentKey String?
+  metadataJson              Json?
   isPinned                  Boolean                 @default(false)
   isArchived                Boolean                 @default(false)
   createdAt                 DateTime                @default(now())

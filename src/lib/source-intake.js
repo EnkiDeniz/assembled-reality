@@ -50,6 +50,8 @@ function buildAiBlocksFromMarkdown(markdown, documentKey, operation = "extracted
       defaultIsEditable: true,
       defaultAuthor: "ai",
       defaultOperation: operation,
+      defaultConfirmationStatus: "unconfirmed",
+      defaultSourceType: "derived",
     },
   );
 }

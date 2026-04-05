@@ -1,4 +1,5 @@
 import BoxObjectVisualization from "@/components/BoxObjectVisualization";
+import RootSummaryPanel from "@/components/RootSummaryPanel";
 import SeedUpdatePanel from "@/components/SeedUpdatePanel";
 
 export default function SeedSurface({
@@ -12,9 +13,12 @@ export default function SeedSurface({
   onOpenStage,
   onRunOperate,
   onAssemble,
+  onOpenConfirmation,
+  onSaveRoot,
   onApplySuggestion,
   onEditSuggestion,
   onDismissSuggestion,
+  rootPending = false,
   isMobileLayout = false,
   children,
 }) {
@@ -24,6 +28,13 @@ export default function SeedSurface({
   const showSeedDocument =
     Boolean(activeDocument?.documentKey) &&
     (activeDocument?.isAssembly || activeDocument?.documentType === "assembly");
+  const rootPanelKey = [
+    seedViewModel?.root?.text || "",
+    seedViewModel?.root?.gloss || "",
+    seedViewModel?.root?.hasRoot ? "1" : "0",
+    seedViewModel?.stateSummary?.current || "",
+    seedViewModel?.confirmationCount || 0,
+  ].join("::");
 
   return (
     <section className="assembler-phase assembler-phase--create">
@@ -83,6 +94,17 @@ export default function SeedSurface({
           ) : null}
         </div>
       </div>
+
+      <RootSummaryPanel
+        key={rootPanelKey}
+        root={seedViewModel?.root}
+        stateSummary={seedViewModel?.stateSummary}
+        confirmationCount={seedViewModel?.confirmationCount || 0}
+        pending={rootPending}
+        compact={isMobileLayout}
+        onSaveRoot={onSaveRoot}
+        onOpenConfirmation={onOpenConfirmation}
+      />
 
       <SeedUpdatePanel
         suggestion={suggestion}

@@ -15,12 +15,16 @@ export default function BoxManagementDialog({
   projects = [],
   selectedProjectKey = "",
   createTitle = "",
+  createRootText = "",
+  createRootGloss = "",
   renameTitle = "",
   pendingAction = "",
   errorMessage = "",
   onClose,
   onSelectProject,
   onCreateTitleChange,
+  onCreateRootTextChange,
+  onCreateRootGlossChange,
   onRenameTitleChange,
   onCreate,
   onRename,
@@ -95,11 +99,28 @@ export default function BoxManagementDialog({
                   }
                 }}
               />
+              <input
+                className="assembler-box-management__input"
+                value={createRootText}
+                onChange={(event) => onCreateRootTextChange(event.target.value)}
+                placeholder="Root (7 words or fewer)"
+                aria-label="New Box root"
+                disabled={mutating}
+              />
+              <textarea
+                className="assembler-box-management__input assembler-box-management__textarea"
+                value={createRootGloss}
+                onChange={(event) => onCreateRootGlossChange(event.target.value)}
+                placeholder="Gloss: one sentence expanding the root."
+                aria-label="New Box root gloss"
+                disabled={mutating}
+                rows={3}
+              />
               <button
                 type="button"
                 className="assembler-box-management__primary"
                 onClick={onCreate}
-                disabled={!createTitle.trim() || mutating}
+                disabled={!createTitle.trim() || !createRootText.trim() || !createRootGloss.trim() || mutating}
               >
                 {creating ? "Creating…" : "Create Box"}
               </button>

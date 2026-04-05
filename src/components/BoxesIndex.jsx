@@ -1,4 +1,9 @@
 import { useMemo, useState } from "react";
+import {
+  getAssemblyColorTokens,
+  getAssemblyStateColorStep,
+  normalizeProjectArchitectureMeta,
+} from "@/lib/assembly-architecture";
 import BoxObjectVisualization from "@/components/BoxObjectVisualization";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
 import { PRODUCT_MARK } from "@/lib/product-language";
@@ -119,13 +124,23 @@ function BoxRow({
   const title = project.boxTitle || project.title || "Untitled Box";
   const subtitle = project.boxSubtitle || project.subtitle || "";
   const hasSeed = Boolean(project?.currentAssemblyDocumentKey);
+  const architectureMeta = normalizeProjectArchitectureMeta(
+    project?.metadataJson || project?.architectureMeta || null,
+  );
+  const stateColorStep = getAssemblyStateColorStep(
+    architectureMeta.assemblyState.current || (architectureMeta.root.text ? "rooted" : "declare-root"),
+  );
   const visualizationState =
     project?.visualizationState ||
-    buildVisualizationState({
-      realSourceCount: Number(project?.sourceCount) || 0,
-      hasSeed,
-      localReceiptCount: Number(project?.receiptDraftCount) || 0,
-    });
+    {
+      ...buildVisualizationState({
+        realSourceCount: Number(project?.sourceCount) || 0,
+        hasSeed,
+        localReceiptCount: Number(project?.receiptDraftCount) || 0,
+      }),
+      colorStep: stateColorStep,
+      colorTokens: getAssemblyColorTokens(stateColorStep),
+    };
 
   return (
     <div

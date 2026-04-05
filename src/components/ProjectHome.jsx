@@ -1,4 +1,5 @@
 import BoxObjectVisualization from "@/components/BoxObjectVisualization";
+import RootSummaryPanel from "@/components/RootSummaryPanel";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 
@@ -171,6 +172,9 @@ export default function ProjectHome({
   onPasteClipboard,
   onOpenSpeak,
   onOpenIntake,
+  onOpenConfirmation,
+  onSaveRoot,
+  rootPending = false,
   ActionIcon,
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
@@ -196,6 +200,13 @@ export default function ProjectHome({
   };
   const latestRealSourceSummary = buildSourceSummaryViewModel(sourceDocuments[0] || null);
   const resumeTarget = boxViewModel?.resumeTarget || null;
+  const rootPanelKey = [
+    boxViewModel?.root?.text || "",
+    boxViewModel?.root?.gloss || "",
+    boxViewModel?.root?.hasRoot ? "1" : "0",
+    boxViewModel?.stateSummary?.current || "",
+    boxViewModel?.confirmationCount || 0,
+  ].join("::");
   const quickActions = [
     primaryAction
       ? {
@@ -286,6 +297,17 @@ export default function ProjectHome({
             </div>
           </div>
         </section>
+
+        <RootSummaryPanel
+          key={rootPanelKey}
+          root={boxViewModel?.root}
+          stateSummary={boxViewModel?.stateSummary}
+          confirmationCount={boxViewModel?.confirmationCount || 0}
+          pending={rootPending}
+          compact
+          onSaveRoot={onSaveRoot}
+          onOpenConfirmation={onOpenConfirmation}
+        />
 
         <section className="assembler-project-home__panel">
           <div className="assembler-project-home__section-head">
@@ -433,6 +455,16 @@ export default function ProjectHome({
           />
         ))}
       </section>
+
+      <RootSummaryPanel
+        key={rootPanelKey}
+        root={boxViewModel?.root}
+        stateSummary={boxViewModel?.stateSummary}
+        confirmationCount={boxViewModel?.confirmationCount || 0}
+        pending={rootPending}
+        onSaveRoot={onSaveRoot}
+        onOpenConfirmation={onOpenConfirmation}
+      />
 
       <section className="assembler-project-home__overview">
         <OverviewCard

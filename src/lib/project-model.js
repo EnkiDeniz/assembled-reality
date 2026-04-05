@@ -140,6 +140,8 @@ export function buildDefaultProjectFromDocuments(documents = []) {
     updatedAt: latestTouchedDocument?.updatedAt || latestTouchedDocument?.createdAt || null,
     receiptDraftCount: 0,
     latestReceiptUpdatedAt: null,
+    metadataJson: null,
+    architectureMeta: null,
   };
 }
 
@@ -235,6 +237,8 @@ export function hydrateProjectWithDocuments(project = null, documents = []) {
       project.currentAssemblyDocumentKey ?? fallbackProject.currentAssemblyDocumentKey ?? null,
     receiptDraftCount: Number(project.receiptDraftCount) || 0,
     latestReceiptUpdatedAt: project.latestReceiptUpdatedAt || null,
+    metadataJson: project.metadataJson || null,
+    architectureMeta: project.architectureMeta || project.metadataJson || null,
   };
 }
 

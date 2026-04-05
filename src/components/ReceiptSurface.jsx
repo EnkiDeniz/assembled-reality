@@ -1,3 +1,4 @@
+import RootSummaryPanel from "@/components/RootSummaryPanel";
 import { formatWorkspaceLogTime, getWorkspaceLogActionColor } from "@/lib/document-blocks";
 
 function ReceiptStatusPill({ label, tone = "" }) {
@@ -15,10 +16,17 @@ export default function ReceiptSurface({
   receiptPending = false,
   activeDocumentTitle = "",
   onCreateReceipt,
+  onSealReceipt,
   onRunOperate,
   onExportReceipt,
   onExportDocument,
   onOpenGetReceipts,
+  root = null,
+  stateSummary = null,
+  confirmationCount = 0,
+  onOpenConfirmation,
+  onSaveRoot,
+  rootPending = false,
   isMobileLayout = false,
 }) {
   const summary = receiptSummary || {
@@ -40,6 +48,13 @@ export default function ReceiptSurface({
     : summary.connectionStatus === "CONNECTED"
       ? "success"
       : "";
+  const rootPanelKey = [
+    root?.text || "",
+    root?.gloss || "",
+    root?.hasRoot ? "1" : "0",
+    stateSummary?.current || "",
+    confirmationCount || 0,
+  ].join("::");
 
   return (
     <section className="assembler-phase assembler-phase--receipts">
@@ -107,8 +122,24 @@ export default function ReceiptSurface({
                 Export doc
               </button>
             ) : null}
+            {hasLatestProof && summary.latestDraftStatus !== "SEALED" && onSealReceipt ? (
+              <button type="button" className="terminal-button" onClick={() => onSealReceipt(summary.latestDraft)}>
+                Seal receipt
+              </button>
+            ) : null}
           </div>
         </section>
+
+        <RootSummaryPanel
+          key={rootPanelKey}
+          root={root}
+          stateSummary={stateSummary}
+          confirmationCount={confirmationCount}
+          pending={rootPending}
+          compact={isMobileLayout}
+          onSaveRoot={onSaveRoot}
+          onOpenConfirmation={onOpenConfirmation}
+        />
 
         <section className="assembler-receipt-surface__status-grid">
           <article className="assembler-receipt-surface__status-card">

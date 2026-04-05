@@ -4,6 +4,7 @@ import {
   deleteReaderProjectForUser,
   updateReaderProjectForUser,
 } from "@/lib/reader-projects";
+import { validateRootText } from "@/lib/assembly-architecture";
 import { getRequiredSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -17,15 +18,26 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   const title = String(body?.title || "").trim();
   const subtitle = String(body?.subtitle || "").trim();
+  const rootText = String(body?.rootText || "").trim();
+  const rootGloss = String(body?.rootGloss || "").trim();
 
   if (!title) {
     return NextResponse.json({ error: "Box title is required." }, { status: 400 });
+  }
+
+  if (rootText) {
+    const rootError = validateRootText(rootText);
+    if (rootError) {
+      return NextResponse.json({ error: rootError }, { status: 400 });
+    }
   }
 
   try {
     const project = await createReaderProjectForUser(session.user.id, {
       title,
       subtitle,
+      rootText,
+      rootGloss,
     });
 
     return NextResponse.json({
@@ -37,6 +49,7 @@ export async function POST(request) {
         subtitle: project.subtitle,
         isPinned: Boolean(project.isPinned),
         isArchived: Boolean(project.isArchived),
+        metadataJson: project.metadataJson || null,
       },
     });
   } catch (error) {
@@ -59,10 +72,23 @@ export async function PUT(request) {
   const hasSubtitle = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "subtitle");
   const hasPinned = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "isPinned");
   const hasArchived = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "isArchived");
+  const hasRootText = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "rootText");
+  const hasRootGloss = Boolean(body) && Object.prototype.hasOwnProperty.call(body, "rootGloss");
+  const hasApplicableDomains =
+    Boolean(body) && Object.prototype.hasOwnProperty.call(body, "applicableDomains");
+  const hasDomainRationales =
+    Boolean(body) && Object.prototype.hasOwnProperty.call(body, "domainRationales");
+  const hasAssemblyState =
+    Boolean(body) && Object.prototype.hasOwnProperty.call(body, "assemblyState");
   const title = String(body?.title || "").trim();
   const subtitle = hasSubtitle ? body?.subtitle : undefined;
   const isPinned = hasPinned ? Boolean(body?.isPinned) : undefined;
   const isArchived = hasArchived ? Boolean(body?.isArchived) : undefined;
+  const rootText = hasRootText ? String(body?.rootText || "").trim() : undefined;
+  const rootGloss = hasRootGloss ? String(body?.rootGloss || "").trim() : undefined;
+  const applicableDomains = hasApplicableDomains ? body?.applicableDomains : undefined;
+  const domainRationales = hasDomainRationales ? body?.domainRationales : undefined;
+  const assemblyState = hasAssemblyState ? body?.assemblyState : undefined;
 
   if (!projectKey) {
     return NextResponse.json({ error: "Box key is required." }, { status: 400 });
@@ -72,7 +98,24 @@ export async function PUT(request) {
     return NextResponse.json({ error: "Box title is required." }, { status: 400 });
   }
 
-  if (!hasTitle && !hasSubtitle && !hasPinned && !hasArchived) {
+  if (hasRootText && rootText) {
+    const rootError = validateRootText(rootText);
+    if (rootError) {
+      return NextResponse.json({ error: rootError }, { status: 400 });
+    }
+  }
+
+  if (
+    !hasTitle &&
+    !hasSubtitle &&
+    !hasPinned &&
+    !hasArchived &&
+    !hasRootText &&
+    !hasRootGloss &&
+    !hasApplicableDomains &&
+    !hasDomainRationales &&
+    !hasAssemblyState
+  ) {
     return NextResponse.json({ error: "No box changes were provided." }, { status: 400 });
   }
 
@@ -82,6 +125,11 @@ export async function PUT(request) {
       ...(hasSubtitle ? { subtitle } : {}),
       ...(hasPinned ? { isPinned } : {}),
       ...(hasArchived ? { isArchived } : {}),
+      ...(hasRootText ? { rootText } : {}),
+      ...(hasRootGloss ? { rootGloss } : {}),
+      ...(hasApplicableDomains ? { applicableDomains } : {}),
+      ...(hasDomainRationales ? { domainRationales } : {}),
+      ...(hasAssemblyState ? { assemblyState } : {}),
     });
 
     return NextResponse.json({
@@ -94,6 +142,7 @@ export async function PUT(request) {
         currentAssemblyDocumentKey: project.currentAssemblyDocumentKey || null,
         isPinned: Boolean(project.isPinned),
         isArchived: Boolean(project.isArchived),
+        metadataJson: project.metadataJson || null,
       },
     });
   } catch (error) {

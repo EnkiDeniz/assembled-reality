@@ -5,6 +5,7 @@ import { startTransition, useCallback, useEffect, useRef, useState } from "react
 import AiUtilityRail from "@/components/AiUtilityRail";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
+import ConfirmationQueueDialog from "@/components/ConfirmationQueueDialog";
 import FirstBoxComposer from "@/components/FirstBoxComposer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProjectHome from "@/components/ProjectHome";
@@ -1659,6 +1660,9 @@ function WorkspaceLaunchpad({
   onPasteClipboard,
   onOpenSpeak,
   onOpenIntake,
+  onOpenConfirmation,
+  onSaveRoot,
+  rootPending = false,
   uploading = false,
   pastePendingMode = "",
   recordingVoice = false,
@@ -1806,6 +1810,9 @@ function WorkspaceLaunchpad({
       onPasteClipboard={onPasteClipboard}
       onOpenSpeak={onOpenSpeak}
       onOpenIntake={onOpenIntake}
+      onOpenConfirmation={onOpenConfirmation}
+      onSaveRoot={onSaveRoot}
+      rootPending={rootPending}
       ActionIcon={WorkspaceActionIcon}
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
       getDocumentKindLabel={getDocumentKindLabel}
@@ -3209,6 +3216,13 @@ function LogView({
   onExportReceipt,
   onExportDocument,
   onOpenGetReceipts,
+  onSealReceipt,
+  root = null,
+  stateSummary = null,
+  confirmationCount = 0,
+  onOpenConfirmation,
+  onSaveRoot,
+  rootPending = false,
   isMobileLayout = false,
 }) {
   return (
@@ -3223,6 +3237,13 @@ function LogView({
       onExportReceipt={onExportReceipt}
       onExportDocument={onExportDocument}
       onOpenGetReceipts={onOpenGetReceipts}
+      onSealReceipt={onSealReceipt}
+      root={root}
+      stateSummary={stateSummary}
+      confirmationCount={confirmationCount}
+      onOpenConfirmation={onOpenConfirmation}
+      onSaveRoot={onSaveRoot}
+      rootPending={rootPending}
       isMobileLayout={isMobileLayout}
     />
   );
@@ -3868,6 +3889,9 @@ export default function WorkspaceShell({
   const [createProjectTitle, setCreateProjectTitle] = useState("Untitled Box");
   const [renameProjectTitle, setRenameProjectTitle] = useState("");
   const [boxManagementError, setBoxManagementError] = useState("");
+  const [rootPending, setRootPending] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [launchpadView, setLaunchpadView] = useState(
     normalizeLaunchpadView(initialLaunchpadView, LAUNCHPAD_VIEWS.boxes),
@@ -4022,6 +4046,7 @@ export default function WorkspaceShell({
   const controlSurfaceViewModel = buildControlSurfaceViewModel({
     activeProject,
     currentAssemblyDocument: currentSeedDocument,
+    projectDocuments,
     boxPhase,
     canRunOperate,
     aiOpen,
@@ -5254,6 +5279,14 @@ export default function WorkspaceShell({
                   payload.project.isArchived === undefined
                     ? Boolean(project.isArchived)
                     : Boolean(payload.project.isArchived),
+                metadataJson:
+                  payload.project.metadataJson === undefined
+                    ? project.metadataJson || null
+                    : payload.project.metadataJson,
+                architectureMeta:
+                  payload.project.metadataJson === undefined
+                    ? project.architectureMeta || project.metadataJson || null
+                    : payload.project.metadataJson,
               }
             : project,
         ),
@@ -5267,6 +5300,114 @@ export default function WorkspaceShell({
       return null;
     } finally {
       setProjectActionPending("");
+    }
+  }
+
+  async function saveRootForProject(projectKey, payload) {
+    const normalizedProjectKey = String(projectKey || "").trim();
+    if (!normalizedProjectKey) return null;
+
+    setRootPending(true);
+    try {
+      const updated = await updateProjectSettings(normalizedProjectKey, payload);
+      if (updated?.metadataJson?.root?.text) {
+        setFeedback(`Root declared for ${updated.title || "this box"}.`, "success");
+      } else if (updated) {
+        setFeedback("Saved the root gloss.", "success");
+      }
+      return updated;
+    } finally {
+      setRootPending(false);
+    }
+  }
+
+  async function resolveConfirmationItem({
+    item,
+    action = "confirm",
+    primaryTag = "",
+    domain = "",
+  } = {}) {
+    if (!item?.documentKey || !item?.id || !activeProjectKey) return;
+
+    setConfirmationPending(true);
+    try {
+      const response = await fetch("/api/workspace/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: activeProjectKey,
+          documentKey: item.documentKey,
+          blockId: item.id,
+          action,
+          primaryTag,
+          domain,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.document?.documentKey) {
+        throw new Error(payload?.error || "Could not update the confirmation queue.");
+      }
+
+      upsertDocument(payload.document, { replaceLogs: true });
+      setFeedback(
+        action === "discard" ? "Discarded the block from active confirmation." : "Confirmed the block.",
+        "success",
+      );
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not update the confirmation queue.",
+        "error",
+      );
+      throw error;
+    } finally {
+      setConfirmationPending(false);
+    }
+  }
+
+  async function sealReceiptDraft(draft) {
+    if (!draft?.id) return;
+
+    const deltaStatement = window.prompt(
+      "State the one operator sentence describing what changed.",
+      draft?.payload?.deltaStatement ||
+        draft?.payload?.decision ||
+        draft?.payload?.learned ||
+        draft?.implications ||
+        "",
+    );
+
+    if (!deltaStatement || !deltaStatement.trim()) {
+      return;
+    }
+
+    setReceiptPending(true);
+    try {
+      const response = await fetch("/api/workspace/receipt", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          draftId: draft.id,
+          deltaStatement: deltaStatement.trim(),
+          projectKey: activeProjectKey,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.draft?.id) {
+        throw new Error(payload?.error || "Could not seal the receipt.");
+      }
+
+      upsertProjectDraft(payload.draft);
+      setFeedback("Receipt sealed.", "success");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not seal the receipt.", "error");
+    } finally {
+      setReceiptPending(false);
     }
   }
 
@@ -8601,6 +8742,8 @@ export default function WorkspaceShell({
               onDeleteDocument={requestDeleteDocument}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onOpenSpeak={openVoiceRecorder}
+              onOpenConfirmation={() => setConfirmationOpen(true)}
+              onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
               onOpenIntake={() => {
                 if (isMobileLayout) {
                   setWorkspacePickerOpen(true);
@@ -8608,6 +8751,7 @@ export default function WorkspaceShell({
                 }
                 setDropAnythingOpen(true);
               }}
+              rootPending={rootPending}
               recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               resumeSessionSummary={resumeSessionSummaryState}
               isMobileLayout={isMobileLayout}
@@ -8812,6 +8956,13 @@ export default function WorkspaceShell({
                           window.location.assign("/account");
                         }
                       }}
+                      onSealReceipt={sealReceiptDraft}
+                      root={seedViewModel?.root}
+                      stateSummary={seedViewModel?.stateSummary}
+                      confirmationCount={seedViewModel?.confirmationCount || 0}
+                      onOpenConfirmation={() => setConfirmationOpen(true)}
+                      onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
+                      rootPending={rootPending}
                       isMobileLayout={isMobileLayout}
                     />
                   ) : isOperatePhase ? (
@@ -8857,6 +9008,9 @@ export default function WorkspaceShell({
                         });
                       }}
                       onDismissSuggestion={dismissSeedSuggestion}
+                      onOpenConfirmation={() => setConfirmationOpen(true)}
+                      onSaveRoot={(payload) => void saveRootForProject(activeProjectKey, payload)}
+                      rootPending={rootPending}
                       isMobileLayout={isMobileLayout}
                     >
                       {documentWorkbench}
@@ -9068,6 +9222,15 @@ export default function WorkspaceShell({
             onClose={() => setAiOpen(false)}
           />
         ) : null}
+
+        <ConfirmationQueueDialog
+          open={confirmationOpen}
+          queue={seedViewModel?.confirmationQueue || []}
+          root={seedViewModel?.root}
+          pending={confirmationPending}
+          onClose={() => setConfirmationOpen(false)}
+          onResolve={(payload) => void resolveConfirmationItem(payload)}
+        />
 
         <BoxManagementDialog
           open={boxManagementOpen}

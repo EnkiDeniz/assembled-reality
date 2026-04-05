@@ -256,12 +256,16 @@ export async function createReaderDocumentForUser(
             documentKey,
             defaultSourceDocumentKey: documentKey,
             defaultIsEditable: true,
+            defaultConfirmationStatus: "unconfirmed",
+            defaultSourceType: "source",
           },
         )
       : buildWorkspaceBlocksFromDocument(parsedDocument, {
           documentKey,
           defaultSourceDocumentKey: documentKey,
           defaultIsEditable: true,
+          defaultConfirmationStatus: "unconfirmed",
+          defaultSourceType: "source",
         });
   const persistedLogEntries = normalizeWorkspaceLogEntries(logEntries, documentKey);
   const storedContentMarkdown = buildStoredWorkspaceContent({

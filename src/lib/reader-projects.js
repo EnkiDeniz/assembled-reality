@@ -10,6 +10,11 @@ import {
   buildDefaultProjectFromDocuments,
   buildProjectsFromDocuments,
 } from "@/lib/project-model";
+import {
+  buildAssemblyIndexEvent,
+  mergeProjectArchitectureMeta,
+  normalizeProjectArchitectureMeta,
+} from "@/lib/assembly-architecture";
 import { slugify } from "@/lib/text";
 
 function getReaderProjectModel() {
@@ -40,6 +45,20 @@ function isMissingReceiptProjectIdColumnError(error) {
   return String(error.meta?.column || "")
     .toLowerCase()
     .includes("projectid");
+}
+
+function isMissingProjectMetadataColumnError(error) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2022") {
+    return false;
+  }
+
+  return String(error.meta?.column || "")
+    .toLowerCase()
+    .includes("metadatajson");
 }
 
 function toProjectDocumentRole(document) {
@@ -149,6 +168,8 @@ function serializePersistedProject(projectRecord, allDocuments = []) {
     receiptDraftCount: Number(projectRecord?._count?.readingReceiptDrafts) || 0,
     latestReceiptUpdatedAt:
       projectRecord?.readingReceiptDrafts?.[0]?.updatedAt?.toISOString?.() || null,
+    metadataJson: normalizeProjectArchitectureMeta(projectRecord?.metadataJson),
+    architectureMeta: normalizeProjectArchitectureMeta(projectRecord?.metadataJson),
   };
 }
 
@@ -185,6 +206,7 @@ async function ensureDefaultProjectRecord(userId, documents = []) {
           title: fallbackProject.title,
           subtitle: fallbackProject.subtitle,
           currentAssemblyDocumentKey: fallbackProject.currentAssemblyDocumentKey,
+          metadataJson: null,
         },
         include: {
           documents: {
@@ -243,7 +265,7 @@ async function ensureDefaultProjectRecord(userId, documents = []) {
       },
     });
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       return null;
     }
 
@@ -280,7 +302,7 @@ async function findOrCreateProjectRecordForUser(
       },
     });
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       return null;
     }
 
@@ -326,7 +348,7 @@ export async function listReaderProjectsForUser(userId, documents = []) {
       serializePersistedProject(projectRecord, documents),
     );
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       return buildProjectsFromDocuments(documents);
     }
 
@@ -347,6 +369,8 @@ export async function createReaderProjectForUser(
   {
     title,
     subtitle = "",
+    rootText = "",
+    rootGloss = "",
     sourceDocumentKeys = [PRIMARY_WORKSPACE_DOCUMENT_KEY],
     includeDefaultSource = true,
   } = {},
@@ -360,6 +384,24 @@ export async function createReaderProjectForUser(
 
   const normalizedTitle = String(title || "").trim() || DEFAULT_PROJECT_TITLE;
   const normalizedSubtitle = String(subtitle || "").trim() || DEFAULT_PROJECT_SUBTITLE;
+  const rootMeta =
+    String(rootText || "").trim() || String(rootGloss || "").trim()
+      ? mergeProjectArchitectureMeta(null, {
+          root: {
+            text: String(rootText || "").trim(),
+            gloss: String(rootGloss || "").trim(),
+            createdAt: new Date().toISOString(),
+            locked: Boolean(String(rootText || "").trim()),
+          },
+          events: String(rootText || "").trim()
+            ? [
+                buildAssemblyIndexEvent("root_declared", {
+                  rootText: String(rootText || "").trim(),
+                }),
+              ]
+            : [],
+        })
+      : null;
   const projectKey = await ensureUniqueProjectKey(userId, slugify(normalizedTitle) || "box");
   const normalizedSourceKeys = [
     ...new Set(
@@ -382,6 +424,7 @@ export async function createReaderProjectForUser(
         title: normalizedTitle,
         subtitle: normalizedSubtitle,
         currentAssemblyDocumentKey: null,
+        metadataJson: rootMeta,
         ...(initialSourceKeys.length
           ? {
               documents: {
@@ -403,7 +446,7 @@ export async function createReaderProjectForUser(
 
     return project;
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       throw new Error("Boxes are temporarily unavailable.");
     }
 
@@ -419,6 +462,13 @@ export async function updateReaderProjectForUser(
     subtitle,
     isPinned,
     isArchived,
+    rootText,
+    rootGloss,
+    applicableDomains,
+    domainRationales,
+    assemblyState,
+    stateHistory,
+    appendEvents = [],
   } = {},
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -432,9 +482,27 @@ export async function updateReaderProjectForUser(
   const hasSubtitle = subtitle !== undefined;
   const hasPinned = isPinned !== undefined;
   const hasArchived = isArchived !== undefined;
+  const hasRootText = rootText !== undefined;
+  const hasRootGloss = rootGloss !== undefined;
+  const hasApplicableDomains = applicableDomains !== undefined;
+  const hasDomainRationales = domainRationales !== undefined;
+  const hasAssemblyState = assemblyState !== undefined;
+  const hasStateHistory = stateHistory !== undefined;
   const normalizedTitle = String(title || "").trim();
 
-  if (!hasTitle && !hasSubtitle && !hasPinned && !hasArchived) {
+  if (
+    !hasTitle &&
+    !hasSubtitle &&
+    !hasPinned &&
+    !hasArchived &&
+    !hasRootText &&
+    !hasRootGloss &&
+    !hasApplicableDomains &&
+    !hasDomainRationales &&
+    !hasAssemblyState &&
+    !hasStateHistory &&
+    !(Array.isArray(appendEvents) && appendEvents.length)
+  ) {
     throw new Error("No box changes were provided.");
   }
 
@@ -456,6 +524,22 @@ export async function updateReaderProjectForUser(
 
     if (project.projectKey === DEFAULT_PROJECT_KEY && isArchived === true) {
       throw new Error("The default box cannot be archived.");
+    }
+
+    const currentMeta = normalizeProjectArchitectureMeta(project.metadataJson);
+    const nextRootDraft = {
+      ...currentMeta.root,
+      ...(hasRootText ? { text: String(rootText || "").trim() } : {}),
+      ...(hasRootGloss ? { gloss: String(rootGloss || "").trim() } : {}),
+      ...(hasRootText && String(rootText || "").trim()
+        ? {
+            createdAt: currentMeta.root.createdAt || new Date().toISOString(),
+            locked: currentMeta.root.locked || true,
+          }
+        : {}),
+    };
+    if (currentMeta.root.locked && hasRootText && String(rootText || "").trim() !== currentMeta.root.text) {
+      throw new Error("The root text is immutable after declaration.");
     }
 
     const nextArchived = hasArchived ? Boolean(isArchived) : Boolean(project.isArchived);
@@ -487,6 +571,26 @@ export async function updateReaderProjectForUser(
               isArchived: nextArchived,
             }
           : {}),
+        ...((hasRootText ||
+          hasRootGloss ||
+          hasApplicableDomains ||
+          hasDomainRationales ||
+          hasAssemblyState ||
+          hasStateHistory ||
+          (Array.isArray(appendEvents) && appendEvents.length > 0))
+          ? {
+              metadataJson: mergeProjectArchitectureMeta(currentMeta, {
+                ...(hasRootText || hasRootGloss ? { root: nextRootDraft } : {}),
+                ...(hasApplicableDomains ? { applicableDomains } : {}),
+                ...(hasDomainRationales ? { domainRationales } : {}),
+                ...(hasAssemblyState ? { assemblyState } : {}),
+                ...(hasStateHistory ? { stateHistory } : {}),
+                ...(Array.isArray(appendEvents) && appendEvents.length > 0
+                  ? { events: appendEvents }
+                  : {}),
+              }),
+            }
+          : {}),
       },
       include: {
         documents: {
@@ -507,7 +611,7 @@ export async function updateReaderProjectForUser(
       },
     });
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       throw new Error("Boxes are temporarily unavailable.");
     }
 
@@ -666,7 +770,7 @@ export async function deleteReaderProjectForUser(userId, projectKey) {
       };
     });
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       throw new Error("Boxes are temporarily unavailable.");
     }
 
@@ -734,7 +838,7 @@ export async function attachDocumentToProjectForUser(
       });
     }
   } catch (error) {
-    if (isMissingProjectTableError(error)) {
+    if (isMissingProjectTableError(error) || isMissingProjectMetadataColumnError(error)) {
       return;
     }
 
@@ -746,5 +850,17 @@ export async function attachDocumentToDefaultProjectForUser(userId, options = {}
   return attachDocumentToProjectForUser(userId, {
     projectKey: DEFAULT_PROJECT_KEY,
     ...options,
+  });
+}
+
+export async function appendReaderProjectAssemblyEventForUser(
+  userId,
+  projectKey,
+  event,
+) {
+  if (!event || !projectKey) return null;
+
+  return updateReaderProjectForUser(userId, projectKey, {
+    appendEvents: [event],
   });
 }

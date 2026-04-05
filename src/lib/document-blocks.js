@@ -1,4 +1,7 @@
 import { buildExcerpt } from "@/lib/text";
+import {
+  normalizeAssemblyBlockFields,
+} from "@/lib/assembly-architecture";
 
 const BLOCK_KIND_MAP = {
   heading: "heading",
@@ -32,6 +35,10 @@ const LOG_ACTION_COLORS = {
   ASSEMBLED: "#f59e0b",
   OPERATED: "#339cff",
   RECEIPT: "#22c55e",
+  CONFIRMED: "#22c55e",
+  DISCARDED: "#ef4444",
+  ROOT_DECLARED: "#60a5fa",
+  RECEIPT_SEALED: "#22c55e",
 };
 
 function timestamp(value) {
@@ -101,6 +108,14 @@ export function normalizeWorkspaceBlock(input, options = {}) {
     ? "ai"
     : "human";
   const documentKey = String(input?.documentKey || options.documentKey || sourceDocumentKey).trim();
+  const architectureFields = normalizeAssemblyBlockFields(input, {
+    defaultIsAssemblyBlock: Boolean(input?.isAssemblyBlock) || Boolean(options.defaultIsAssemblyBlock),
+    defaultConfirmationStatus: options.defaultConfirmationStatus,
+    defaultExtractionPassId: options.defaultExtractionPassId,
+    defaultSevenStage: options.defaultSevenStage,
+    defaultSourceType: options.defaultSourceType,
+    root: options.root,
+  });
 
   return {
     id:
@@ -126,6 +141,7 @@ export function normalizeWorkspaceBlock(input, options = {}) {
     sectionLabel: input?.sectionLabel || "",
     sectionTitle: input?.sectionTitle || "",
     sourceTitle: input?.sourceTitle || "",
+    ...architectureFields,
   };
 }
 

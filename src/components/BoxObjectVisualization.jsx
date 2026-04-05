@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { getAssemblyColorTokens } from "@/lib/assembly-architecture";
 
 const SIZE_TOKENS = Object.freeze({
   compact: {
@@ -37,13 +38,23 @@ export default function BoxObjectVisualization({
   const wireGradientId = `${gradientScope}-box-object-wire`;
   const fill = Math.max(0.06, Math.min(1, Number(state?.fill) || 0));
   const stage = String(state?.stage || "dormant").trim().toLowerCase();
+  const colorTokens = state?.colorTokens || getAssemblyColorTokens(state?.colorStep);
   const transition = prefersReducedMotion
     ? { duration: 0 }
     : { duration: 0.8, ease: "easeInOut" };
 
   return (
     <div className={`assembler-box-object ${resolvedSize.className}`}>
-      <div className="assembler-box-object__frame">
+      <div
+        className="assembler-box-object__frame"
+        style={{
+          "--assembly-tone": colorTokens.fill,
+          "--assembly-tone-soft": colorTokens.soft,
+          "--assembly-tone-border": colorTokens.border,
+          "--assembly-tone-glow": colorTokens.glow,
+          "--assembly-tone-text": colorTokens.text,
+        }}
+      >
         <svg
           viewBox="0 0 220 176"
           width={resolvedSize.width}
@@ -53,19 +64,19 @@ export default function BoxObjectVisualization({
         >
           <defs>
             <linearGradient id={fillGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(138, 193, 255, 0.92)" />
-              <stop offset="50%" stopColor="rgba(212, 230, 255, 0.72)" />
-              <stop offset="100%" stopColor="rgba(255, 196, 220, 0.78)" />
+              <stop offset="0%" stopColor={colorTokens.fill} />
+              <stop offset="50%" stopColor="rgba(255, 255, 255, 0.68)" />
+              <stop offset="100%" stopColor={colorTokens.text} />
             </linearGradient>
             <linearGradient id={wireGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(111, 166, 247, 0.92)" />
-              <stop offset="100%" stopColor="rgba(238, 214, 255, 0.75)" />
+              <stop offset="0%" stopColor={colorTokens.fill} />
+              <stop offset="100%" stopColor={colorTokens.text} />
             </linearGradient>
           </defs>
 
           <Motion.polygon
             points="34,54 110,24 186,54 110,84"
-            fill="rgba(255,255,255,0.04)"
+            fill={colorTokens.soft}
             stroke={`url(#${wireGradientId})`}
             strokeWidth="2"
             initial={false}
@@ -74,7 +85,7 @@ export default function BoxObjectVisualization({
           />
           <Motion.polygon
             points="34,54 34,118 110,150 110,84"
-            fill="rgba(124, 174, 255, 0.06)"
+            fill={colorTokens.soft}
             stroke={`url(#${wireGradientId})`}
             strokeWidth="2"
             initial={false}
@@ -83,7 +94,7 @@ export default function BoxObjectVisualization({
           />
           <Motion.polygon
             points="110,84 110,150 186,118 186,54"
-            fill="rgba(255, 205, 225, 0.06)"
+            fill={colorTokens.soft}
             stroke={`url(#${wireGradientId})`}
             strokeWidth="2"
             initial={false}
@@ -94,7 +105,7 @@ export default function BoxObjectVisualization({
           <Motion.polygon
             points="58,70 110,50 162,70 110,90"
             fill={`url(#${fillGradientId})`}
-            stroke="rgba(255,255,255,0.44)"
+            stroke={colorTokens.text}
             strokeWidth="1.2"
             initial={false}
             animate={{
@@ -113,7 +124,7 @@ export default function BoxObjectVisualization({
           <Motion.path
             d="M58 70 L58 116 L110 136 L110 90"
             fill={`url(#${fillGradientId})`}
-            stroke="rgba(255,255,255,0.32)"
+            stroke={colorTokens.border}
             strokeWidth="1.2"
             initial={false}
             animate={{
@@ -129,7 +140,7 @@ export default function BoxObjectVisualization({
           <Motion.path
             d="M110 90 L110 136 L162 116 L162 70"
             fill={`url(#${fillGradientId})`}
-            stroke="rgba(255,255,255,0.28)"
+            stroke={colorTokens.border}
             strokeWidth="1.2"
             initial={false}
             animate={{
@@ -146,7 +157,7 @@ export default function BoxObjectVisualization({
           <Motion.path
             d="M44 60 L110 86 L176 60"
             fill="none"
-            stroke="rgba(255,255,255,0.26)"
+            stroke={colorTokens.border}
             strokeDasharray="5 6"
             strokeWidth="1.4"
             initial={false}
@@ -160,7 +171,7 @@ export default function BoxObjectVisualization({
           <Motion.path
             d="M76 100 C92 92, 126 92, 146 104"
             fill="none"
-            stroke="rgba(255,255,255,0.72)"
+            stroke={colorTokens.fill}
             strokeWidth="2"
             strokeLinecap="round"
             initial={false}
@@ -175,7 +186,7 @@ export default function BoxObjectVisualization({
             cx="110"
             cy="104"
             r="8"
-            fill="rgba(255,255,255,0.9)"
+            fill={colorTokens.text}
             initial={false}
             animate={{
               opacity: stage === "solid" || stage === "tension" ? 0.9 : 0.22,
