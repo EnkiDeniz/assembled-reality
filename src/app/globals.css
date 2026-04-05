@@ -2652,7 +2652,7 @@ main {
 }
 
 .assembler-block__editor-status.is-saving {
-  color: var(--purple);
+  color: var(--assembly-step-1-text);
 }
 
 .assembler-block__editor-status.is-saved {
@@ -4608,13 +4608,14 @@ main {
 }
 
 .assembler-assembly-lane__badge.is-stage {
-  border-color: var(--assembly-step-1-border);
-  color: var(--text-primary);
+  border-color: var(--line-strong);
+  color: var(--text-secondary);
 }
 
-.assembler-assembly-lane__badge.is-proof {
+.assembler-assembly-lane__badge.is-stage.has-evidence {
   border-color: var(--assembly-step-4-border);
-  color: var(--text-primary);
+  background: var(--assembly-step-4-soft);
+  color: var(--assembly-step-4-text);
 }
 
 .assembler-assembly-lane__entry-links {

@@ -33,9 +33,9 @@ const CONTEXTUAL_ACTION_ICONS = {
   "open-seal": FileCheck,
 };
 
-function LaneBadge({ label, tone = "" }) {
+function LaneBadge({ label, tone = "", hasEvidence = false }) {
   return (
-    <span className={`assembler-assembly-lane__badge ${tone ? `is-${tone}` : ""}`}>
+    <span className={`assembler-assembly-lane__badge ${tone ? `is-${tone}` : ""} ${hasEvidence ? "has-evidence" : ""}`}>
       {label}
     </span>
   );
@@ -127,7 +127,11 @@ function LaneEntry({ entry, onOpenEntry, onInspectEvidence }) {
       <p className="assembler-assembly-lane__entry-detail">{entry?.detail || "No detail yet."}</p>
 
       <div className="assembler-assembly-lane__entry-badges">
-        <LaneBadge label={entry?.stageStatusLabel || "Present"} tone="stage" />
+        <LaneBadge
+          label={entry?.stageStatusLabel || "Present"}
+          tone="stage"
+          hasEvidence={entry?.proofStatus === "sealed" || entry?.proofStatus === "evidenced"}
+        />
       </div>
 
       {evidenceMeta.length ? (

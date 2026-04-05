@@ -578,10 +578,10 @@ function buildSourceRecord(definition, file, normalized) {
 
   const trustSummary =
     definition.evidenceBasis === "platform-export"
-      ? "Downloaded platform history export. Strong for chronology and change sequence; weaker than receipts for proof."
+      ? "History export · captured"
       : definition.evidenceBasis === "image-derived-markdown"
-        ? "Derived markdown witness of screenshots and images. Strong for narrative chronology, but still secondary to raw assets."
-        : "Direct text source preserved in the corpus. Useful as contextual or foundational material.";
+        ? "Image-derived · normalized"
+        : "Text · preserved";
 
   const trustProfile = createSourceTrustProfileSeed({
     basis:
