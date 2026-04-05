@@ -234,6 +234,148 @@ export default function ProjectHome({
     },
   ].filter(Boolean);
 
+  if (isMobileLayout) {
+    return (
+      <div className="assembler-project-home assembler-project-home--next assembler-project-home--mobile">
+        <section className="assembler-project-home__quick-actions assembler-project-home__quick-actions--mobile">
+          {quickActions
+            .filter((action) => action.key !== "proof")
+            .map((action) => (
+              <QuickAction
+                key={action.key}
+                icon={action.icon}
+                label={action.label}
+                detail={action.detail}
+                onClick={action.onClick}
+                disabled={action.disabled}
+                primary={action.primary}
+              />
+            ))}
+          {currentAssemblyDocument?.documentKey &&
+          !String(primaryAction?.label || "").toLowerCase().includes("seed") ? (
+            <QuickAction
+              icon="seed"
+              label="Open Seed"
+              detail="Open the live working position"
+              onClick={() =>
+                onOpenDocument(currentAssemblyDocument.documentKey, "assemble", { phase: "create" })
+              }
+              disabled={false}
+            />
+          ) : null}
+        </section>
+
+        <section className="assembler-project-home__panel assembler-project-home__panel--compact">
+          <div className="assembler-project-home__section-head">
+            <span>Current box</span>
+            <button
+              type="button"
+              className="assembler-project-home__section-action"
+              onClick={onBrowseBoxes}
+            >
+              All boxes
+            </button>
+          </div>
+          <div className="assembler-project-home__compact-copy">
+            <strong className="assembler-project-home__compact-title">{boxTitle}</strong>
+            <p className="assembler-project-home__compact-detail">{boxSubtitle}</p>
+            <div className="assembler-project-home__meta">
+              <span>{boxViewModel?.realSourceCount || 0} real source{(boxViewModel?.realSourceCount || 0) === 1 ? "" : "s"}</span>
+              <span>{boxViewModel?.hasSeed ? "Seed ready" : "No seed yet"}</span>
+              <span>{receiptSummary.draftCount || 0} proof draft{(receiptSummary.draftCount || 0) === 1 ? "" : "s"}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="assembler-project-home__panel">
+          <div className="assembler-project-home__section-head">
+            <span>Resume</span>
+          </div>
+          <div className="assembler-project-home__compact-copy">
+            <strong className="assembler-project-home__compact-title">
+              {resumeTarget?.title || "No active position yet"}
+            </strong>
+            <p className="assembler-project-home__compact-detail">
+              {resumeTarget?.detail || "Bring in a source or keep shaping the seed."}
+            </p>
+            {currentPositionAction ? (
+              <button
+                type="button"
+                className="assembler-project-home__primary-button"
+                onClick={currentPositionAction.onClick}
+                disabled={currentPositionAction.disabled}
+              >
+                {currentPositionAction.label}
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="assembler-project-home__panel">
+          <div className="assembler-project-home__section-head">
+            <span>Proof</span>
+            <button
+              type="button"
+              className="assembler-project-home__section-action"
+              onClick={onOpenReceipts}
+            >
+              Open Receipts
+            </button>
+          </div>
+          <div className="assembler-project-home__compact-copy">
+            <strong className="assembler-project-home__compact-title">
+              {receiptSummary.latestDraftStatusLabel || "No proof yet"}
+            </strong>
+            <p className="assembler-project-home__compact-detail">{receiptSummary.syncLine}</p>
+          </div>
+        </section>
+
+        <section className="assembler-project-home__panel assembler-project-home__panel--sources">
+          <div className="assembler-project-home__section-head">
+            <span>Recent sources</span>
+          </div>
+
+          <div className="assembler-project-home__list">
+            {sourceRows.length ? (
+              sourceRows.slice(0, 4).map((document) => (
+                <ProjectHomeDocumentRow
+                  key={document.documentKey}
+                  document={document}
+                  loadingDocumentKey={loadingDocumentKey}
+                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
+                  onOpen={() =>
+                    onOpenDocument(
+                      document.documentKey,
+                      document.isAssembly || document.documentType === "assembly" ? "assemble" : sourceOpenMode,
+                      {
+                        phase:
+                          document.isAssembly || document.documentType === "assembly"
+                            ? "create"
+                            : "think",
+                      },
+                    )
+                  }
+                  onDelete={
+                    canDeleteDocument(document) && onDeleteDocument
+                      ? () => onDeleteDocument(document)
+                      : null
+                  }
+                  _ActionIcon={ActionIcon}
+                  getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+                  getDocumentKindLabel={getDocumentKindLabel}
+                />
+              ))
+            ) : (
+              <p className="assembler-project-home__empty">
+                No imported sources yet. Add a source or speak a note to start.
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className={`assembler-project-home assembler-project-home--next ${isMobileLayout ? "is-mobile" : ""}`}>
       <section className="assembler-project-home__masthead">

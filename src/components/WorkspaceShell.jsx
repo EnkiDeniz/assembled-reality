@@ -65,6 +65,11 @@ import {
   getSeedDocument,
   listRealSourceDocuments,
 } from "@/lib/seed-model";
+import {
+  deleteVoiceMemoDraft,
+  loadVoiceMemoDraft,
+  saveVoiceMemoDraft,
+} from "@/lib/voice-memo-drafts";
 
 const STORAGE_VERSION = 3;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
@@ -78,6 +83,7 @@ const LAUNCHPAD_VIEWS = Object.freeze({
   boxes: "boxes",
   box: "box",
 });
+const ACTIVE_VOICE_MEMO_DRAFT_KEY = "active";
 const DESKTOP_SIDECAR_PANELS = Object.freeze({
   seven: "seven",
   stage: "stage",
@@ -201,6 +207,17 @@ function getPrimaryDiagnosticMessage(intake = null) {
       (diagnostic) =>
         diagnostic?.severity === "warning" || diagnostic?.severity === "error",
     )?.message || ""
+  );
+}
+
+function getDocumentByKey(documentKey, documentCache = {}, documents = []) {
+  const normalizedDocumentKey = String(documentKey || "").trim();
+  if (!normalizedDocumentKey) return null;
+
+  return (
+    documentCache[normalizedDocumentKey] ||
+    documents.find((document) => document.documentKey === normalizedDocumentKey) ||
+    null
   );
 }
 
@@ -1283,7 +1300,6 @@ function WorkspaceShelf({
   onPasteSource,
   onClose,
   uploading = false,
-  lastUsedMode = WORKSPACE_MODES.assemble,
 }) {
   if (!open) return null;
   const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
@@ -1321,7 +1337,6 @@ function WorkspaceShelf({
             documents={documents}
             activeDocumentKey={activeDocumentKey}
             loadingDocumentKey={loadingDocumentKey}
-            lastUsedMode={lastUsedMode}
             onOpenDocument={(documentKey, mode, options = {}) => {
               onClose();
               onOpenDocument(documentKey, mode, options);
@@ -1340,6 +1355,280 @@ function WorkspaceShelf({
           >
             Paste
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileSheetAction({
+  icon,
+  label,
+  detail = "",
+  onClick,
+  disabled = false,
+}) {
+  return (
+    <button
+      type="button"
+      className="assembler-mobile-sheet__action"
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <span className="assembler-mobile-sheet__action-icon" aria-hidden="true">
+        <WorkspaceGlyph kind={icon} />
+      </span>
+      <span className="assembler-mobile-sheet__action-copy">
+        <span className="assembler-mobile-sheet__action-label">{label}</span>
+        {detail ? (
+          <span className="assembler-mobile-sheet__action-detail">{detail}</span>
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
+function MobileSourceSheet({
+  open = false,
+  boxTitle = "Untitled Box",
+  activeDocument = null,
+  currentSeedDocument = null,
+  documents = [],
+  activeDocumentKey = "",
+  loadingDocumentKey = "",
+  onClose,
+  onOpenDocument,
+  onUpload,
+  onOpenPhoto,
+  onPasteSource,
+  onOpenSpeak,
+  onImportLink,
+  uploading = false,
+  linkPending = false,
+}) {
+  const [manualLink, setManualLink] = useState("");
+
+  if (!open) return null;
+
+  const normalizedLink = extractSingleUrlText(manualLink);
+
+  return (
+    <div className="assembler-sheet assembler-sheet--workspace is-open">
+      <div className="assembler-sheet__backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--mobile-source">
+        <div className="assembler-sheet__header">
+          <div className="assembler-home__copy">
+            <span className="assembler-sheet__eyebrow">{boxTitle}</span>
+            <span className="assembler-sheet__title">Switch or add</span>
+          </div>
+
+          <button type="button" className="assembler-sheet__close" onClick={onClose}>
+            Done
+          </button>
+        </div>
+
+        <div className="assembler-mobile-sheet__summary">
+          {activeDocument?.documentKey ? (
+            <button
+              type="button"
+              className="assembler-mobile-sheet__summary-card"
+              onClick={() => {
+                onClose();
+                onOpenDocument(
+                  activeDocument.documentKey,
+                  activeDocument.isAssembly || activeDocument.documentType === "assembly"
+                    ? WORKSPACE_MODES.assemble
+                    : WORKSPACE_MODES.listen,
+                  {
+                    phase:
+                      activeDocument.isAssembly || activeDocument.documentType === "assembly"
+                        ? BOX_PHASES.create
+                        : BOX_PHASES.think,
+                  },
+                );
+              }}
+            >
+              <span className="assembler-mobile-sheet__summary-eyebrow">Current</span>
+              <strong>{activeDocument.title}</strong>
+            </button>
+          ) : null}
+          {currentSeedDocument?.documentKey ? (
+            <button
+              type="button"
+              className="assembler-mobile-sheet__summary-card"
+              onClick={() => {
+                onClose();
+                onOpenDocument(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
+                  phase: BOX_PHASES.create,
+                });
+              }}
+            >
+              <span className="assembler-mobile-sheet__summary-eyebrow">Seed</span>
+              <strong>{currentSeedDocument.title}</strong>
+            </button>
+          ) : null}
+        </div>
+
+        <div className="assembler-mobile-sheet__layout">
+          <div className="assembler-mobile-sheet__content">
+            <ListenPicker
+              documents={documents}
+              activeDocumentKey={activeDocumentKey}
+              loadingDocumentKey={loadingDocumentKey}
+              onOpenDocument={(documentKey, mode, options = {}) => {
+                onClose();
+                onOpenDocument(documentKey, mode, options);
+              }}
+            />
+          </div>
+
+          <aside className="assembler-mobile-sheet__rail">
+            <MobileSheetAction
+              icon="open"
+              label="Upload file"
+              detail="PDF, DOCX, Markdown, TXT"
+              onClick={() => {
+                onClose();
+                onUpload();
+              }}
+              disabled={uploading || linkPending}
+            />
+            <MobileSheetAction
+              icon="photo"
+              label="Photo"
+              detail="Take photo or open library"
+              onClick={() => {
+                onClose();
+                onOpenPhoto();
+              }}
+              disabled={uploading || linkPending}
+            />
+            <MobileSheetAction
+              icon="paste"
+              label="Paste text"
+              detail="Keep raw text as a source"
+              onClick={() => {
+                onClose();
+                onPasteSource();
+              }}
+              disabled={uploading || linkPending}
+            />
+            <MobileSheetAction
+              icon="speak"
+              label="Speak note"
+              detail="Record a voice memo"
+              onClick={() => {
+                onClose();
+                onOpenSpeak();
+              }}
+              disabled={uploading || linkPending}
+            />
+
+            <div className="assembler-mobile-sheet__link">
+              <label className="assembler-mobile-sheet__summary-eyebrow" htmlFor="mobile-source-link">
+                Add link
+              </label>
+              <div className="assembler-mobile-sheet__link-row">
+                <input
+                  id="mobile-source-link"
+                  className="assembler-mobile-sheet__input"
+                  value={manualLink}
+                  onChange={(event) => setManualLink(event.target.value)}
+                  placeholder="https://example.com/article"
+                  disabled={uploading || linkPending}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && normalizedLink && !uploading && !linkPending) {
+                      event.preventDefault();
+                      onClose();
+                      onImportLink(normalizedLink);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="assembler-mobile-sheet__submit"
+                  disabled={!normalizedLink || uploading || linkPending}
+                  onClick={() => {
+                    if (!normalizedLink) return;
+                    onClose();
+                    onImportLink(normalizedLink);
+                  }}
+                >
+                  Add link
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileBoxSheet({
+  open = false,
+  activeProject = null,
+  sourceCount = 0,
+  hasSeed = false,
+  receiptCount = 0,
+  onClose,
+  onGoHome,
+  onOpenBoxes,
+  onManageBox,
+}) {
+  if (!open) return null;
+
+  const boxTitle = activeProject?.boxTitle || activeProject?.title || "Untitled Box";
+
+  return (
+    <div className="assembler-sheet assembler-sheet--workspace is-open">
+      <div className="assembler-sheet__backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--mobile-source">
+        <div className="assembler-sheet__header">
+          <div className="assembler-home__copy">
+            <span className="assembler-sheet__eyebrow">Box</span>
+            <span className="assembler-sheet__title">{boxTitle}</span>
+          </div>
+
+          <button type="button" className="assembler-sheet__close" onClick={onClose}>
+            Done
+          </button>
+        </div>
+
+        <div className="assembler-mobile-sheet__box-summary">
+          <span>{sourceCount} real source{sourceCount === 1 ? "" : "s"}</span>
+          <span>{hasSeed ? "Seed ready" : "No seed yet"}</span>
+          <span>{receiptCount} proof draft{receiptCount === 1 ? "" : "s"}</span>
+        </div>
+
+        <div className="assembler-mobile-sheet__rail assembler-mobile-sheet__rail--box">
+          <MobileSheetAction
+            icon="box"
+            label="Go Home"
+            detail="Return to Box Home"
+            onClick={() => {
+              onClose();
+              onGoHome();
+            }}
+          />
+          <MobileSheetAction
+            icon="open"
+            label="All boxes"
+            detail="Switch or create a box"
+            onClick={() => {
+              onClose();
+              onOpenBoxes();
+            }}
+          />
+          <MobileSheetAction
+            icon="manage"
+            label="Manage box"
+            detail="Rename, pin, archive, or delete"
+            onClick={() => {
+              onClose();
+              onManageBox();
+            }}
+          />
         </div>
       </div>
     </div>
@@ -1521,7 +1810,7 @@ function WorkspaceLaunchpad({
       getDocumentBlockCountLabel={getDocumentBlockCountLabel}
       getDocumentKindLabel={getDocumentKindLabel}
       canDeleteDocument={canDeleteDocument}
-      sourceOpenMode={WORKSPACE_MODES.listen}
+      sourceOpenMode={WORKSPACE_MODES.assemble}
       isMobileLayout={isMobileLayout}
     />
   );
@@ -1531,13 +1820,13 @@ function ListenPicker({
   documents,
   activeDocumentKey,
   loadingDocumentKey,
-  lastUsedMode = WORKSPACE_MODES.listen,
   onOpenDocument,
 }) {
   const grouped = groupedDocuments(documents);
-  const openMode = normalizeWorkspaceMode(lastUsedMode, WORKSPACE_MODES.listen);
 
   function renderDocumentRow(document) {
+    const isSeed = document?.isAssembly || document?.documentType === "assembly";
+
     return (
       <div
         key={document.documentKey}
@@ -1556,7 +1845,11 @@ function ListenPicker({
         <button
           type="button"
           className="assembler-document-row__body"
-          onClick={() => onOpenDocument(document.documentKey, openMode)}
+          onClick={() =>
+            onOpenDocument(document.documentKey, WORKSPACE_MODES.assemble, {
+              phase: isSeed ? BOX_PHASES.create : BOX_PHASES.think,
+            })
+          }
         >
           <span className="assembler-document-row__title">{document.title}</span>
           <span className="assembler-document-row__meta">
@@ -1603,129 +1896,115 @@ function ListenSurface({
   pickerOpen,
   onTogglePicker,
   onOpenProjectHome,
-  onOpenSeven,
   onOpenDocument,
   projectDocuments,
   loadingDocumentKey,
   onOpenLog,
   onExportDocument,
-  lastUsedMode = WORKSPACE_MODES.listen,
-  aiOpen = false,
   isMobileLayout = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
-      <div className="assembler-listen__chrome">
-        <div className="assembler-listen__topbar">
-          <button
-            type="button"
-            className="assembler-listen__topbar-icon"
-            onClick={onOpenProjectHome}
-            aria-label="Open Box home"
-          >
-            <WorkspaceActionIcon kind="back" />
-          </button>
+      {!isMobileLayout ? (
+        <div className="assembler-listen__chrome">
+          <div className="assembler-listen__topbar">
+            <button
+              type="button"
+              className="assembler-listen__topbar-icon"
+              onClick={onOpenProjectHome}
+              aria-label="Open Box home"
+            >
+              <WorkspaceActionIcon kind="back" />
+            </button>
 
-          <span className="assembler-listen__topbar-title">{activeDocument.title}</span>
+            <span className="assembler-listen__topbar-title">{activeDocument.title}</span>
 
-          <div className="assembler-listen__topbar-actions">
-            {isMobileLayout ? (
+            <div className="assembler-listen__topbar-actions">
               <button
                 type="button"
-                className={`assembler-listen__topbar-button ${aiOpen ? "is-active" : ""}`}
-                onClick={onOpenSeven}
+                className={`assembler-listen__topbar-button ${pickerOpen ? "is-active" : ""}`}
+                onClick={onTogglePicker}
               >
-                Seven
+                Sources
               </button>
-            ) : (
-              <>
+
+              <div className="assembler-listen__menu">
                 <button
                   type="button"
-                  className={`assembler-listen__topbar-button ${pickerOpen ? "is-active" : ""}`}
-                  onClick={onTogglePicker}
+                  className="assembler-listen__topbar-icon"
+                  onClick={() => setMenuOpen((value) => !value)}
+                  aria-label="More listening actions"
                 >
-                  Sources
+                  <WorkspaceActionIcon kind="menu" />
                 </button>
 
-                <div className="assembler-listen__menu">
-                  <button
-                    type="button"
-                    className="assembler-listen__topbar-icon"
-                    onClick={() => setMenuOpen((value) => !value)}
-                    aria-label="More listening actions"
-                  >
-                    <WorkspaceActionIcon kind="menu" />
-                  </button>
-
-                  {menuOpen ? (
-                    <div className="assembler-listen__menu-panel">
-                      <button
-                        type="button"
-                        className="assembler-listen__menu-item"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          onTogglePicker();
-                        }}
-                      >
-                        Sources
-                      </button>
-                      <button
-                        type="button"
-                        className="assembler-listen__menu-item"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          onSwitchToAssemble();
-                        }}
-                      >
-                        Seed
-                      </button>
-                      <button
-                        type="button"
-                        className="assembler-listen__menu-item"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          onOpenLog();
-                        }}
-                      >
-                        Receipts
-                      </button>
-                      <button
-                        type="button"
-                        className="assembler-listen__menu-item"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          onExportDocument();
-                        }}
-                      >
-                        Export Document
-                      </button>
-                      <Link
-                        href="/account"
-                        className="assembler-listen__menu-item"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        Account
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
-              </>
-            )}
+                {menuOpen ? (
+                  <div className="assembler-listen__menu-panel">
+                    <button
+                      type="button"
+                      className="assembler-listen__menu-item"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onTogglePicker();
+                      }}
+                    >
+                      Sources
+                    </button>
+                    <button
+                      type="button"
+                      className="assembler-listen__menu-item"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onSwitchToAssemble();
+                      }}
+                    >
+                      Seed
+                    </button>
+                    <button
+                      type="button"
+                      className="assembler-listen__menu-item"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenLog();
+                      }}
+                    >
+                      Receipts
+                    </button>
+                    <button
+                      type="button"
+                      className="assembler-listen__menu-item"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onExportDocument();
+                      }}
+                    >
+                      Export Document
+                    </button>
+                    <Link
+                      href="/account"
+                      className="assembler-listen__menu-item"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Account
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
-        </div>
 
-        {pickerOpen && !isMobileLayout ? (
-          <ListenPicker
-            documents={projectDocuments}
-            activeDocumentKey={activeDocument.documentKey}
-            loadingDocumentKey={loadingDocumentKey}
-            lastUsedMode={lastUsedMode}
-            onOpenDocument={onOpenDocument}
-          />
-        ) : null}
-      </div>
+          {pickerOpen ? (
+            <ListenPicker
+              documents={projectDocuments}
+              activeDocumentKey={activeDocument.documentKey}
+              loadingDocumentKey={loadingDocumentKey}
+              onOpenDocument={onOpenDocument}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       <section className="assembler-surface assembler-surface--listen">
         <div className="assembler-listen">
@@ -1783,35 +2062,6 @@ function ListenSurface({
           </div>
         </div>
       </section>
-
-      {isMobileLayout ? (
-        <div className={`assembler-sheet assembler-sheet--browse ${pickerOpen ? "is-open" : ""}`}>
-          <div className="assembler-sheet__backdrop" onClick={onTogglePicker} aria-hidden="true" />
-          <div className="assembler-sheet__panel">
-            <div className="assembler-sheet__header">
-              <span className="assembler-sheet__title">Sources</span>
-              <button
-                type="button"
-                className="assembler-sheet__close"
-                onClick={onTogglePicker}
-              >
-                Done
-              </button>
-            </div>
-
-            <ListenPicker
-              documents={projectDocuments}
-              activeDocumentKey={activeDocument.documentKey}
-              loadingDocumentKey={loadingDocumentKey}
-              lastUsedMode={lastUsedMode}
-              onOpenDocument={(documentKey, mode) => {
-                onTogglePicker();
-                onOpenDocument(documentKey, mode);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
@@ -2119,7 +2369,7 @@ function DropAnythingSheet({
               <WorkspaceActionIcon kind="photo" />
             </span>
             <span className="assembler-drop-sheet__action-copy">
-              <span className="assembler-drop-sheet__action-title">Add photo</span>
+              <span className="assembler-drop-sheet__action-title">Photo library</span>
             </span>
           </button>
 
@@ -2221,10 +2471,10 @@ function PhotoSourceSheet({
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
             <h2 id="photo-intake-title" className="assembler-image-chooser__title">
-              Add photo
+              Photo
             </h2>
             <p className="assembler-drop-sheet__note">
-              Turn a photo into a source without going through generic file upload.
+              Capture a photo or choose one from your library, then turn it into a source.
             </p>
           </div>
 
@@ -2278,11 +2528,16 @@ function VoiceRecorderDialog({
   elapsedSeconds = 0,
   level = 0,
   errorMessage = "",
+  hasSavedDraft = false,
+  draftFilename = "",
   onClose,
   onStart,
   onPause,
   onResume,
   onStop,
+  onRetryDraft,
+  onSaveDraft,
+  onDiscardDraft,
 }) {
   if (!open) return null;
 
@@ -2301,6 +2556,8 @@ function VoiceRecorderDialog({
             ? "Wrapping up"
             : phase === "transcribing"
               ? "Creating source"
+              : hasSavedDraft
+                ? "Voice memo kept"
               : "Start talking";
   return (
     <div className="assembler-image-chooser assembler-image-chooser--recorder assembler-voice-screen">
@@ -2348,7 +2605,34 @@ function VoiceRecorderDialog({
         </div>
 
         <div className="assembler-voice-screen__controls">
-          {phase === "idle" ? (
+          {phase === "idle" && hasSavedDraft ? (
+            <div className="assembler-voice-screen__recovery">
+              <button
+                type="button"
+                className="assembler-voice-screen__secondary"
+                onClick={onRetryDraft}
+                disabled={busy}
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                className="assembler-voice-screen__secondary"
+                onClick={onSaveDraft}
+                disabled={busy}
+              >
+                Save recording
+              </button>
+              <button
+                type="button"
+                className="assembler-voice-screen__stop"
+                onClick={onDiscardDraft}
+                disabled={busy}
+              >
+                Discard
+              </button>
+            </div>
+          ) : phase === "idle" ? (
             <>
               <span className="assembler-voice-screen__secondary-placeholder" aria-hidden="true" />
               <button
@@ -2395,6 +2679,9 @@ function VoiceRecorderDialog({
             </>
           )}
         </div>
+        {hasSavedDraft && draftFilename ? (
+          <p className="assembler-voice-screen__detail">{draftFilename}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -3587,6 +3874,7 @@ export default function WorkspaceShell({
   );
   const [listenPickerOpen, setListenPickerOpen] = useState(false);
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
+  const [mobileBoxSheetOpen, setMobileBoxSheetOpen] = useState(false);
   const [dropAnythingOpen, setDropAnythingOpen] = useState(false);
   const [photoIntakeOpen, setPhotoIntakeOpen] = useState(false);
   const [mobileComposeOpen, setMobileComposeOpen] = useState(false);
@@ -3607,6 +3895,7 @@ export default function WorkspaceShell({
   const [voiceRecorderElapsed, setVoiceRecorderElapsed] = useState(0);
   const [voiceRecorderLevel, setVoiceRecorderLevel] = useState(0);
   const [voiceRecorderError, setVoiceRecorderError] = useState("");
+  const [voiceMemoDraft, setVoiceMemoDraft] = useState(null);
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
@@ -3901,57 +4190,6 @@ export default function WorkspaceShell({
         />
       ) : null}
 
-      {isMobileLayout ? (
-        <div className="assembler-document__quick-actions">
-          <button
-            type="button"
-            className="assembler-document__quick-action"
-            onClick={() => setWorkspacePickerOpen(true)}
-          >
-            <WorkspaceActionIcon kind="browse" />
-            <span>Sources</span>
-          </button>
-          <button
-            type="button"
-            className="assembler-document__quick-action"
-            onClick={() => void pasteIntoWorkspace("source")}
-            disabled={Boolean(pastePendingMode) || uploading}
-          >
-            <WorkspaceActionIcon kind="clipboard" />
-            <span>Paste</span>
-          </button>
-          <button
-            type="button"
-            className="assembler-document__quick-action"
-            onClick={openPhotoIntake}
-            disabled={Boolean(pastePendingMode) || uploading}
-          >
-            <WorkspaceActionIcon kind="photo" />
-            <span>Photo</span>
-          </button>
-          <button
-            type="button"
-            className="assembler-document__quick-action"
-            onClick={openVoiceRecorder}
-            disabled={Boolean(pastePendingMode) || uploading}
-          >
-            <WorkspaceActionIcon kind="speak" />
-            <span>Speak</span>
-          </button>
-          <button
-            type="button"
-            className={`assembler-document__quick-action ${aiOpen && isThinkPhase ? "is-active" : ""}`}
-            onClick={() => {
-              setBoxPhase(BOX_PHASES.think);
-              setAiOpen((value) => !value || !isThinkPhase);
-            }}
-          >
-            <WorkspaceActionIcon kind="continue" />
-            <span>Seven</span>
-          </button>
-        </div>
-      ) : null}
-
       <div className="assembler-document__blocks">
         {blocks.map((block) => (
           <BlockRow
@@ -3980,11 +4218,38 @@ export default function WorkspaceShell({
   const lastUsedMode =
     normalizeWorkspaceMode(lastModeByProjectKey[activeProjectKey], workspaceMode) ||
     workspaceMode;
+  const sevenContextDocumentKey = String(
+    launchpadOpen
+      ? currentSeedDocument?.documentKey ||
+          resumeSessionSummaryState?.documentKey ||
+          latestRealSourceDocument?.documentKey ||
+          guideSourceDocument?.documentKey ||
+          activeDocument?.documentKey ||
+          ""
+      : activeDocument?.documentKey ||
+          currentSeedDocument?.documentKey ||
+          latestRealSourceDocument?.documentKey ||
+          ""
+  ).trim();
+  const sevenContextDocument =
+    getDocumentByKey(sevenContextDocumentKey, documentCache, projectDocuments) ||
+    activeDocument;
+  const sevenContextBlocks =
+    sevenContextDocument?.documentKey === activeDocument?.documentKey
+      ? blocks
+      : Array.isArray(sevenContextDocument?.blocks)
+        ? sevenContextDocument.blocks
+        : EMPTY_BLOCKS;
+  const sevenContextFocusedBlock =
+    sevenContextDocument?.documentKey === activeDocument?.documentKey
+      ? focusedBlock
+      : sevenContextBlocks[0] || null;
   const activeSevenThread =
-    sevenThreads[activeDocument.documentKey] ||
-    buildEmptySevenThread(activeDocument.documentKey);
-  const sevenSuggestions = buildSevenSuggestions(focusedBlock);
-  const sevenThreadLoading = sevenThreadLoadingKey === activeDocument.documentKey;
+    sevenThreads[sevenContextDocument?.documentKey || ""] ||
+    buildEmptySevenThread(sevenContextDocument?.documentKey || "");
+  const sevenSuggestions = buildSevenSuggestions(sevenContextFocusedBlock);
+  const sevenThreadLoading =
+    sevenThreadLoadingKey === (sevenContextDocument?.documentKey || "");
 
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
@@ -4248,7 +4513,7 @@ export default function WorkspaceShell({
   ]);
 
   useEffect(() => {
-    const documentKey = activeDocument.documentKey;
+    const documentKey = sevenContextDocument?.documentKey || "";
     if (!documentKey) return undefined;
 
     let cancelled = false;
@@ -4290,7 +4555,7 @@ export default function WorkspaceShell({
     return () => {
       cancelled = true;
     };
-  }, [activeDocument.documentKey, activeProjectKey, workspaceMode]);
+  }, [activeProjectKey, sevenContextDocument?.documentKey, workspaceMode]);
 
   useEffect(() => {
     if (!resolvedVoiceChoice && voiceChoice) {
@@ -4445,9 +4710,24 @@ export default function WorkspaceShell({
   }, [aiOpen]);
 
   useEffect(() => {
-    if (boxPhase === BOX_PHASES.think) return;
+    let cancelled = false;
+
+    void loadVoiceMemoDraft(ACTIVE_VOICE_MEMO_DRAFT_KEY)
+      .then((draft) => {
+        if (cancelled || !draft?.file) return;
+        setVoiceMemoDraft(draft);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMobileLayout || boxPhase === BOX_PHASES.think) return;
     setAiOpen(false);
-  }, [boxPhase]);
+  }, [boxPhase, isMobileLayout]);
 
   useEffect(() => {
     if (!currentBlock?.id) return;
@@ -4544,6 +4824,11 @@ export default function WorkspaceShell({
         return;
       }
 
+      if (event.key === "Escape" && mobileBoxSheetOpen) {
+        setMobileBoxSheetOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && dropAnythingOpen) {
         setDropAnythingOpen(false);
         return;
@@ -4579,7 +4864,7 @@ export default function WorkspaceShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, dropAnythingOpen, photoIntakeOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
+  }, [aiOpen, launchpadOpen, listenPickerOpen, workspacePickerOpen, mobileBoxSheetOpen, dropAnythingOpen, photoIntakeOpen, voiceRecorderOpen, mobileComposeOpen, pendingImageIntake, pendingLinkIntake, pastePendingMode, uploading, workspaceMode]);
 
   useEffect(() => {
     async function handlePaste(event) {
@@ -4816,6 +5101,7 @@ export default function WorkspaceShell({
       setBoxPhase(BOX_PHASES.think);
       setListenPickerOpen(false);
       setWorkspacePickerOpen(false);
+      setMobileBoxSheetOpen(false);
       setDropAnythingOpen(false);
       setPhotoIntakeOpen(false);
       closeVoiceRecorderRef.current?.();
@@ -4902,6 +5188,7 @@ export default function WorkspaceShell({
     setBoxPhase(BOX_PHASES.think);
     setListenPickerOpen(false);
     setWorkspacePickerOpen(false);
+    setMobileBoxSheetOpen(false);
     setDropAnythingOpen(false);
     setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
@@ -5541,6 +5828,7 @@ export default function WorkspaceShell({
     const normalizedMode = applyWorkspaceMode(mode);
     setLaunchpadOpen(false);
     setWorkspacePickerOpen(false);
+    setMobileBoxSheetOpen(false);
     setDropAnythingOpen(false);
     setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
@@ -5885,11 +6173,89 @@ export default function WorkspaceShell({
   function openVoiceRecorder() {
     setDropAnythingOpen(false);
     setPhotoIntakeOpen(false);
+    setMobileBoxSheetOpen(false);
     setVoiceRecorderOpen(true);
     setVoiceRecorderPhase("idle");
     setVoiceRecorderElapsed(0);
     setVoiceRecorderLevel(0);
+    setVoiceRecorderError(
+      voiceMemoDraft?.errorMessage ||
+        (voiceMemoDraft?.file
+          ? "This voice memo is kept on this device until you retry or discard it."
+          : ""),
+    );
+  }
+
+  async function persistVoiceMemoDraft(file, errorMessage = "") {
+    const draft = {
+      id: ACTIVE_VOICE_MEMO_DRAFT_KEY,
+      file,
+      errorMessage:
+        errorMessage ||
+        "This voice memo is kept on this device until you retry or discard it.",
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await saveVoiceMemoDraft(draft);
+      setVoiceMemoDraft(draft);
+    } catch {
+      setVoiceMemoDraft(draft);
+    }
+  }
+
+  async function clearVoiceMemoDraftState() {
+    setVoiceMemoDraft(null);
+    try {
+      await deleteVoiceMemoDraft(ACTIVE_VOICE_MEMO_DRAFT_KEY);
+    } catch {
+      // Ignore local cleanup failures.
+    }
+  }
+
+  async function retryVoiceMemoDraft() {
+    if (!voiceMemoDraft?.file || uploading) return;
+
+    setVoiceRecorderOpen(true);
+    setVoiceRecorderPhase("transcribing");
     setVoiceRecorderError("");
+
+    const result = await handleUpload(voiceMemoDraft.file, { sourceKind: "voice" });
+    if (result?.document?.documentKey) {
+      await clearVoiceMemoDraftState();
+      setVoiceRecorderOpen(false);
+      setVoiceRecorderPhase("idle");
+      setVoiceRecorderElapsed(0);
+      setVoiceRecorderLevel(0);
+      setVoiceRecorderError("");
+      return;
+    }
+
+    const retryMessage =
+      result?.errorMessage ||
+      voiceMemoDraft.errorMessage ||
+      "Could not turn that voice memo into a source. It is still kept on this device until you retry or discard it.";
+    await persistVoiceMemoDraft(voiceMemoDraft.file, retryMessage);
+    setVoiceRecorderPhase("idle");
+    setVoiceRecorderError(retryMessage);
+  }
+
+  function saveVoiceMemoDraftToDisk() {
+    if (!voiceMemoDraft?.file) return;
+    downloadFile(
+      voiceMemoDraft.file.name || "voice-memo.wav",
+      voiceMemoDraft.file,
+      voiceMemoDraft.file.type || "audio/wav",
+    );
+    setFeedback("Saved the voice memo to your device.", "success");
+  }
+
+  async function discardVoiceMemoDraft() {
+    await clearVoiceMemoDraftState();
+    setVoiceRecorderError("");
+    setVoiceRecorderOpen(false);
+    setVoiceRecorderPhase("idle");
+    setFeedback("Discarded the preserved voice memo.");
   }
 
   async function startVoiceRecorder() {
@@ -5997,6 +6363,7 @@ export default function WorkspaceShell({
     stopVoiceRecorderTracks();
 
     if (discard) {
+      await clearVoiceMemoDraftState();
       setVoiceRecorderOpen(false);
       setVoiceRecorderPhase("idle");
       setVoiceRecorderElapsed(0);
@@ -6026,6 +6393,7 @@ export default function WorkspaceShell({
     setVoiceRecorderPhase("transcribing");
     const result = await handleUpload(file, { sourceKind: "voice" });
     if (result?.document?.documentKey) {
+      await clearVoiceMemoDraftState();
       setVoiceRecorderOpen(false);
       setVoiceRecorderPhase("idle");
       setVoiceRecorderElapsed(0);
@@ -6034,8 +6402,22 @@ export default function WorkspaceShell({
       return;
     }
 
+    const failureMessage =
+      result?.errorMessage ||
+      voiceRecorderError ||
+      "Could not turn that voice memo into a source. It is still kept on this device until you retry or discard it.";
+    await persistVoiceMemoDraft(
+      file,
+      failureMessage.includes("kept on this device")
+        ? failureMessage
+        : `${failureMessage} It is still kept on this device until you retry or discard it.`,
+    );
     setVoiceRecorderPhase("idle");
-    setVoiceRecorderError("Could not turn that voice memo into a source. The recording was preserved locally until this step failed.");
+    setVoiceRecorderError(
+      failureMessage.includes("kept on this device")
+        ? failureMessage
+        : `${failureMessage} It is still kept on this device until you retry or discard it.`,
+    );
   }
 
   const closeVoiceRecorder = useCallback(() => {
@@ -6294,15 +6676,20 @@ export default function WorkspaceShell({
       );
       return payload;
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "The document could not be imported.";
       trackWorkspaceEvent("source_import_failed", {
         source_kind: getSourceIntakeKind(file, sourceKind),
         intake_surface: sourceKind === "voice" ? "voice" : "upload",
       });
+      if (sourceKind === "voice") {
+        setVoiceRecorderError(errorMessage);
+      }
       setFeedback(
-        error instanceof Error ? error.message : "The document could not be imported.",
+        errorMessage,
         "error",
       );
-      return null;
+      return { errorMessage };
     } finally {
       setUploading(false);
     }
@@ -7532,13 +7919,13 @@ export default function WorkspaceShell({
 
   async function runAiOperation(explicitPrompt = "") {
     const prompt = String(explicitPrompt || aiInput || "").trim();
-    if (!prompt || !activeDocument?.documentKey) return;
+    if (!prompt || !sevenContextDocument?.documentKey) return;
 
-    const documentKey = activeDocument.documentKey;
+    const documentKey = sevenContextDocument.documentKey;
     const sentAt = new Date().toISOString();
     const optimisticUserId = `seven-user-${Date.now()}`;
     const optimisticAssistantId = `seven-assistant-${Date.now()}`;
-    const requestContext = buildSevenRequestContext(activeDocument, focusedBlock);
+    const requestContext = buildSevenRequestContext(sevenContextDocument, sevenContextFocusedBlock);
 
     setAiPending(true);
     setAiInput("");
@@ -7577,7 +7964,7 @@ export default function WorkspaceShell({
     });
     appendLog("SEVEN_QUESTION", `"${prompt}"`, {
       documentKey,
-      blockIds: focusedBlock?.id ? [focusedBlock.id] : [],
+      blockIds: sevenContextFocusedBlock?.id ? [sevenContextFocusedBlock.id] : [],
     });
 
     try {
@@ -7590,8 +7977,8 @@ export default function WorkspaceShell({
           mode: "question",
           question: prompt,
           documentKey,
-          documentTitle: activeDocument.title,
-          documentSubtitle: activeDocument.subtitle || "",
+          documentTitle: sevenContextDocument.title,
+          documentSubtitle: sevenContextDocument.subtitle || "",
           ...requestContext,
         }),
       });
@@ -7638,7 +8025,7 @@ export default function WorkspaceShell({
           },
         };
       });
-      appendLog("SEVEN_ANSWER", `Seven replied in ${activeDocument.title}.`, {
+      appendLog("SEVEN_ANSWER", `Seven replied in ${sevenContextDocument.title}.`, {
         documentKey,
       });
     } catch (error) {
@@ -7686,7 +8073,7 @@ export default function WorkspaceShell({
   }
 
   function stageSevenMessage(message) {
-    const nextBlocks = buildStagedBlocksFromSevenMessage(activeDocument, message);
+    const nextBlocks = buildStagedBlocksFromSevenMessage(sevenContextDocument, message);
     if (!nextBlocks.length) {
       setFeedback("Seven didn't return anything you can stage.", "error");
       return;
@@ -8015,6 +8402,22 @@ export default function WorkspaceShell({
             : isCreatePhase
             ? "Seed"
             : "Think";
+  const mobileSourceDocument =
+    !launchpadOpen && (isCreatePhase || isOperatePhase || isReceiptsPhase)
+      ? currentSeedDocument || activeDocument
+      : !launchpadOpen
+        ? activeDocument
+        : null;
+  const showMobileSourcePill =
+    isMobileLayout &&
+    !isFirstTimeSurface &&
+    !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes) &&
+    Boolean(mobileSourceDocument?.documentKey);
+  const mobileSourceLabel = showMobileSourcePill
+    ? mobileSourceDocument?.isAssembly || mobileSourceDocument?.documentType === "assembly"
+      ? "Seed"
+      : mobileSourceDocument?.title || "Source"
+    : "";
   const canOpenMobileSeed = Boolean(currentSeedDocument?.documentKey || realProjectSourceDocuments.length);
   const showMobileBottomNav =
     isMobileLayout &&
@@ -8088,13 +8491,54 @@ export default function WorkspaceShell({
           <div className="assembler-header__identity">
             <span className="assembler-header__name">{PRODUCT_MARK}</span>
             {activeProject ? (
-              <span className="assembler-header__project">{activeBoxTitle}</span>
+              isMobileLayout ? (
+                <button
+                  type="button"
+                  className="assembler-header__project assembler-header__project-button"
+                  onClick={() => setMobileBoxSheetOpen(true)}
+                >
+                  {activeBoxTitle}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="assembler-header__project assembler-header__project-button"
+                  onClick={() => openCurrentBoxHome(activeProject.projectKey)}
+                >
+                  {activeBoxTitle}
+                </button>
+              )
             ) : null}
-            <span className="assembler-header__context">{headerContextLabel}</span>
+            {showMobileSourcePill ? (
+              <button
+                type="button"
+                className="assembler-header__start assembler-header__start--source"
+                onClick={() => setWorkspacePickerOpen(true)}
+              >
+                {mobileSourceLabel}
+              </button>
+            ) : null}
+            {!isMobileLayout ? (
+              <span className="assembler-header__context">{headerContextLabel}</span>
+            ) : null}
           </div>
 
           <div className="assembler-header__actions">
-            {isListenMode ? (
+            {isMobileLayout ? (
+              <>
+                <button
+                  type="button"
+                  className={`assembler-header__start ${aiOpen ? "is-active" : ""}`}
+                  onClick={() => setAiOpen((value) => !value)}
+                  disabled={!sevenContextDocument?.documentKey}
+                >
+                  Seven
+                </button>
+                <Link href="/account" className="assembler-header__account" aria-label="Account">
+                  <WorkspaceActionIcon kind="account" />
+                </Link>
+              </>
+            ) : isListenMode ? (
               <button
                 type="button"
                 className={`assembler-header__start ${workspacePickerOpen ? "is-active" : ""}`}
@@ -8122,9 +8566,11 @@ export default function WorkspaceShell({
               </button>
             ) : null}
 
-            <Link href="/account" className="assembler-header__account" aria-label="Account">
-              <WorkspaceActionIcon kind="account" />
-            </Link>
+            {!isMobileLayout ? (
+              <Link href="/account" className="assembler-header__account" aria-label="Account">
+                <WorkspaceActionIcon kind="account" />
+              </Link>
+            ) : null}
           </div>
         </header>
 
@@ -8155,7 +8601,13 @@ export default function WorkspaceShell({
               onDeleteDocument={requestDeleteDocument}
               onPasteClipboard={() => void pasteIntoWorkspace("clipboard")}
               onOpenSpeak={openVoiceRecorder}
-              onOpenIntake={() => setDropAnythingOpen(true)}
+              onOpenIntake={() => {
+                if (isMobileLayout) {
+                  setWorkspacePickerOpen(true);
+                  return;
+                }
+                setDropAnythingOpen(true);
+              }}
               recordingVoice={voiceRecorderOpen && voiceRecorderPhase !== "idle"}
               resumeSessionSummary={resumeSessionSummaryState}
               isMobileLayout={isMobileLayout}
@@ -8229,29 +8681,6 @@ export default function WorkspaceShell({
               isMobileLayout={isMobileLayout}
             />
 
-            {isMobileLayout && aiOpen ? (
-              <AiBar
-                inputRef={aiInputRef}
-                value={aiInput}
-                pending={aiPending}
-                loading={sevenThreadLoading}
-                errorMessage={sevenThreadError}
-                documentTitle={activeDocument.title}
-                thread={activeSevenThread}
-                suggestions={sevenSuggestions}
-                onChange={(nextValue) => {
-                  setAiInput(nextValue);
-                  if (sevenThreadError) {
-                    setSevenThreadError("");
-                  }
-                }}
-                onSubmit={runAiOperation}
-                onSuggestion={(prompt) => void runAiOperation(prompt)}
-                onStageMessage={stageSevenMessage}
-                onClose={() => setAiOpen(false)}
-              />
-            ) : null}
-
             <PlayerBar
               workspaceMode={workspaceMode}
               currentBlock={currentBlock}
@@ -8293,25 +8722,27 @@ export default function WorkspaceShell({
           </>
         ) : (
           <>
-            <WorkspaceShelf
-              open={workspacePickerOpen}
-              activeProject={activeProject}
-              documents={projectDocuments}
-              activeDocumentKey={activeDocumentKey}
-              loadingDocumentKey={loadingDocumentKey}
-              onOpenProjectHome={() => {
-                setWorkspacePickerOpen(false);
-                openCurrentBoxHome(activeProjectKey);
-              }}
-              uploading={uploading}
-              onOpenDocument={(documentKey, mode, options = {}) => {
-                void enterWorkspace(documentKey, mode, options);
-              }}
-              onUpload={() => fileInputRef.current?.click()}
-              onPasteSource={() => void pasteIntoWorkspace("source")}
-              onClose={() => setWorkspacePickerOpen(false)}
-              lastUsedMode={lastUsedMode}
-            />
+            {!isMobileLayout ? (
+              <WorkspaceShelf
+                open={workspacePickerOpen}
+                activeProject={activeProject}
+                documents={projectDocuments}
+                activeDocumentKey={activeDocumentKey}
+                loadingDocumentKey={loadingDocumentKey}
+                onOpenProjectHome={() => {
+                  setWorkspacePickerOpen(false);
+                  openCurrentBoxHome(activeProjectKey);
+                }}
+                uploading={uploading}
+                onOpenDocument={(documentKey, mode, options = {}) => {
+                  void enterWorkspace(documentKey, mode, options);
+                }}
+                onUpload={() => fileInputRef.current?.click()}
+                onPasteSource={() => void pasteIntoWorkspace("source")}
+                onClose={() => setWorkspacePickerOpen(false)}
+                lastUsedMode={lastUsedMode}
+              />
+            ) : null}
 
             <div
               className={`assembler-workbench assembler-workbench--next ${isMobileLayout ? "is-mobile" : ""} ${
@@ -8440,28 +8871,6 @@ export default function WorkspaceShell({
                   )}
                 </section>
 
-                {isMobileLayout && aiOpen && isThinkPhase ? (
-                  <AiBar
-                    inputRef={aiInputRef}
-                    value={aiInput}
-                    pending={aiPending}
-                    loading={sevenThreadLoading}
-                    errorMessage={sevenThreadError}
-                    documentTitle={activeDocument.title}
-                    thread={activeSevenThread}
-                    suggestions={sevenSuggestions}
-                    onChange={(nextValue) => {
-                      setAiInput(nextValue);
-                      if (sevenThreadError) {
-                        setSevenThreadError("");
-                      }
-                    }}
-                    onSubmit={runAiOperation}
-                    onSuggestion={(prompt) => void runAiOperation(prompt)}
-                    onStageMessage={stageSevenMessage}
-                    onClose={() => setAiOpen(false)}
-                  />
-                ) : null}
               </div>
 
               {!isMobileLayout && (isThinkPhase || isCreatePhase) ? (
@@ -8594,7 +9003,69 @@ export default function WorkspaceShell({
             onGoListen={openMobileListenSurface}
             onGoSeed={openMobileSeedSurface}
             onGoReceipts={openReceiptsSurface}
-            onOpenAdd={() => setDropAnythingOpen(true)}
+            onOpenAdd={() => setWorkspacePickerOpen(true)}
+          />
+        ) : null}
+
+        {isMobileLayout ? (
+          <MobileSourceSheet
+            open={workspacePickerOpen}
+            boxTitle={activeBoxTitle}
+            activeDocument={mobileSourceDocument || sevenContextDocument}
+            currentSeedDocument={currentSeedDocument}
+            documents={projectDocuments}
+            activeDocumentKey={activeDocumentKey}
+            loadingDocumentKey={loadingDocumentKey}
+            onOpenDocument={(documentKey, mode, options = {}) => {
+              void enterWorkspace(documentKey, mode, options);
+            }}
+            onUpload={() => fileInputRef.current?.click()}
+            onOpenPhoto={openPhotoIntake}
+            onPasteSource={() => void pasteIntoWorkspace("source")}
+            onOpenSpeak={openVoiceRecorder}
+            onImportLink={(url) => {
+              void importLinkFromIntake(url);
+            }}
+            onClose={() => setWorkspacePickerOpen(false)}
+            uploading={uploading}
+            linkPending={Boolean(pastePendingMode)}
+          />
+        ) : null}
+
+        {isMobileLayout ? (
+          <MobileBoxSheet
+            open={mobileBoxSheetOpen}
+            activeProject={activeProject}
+            sourceCount={realProjectSourceDocuments.length}
+            hasSeed={Boolean(currentSeedDocument?.documentKey)}
+            receiptCount={receiptSummaryViewModel.draftCount}
+            onClose={() => setMobileBoxSheetOpen(false)}
+            onGoHome={() => openCurrentBoxHome(activeProjectKey)}
+            onOpenBoxes={openBoxesIndex}
+            onManageBox={() => openProjectManagement(activeProjectKey)}
+          />
+        ) : null}
+
+        {isMobileLayout && aiOpen ? (
+          <AiBar
+            inputRef={aiInputRef}
+            value={aiInput}
+            pending={aiPending}
+            loading={sevenThreadLoading}
+            errorMessage={sevenThreadError}
+            documentTitle={sevenContextDocument?.title || activeDocument.title}
+            thread={activeSevenThread}
+            suggestions={sevenSuggestions}
+            onChange={(nextValue) => {
+              setAiInput(nextValue);
+              if (sevenThreadError) {
+                setSevenThreadError("");
+              }
+            }}
+            onSubmit={runAiOperation}
+            onSuggestion={(prompt) => void runAiOperation(prompt)}
+            onStageMessage={stageSevenMessage}
+            onClose={() => setAiOpen(false)}
           />
         ) : null}
 
@@ -8739,11 +9210,16 @@ export default function WorkspaceShell({
           elapsedSeconds={voiceRecorderElapsed}
           level={voiceRecorderLevel}
           errorMessage={voiceRecorderError}
+          hasSavedDraft={Boolean(voiceMemoDraft?.file)}
+          draftFilename={voiceMemoDraft?.file?.name || ""}
           onClose={closeVoiceRecorder}
           onStart={() => void startVoiceRecorder()}
           onPause={pauseVoiceRecorder}
           onResume={resumeVoiceRecorder}
           onStop={() => void stopVoiceRecorder()}
+          onRetryDraft={() => void retryVoiceMemoDraft()}
+          onSaveDraft={saveVoiceMemoDraftToDisk}
+          onDiscardDraft={() => void discardVoiceMemoDraft()}
         />
       </div>
       {dropActive ? (
