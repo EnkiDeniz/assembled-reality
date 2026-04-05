@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { cleanDisplayTitle } from "@/lib/document-blocks";
 import {
   ASSEMBLY_DOMAINS,
   getAssemblyColorTokens,
@@ -116,7 +117,7 @@ export default function ConfirmationQueueDialog({
         {currentItem ? (
           <div className="assembler-confirmation">
             <div className="assembler-confirmation__meta">
-              <span>{focus?.label || currentItem.sourceTitle || currentItem.documentKey}</span>
+              <span>{focus?.label || cleanDisplayTitle(currentItem.sourceTitle) || currentItem.documentKey}</span>
               <span>{remaining} left</span>
             </div>
 

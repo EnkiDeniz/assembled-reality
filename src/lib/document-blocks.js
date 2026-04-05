@@ -75,7 +75,8 @@ export function cleanDisplayTitle(title) {
 
 export function stripMarkdownSyntax(markdown) {
   return String(markdown || "")
-    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\\?#{1,6}\s+/gm, "")
+    .replace(/\\([#*_`~>])/g, "$1")
     .replace(/^>\s?/gm, "")
     .replace(/^\d+\.\s+/gm, "")
     .replace(/^[-+*]\s+/gm, "")
@@ -157,7 +158,7 @@ export function normalizeWorkspaceBlock(input, options = {}) {
     sectionSlug: input?.sectionSlug || null,
     sectionLabel: input?.sectionLabel || "",
     sectionTitle: input?.sectionTitle || "",
-    sourceTitle: input?.sourceTitle || "",
+    sourceTitle: cleanDisplayTitle(input?.sourceTitle || ""),
     ...architectureFields,
   };
 }
@@ -232,7 +233,7 @@ export function buildWorkspaceBlocksFromDocument(documentData, options = {}) {
           sectionSlug: section.slug,
           sectionTitle: section.title,
           sectionLabel: `${section.number} · ${section.title}`,
-          sourceTitle: documentData?.title || "",
+          sourceTitle: cleanDisplayTitle(documentData?.title || ""),
         },
         {
           documentKey: options.documentKey || documentData?.documentKey || "",
