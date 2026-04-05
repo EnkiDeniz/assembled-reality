@@ -91,33 +91,11 @@ function ScopeButton({ active = false, label, onClick }) {
   );
 }
 
-function ActionCard({ icon, eyebrow, title, detail = "", onClick, disabled = false, primary = false }) {
-  return (
-    <button
-      type="button"
-      className={`assembler-boxes-index__action-card ${primary ? "is-primary" : ""}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <span className="assembler-boxes-index__action-icon" aria-hidden="true">
-        <WorkspaceGlyph kind={icon} />
-      </span>
-      <span className="assembler-boxes-index__action-copy">
-        <span className="assembler-boxes-index__action-eyebrow">{eyebrow}</span>
-        <span className="assembler-boxes-index__action-title">{title}</span>
-        {detail ? <span className="assembler-boxes-index__action-detail">{detail}</span> : null}
-      </span>
-    </button>
-  );
-}
-
 function BoxRow({
   project,
   activeProjectKey = "",
   projectActionPending = "",
   onOpenProjectHome,
-  onToggleProjectPinned,
-  onToggleProjectArchived,
 }) {
   const isActive = project.projectKey === activeProjectKey;
   const pending = projectActionPending === project.projectKey;
@@ -186,37 +164,6 @@ function BoxRow({
             <span className="assembler-boxes-index__row-badge">Current</span>
           ) : null}
         </div>
-
-        <div className="assembler-boxes-index__row-tools">
-          <button
-            type="button"
-            className={`assembler-boxes-index__tool ${project?.isPinned ? "is-active" : ""}`}
-            onClick={() => onToggleProjectPinned(project, !project?.isPinned)}
-            disabled={pending}
-            aria-label={project?.isPinned ? `Unpin ${title}` : `Pin ${title}`}
-            title={project?.isPinned ? "Unpin" : "Pin"}
-          >
-            <WorkspaceGlyph kind="pin" />
-          </button>
-          <button
-            type="button"
-            className={`assembler-boxes-index__tool ${project?.isArchived ? "is-active" : ""}`}
-            onClick={() => onToggleProjectArchived(project, !project?.isArchived)}
-            disabled={pending || project?.isDefaultBox}
-            aria-label={project?.isArchived ? `Restore ${title}` : `Archive ${title}`}
-            title={project?.isArchived ? "Restore" : "Archive"}
-          >
-            <WorkspaceGlyph kind="archive" />
-          </button>
-          <button
-            type="button"
-            className="assembler-boxes-index__row-action"
-            onClick={() => onOpenProjectHome(project.projectKey)}
-            disabled={pending}
-          >
-            Open Box
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -230,11 +177,8 @@ export default function BoxesIndex({
   projectActionPending = "",
   onOpenProjectHome,
   onResumeProject,
-  onCreateProject: _onCreateProject,
   onManageProjects,
   onOpenIntake,
-  onToggleProjectPinned,
-  onToggleProjectArchived,
 }) {
   const [scope, setScope] = useState(BOX_SCOPES.recent);
   const [query, setQuery] = useState("");
@@ -270,9 +214,6 @@ export default function BoxesIndex({
 
         <div className="assembler-boxes-index__copy">
           <h1 className="assembler-boxes-index__title">Open the right box and keep moving.</h1>
-          <p className="assembler-boxes-index__subtitle">
-            Calm entry. Fast capture. Recent work where you can reach it.
-          </p>
           <div className="assembler-boxes-index__meta">
             <span>{activeBoxes.length} active</span>
             <span>{archivedBoxes.length} archived</span>
@@ -280,42 +221,29 @@ export default function BoxesIndex({
           </div>
         </div>
 
-        <div className="assembler-boxes-index__actions">
-          <ActionCard
-            icon="open"
-            eyebrow="Resume"
-            title="Resume current work"
-            detail={
-              resumeTarget?.title
-                ? `${resumeTarget.title} · ${resumeTarget.detail || "Continue where you left off."}`
-                : "Continue the most recent source or seed."
-            }
+        <div className="assembler-boxes-index__compact-actions">
+          <button
+            type="button"
+            className="terminal-button is-primary"
             onClick={() => activeProject?.projectKey && onResumeProject?.(activeProject.projectKey)}
             disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
-            primary
-          />
-          <ActionCard
-            icon="box"
-            eyebrow="Home"
-            title="Open Box Home"
-            detail="Orient, review proof, and choose the next move."
+          >
+            Resume
+          </button>
+          <button
+            type="button"
+            className="terminal-button"
             onClick={() => activeProject?.projectKey && onOpenProjectHome(activeProject.projectKey)}
             disabled={!activeProject?.projectKey || projectActionPending === activeProject?.projectKey}
-          />
-          <ActionCard
-            icon="plus"
-            eyebrow="Capture"
-            title="Add source"
-            detail="Upload, paste, link, photo, or speak."
-            onClick={onOpenIntake}
-          />
-          <ActionCard
-            icon="manage"
-            eyebrow="Organize"
-            title="Manage boxes"
-            detail="Create, rename, archive, or clean up."
-            onClick={onManageProjects}
-          />
+          >
+            Home
+          </button>
+          <button type="button" className="terminal-button" onClick={onOpenIntake}>
+            Add
+          </button>
+          <button type="button" className="terminal-button" onClick={onManageProjects}>
+            Manage
+          </button>
         </div>
       </section>
 
@@ -367,8 +295,6 @@ export default function BoxesIndex({
                 activeProjectKey={activeProjectKey}
                 projectActionPending={projectActionPending}
                 onOpenProjectHome={onOpenProjectHome}
-                onToggleProjectPinned={onToggleProjectPinned}
-                onToggleProjectArchived={onToggleProjectArchived}
               />
             ))}
           </div>
@@ -396,8 +322,6 @@ export default function BoxesIndex({
                 activeProjectKey={activeProjectKey}
                 projectActionPending={projectActionPending}
                 onOpenProjectHome={onOpenProjectHome}
-                onToggleProjectPinned={onToggleProjectPinned}
-                onToggleProjectArchived={onToggleProjectArchived}
               />
             ))
           ) : (

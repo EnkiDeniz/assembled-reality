@@ -1,3 +1,6 @@
+import InlineAssist from "@/components/InlineAssist";
+import { validateRootText } from "@/lib/assembly-architecture";
+
 function formatBoxMeta(project = null) {
   const sourceCount = Number(project?.sourceCount) || 0;
   const seedCount = Number(project?.assemblyCount) || 0;
@@ -45,24 +48,23 @@ export default function BoxManagementDialog({
   const mutating = Boolean(pendingAction);
 
   return (
-    <div className="assembler-image-chooser assembler-image-chooser--box-management">
-      <button
-        type="button"
-        className="assembler-image-chooser__backdrop"
-        aria-label="Close box management"
+    <div className="assembler-sheet assembler-sheet--workspace is-open">
+      <div
+        className="assembler-sheet__backdrop"
+        aria-hidden="true"
         onClick={mutating ? undefined : onClose}
       />
 
       <div
-        className="assembler-image-chooser__panel assembler-box-management"
+        className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-box-management"
         role="dialog"
         aria-modal="true"
         aria-labelledby="box-management-title"
       >
-        <div className="assembler-image-chooser__header">
-          <div className="assembler-image-chooser__copy">
+        <div className="assembler-sheet__header">
+          <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">Boxes</span>
-            <h2 id="box-management-title" className="assembler-image-chooser__title">
+            <h2 id="box-management-title" className="assembler-sheet__title">
               Manage boxes
             </h2>
           </div>
@@ -106,6 +108,11 @@ export default function BoxManagementDialog({
                 placeholder="Root (7 words or fewer)"
                 aria-label="New Box root"
                 disabled={mutating}
+              />
+              <InlineAssist
+                error={validateRootText(createRootText)}
+                visible={Boolean(createRootText.trim() && validateRootText(createRootText))}
+                assemblyStep={0}
               />
               <textarea
                 className="assembler-box-management__input assembler-box-management__textarea"
@@ -217,24 +224,27 @@ export default function BoxManagementDialog({
                       {selectedProject.isPinned ? "Unpin" : "Pin"}
                     </button>
                     {!selectedProject.isDefaultBox ? (
-                      <button
-                        type="button"
-                        className="assembler-box-management__secondary"
-                        onClick={onToggleArchive}
-                        disabled={mutating}
-                      >
-                        {selectedProject.isArchived ? "Restore" : "Archive"}
-                      </button>
-                    ) : null}
-                    {!selectedProject.isDefaultBox ? (
-                      <button
-                        type="button"
-                        className="assembler-box-management__danger"
-                        onClick={onDelete}
-                        disabled={mutating}
-                      >
-                        {deleting ? "Moving work…" : "Delete Box"}
-                      </button>
+                      <details className="assembler-box-management__danger-zone">
+                        <summary>Danger zone</summary>
+                        <div className="assembler-box-management__danger-actions">
+                          <button
+                            type="button"
+                            className="assembler-box-management__secondary"
+                            onClick={onToggleArchive}
+                            disabled={mutating}
+                          >
+                            {selectedProject.isArchived ? "Restore" : "Archive"}
+                          </button>
+                          <button
+                            type="button"
+                            className="assembler-box-management__danger"
+                            onClick={onDelete}
+                            disabled={mutating}
+                          >
+                            {deleting ? "Moving work…" : "Delete Box"}
+                          </button>
+                        </div>
+                      </details>
                     ) : null}
                   </div>
                 </div>
@@ -244,7 +254,7 @@ export default function BoxManagementDialog({
         </div>
 
         {errorMessage ? (
-          <p className="assembler-delete-dialog__error" aria-live="polite">
+          <p className="assembler-box-management__error" aria-live="polite">
             {errorMessage}
           </p>
         ) : null}

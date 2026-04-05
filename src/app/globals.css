@@ -191,8 +191,8 @@ main {
 
 .terminal-button.is-primary,
 .terminal-link.is-primary {
-  border-color: rgba(51, 156, 255, 0.28);
-  background: rgba(51, 156, 255, 0.14);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.28));
+  background: var(--assembly-tone, rgba(51, 156, 255, 0.14));
   color: var(--white);
 }
 
@@ -987,7 +987,7 @@ main {
   border: 1px solid var(--line);
   border-radius: 28px;
   background:
-    radial-gradient(circle at top right, rgba(51, 156, 255, 0.12), transparent 30%),
+    radial-gradient(circle at top right, var(--assembly-tone-soft, rgba(51, 156, 255, 0.12)), transparent 30%),
     radial-gradient(circle at top left, rgba(245, 158, 11, 0.1), transparent 26%),
     var(--surface-1);
   box-shadow: var(--shadow-panel);
@@ -1207,8 +1207,8 @@ main {
 }
 
 .self-assembly-stage-item.is-advanced {
-  border-color: rgba(51, 156, 255, 0.18);
-  background: rgba(51, 156, 255, 0.08);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.18));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
 }
 
 .self-assembly-history-list {
@@ -1716,12 +1716,12 @@ main {
 
 .assembler-toolbar__document-state.is-saving {
   color: var(--blue);
-  border-color: rgba(51, 156, 255, 0.24);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
 }
 
 .assembler-toolbar__document-state.is-saved {
   color: var(--blue);
-  border-color: rgba(51, 156, 255, 0.24);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
 }
 
 .assembler-toolbar__document-state.is-conflict {
@@ -1761,16 +1761,16 @@ main {
 
 .assembler-tab.is-active {
   color: var(--white);
-  border-color: rgba(51, 156, 255, 0.22);
-  background: rgba(51, 156, 255, 0.08);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
 }
 
 .assembler-tab.is-log.is-active {
-  border-color: rgba(51, 156, 255, 0.22);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
 }
 
 .assembler-tab.is-edit.is-active {
-  border-color: rgba(51, 156, 255, 0.22);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
   color: var(--blue);
 }
 
@@ -1788,8 +1788,8 @@ main {
 
 .assembler-ai-toggle.is-active {
   color: var(--white);
-  border-color: rgba(51, 156, 255, 0.22);
-  background: rgba(51, 156, 255, 0.08);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
 }
 
 .assembler-surface {
@@ -2901,9 +2901,9 @@ main {
 .assembler-seven-sheet__run {
   min-height: 30px;
   padding: 0 10px;
-  border: 1px solid rgba(51, 156, 255, 0.18);
+  border: 1px solid var(--assembly-tone-border, rgba(51, 156, 255, 0.18));
   border-radius: 999px;
-  background: rgba(51, 156, 255, 0.08);
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
   color: var(--blue);
   font-size: 12px;
 }
@@ -2930,8 +2930,8 @@ main {
 }
 
 .assembler-seven-sheet__message.is-user .assembler-seven-sheet__message-body {
-  border-color: rgba(51, 156, 255, 0.2);
-  background: rgba(51, 156, 255, 0.08);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.2));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
 }
 
 .assembler-seven-sheet__message.is-error .assembler-seven-sheet__message-body {
@@ -3126,11 +3126,11 @@ main {
 
 .assembler-player__button.is-ai-active {
   color: var(--blue);
-  border-color: rgba(51, 156, 255, 0.24);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
 }
 
 .assembler-player__button.is-playing {
-  border-color: rgba(51, 156, 255, 0.28);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.28));
   color: var(--blue);
 }
 
@@ -3496,20 +3496,20 @@ main {
 
 .assembler-document-row--picker.is-active {
   padding: 10px 10px;
-  border: 1px solid rgba(51, 156, 255, 0.24);
-  background: rgba(51, 156, 255, 0.08);
-  box-shadow: 0 0 18px rgba(51, 156, 255, 0.08);
+  border: 1px solid var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
+  box-shadow: 0 0 18px var(--assembly-tone-glow, rgba(51, 156, 255, 0.08));
 }
 
 .assembler-document-row--picker.is-active .assembler-document-row__quick {
-  border-color: rgba(51, 156, 255, 0.26);
-  background: rgba(51, 156, 255, 0.12);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.12));
   color: var(--white);
 }
 
 .assembler-document-row--picker.is-active .assembler-document-row__badge {
-  border-color: rgba(51, 156, 255, 0.22);
-  background: rgba(51, 156, 255, 0.1);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.1));
   color: var(--white);
 }
 
@@ -3945,8 +3945,8 @@ main {
 }
 
 .assembler-image-chooser__action.is-primary {
-  border-color: rgba(51, 156, 255, 0.24);
-  background: rgba(51, 156, 255, 0.1);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.24));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.1));
 }
 
 .assembler-image-chooser__action-label {
@@ -4053,9 +4053,9 @@ main {
   min-width: 40px;
   min-height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(51, 156, 255, 0.22);
+  border: 1px solid var(--assembly-tone-border, rgba(51, 156, 255, 0.22));
   border-radius: 999px;
-  background: rgba(51, 156, 255, 0.08);
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
   color: var(--accent-primary);
   font-family: var(--font-code);
   font-size: 12px;
@@ -4178,8 +4178,8 @@ main {
 }
 
 .assembler-drop-sheet__action.is-primary {
-  border-color: rgba(51, 156, 255, 0.26);
-  background: rgba(51, 156, 255, 0.08);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
 }
 
 .assembler-drop-sheet__action-icon {
@@ -4243,9 +4243,9 @@ main {
 .assembler-drop-sheet__submit {
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid rgba(51, 156, 255, 0.26);
+  border: 1px solid var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
   border-radius: 12px;
-  background: rgba(51, 156, 255, 0.08);
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
   color: var(--white);
   font-size: 11px;
   letter-spacing: 0.12em;
@@ -4522,7 +4522,7 @@ main {
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(51, 156, 255, 0.05), transparent 65%),
+    linear-gradient(180deg, var(--assembly-tone-soft, rgba(51, 156, 255, 0.05)), transparent 65%),
     rgba(15, 17, 17, 0.92);
 }
 
@@ -4610,8 +4610,8 @@ main {
 
 .assembler-project-home__primary-button,
 .assembler-project-home__summary-action.is-primary {
-  border-color: rgba(51, 156, 255, 0.26);
-  background: rgba(51, 156, 255, 0.1);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.1));
 }
 
 .assembler-project-home__masthead-secondary,
@@ -4814,7 +4814,7 @@ main {
 }
 
 .assembler-mobile-sheet__submit {
-  background: rgba(51, 156, 255, 0.1);
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.1));
   color: var(--white);
 }
 
@@ -4842,7 +4842,7 @@ main {
 
 .assembler-project-home__summary.is-primary {
   background:
-    linear-gradient(180deg, rgba(51, 156, 255, 0.05), transparent 70%),
+    linear-gradient(180deg, var(--assembly-tone-soft, rgba(51, 156, 255, 0.05)), transparent 70%),
     rgba(15, 17, 17, 0.94);
 }
 
@@ -5037,10 +5037,15 @@ main {
 }
 
 .assembler-boxes-index__copy,
-.assembler-boxes-index__actions,
 .assembler-boxes-index__list {
   display: grid;
   gap: 10px;
+}
+
+.assembler-boxes-index__compact-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .assembler-boxes-index__eyebrow,
@@ -5098,8 +5103,8 @@ main {
 }
 
 .assembler-boxes-index__primary-button {
-  border-color: rgba(51, 156, 255, 0.26);
-  background: rgba(51, 156, 255, 0.1);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.1));
 }
 
 .assembler-boxes-index__panel-head {
@@ -5158,7 +5163,7 @@ main {
 .assembler-project-home__project-row.is-active,
 .assembler-box-management__row.is-active {
   padding-left: 10px;
-  border-left: 2px solid rgba(51, 156, 255, 0.44);
+  border-left: 2px solid var(--assembly-tone-border, rgba(51, 156, 255, 0.44));
 }
 
 .assembler-receipt-surface__pill {
@@ -5234,13 +5239,50 @@ main {
 }
 
 .assembler-box-management__primary {
-  border-color: rgba(51, 156, 255, 0.26);
-  background: rgba(51, 156, 255, 0.08);
+  border-color: var(--assembly-tone-border, rgba(51, 156, 255, 0.26));
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.08));
 }
 
 .assembler-box-management__danger {
   color: var(--red);
   border-color: rgba(239, 68, 68, 0.26);
+}
+
+.assembler-box-management__danger-zone {
+  margin-top: var(--space-3);
+}
+
+.assembler-box-management__danger-zone > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-meta);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  list-style: none;
+}
+
+.assembler-box-management__danger-zone > summary::-webkit-details-marker {
+  display: none;
+}
+
+.assembler-box-management__danger-zone > summary::before {
+  content: "▸ ";
+}
+
+.assembler-box-management__danger-zone[open] > summary::before {
+  content: "▾ ";
+}
+
+.assembler-box-management__danger-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.assembler-box-management__error {
+  padding: var(--space-4);
+  color: var(--danger-text);
+  font-size: 13px;
 }
 
 .assembler-toolbar__phase-label {
@@ -6831,7 +6873,7 @@ main {
 }
 
 .assembler-mobile-nav__item.is-active {
-  background: rgba(51, 156, 255, 0.12);
+  background: var(--assembly-tone-soft, rgba(51, 156, 255, 0.12));
   color: var(--white);
 }
 
