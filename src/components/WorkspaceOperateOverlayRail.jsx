@@ -2,19 +2,14 @@
 
 import { useState } from "react";
 import { SignalChip } from "@/components/LoegosSystem";
+import { getOverlaySignalTone } from "@/lib/operate-overlay";
 
 function formatSignalLabel(signal = "") {
   const normalized = String(signal || "").trim().toLowerCase();
+  if (normalized === "override") return "Attested";
   if (normalized === "green") return "Grounded";
   if (normalized === "red") return "Broken";
   return "Partial";
-}
-
-function getSignalTone(signal = "") {
-  const normalized = String(signal || "").trim().toLowerCase();
-  if (normalized === "green") return "clear";
-  if (normalized === "red") return "alert";
-  return "active";
 }
 
 function formatOverrideStatus(status = "") {
@@ -42,11 +37,11 @@ function FindingRow({
         </span>
       </span>
       <span className="loegos-diagnostics__finding-meta">
-        <SignalChip tone={getSignalTone(finding?.signal)} subtle>
-          {formatSignalLabel(finding?.signal)}
+        <SignalChip tone={getOverlaySignalTone(finding?.displaySignal || finding?.signal)} subtle>
+          {formatSignalLabel(finding?.displaySignal || finding?.signal)}
         </SignalChip>
         <SignalChip tone={finding?.overrideApplied ? "neutral" : "active"} subtle>
-          {finding?.overrideApplied ? "Override" : finding?.trustLevel || "L1"}
+          {finding?.trustLevel || "L1"}
         </SignalChip>
       </span>
     </button>
@@ -76,7 +71,15 @@ export default function WorkspaceOperateOverlayRail({
     redCount: 0,
     amberCount: 0,
     greenCount: 0,
+    attestedCount: 0,
     overrideCount: 0,
+  };
+  const coverage = overlay?.coverage || {
+    totalBlockCount: 0,
+    evaluatedBlockCount: 0,
+    omittedBlockCount: 0,
+    truncated: false,
+    maxBlockCount: 24,
   };
   const selectedOverrides = Array.isArray(selectedFinding?.overrides)
     ? selectedFinding.overrides
@@ -125,11 +128,25 @@ export default function WorkspaceOperateOverlayRail({
         </article>
       ) : null}
 
+      {coverage?.truncated ? (
+        <article className="loegos-diagnostics__callout">
+          <strong>Operate is partial.</strong>
+          <p>
+            This run covered {coverage.evaluatedBlockCount} of {coverage.totalBlockCount} blocks.
+            The remaining {coverage.omittedBlockCount} blocks stayed out of scope.
+          </p>
+        </article>
+      ) : null}
+
       <div className="loegos-diagnostics__metrics">
         <SignalChip tone="clear" subtle>{summary.greenCount || 0} grounded</SignalChip>
         <SignalChip tone="active" subtle>{summary.amberCount || 0} partial</SignalChip>
         <SignalChip tone="alert" subtle>{summary.redCount || 0} broken</SignalChip>
+        <SignalChip tone="neutral" subtle>{summary.attestedCount || 0} attested</SignalChip>
         <SignalChip tone="neutral" subtle>{summary.overrideCount || 0} overrides</SignalChip>
+        <SignalChip tone="neutral" subtle>
+          {coverage.evaluatedBlockCount || 0}/{coverage.totalBlockCount || 0} blocks
+        </SignalChip>
       </div>
 
       {open ? (
@@ -156,11 +173,14 @@ export default function WorkspaceOperateOverlayRail({
               <div className="loegos-diagnostics__inspect-head">
                 <strong>{selectedFinding.blockId}</strong>
                 <div className="loegos-diagnostics__finding-meta">
-                  <SignalChip tone={getSignalTone(selectedFinding.signal)} subtle>
-                    {formatSignalLabel(selectedFinding.signal)}
+                  <SignalChip
+                    tone={getOverlaySignalTone(selectedFinding.displaySignal || selectedFinding.signal)}
+                    subtle
+                  >
+                    {formatSignalLabel(selectedFinding.displaySignal || selectedFinding.signal)}
                   </SignalChip>
                   <SignalChip tone={selectedFinding.overrideApplied ? "neutral" : "active"} subtle>
-                    {selectedFinding.overrideApplied ? "Override" : selectedFinding.trustLevel || "L1"}
+                    {selectedFinding.trustLevel || "L1"}
                   </SignalChip>
                 </div>
               </div>
@@ -170,6 +190,12 @@ export default function WorkspaceOperateOverlayRail({
               ) : null}
               {selectedFinding.uncertainty ? (
                 <p className="loegos-diagnostics__inspect-note">{selectedFinding.uncertainty}</p>
+              ) : null}
+              {selectedFinding.overrideApplied ? (
+                <p className="loegos-diagnostics__inspect-note">
+                  Underlying machine read: {formatSignalLabel(selectedFinding.baseSignal || selectedFinding.signal)} at{" "}
+                  {selectedFinding.baseTrustLevel || selectedFinding.trustLevel || "L1"}.
+                </p>
               ) : null}
 
               <div className="loegos-diagnostics__inspect-section">
@@ -204,7 +230,7 @@ export default function WorkspaceOperateOverlayRail({
                       return (
                         <article key={spanKey} className="loegos-diagnostics__inspect-span">
                           <div className="loegos-diagnostics__inspect-span-head">
-                            <SignalChip tone={getSignalTone(span.signal)} subtle>
+                            <SignalChip tone={getOverlaySignalTone(span.signal)} subtle>
                               {span.text}
                             </SignalChip>
                             {activeSpanOverride ? (

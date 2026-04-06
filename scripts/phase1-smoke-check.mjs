@@ -13,6 +13,8 @@ async function main() {
     receiptRoute,
     workspaceAiRoute,
     workspaceShell,
+    operateOverlay,
+    overlayRail,
   ] = await Promise.all([
     read("prisma/schema.prisma"),
     read("src/app/api/workspace/operate/route.js"),
@@ -20,6 +22,8 @@ async function main() {
     read("src/app/api/workspace/receipt/route.js"),
     read("src/app/api/workspace/ai/route.js"),
     read("src/components/WorkspaceShell.jsx"),
+    read("src/lib/operate-overlay.js"),
+    read("src/components/WorkspaceOperateOverlayRail.jsx"),
   ]);
 
   assert.match(schema, /model\s+ReaderOperateRun\s+\{/);
@@ -31,6 +35,7 @@ async function main() {
   assert.match(operateRoute, /createReaderOperateRunForUser/);
   assert.match(operateRoute, /buildOperateSourceFingerprint/);
   assert.match(operateRoute, /findings:/);
+  assert.match(operateRoute, /coverage:/);
 
   assert.match(operateOverridesRoute, /upsertReaderAttestedOverrideForUser/);
   assert.match(operateOverridesRoute, /deleteReaderAttestedOverrideForUser/);
@@ -42,9 +47,19 @@ async function main() {
   assert.match(workspaceAiRoute, /unavailable:\s*true/);
   assert.doesNotMatch(workspaceAiRoute, /fallbackBlocks/);
 
+  assert.match(operateOverlay, /Local evidence did not survive validation/);
+  assert.match(operateOverlay, /displaySignal/);
+  assert.match(operateOverlay, /attestedCount/);
+  assert.match(operateOverlay, /buildOperateOverlayCoverage/);
+
   assert.match(workspaceShell, /mode:\s*"overlay"/);
   assert.match(workspaceShell, /receiptSealOverrideAcknowledged/);
   assert.match(workspaceShell, /createAttestedOverride/);
+  assert.match(workspaceShell, /Underlying machine read/);
+
+  assert.match(overlayRail, /Operate is partial/);
+  assert.match(overlayRail, /attested/);
+  assert.match(overlayRail, /coverage/);
 
   console.log("phase1-smoke-check: ok");
 }

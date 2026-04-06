@@ -4,6 +4,7 @@ import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
 import { getReaderDocumentDataForUser, listReaderDocumentsForUser } from "@/lib/reader-documents";
 import {
   buildLocalSourceEvidenceForBlocks,
+  buildOperateOverlayCoverage,
   buildOperateOverrideSummary,
   buildOperateOverlayPrompt,
   buildOperateSourceFingerprint,
@@ -277,20 +278,25 @@ function createOverlayResponse({
   mergedPayload = null,
   stale = false,
   overrideSummary = null,
+  coverage = null,
   documentKey = "",
 } = {}) {
   const payload = mergedPayload && typeof mergedPayload === "object" ? mergedPayload : {};
   const summary = payload.summary && typeof payload.summary === "object"
     ? payload.summary
-    : {
-        redCount: 0,
-        amberCount: 0,
-        greenCount: 0,
-        overrideCount: 0,
-        activeOverrideCount: 0,
-        staleOverrideCount: 0,
-        orphanedOverrideCount: 0,
-      };
+    : buildOperateOverrideSummary([], null);
+  const resolvedCoverage =
+    coverage && typeof coverage === "object"
+      ? coverage
+      : payload.coverage && typeof payload.coverage === "object"
+        ? payload.coverage
+        : {
+            totalBlockCount: 0,
+            evaluatedBlockCount: 0,
+            omittedBlockCount: 0,
+            truncated: false,
+            maxBlockCount: 24,
+          };
 
   return {
     ok: true,
@@ -301,6 +307,7 @@ function createOverlayResponse({
     stale: Boolean(stale),
     blocks: Array.isArray(payload.blocks) ? payload.blocks : [],
     findings: Array.isArray(payload.findings) ? payload.findings : [],
+    coverage: resolvedCoverage,
     summary,
     overrideSummary:
       overrideSummary && typeof overrideSummary === "object" ? overrideSummary : summary,
@@ -412,6 +419,7 @@ async function buildOverlayRuntimeContext(userId, context = {}) {
     };
   }
   const evidenceMap = buildLocalSourceEvidenceForBlocks(candidateBlocks, sourceDocuments);
+  const coverage = buildOperateOverlayCoverage(currentAssemblyDocument, candidateBlocks);
   const sourceFingerprint = buildOperateSourceFingerprint({
     workingDocument: currentAssemblyDocument,
     sourceDocuments,
@@ -422,6 +430,7 @@ async function buildOverlayRuntimeContext(userId, context = {}) {
     overrides,
     candidateBlocks,
     evidenceMap,
+    coverage,
     sourceFingerprint,
   };
 }
@@ -567,6 +576,7 @@ async function runOverlayOperate({
   const coercedPayload = coerceOperateOverlayPayload(parsed, {
     candidateBlocks: runtimeContext.candidateBlocks,
     evidenceMap: runtimeContext.evidenceMap,
+    workingDocument: baseContext.currentAssemblyDocument,
   });
   const latestOverlayState = await getCurrentOverlayStateForUser(session.user.id, baseContext);
   const latestFingerprint = buildOperateSourceFingerprint({
@@ -634,6 +644,7 @@ async function runOverlayOperate({
       mergedPayload,
       stale,
       overrideSummary,
+      coverage: runtimeContext.coverage,
       documentKey: baseContext.currentAssemblyDocument.documentKey,
     }),
   );
@@ -860,6 +871,11 @@ export async function GET(request) {
     projectId: operateContext.activeProject?.id || null,
     documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
   });
+  const currentCandidateBlocks = buildOverlayCandidateBlocks(operateContext.currentAssemblyDocument);
+  const currentCoverage = buildOperateOverlayCoverage(
+    operateContext.currentAssemblyDocument,
+    currentCandidateBlocks,
+  );
   const currentFingerprint = buildOperateSourceFingerprint({
     workingDocument: operateContext.currentAssemblyDocument,
     sourceDocuments: operateContext.sourceDocuments,
@@ -877,10 +893,12 @@ export async function GET(request) {
         mergedPayload: {
           blocks: [],
           findings: [],
+          coverage: currentCoverage,
           summary: overrideSummary,
         },
         stale: true,
         overrideSummary,
+        coverage: currentCoverage,
         documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
       }),
     );
@@ -899,6 +917,7 @@ export async function GET(request) {
       mergedPayload,
       stale,
       overrideSummary,
+      coverage: currentCoverage,
       documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
     }),
   );

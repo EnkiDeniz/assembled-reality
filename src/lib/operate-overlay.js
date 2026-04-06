@@ -10,6 +10,7 @@ export const OPERATE_OVERLAY_TRUST_LEVELS = Object.freeze(["L1", "L2", "L3"]);
 export const MAX_OVERLAY_BLOCKS = 24;
 export const MAX_EVIDENCE_PER_BLOCK = 4;
 export const MAX_SPANS_PER_BLOCK = 4;
+export const MIN_EVIDENCE_FOR_L3 = 2;
 
 function normalizeText(value = "") {
   return stripMarkdownSyntax(String(value || ""))
@@ -104,6 +105,22 @@ export function buildOverlayCandidateBlocks(document = null) {
         ? Number(block.sourcePosition)
         : index,
     }));
+}
+
+export function buildOperateOverlayCoverage(document = null, candidateBlocks = []) {
+  const totalBlockCount = (Array.isArray(document?.blocks) ? document.blocks : []).filter((block) =>
+    normalizeBlockText(block),
+  ).length;
+  const evaluatedBlockCount = Array.isArray(candidateBlocks) ? candidateBlocks.length : 0;
+  const omittedBlockCount = Math.max(0, totalBlockCount - evaluatedBlockCount);
+
+  return {
+    totalBlockCount,
+    evaluatedBlockCount,
+    omittedBlockCount,
+    truncated: omittedBlockCount > 0,
+    maxBlockCount: MAX_OVERLAY_BLOCKS,
+  };
 }
 
 export function extractSpanHints(text = "") {
@@ -258,6 +275,67 @@ function normalizeTrustLevel(value = "") {
   return OPERATE_OVERLAY_TRUST_LEVELS.includes(normalized) ? normalized : "L1";
 }
 
+function normalizeDisplaySignal(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "override") return "override";
+  return normalizeSignal(normalized);
+}
+
+function buildEvidenceEnforcedFinding(block = null, evidence = []) {
+  const localEvidence = Array.isArray(evidence) ? evidence : [];
+  const evidenceCount = localEvidence.length;
+  const baseSignal = normalizeSignal(block?.signal);
+  const baseTrustLevel = normalizeTrustLevel(block?.trustLevel);
+  const unsupported = evidenceCount === 0;
+  const constrainedTrustLevel =
+    unsupported
+      ? "L1"
+      : baseTrustLevel === "L3" && evidenceCount < MIN_EVIDENCE_FOR_L3
+        ? "L2"
+        : baseTrustLevel;
+  const constrainedSignal = unsupported ? "amber" : baseSignal;
+  const rationaleParts = [];
+  const uncertaintyParts = [];
+
+  if (String(block?.rationale || "").trim()) {
+    rationaleParts.push(String(block.rationale).trim());
+  }
+  if (unsupported) {
+    rationaleParts.push("Local evidence did not survive validation for this block.");
+    uncertaintyParts.push("No local source evidence is attached, so this finding stays asserted rather than grounded.");
+  } else if (baseTrustLevel === "L3" && evidenceCount < MIN_EVIDENCE_FOR_L3) {
+    uncertaintyParts.push("Only one local source is attached, so trust is capped below audited strength.");
+  }
+  if (String(block?.uncertainty || "").trim()) {
+    uncertaintyParts.unshift(String(block.uncertainty).trim());
+  }
+
+  return {
+    baseSignal,
+    baseTrustLevel,
+    signal: constrainedSignal,
+    displaySignal: constrainedSignal,
+    trustLevel: constrainedTrustLevel,
+    rationale: uniqueList(rationaleParts).join(" "),
+    uncertainty: uniqueList(uncertaintyParts).join(" "),
+    evidence: localEvidence,
+    spans: unsupported ? [] : Array.isArray(block?.spans) ? block.spans : [],
+  };
+}
+
+function buildEmptyOperateSummary() {
+  return {
+    redCount: 0,
+    amberCount: 0,
+    greenCount: 0,
+    attestedCount: 0,
+    overrideCount: 0,
+    activeOverrideCount: 0,
+    staleOverrideCount: 0,
+    orphanedOverrideCount: 0,
+  };
+}
+
 function normalizeFindingSpan(span = null, text = "") {
   if (!span || typeof span !== "object") return null;
   const sourceText = String(text || "");
@@ -320,42 +398,51 @@ export function coerceOperateOverlayPayload(rawPayload, context = {}) {
     const evidence = (evidenceMap.get(block.blockId) || []).filter((entry) =>
       block.evidenceIds.includes(entry.id),
     );
+    const enforced = buildEvidenceEnforcedFinding(block, evidence);
 
     return {
       findingId: `finding:${block.blockId}`,
       blockId: block.blockId,
-      signal: block.signal,
-      trustLevel: block.trustLevel,
-      rationale: block.rationale,
-      uncertainty: block.uncertainty,
-      evidence,
+      signal: enforced.signal,
+      displaySignal: enforced.displaySignal,
+      baseSignal: enforced.baseSignal,
+      trustLevel: enforced.trustLevel,
+      baseTrustLevel: enforced.baseTrustLevel,
+      rationale: enforced.rationale,
+      uncertainty: enforced.uncertainty,
+      evidence: enforced.evidence,
       overrideApplied: false,
-      spans: block.spans,
+      spans: enforced.spans,
       overrides: [],
     };
   });
 
   const summary = findings.reduce(
     (accumulator, finding) => {
-      if (finding.signal === "green") accumulator.greenCount += 1;
-      else if (finding.signal === "red") accumulator.redCount += 1;
+      if (finding.displaySignal === "green") accumulator.greenCount += 1;
+      else if (finding.displaySignal === "red") accumulator.redCount += 1;
       else accumulator.amberCount += 1;
       return accumulator;
     },
-    { redCount: 0, amberCount: 0, greenCount: 0, overrideCount: 0 },
+    buildEmptyOperateSummary(),
   );
+  const coverage = buildOperateOverlayCoverage(context?.workingDocument, candidateBlocks);
 
   return {
     schemaVersion: OPERATE_OVERLAY_SCHEMA_VERSION,
     engineKind: OPERATE_OVERLAY_ENGINE_KIND,
     engineVersion: OPERATE_OVERLAY_ENGINE_VERSION,
     promptVersion: OPERATE_OVERLAY_PROMPT_VERSION,
-    blocks: blocks.map((block) => ({
-      blockId: block.blockId,
-      signal: block.signal,
-      trustLevel: block.trustLevel,
-      findingId: `finding:${block.blockId}`,
-      spans: block.spans,
+    coverage,
+    blocks: findings.map((finding) => ({
+      blockId: finding.blockId,
+      signal: finding.signal,
+      displaySignal: finding.displaySignal,
+      baseSignal: finding.baseSignal,
+      trustLevel: finding.trustLevel,
+      baseTrustLevel: finding.baseTrustLevel,
+      findingId: finding.findingId,
+      spans: finding.spans,
       overrideApplied: false,
     })),
     findings,
@@ -387,7 +474,7 @@ export function mergeOperateOverlayWithOverrides(
       : {
           blocks: [],
           findings: [],
-          summary: { redCount: 0, amberCount: 0, greenCount: 0, overrideCount: 0 },
+          summary: buildEmptyOperateSummary(),
         };
 
   const documentBlocks = new Map(
@@ -424,6 +511,7 @@ export function mergeOperateOverlayWithOverrides(
 
     return {
       ...block,
+      displaySignal: hasActiveOverride ? "override" : normalizeDisplaySignal(block?.signal),
       trustLevel: hasActiveOverride ? "L1" : block.trustLevel || "L1",
       overrideApplied: hasActiveOverride,
       overrideCount: overridesForBlock.length,
@@ -436,25 +524,19 @@ export function mergeOperateOverlayWithOverrides(
 
     return {
       ...finding,
+      displaySignal: hasActiveOverride ? "override" : normalizeDisplaySignal(finding?.signal),
       trustLevel: hasActiveOverride ? "L1" : finding.trustLevel || "L1",
       overrideApplied: hasActiveOverride,
       overrides: overridesForBlock,
     };
   });
 
-  const summary = {
-    redCount: 0,
-    amberCount: 0,
-    greenCount: 0,
-    overrideCount: 0,
-    activeOverrideCount: 0,
-    staleOverrideCount: 0,
-    orphanedOverrideCount: 0,
-  };
+  const summary = buildEmptyOperateSummary();
 
   nextPayload.findings.forEach((finding) => {
-    if (finding.signal === "green") summary.greenCount += 1;
-    else if (finding.signal === "red") summary.redCount += 1;
+    if (finding.displaySignal === "override") summary.attestedCount += 1;
+    else if (finding.displaySignal === "green") summary.greenCount += 1;
+    else if (finding.displaySignal === "red") summary.redCount += 1;
     else summary.amberCount += 1;
 
     const findingOverrides = Array.isArray(finding.overrides) ? finding.overrides : [];
@@ -469,21 +551,32 @@ export function mergeOperateOverlayWithOverrides(
 }
 
 export function buildOperateOverrideSummary(overrides = [], workingDocument = null) {
-  const merged = mergeOperateOverlayWithOverrides(
-    { blocks: [], findings: [], summary: {} },
-    overrides,
-    workingDocument,
+  const documentBlocks = new Map(
+    (Array.isArray(workingDocument?.blocks) ? workingDocument.blocks : [])
+      .filter(Boolean)
+      .map((block) => [String(block?.id || "").trim(), block]),
   );
+  const summary = buildEmptyOperateSummary();
 
-  return merged.summary || {
-    redCount: 0,
-    amberCount: 0,
-    greenCount: 0,
-    overrideCount: 0,
-    activeOverrideCount: 0,
-    staleOverrideCount: 0,
-    orphanedOverrideCount: 0,
-  };
+  (Array.isArray(overrides) ? overrides : []).forEach((override) => {
+    const blockId = String(override?.blockId || "").trim();
+    if (!blockId) return;
+
+    const block = documentBlocks.get(blockId);
+    const status = block
+      ? doesOverrideMatchCurrentText(override, block)
+        ? "active"
+        : "stale"
+      : "orphaned";
+
+    summary.overrideCount += 1;
+    if (status === "active") summary.activeOverrideCount += 1;
+    else if (status === "stale") summary.staleOverrideCount += 1;
+    else summary.orphanedOverrideCount += 1;
+  });
+
+  summary.attestedCount = summary.activeOverrideCount;
+  return summary;
 }
 
 export function getOverrideExcerptSnapshot(block = null, spanStart = null, spanEnd = null) {
@@ -502,7 +595,8 @@ export function getOverrideExcerptSnapshot(block = null, spanStart = null, spanE
 }
 
 export function getOverlaySignalTone(signal = "") {
-  const normalized = normalizeSignal(signal);
+  const normalized = normalizeDisplaySignal(signal);
+  if (normalized === "override") return "neutral";
   if (normalized === "green") return "clear";
   if (normalized === "red") return "alert";
   return "active";

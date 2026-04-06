@@ -3868,6 +3868,7 @@ function BlockFormalAnnotations({ block, annotation = null, hidePrimaryShape = f
 
 function formatOverlaySignalLabel(signal = "") {
   const normalized = String(signal || "").trim().toLowerCase();
+  if (normalized === "override") return "Attested";
   if (normalized === "green") return "Grounded";
   if (normalized === "red") return "Broken";
   return "Partial";
@@ -3887,11 +3888,11 @@ function BlockOperateFinding({
     <div className={`assembler-block__operate ${selected ? "is-active" : ""}`}>
       <div className="assembler-block__operate-head">
         <div className="assembler-block__operate-chips">
-          <SignalChip tone={getOverlaySignalTone(finding?.signal)} subtle>
-            {formatOverlaySignalLabel(finding?.signal)}
+          <SignalChip tone={getOverlaySignalTone(finding?.displaySignal || finding?.signal)} subtle>
+            {formatOverlaySignalLabel(finding?.displaySignal || finding?.signal)}
           </SignalChip>
           <SignalChip tone={finding?.overrideApplied ? "neutral" : "active"} subtle>
-            {finding?.overrideApplied ? "Attested override" : finding?.trustLevel || "L1"}
+            {finding?.trustLevel || "L1"}
           </SignalChip>
         </div>
         <button
@@ -3912,6 +3913,12 @@ function BlockOperateFinding({
       ) : null}
       {finding?.uncertainty ? (
         <p className="assembler-block__operate-note">{finding.uncertainty}</p>
+      ) : null}
+      {finding?.overrideApplied ? (
+        <p className="assembler-block__operate-note">
+          Underlying machine read: {formatOverlaySignalLabel(finding?.baseSignal || finding?.signal)} at{" "}
+          {finding?.baseTrustLevel || finding?.trustLevel || "L1"}.
+        </p>
       ) : null}
 
       {spans.length ? (
@@ -4029,18 +4036,18 @@ function BlockRow({
         {showOperateFinding ? (
           <>
             <SignalChip
-              tone={getOverlaySignalTone(finding?.signal)}
+              tone={getOverlaySignalTone(finding?.displaySignal || finding?.signal)}
               subtle
               className="assembler-block__gutter-chip"
             >
-              {formatOverlaySignalLabel(finding?.signal)}
+              {formatOverlaySignalLabel(finding?.displaySignal || finding?.signal)}
             </SignalChip>
             <SignalChip
               tone={finding?.overrideApplied ? "neutral" : "active"}
               subtle
               className="assembler-block__gutter-chip"
             >
-              {finding?.overrideApplied ? "override" : finding?.trustLevel || "L1"}
+              {finding?.trustLevel || "L1"}
             </SignalChip>
           </>
         ) : null}
@@ -11650,8 +11657,10 @@ export default function WorkspaceShell({
       setFeedback(
         payload?.stale
           ? "Inline Operate landed, but the seed changed before it returned."
+          : payload?.coverage?.truncated
+            ? `Inline Operate covered ${payload.coverage.evaluatedBlockCount} of ${payload.coverage.totalBlockCount} blocks.`
           : "Inline Operate attached findings to the current seed.",
-        payload?.stale ? "warning" : "success",
+        payload?.stale || payload?.coverage?.truncated ? "warning" : "success",
       );
       return payload;
     } catch (error) {
