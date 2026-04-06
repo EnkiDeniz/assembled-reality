@@ -6,6 +6,7 @@ function listMarkdownLinks() {
     publicPages.home,
     publicPages.about,
     publicPages.selfAssembly,
+    publicPages.disclaimer,
     publicPages.trust,
     publicPages.privacy,
     publicPages.terms,

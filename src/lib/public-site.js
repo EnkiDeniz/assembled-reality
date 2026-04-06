@@ -8,6 +8,7 @@ import {
   PRODUCT_NAME,
   PRODUCT_SENTENCE,
 } from "@/lib/product-language";
+import { disclaimerPage } from "@/lib/disclaimer-content";
 
 const founder = {
   name: "Deniz Sengun",
@@ -107,6 +108,8 @@ export const publicSite = {
       "What Loegos is, how Boxes and Operate work, and how the product relates to GetReceipts and PromiseMe.",
     trustSummary:
       "Public trust and provenance model, including L1-L3 trust levels and the rule that normalization is not verification.",
+    disclaimerSummary:
+      "Experimental-use disclaimer covering product boundaries, human responsibility, and when not to proceed.",
     selfAssemblySummary:
       "Curated self-assembly demo showing how Loegos can open its own box as an assembly lane with source documents, image-derived chronology, Git history exports, and proof closure.",
     privacySummary:
@@ -264,6 +267,7 @@ export const publicPages = {
       },
     ],
   },
+  disclaimer: disclaimerPage,
   privacy: {
     id: "privacy",
     path: "/privacy",
@@ -455,6 +459,7 @@ export const publicPageOrder = [
   publicPages.home,
   publicPages.about,
   publicPages.selfAssembly,
+  publicPages.disclaimer,
   publicPages.trust,
   publicPages.privacy,
   publicPages.terms,
@@ -462,6 +467,7 @@ export const publicPageOrder = [
 
 export const publicFooterLinks = [
   publicPages.about,
+  publicPages.disclaimer,
   publicPages.privacy,
   publicPages.terms,
   publicPages.trust,

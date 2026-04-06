@@ -447,6 +447,7 @@ export default async function WorkspacePage({ searchParams }) {
       initialEntryState={isFirstTime ? "first-time" : "returning"}
       initialBoxPhase={initialBoxPhase}
       initialWorkspaceNotice={initialWorkspaceNotice}
+      initialDisclaimerAcceptedAt={readerData?.profile?.disclaimerAcceptedAt || null}
     />
   );
 }

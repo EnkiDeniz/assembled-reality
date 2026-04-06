@@ -830,6 +830,13 @@ main {
   margin-top: 10px;
 }
 
+.intro-auth__note {
+  margin: 10px 0 0;
+  color: var(--soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .intro-auth-inline__footer-row {
   display: flex;
   flex-wrap: wrap;

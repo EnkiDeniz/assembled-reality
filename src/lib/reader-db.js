@@ -744,3 +744,15 @@ export async function updateReaderProfileForUser(userId, input) {
 
   return updated;
 }
+
+export async function acceptReaderDisclaimerForUser(userId) {
+  const resolved = await getReaderProfileByUserId(userId);
+  if (!resolved?.profile?.id) return null;
+
+  return prisma.readerProfile.update({
+    where: { id: resolved.profile.id },
+    data: {
+      disclaimerAcceptedAt: resolved.profile.disclaimerAcceptedAt || new Date(),
+    },
+  });
+}

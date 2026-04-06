@@ -116,6 +116,7 @@ model ReaderProfile {
   role                ReaderRole            @default(READER)
   lastReadSlug        String?
   lastReadAt          DateTime?
+  disclaimerAcceptedAt DateTime?
   preferredVoiceProvider ReaderVoiceProvider?
   preferredVoiceId    String?
   preferredListeningRate Float              @default(1)

@@ -36,6 +36,7 @@ import StagingPanel from "@/components/StagingPanel";
 import ThinkSurface from "@/components/ThinkSurface";
 import WorkspaceControlSurface from "@/components/WorkspaceControlSurface";
 import WorkspaceDiagnosticsRail from "@/components/WorkspaceDiagnosticsRail";
+import WorkspaceDisclaimerGate from "@/components/WorkspaceDisclaimerGate";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
 import { ShapeGlyph, SignalChip } from "@/components/LoegosSystem";
 import {
@@ -4174,6 +4175,7 @@ export default function WorkspaceShell({
   initialEntryState = "returning",
   initialBoxPhase = "",
   initialWorkspaceNotice = null,
+  initialDisclaimerAcceptedAt = null,
 }) {
   const fileInputRef = useRef(null);
   const photoCameraInputRef = useRef(null);
@@ -4374,12 +4376,36 @@ export default function WorkspaceShell({
   const [entryStateOverride, setEntryStateOverride] = useState(
     initialEntryState === "first-time" ? "first-time" : "",
   );
+  const [disclaimerAcceptedAt, setDisclaimerAcceptedAt] = useState(
+    initialDisclaimerAcceptedAt || null,
+  );
   const openWorkspacePicker = useCallback((intent = "switch") => {
     setWorkspacePickerIntent(intent === "add" ? "add" : "switch");
     setWorkspacePickerOpen(true);
   }, []);
   const closeWorkspacePicker = useCallback(() => {
     setWorkspacePickerOpen(false);
+  }, []);
+  const acceptWorkspaceDisclaimer = useCallback(async () => {
+    const response = await fetch("/api/reader/disclaimer", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error || "Could not record your acknowledgment.");
+    }
+
+    const acceptedAt = payload?.acceptedAt || new Date().toISOString();
+    setDisclaimerAcceptedAt(acceptedAt);
+    setStatus("Acknowledged. The box is open.");
+    setStatusTone("success");
+    recordProductEvent("workspace_disclaimer_accepted", {
+      surface: "workspace",
+    });
   }, []);
 
   const hydratedProjects = hydrateProjectsWithDocuments(projectsState, documentsState);
@@ -11043,6 +11069,10 @@ export default function WorkspaceShell({
           event.target.value = "";
         }}
       />
+
+      {!disclaimerAcceptedAt ? (
+        <WorkspaceDisclaimerGate onAccept={acceptWorkspaceDisclaimer} />
+      ) : null}
 
       <div className="assembler-shell">
         <header className="assembler-header assembler-header--minimal">

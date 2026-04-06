@@ -254,6 +254,11 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
         {status ? <p className="terminal-status is-success" aria-live="polite">{status}</p> : null}
         {error ? <p className="terminal-status is-error" aria-live="polite">{error}</p> : null}
       </form>
+
+      <p className="intro-auth__note">
+        Read the <Link href="/disclaimer" className="terminal-link">disclaimer</Link> before you
+        open the box.
+      </p>
     </div>
   );
 }
