@@ -40,7 +40,7 @@ export default function ReceiptSealDialog({
         : "Audit will update as you write";
 
   return (
-    <div className="assembler-sheet assembler-sheet--workspace is-open">
+    <div className="assembler-sheet assembler-sheet--workspace is-open" data-testid="receipt-seal-dialog">
       <div className="assembler-sheet__backdrop" onClick={pending ? undefined : onClose} aria-hidden="true" />
       <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--receipt-seal">
         <div className="assembler-sheet__header">
@@ -69,6 +69,7 @@ export default function ReceiptSealDialog({
               rows={4}
               placeholder="State the one operator sentence describing what changed."
               disabled={pending}
+              data-testid="receipt-seal-delta-input"
             />
 
             <InlineAssist
@@ -167,6 +168,7 @@ export default function ReceiptSealDialog({
                       checked={overrideAcknowledged}
                       onChange={(event) => onChangeOverrideAcknowledged?.(event.target.checked)}
                       disabled={pending}
+                      data-testid="receipt-override-acknowledgement"
                     />
                     <span>
                       I acknowledge that attested overrides will remain visible in the sealed receipt context.
@@ -184,6 +186,7 @@ export default function ReceiptSealDialog({
             className="assembler-sheet__primary"
             onClick={canSeal ? onSeal : undefined}
             disabled={!canSeal}
+            data-testid="receipt-seal-submit"
           >
             {primaryLabel}
           </button>

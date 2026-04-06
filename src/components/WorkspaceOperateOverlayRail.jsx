@@ -29,6 +29,7 @@ function FindingRow({
       type="button"
       className={`loegos-diagnostics__finding-row ${selected ? "is-active" : ""}`}
       onClick={onSelect}
+      data-testid="workspace-operate-finding-row"
     >
       <span className="loegos-diagnostics__finding-copy">
         <span className="loegos-diagnostics__finding-title">{finding?.blockId || "Block"}</span>
@@ -92,7 +93,7 @@ export default function WorkspaceOperateOverlayRail({
   ) || null;
 
   return (
-    <section className="loegos-diagnostics__section">
+    <section className="loegos-diagnostics__section" data-testid="workspace-operate-overlay-rail">
       <div className="loegos-diagnostics__section-head">
         <span>Inline Operate</span>
         <div className="loegos-diagnostics__actions">
@@ -100,6 +101,7 @@ export default function WorkspaceOperateOverlayRail({
             type="button"
             className="terminal-button"
             onClick={onToggleOpen}
+            data-testid="workspace-inline-operate-toggle"
           >
             {open ? "Hide overlay" : "Show overlay"}
           </button>
@@ -108,6 +110,7 @@ export default function WorkspaceOperateOverlayRail({
             className="terminal-button is-primary"
             onClick={onRunOperate}
             disabled={pending}
+            data-testid="workspace-inline-operate-refresh"
           >
             {pending ? "Running…" : findings.length ? "Refresh Operate" : "Run Operate"}
           </button>
@@ -169,7 +172,7 @@ export default function WorkspaceOperateOverlayRail({
           </div>
 
           {selectedFinding ? (
-            <article className="loegos-diagnostics__inspect">
+            <article className="loegos-diagnostics__inspect" data-testid="workspace-operate-inspect">
               <div className="loegos-diagnostics__inspect-head">
                 <strong>{selectedFinding.blockId}</strong>
                 <div className="loegos-diagnostics__finding-meta">
@@ -254,6 +257,7 @@ export default function WorkspaceOperateOverlayRail({
                                 value={spanNotes[spanKey] || ""}
                                 rows={2}
                                 placeholder="Why should this span be attested anyway?"
+                                data-testid="workspace-attest-span-input"
                                 onChange={(event) =>
                                   setSpanNotes((previous) => ({
                                     ...previous,
@@ -275,6 +279,7 @@ export default function WorkspaceOperateOverlayRail({
                                   });
                                 }}
                                 disabled={!String(spanNotes[spanKey] || "").trim() || pending}
+                                data-testid="workspace-attest-span-submit"
                               >
                                 Attest span
                               </button>
@@ -298,6 +303,7 @@ export default function WorkspaceOperateOverlayRail({
                       className="assembler-tiny-button"
                       onClick={() => onDeleteOverride?.(activeBlockOverride.id)}
                       disabled={pending}
+                      data-testid="workspace-attest-block-remove"
                     >
                       Remove override
                     </button>
@@ -309,6 +315,7 @@ export default function WorkspaceOperateOverlayRail({
                       value={blockNote}
                       rows={3}
                       placeholder="Explain why this block should remain attested despite missing or partial evidence."
+                      data-testid="workspace-attest-block-input"
                       onChange={(event) => setBlockNote(event.target.value)}
                     />
                     <button
@@ -323,6 +330,7 @@ export default function WorkspaceOperateOverlayRail({
                         });
                       }}
                       disabled={!String(blockNote || "").trim() || pending}
+                      data-testid="workspace-attest-block-submit"
                     >
                       Attest block
                     </button>

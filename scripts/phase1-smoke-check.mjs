@@ -15,6 +15,12 @@ async function main() {
     workspaceShell,
     operateOverlay,
     overlayRail,
+    receiptSealController,
+    operateOverlayController,
+    workbench,
+    packageJson,
+    playwrightConfig,
+    e2eSmoke,
   ] = await Promise.all([
     read("prisma/schema.prisma"),
     read("src/app/api/workspace/operate/route.js"),
@@ -24,6 +30,12 @@ async function main() {
     read("src/components/WorkspaceShell.jsx"),
     read("src/lib/operate-overlay.js"),
     read("src/components/WorkspaceOperateOverlayRail.jsx"),
+    read("src/components/workspace/useReceiptSealController.js"),
+    read("src/components/workspace/useOperateOverlayController.js"),
+    read("src/components/workspace/WorkspaceDocumentWorkbench.jsx"),
+    read("package.json"),
+    read("playwright.config.mjs"),
+    read("tests/e2e/phase1-inline-operate.spec.mjs"),
   ]);
 
   assert.match(schema, /model\s+ReaderOperateRun\s+\{/);
@@ -52,14 +64,27 @@ async function main() {
   assert.match(operateOverlay, /attestedCount/);
   assert.match(operateOverlay, /buildOperateOverlayCoverage/);
 
-  assert.match(workspaceShell, /mode:\s*"overlay"/);
-  assert.match(workspaceShell, /receiptSealOverrideAcknowledged/);
-  assert.match(workspaceShell, /createAttestedOverride/);
-  assert.match(workspaceShell, /Underlying machine read/);
+  assert.match(workspaceShell, /useOperateOverlayController/);
+  assert.match(workspaceShell, /useReceiptSealController/);
+  assert.match(workspaceShell, /WorkspaceDocumentWorkbench/);
 
   assert.match(overlayRail, /Operate is partial/);
   assert.match(overlayRail, /attested/);
   assert.match(overlayRail, /coverage/);
+  assert.match(overlayRail, /workspace-attest-block-submit/);
+
+  assert.match(receiptSealController, /runReceiptSealAudit/);
+  assert.match(receiptSealController, /performSealReceiptDraft/);
+  assert.match(operateOverlayController, /runInlineOperate/);
+  assert.match(operateOverlayController, /createAttestedOverride/);
+  assert.match(workbench, /workspace-document-workbench/);
+  assert.match(workbench, /workspace-finding-inspect/);
+
+  assert.match(packageJson, /"test:e2e": "playwright test"/);
+  assert.match(playwrightConfig, /tests\/e2e/);
+  assert.match(playwrightConfig, /npm run dev -- --port/);
+  assert.match(e2eSmoke, /dev-guardian/);
+  assert.match(e2eSmoke, /receipt-override-acknowledgement/);
 
   console.log("phase1-smoke-check: ok");
 }

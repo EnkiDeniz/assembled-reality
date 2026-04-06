@@ -26,3 +26,5 @@ applekeys.md
 *.sln
 *.sw?
 .vercel
+playwright-report
+test-results

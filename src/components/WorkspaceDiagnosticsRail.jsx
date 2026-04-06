@@ -206,6 +206,7 @@ function BuildOutputCard({
             className="terminal-button"
             onClick={onDraftReceipt}
             disabled={!operateReady || receiptPending}
+            data-testid="workspace-draft-receipt"
           >
             {receiptPending ? "Saving…" : "Draft receipt"}
           </button>
@@ -215,6 +216,7 @@ function BuildOutputCard({
               className="terminal-button is-primary"
               onClick={() => onSealLatestDraft?.(latestDraft)}
               disabled={receiptPending}
+              data-testid="workspace-seal-latest-receipt"
             >
               Seal latest
             </button>
@@ -328,7 +330,7 @@ export default function WorkspaceDiagnosticsRail({
   ];
 
   return (
-    <aside className="loegos-diagnostics" aria-label="Box diagnostics">
+    <aside className="loegos-diagnostics" aria-label="Box diagnostics" data-testid="workspace-diagnostics-rail">
       <div className="loegos-diagnostics__header">
         <div className="loegos-diagnostics__copy">
           <span className="loegos-diagnostics__eyebrow">Compiler</span>
@@ -386,6 +388,7 @@ export default function WorkspaceDiagnosticsRail({
             className="terminal-button is-primary"
             onClick={onRunOperate}
             disabled={operateOverlayPending}
+            data-testid="workspace-inline-operate-trigger"
           >
             {operateOverlayPending ? "Running…" : "Run inline Operate"}
           </button>

@@ -39,7 +39,13 @@ export default function WorkspaceDisclaimerGate({ onAccept }) {
   }
 
   return (
-    <div className="loegos-disclaimer-gate" role="dialog" aria-modal="true" aria-labelledby="workspace-disclaimer-title">
+    <div
+      className="loegos-disclaimer-gate"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="workspace-disclaimer-title"
+      data-testid="workspace-disclaimer-gate"
+    >
       <div className="loegos-disclaimer-gate__backdrop" />
       <section className="loegos-disclaimer-gate__panel">
         <div className="loegos-disclaimer-gate__copy">
@@ -84,6 +90,7 @@ export default function WorkspaceDisclaimerGate({ onAccept }) {
             placeholder={DISCLAIMER_ACCEPT_PHRASE}
             autoComplete="off"
             spellCheck="false"
+            data-testid="workspace-disclaimer-input"
           />
           {error ? <p className="loegos-disclaimer-gate__error">{error}</p> : null}
           <div className="loegos-disclaimer-gate__actions">
@@ -92,6 +99,7 @@ export default function WorkspaceDisclaimerGate({ onAccept }) {
               className="terminal-button is-primary"
               disabled={!ready || pending}
               onClick={() => void handleAccept()}
+              data-testid="workspace-disclaimer-submit"
             >
               {pending ? "Recording…" : disclaimerGate.proceedLabel}
             </button>

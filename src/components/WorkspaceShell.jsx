@@ -38,6 +38,9 @@ import WorkspaceControlSurface from "@/components/WorkspaceControlSurface";
 import WorkspaceDiagnosticsRail from "@/components/WorkspaceDiagnosticsRail";
 import WorkspaceDisclaimerGate from "@/components/WorkspaceDisclaimerGate";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
+import WorkspaceDocumentWorkbench from "@/components/workspace/WorkspaceDocumentWorkbench";
+import { useOperateOverlayController } from "@/components/workspace/useOperateOverlayController";
+import { useReceiptSealController } from "@/components/workspace/useReceiptSealController";
 import { ShapeGlyph, SignalChip } from "@/components/LoegosSystem";
 import {
   buildWorkspaceMarkdown,
@@ -103,7 +106,6 @@ import { getPrimaryBoxPhaseForShape, getWorkspaceShapeAndVerb } from "@/lib/loeg
 import {
   buildFormalBoxState,
   buildFormalSealCheck,
-  buildFormalSentenceAnnotations,
 } from "@/lib/formal-core/runtime";
 import {
   buildWorkspaceBlockProvenanceView,
@@ -114,7 +116,6 @@ import {
   loadVoiceMemoDraft,
   saveVoiceMemoDraft,
 } from "@/lib/voice-memo-drafts";
-import { getOverlaySignalTone } from "@/lib/operate-overlay";
 
 const STORAGE_VERSION = 3;
 const RATE_STEPS = [0.75, 1, 1.25, 1.5, 2];
@@ -571,37 +572,6 @@ function mapFormalShapeToConfirmationTag(shapeKey = "") {
   if (normalized === "aim") return ASSEMBLY_PRIMARY_TAGS.aim;
   if (normalized === "reality") return ASSEMBLY_PRIMARY_TAGS.evidence;
   return ASSEMBLY_PRIMARY_TAGS.story;
-}
-
-function getConfirmationStateView(block = null) {
-  const status = String(block?.confirmationStatus || "").trim().toLowerCase();
-  const tag = String(block?.primaryTag || "").trim().toLowerCase();
-
-  if (status === ASSEMBLY_CONFIRMATION_STATUSES.confirmed) {
-    return {
-      label: tag ? `${tag} confirmed` : "confirmed",
-      tone: "green",
-    };
-  }
-
-  if (status === ASSEMBLY_CONFIRMATION_STATUSES.discarded) {
-    return {
-      label: "discarded",
-      tone: "red",
-    };
-  }
-
-  return {
-    label: "draft",
-    tone: "neutral",
-  };
-}
-
-function buildBlockMetaDetail(block = null) {
-  if (!block) return "";
-  const currentTag = String(block?.primaryTag || "").trim().toLowerCase();
-  if (!currentTag || currentTag === ASSEMBLY_PRIMARY_TAGS.unconfirmed) return "";
-  return currentTag;
 }
 
 function buildStagedBlocksFromSevenMessage(document, message, projectKey = "") {
@@ -3798,454 +3768,6 @@ function DesktopAssemblySidecar({
   );
 }
 
-function getFormalSignalHintForBlock(block = null) {
-  if (!block) return "neutral";
-  if (block.author === "ai" || block.operation === "edited") return "amber";
-  if (String(block.confirmationStatus || "").trim().toLowerCase() === "confirmed") return "green";
-  return "neutral";
-}
-
-function getFormalDiagnosticTone(level = "") {
-  const normalized = String(level || "").trim().toLowerCase();
-  if (normalized === "error") return "alert";
-  if (normalized === "warn") return "active";
-  return "neutral";
-}
-
-function formatShapeLabel(shapeKey = "") {
-  const normalized = String(shapeKey || "").trim();
-  if (!normalized) return "Unknown";
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function BlockFormalAnnotations({ block, annotation = null, hidePrimaryShape = false }) {
-  const resolvedAnnotation = useMemo(
-    () =>
-      annotation ||
-      buildFormalSentenceAnnotations(block?.plainText || block?.text || "", {
-        sentenceIdPrefix: block?.id || "block",
-        signalHint: getFormalSignalHintForBlock(block),
-      }),
-    [annotation, block],
-  );
-  const primarySentence = resolvedAnnotation.sentences[0] || null;
-  const diagnostics = Array.isArray(resolvedAnnotation.diagnostics)
-    ? resolvedAnnotation.diagnostics.slice(0, 2)
-    : [];
-
-  if ((!primarySentence || hidePrimaryShape) && diagnostics.length === 0) return null;
-
-  return (
-    <div className="assembler-block__formal">
-      <div className="assembler-block__formal-head">
-        {primarySentence && !hidePrimaryShape ? (
-          <div className="assembler-block__formal-shape">
-            <ShapeGlyph shapeKey={primarySentence.shapeKey} size={14} />
-            <span>Reads as {formatShapeLabel(primarySentence.shapeKey)}</span>
-          </div>
-        ) : null}
-        {primarySentence?.signal ? (
-          <SignalChip tone={primarySentence.signal} subtle>
-            {primarySentence.signal}
-          </SignalChip>
-        ) : null}
-      </div>
-      {diagnostics.length ? (
-        <div className="assembler-block__formal-notes">
-          {diagnostics.map((diagnostic, index) => (
-            <div key={`${diagnostic.code || "formal"}-${index}`} className="assembler-block__formal-note">
-              <SignalChip tone={getFormalDiagnosticTone(diagnostic.level)} subtle>
-                {diagnostic.level || "info"}
-              </SignalChip>
-              <span>{diagnostic.message}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function formatOverlaySignalLabel(signal = "") {
-  const normalized = String(signal || "").trim().toLowerCase();
-  if (normalized === "override") return "Attested";
-  if (normalized === "green") return "Grounded";
-  if (normalized === "red") return "Broken";
-  return "Partial";
-}
-
-function BlockOperateFinding({
-  finding = null,
-  selected = false,
-  pending = false,
-  onInspect,
-}) {
-  if (!finding) return null;
-
-  const spans = Array.isArray(finding?.spans) ? finding.spans : [];
-
-  return (
-    <div className={`assembler-block__operate ${selected ? "is-active" : ""}`}>
-      <div className="assembler-block__operate-head">
-        <div className="assembler-block__operate-chips">
-          <SignalChip tone={getOverlaySignalTone(finding?.displaySignal || finding?.signal)} subtle>
-            {formatOverlaySignalLabel(finding?.displaySignal || finding?.signal)}
-          </SignalChip>
-          <SignalChip tone={finding?.overrideApplied ? "neutral" : "active"} subtle>
-            {finding?.trustLevel || "L1"}
-          </SignalChip>
-        </div>
-        <button
-          type="button"
-          className="assembler-tiny-button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onInspect?.();
-          }}
-          disabled={pending}
-        >
-          {selected ? "Inspecting" : "Inspect"}
-        </button>
-      </div>
-
-      {finding?.rationale ? (
-        <p className="assembler-block__operate-copy">{finding.rationale}</p>
-      ) : null}
-      {finding?.uncertainty ? (
-        <p className="assembler-block__operate-note">{finding.uncertainty}</p>
-      ) : null}
-      {finding?.overrideApplied ? (
-        <p className="assembler-block__operate-note">
-          Underlying machine read: {formatOverlaySignalLabel(finding?.baseSignal || finding?.signal)} at{" "}
-          {finding?.baseTrustLevel || finding?.trustLevel || "L1"}.
-        </p>
-      ) : null}
-
-      {spans.length ? (
-        <div className="assembler-block__operate-spans">
-          {spans.map((span) => (
-            <button
-              key={`${finding.blockId}:${span.start}:${span.end}`}
-              type="button"
-              className="assembler-block__operate-span"
-              onClick={(event) => {
-                event.stopPropagation();
-                onInspect?.();
-              }}
-              disabled={pending}
-            >
-              <SignalChip tone={getOverlaySignalTone(span.signal)} subtle>
-                {span.text}
-              </SignalChip>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function BlockRow({
-  block,
-  documents = [],
-  finding = null,
-  showFinding = false,
-  findingSelected = false,
-  isFocused,
-  isPlaying,
-  isNext,
-  isSelected,
-  editMode,
-  showNativeActions = false,
-  actionPending = false,
-  canDelete = false,
-  saveState,
-  onFocus,
-  onAdd,
-  onDelete,
-  onRemove,
-  onEdit,
-  onKeepDraft,
-  onAcceptInference,
-  onRecastTag,
-  onOpenSourceWitness,
-  onInspectFinding,
-  blockRef,
-}) {
-  const [recastOpen, setRecastOpen] = useState(false);
-  const annotation = useMemo(
-    () =>
-      buildFormalSentenceAnnotations(block?.plainText || block?.text || "", {
-        sentenceIdPrefix: block?.id || "block",
-        signalHint: getFormalSignalHintForBlock(block),
-      }),
-    [block],
-  );
-  const primarySentence = annotation.sentences[0] || null;
-  const inlineDiagnostics = Array.isArray(annotation?.diagnostics)
-    ? annotation.diagnostics.slice(0, 2)
-    : [];
-  const provenanceView = useMemo(
-    () => buildWorkspaceBlockProvenanceView(block, documents),
-    [block, documents],
-  );
-  const confirmationState = useMemo(() => getConfirmationStateView(block), [block]);
-  const currentTag = buildBlockMetaDetail(block);
-  const controlsDisabled = actionPending || saveState === "saving";
-  const canMutateBlock = Boolean(editMode && block.isEditable);
-  const primaryShapeKey = primarySentence?.shapeKey || "";
-  const showContextActions = showNativeActions && (isFocused || isSelected || recastOpen);
-  const originLabel =
-    block.sectionLabel ||
-    block.sourceTitle ||
-    block.sourceDocumentKey ||
-    block.documentKey ||
-    "Artifact";
-  const showOperateFinding = Boolean(showFinding && finding);
-
-  return (
-    <article
-      ref={blockRef}
-      className={`assembler-block is-${block.kind} ${
-        isFocused ? "is-focused" : ""
-      } ${isPlaying ? "is-playing" : ""} ${isNext ? "is-next" : ""} ${
-        isSelected ? "is-selected" : ""
-      } ${block.author === "ai" ? "is-ai" : ""} ${
-        block.operation === "edited" ? "is-edited" : ""
-      }`}
-      onClick={() => onFocus(block.id)}
-      data-block-id={block.id}
-    >
-      <div className="assembler-block__stripe" aria-hidden="true" />
-
-      <div className="assembler-block__gutter">
-        <span className="assembler-block__line-number">
-          {String(block.sourcePosition + 1).padStart(3, "0")}
-        </span>
-        {primaryShapeKey ? (
-          <div className="assembler-block__gutter-shape">
-            <ShapeGlyph shapeKey={primaryShapeKey} size={13} />
-            <span>{formatShapeLabel(primaryShapeKey)}</span>
-          </div>
-        ) : (
-          <span className="assembler-block__gutter-detail">Untyped</span>
-        )}
-        <SignalChip tone={confirmationState.tone} subtle className="assembler-block__gutter-chip">
-          {confirmationState.label}
-        </SignalChip>
-        {showOperateFinding ? (
-          <>
-            <SignalChip
-              tone={getOverlaySignalTone(finding?.displaySignal || finding?.signal)}
-              subtle
-              className="assembler-block__gutter-chip"
-            >
-              {formatOverlaySignalLabel(finding?.displaySignal || finding?.signal)}
-            </SignalChip>
-            <SignalChip
-              tone={finding?.overrideApplied ? "neutral" : "active"}
-              subtle
-              className="assembler-block__gutter-chip"
-            >
-              {finding?.trustLevel || "L1"}
-            </SignalChip>
-          </>
-        ) : null}
-        {currentTag ? (
-          <span className="assembler-block__gutter-detail">tag · {currentTag}</span>
-        ) : null}
-        <span className="assembler-block__gutter-detail">{originLabel}</span>
-        {provenanceView?.compact ? (
-          <span className="assembler-block__gutter-detail">
-            {provenanceView.label} · {provenanceView.compact}
-          </span>
-        ) : null}
-        {showNativeActions
-          ? inlineDiagnostics.map((diagnostic, index) => (
-              <span
-                key={`${diagnostic.code || "diag"}-${index}`}
-                className={`assembler-block__gutter-detail assembler-block__gutter-detail--${String(
-                  diagnostic.level || "",
-                ).toLowerCase() || "info"}`}
-              >
-                {diagnostic.message}
-              </span>
-            ))
-          : null}
-      </div>
-
-      <div className="assembler-block__body">
-        {editMode && block.isEditable ? (
-          <BlockEditor
-            key={`${block.id}:${block.updatedAt || block.text}`}
-            block={block}
-            saveState={saveState}
-            onEdit={onEdit}
-          />
-        ) : block.kind === "list" ? (
-          <div className="assembler-block__text">
-            {String(block.text || "")
-              .split("\n")
-              .filter(Boolean)
-              .map((line, index) => (
-                <div key={`${block.id}-line-${index}`} className="assembler-block__list-line">
-                  <span className="assembler-block__bullet">•</span>
-                  <span>{line.replace(/^[-+*]\s+/, "").trim()}</span>
-                </div>
-              ))}
-          </div>
-        ) : (
-          <div className="assembler-block__text">{block.text.replace(/^#{1,6}\s+/, "")}</div>
-        )}
-
-        {block.author === "ai" ? (
-          <span className="assembler-block__badge">AI-GENERATED · {block.operation}</span>
-        ) : null}
-        {!showNativeActions ? (
-          <BlockFormalAnnotations
-            block={block}
-            annotation={annotation}
-            hidePrimaryShape={Boolean(primaryShapeKey)}
-          />
-        ) : null}
-        {showOperateFinding ? (
-          <BlockOperateFinding
-            finding={finding}
-            selected={findingSelected}
-            pending={controlsDisabled}
-            onInspect={() => onInspectFinding?.(finding?.findingId)}
-          />
-        ) : null}
-        {showContextActions ? (
-          <div className="assembler-block__actions">
-            {canMutateBlock ? (
-              <>
-                <button
-                  type="button"
-                  className="assembler-tiny-button"
-                  onClick={() => onKeepDraft?.(block)}
-                  disabled={controlsDisabled}
-                >
-                  Keep draft
-                </button>
-                <button
-                  type="button"
-                  className="assembler-tiny-button"
-                  onClick={() => onAcceptInference?.(block, primarySentence)}
-                  disabled={controlsDisabled || !primarySentence?.shapeKey}
-                >
-                  Accept read
-                </button>
-                <button
-                  type="button"
-                  className="assembler-tiny-button"
-                  onClick={() => setRecastOpen((value) => !value)}
-                  disabled={controlsDisabled}
-                >
-                  Recast tag
-                </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              className={`assembler-tiny-button ${isSelected ? "is-active" : ""}`}
-              onClick={() => (isSelected ? onRemove(block.id) : onAdd(block))}
-              disabled={controlsDisabled}
-            >
-              {isSelected ? "Remove from weld" : "Stage into weld"}
-            </button>
-            <button
-              type="button"
-              className="assembler-tiny-button"
-              onClick={() => onOpenSourceWitness?.(block)}
-              disabled={controlsDisabled || !String(block?.sourceDocumentKey || block?.documentKey || "").trim()}
-            >
-              Open witness
-            </button>
-            {canDelete ? (
-              <button
-                type="button"
-                className="assembler-tiny-button is-danger"
-                onClick={() => onDelete(block.id)}
-                disabled={controlsDisabled}
-              >
-                Delete
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-        {showContextActions && canMutateBlock && recastOpen ? (
-          <div className="assembler-block__recast">
-            {[
-              ["Aim", ASSEMBLY_PRIMARY_TAGS.aim],
-              ["Evidence", ASSEMBLY_PRIMARY_TAGS.evidence],
-              ["Story", ASSEMBLY_PRIMARY_TAGS.story],
-            ].map(([label, tag]) => (
-              <button
-                key={tag}
-                type="button"
-                className={`assembler-tiny-button ${currentTag === tag ? "is-active" : ""}`}
-                onClick={() => {
-                  setRecastOpen(false);
-                  onRecastTag?.(block, tag);
-                }}
-                disabled={controlsDisabled}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-function BlockEditor({ block, saveState, onEdit }) {
-  const [draftText, setDraftText] = useState(block.text);
-  const statusLabel =
-    saveState === "saving"
-      ? "Saving…"
-      : saveState === "saved"
-        ? "Saved"
-        : saveState === "conflict"
-          ? "Reload latest before saving again"
-          : saveState === "error"
-            ? "Not saved"
-            : "";
-
-  return (
-    <div className="assembler-block__editor-wrap">
-      <textarea
-        className="assembler-block__editor"
-        value={draftText}
-        onChange={(event) => setDraftText(event.target.value)}
-        onClick={(event) => event.stopPropagation()}
-        onBlur={() => onEdit(block.id, draftText)}
-        onKeyDown={(event) => {
-          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-            event.preventDefault();
-            void onEdit(block.id, draftText);
-            event.currentTarget.blur();
-          }
-
-          if (event.key === "Escape") {
-            event.preventDefault();
-            setDraftText(block.text);
-            event.currentTarget.blur();
-          }
-        }}
-      />
-
-      {statusLabel ? (
-        <div className={`assembler-block__editor-status is-${saveState || "idle"}`}>
-          {statusLabel}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function LogView({
   logEntries,
   drafts,
@@ -4839,8 +4361,6 @@ export default function WorkspaceShell({
   const pendingFocusBlockIdRef = useRef(null);
   const seedEnsureFingerprintRef = useRef("");
   const seedSuggestFingerprintRef = useRef("");
-  const receiptSealAuditRequestIdRef = useRef(0);
-  const receiptSealImmediateAuditDraftRef = useRef("");
   const remoteSyncAttemptedRef = useRef({});
   const pendingSeedFocusRef = useRef(false);
   const attachDocumentToActiveProjectRef = useRef(() => {});
@@ -4926,12 +4446,6 @@ export default function WorkspaceShell({
   const [operatePending, setOperatePending] = useState(false);
   const [operateError, setOperateError] = useState("");
   const [operateResult, setOperateResult] = useState(null);
-  const [operateOverlayOpen, setOperateOverlayOpen] = useState(true);
-  const [operateOverlayPending, setOperateOverlayPending] = useState(false);
-  const [operateOverlayError, setOperateOverlayError] = useState("");
-  const [operateOverlayResult, setOperateOverlayResult] = useState(null);
-  const [operateOverridePending, setOperateOverridePending] = useState(false);
-  const [selectedOperateFindingId, setSelectedOperateFindingId] = useState("");
   const [closeMoveOpen, setCloseMoveOpen] = useState(false);
   const [closeMoveResult, setCloseMoveResult] = useState(null);
   const [closeMoveDelta, setCloseMoveDelta] = useState("");
@@ -4973,13 +4487,6 @@ export default function WorkspaceShell({
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationFocus, setConfirmationFocus] = useState(null);
   const [confirmationPending, setConfirmationPending] = useState(false);
-  const [receiptSealDraft, setReceiptSealDraft] = useState(null);
-  const [receiptSealDelta, setReceiptSealDelta] = useState("");
-  const [receiptSealAudit, setReceiptSealAudit] = useState(null);
-  const [receiptSealAuditPending, setReceiptSealAuditPending] = useState(false);
-  const [receiptSealAuditError, setReceiptSealAuditError] = useState("");
-  const [receiptSealAuditStatement, setReceiptSealAuditStatement] = useState("");
-  const [receiptSealOverrideAcknowledged, setReceiptSealOverrideAcknowledged] = useState(false);
   const [launchpadOpen, setLaunchpadOpen] = useState(showLaunchpadInitially);
   const [launchpadView, setLaunchpadView] = useState(
     normalizeLaunchpadView(initialLaunchpadView, LAUNCHPAD_VIEWS.boxes),
@@ -5144,18 +4651,52 @@ export default function WorkspaceShell({
   });
   const blocks = activeDocument?.blocks ?? EMPTY_BLOCKS;
   const inlineOperateDocumentKey = String(currentSeedDocument?.documentKey || "").trim();
+  const {
+    operateOverlayOpen,
+    setOperateOverlayOpen,
+    operateOverlayPending,
+    operateOverlayError,
+    operateOverlayResult,
+    operateOverridePending,
+    selectedOperateFindingId,
+    setSelectedOperateFindingId,
+    operateOverlayFindingMap,
+    runInlineOperate,
+    revealOperateOverlay,
+    createAttestedOverride,
+    deleteAttestedOverride,
+  } = useOperateOverlayController({
+    activeProjectKey,
+    documentKey: inlineOperateDocumentKey,
+    canRunOperate,
+    setFeedback,
+    onReveal: () => setDesktopRightPanel(DESKTOP_RIGHT_PANELS.diagnostics),
+  });
+  const {
+    receiptSealDraft,
+    receiptSealDelta,
+    setReceiptSealDelta,
+    receiptSealAudit,
+    receiptSealAuditPending,
+    receiptSealAuditError,
+    receiptSealOverrideAcknowledged,
+    setReceiptSealOverrideAcknowledged,
+    openReceiptSealDialog,
+    closeReceiptSealDialog,
+    runReceiptSealAudit,
+    performSealReceiptDraft,
+    sealReceiptDraft,
+  } = useReceiptSealController({
+    activeProjectKey,
+    receiptPending,
+    setReceiptPending,
+    setProjectDraftsState,
+    requireRootFor,
+    setFeedback,
+  });
   const showingInlineOperateDocument =
     Boolean(inlineOperateDocumentKey) &&
     String(activeDocument?.documentKey || "").trim() === inlineOperateDocumentKey;
-  const operateOverlayFindingMap = useMemo(
-    () =>
-      new Map(
-        (Array.isArray(operateOverlayResult?.findings) ? operateOverlayResult.findings : [])
-          .filter(Boolean)
-          .map((finding) => [String(finding?.blockId || "").trim(), finding]),
-      ),
-    [operateOverlayResult],
-  );
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
     diagnostics: activeDocument?.intakeDiagnostics,
   });
@@ -6285,60 +5826,61 @@ export default function WorkspaceShell({
         </div>
       </div>
 
-      {cleanupOpen && canManageActiveSource ? (
-        <SourceCleanupTray
-          findValue={cleanupFind}
-          replaceValue={cleanupReplace}
-          pendingAction={cleanupPendingAction}
-          onFindChange={setCleanupFind}
-          onReplaceChange={setCleanupReplace}
-          onReplaceAll={() => void replaceAcrossSource()}
-          onDeleteMatches={() => void deleteMatchingBlocks()}
-          onClose={() => setCleanupOpen(false)}
-        />
-      ) : null}
-
-      <div className="assembler-document__blocks">
-        {blocks.map((block) => (
-          <BlockRow
-            key={block.id}
-            block={block}
-            documents={hydratedProjectDocuments}
-            finding={showingInlineOperateDocument ? operateOverlayFindingMap.get(block.id) || null : null}
-            showFinding={showingInlineOperateDocument && operateOverlayOpen}
-            findingSelected={
-              String(operateOverlayFindingMap.get(block.id)?.findingId || "").trim() ===
-              String(selectedOperateFindingId || "").trim()
-            }
-            blockRef={(element) => {
-              blockRefs.current[block.id] = element;
-            }}
-            isFocused={block.id === focusBlockId}
-            isPlaying={block.id === currentBlock?.id && isPlaying}
-            isNext={block.id === nextBlock?.id}
-            isSelected={clipboard.some((item) => item.id === block.id)}
-            editMode={desktopEditorMode}
-            showNativeActions={showDesktopIde}
-            actionPending={blockActionPendingId === block.id}
-            canDelete={desktopEditorMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
-            saveState={blockSaveStates[block.id] || ""}
-            onFocus={focusBlock}
-            onAdd={addBlockToClipboard}
-            onDelete={(blockId) => void deleteBlock(blockId)}
-            onRemove={removeBlockFromClipboard}
-            onEdit={editBlock}
-            onKeepDraft={(targetBlock) => void resetBlockToDraft(targetBlock)}
-            onAcceptInference={(targetBlock, sentence) => void acceptBlockInference(targetBlock, sentence)}
-            onRecastTag={(targetBlock, primaryTag) => void confirmBlockWorkingTag(targetBlock, primaryTag)}
-            onOpenSourceWitness={(targetBlock) => void openBlockSourceWitness(targetBlock)}
-            onInspectFinding={(findingId) => {
-              setOperateOverlayOpen(true);
-              setDesktopRightPanel(DESKTOP_RIGHT_PANELS.diagnostics);
-              setSelectedOperateFindingId(findingId);
-            }}
-          />
-        ))}
-      </div>
+      <WorkspaceDocumentWorkbench
+        className=""
+        streamClassName=""
+        blocksClassName="assembler-document__blocks"
+        prefixContent={
+          cleanupOpen && canManageActiveSource ? (
+            <SourceCleanupTray
+              findValue={cleanupFind}
+              replaceValue={cleanupReplace}
+              pendingAction={cleanupPendingAction}
+              onFindChange={setCleanupFind}
+              onReplaceChange={setCleanupReplace}
+              onReplaceAll={() => void replaceAcrossSource()}
+              onDeleteMatches={() => void deleteMatchingBlocks()}
+              onClose={() => setCleanupOpen(false)}
+            />
+          ) : null
+        }
+        blocks={blocks}
+        documents={hydratedProjectDocuments}
+        operateOverlayFindingMap={operateOverlayFindingMap}
+        showingInlineOperateDocument={showingInlineOperateDocument}
+        operateOverlayOpen={operateOverlayOpen}
+        selectedOperateFindingId={selectedOperateFindingId}
+        blockRefs={blockRefs}
+        focusBlockId={focusBlockId}
+        currentBlockId={currentBlock?.id || ""}
+        nextBlockId={nextBlock?.id || ""}
+        isPlaying={isPlaying}
+        selectedBlockIds={clipboard.map((item) => item.id)}
+        editMode={desktopEditorMode}
+        showNativeActions={showDesktopIde}
+        blockActionPendingId={blockActionPendingId}
+        canDeleteBlock={
+          desktopEditorMode && canManageActiveSource && !cleanupPendingAction && !polishPending
+        }
+        blockSaveStates={blockSaveStates}
+        emptyTitle="No blocks yet."
+        emptyDetail="The artifact opens at line 1. Add text or carry evidence into it."
+        testId="workspace-document-surface"
+        onFocusBlock={focusBlock}
+        onAddBlock={addBlockToClipboard}
+        onDeleteBlock={(blockId) => void deleteBlock(blockId)}
+        onRemoveBlock={removeBlockFromClipboard}
+        onEditBlock={editBlock}
+        onKeepDraftBlock={(targetBlock) => void resetBlockToDraft(targetBlock)}
+        onAcceptBlockInference={(targetBlock, sentence) =>
+          void acceptBlockInference(targetBlock, sentence)
+        }
+        onRecastBlockTag={(targetBlock, primaryTag) =>
+          void confirmBlockWorkingTag(targetBlock, primaryTag)
+        }
+        onOpenSourceWitness={(targetBlock) => void openBlockSourceWitness(targetBlock)}
+        onRevealFinding={revealOperateOverlay}
+      />
     </div>
   );
   const lastUsedMode =
@@ -7863,23 +7405,6 @@ export default function WorkspaceShell({
     }
   }
 
-  function openReceiptSealDialog(draft) {
-    if (!draft?.id) return;
-
-    const nextDelta =
-      draft?.payload?.deltaStatement ||
-      draft?.payload?.decision ||
-      draft?.payload?.learned ||
-      draft?.implications ||
-      "";
-    setReceiptSealDraft(draft);
-    setReceiptSealDelta(nextDelta);
-    setReceiptSealAudit(null);
-    setReceiptSealAuditError("");
-    setReceiptSealAuditStatement("");
-    setReceiptSealOverrideAcknowledged(false);
-  }
-
   function openCloseMoveDialog(result) {
     if (!result) return;
 
@@ -8127,17 +7652,6 @@ export default function WorkspaceShell({
     }
   }
 
-  function closeReceiptSealDialog() {
-    if (receiptPending || receiptSealAuditPending) return;
-    receiptSealAuditRequestIdRef.current += 1;
-    setReceiptSealDraft(null);
-    setReceiptSealDelta("");
-    setReceiptSealAudit(null);
-    setReceiptSealAuditError("");
-    setReceiptSealAuditStatement("");
-    setReceiptSealOverrideAcknowledged(false);
-  }
-
   function openGetReceiptsConnection(returnTo = "workspace-receipts") {
     if (typeof window === "undefined") return;
 
@@ -8193,109 +7707,6 @@ export default function WorkspaceShell({
     }
   }, [upsertProjectDraft]);
 
-  const runReceiptSealAudit = useCallback(async (
-    draft = receiptSealDraft,
-    nextDelta = receiptSealDelta,
-  ) => {
-    if (!draft?.id) return null;
-
-    const deltaStatement = String(nextDelta || "").trim();
-    if (!deltaStatement) {
-      setReceiptSealAudit(null);
-      setReceiptSealAuditStatement("");
-      setReceiptSealAuditError("");
-      return null;
-    }
-
-    const requestId = receiptSealAuditRequestIdRef.current + 1;
-    receiptSealAuditRequestIdRef.current = requestId;
-    setReceiptSealAuditPending(true);
-    setReceiptSealAuditError("");
-
-    try {
-      const response = await fetch("/api/workspace/receipt/audit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          draftId: draft.id,
-          deltaStatement,
-          projectKey: activeProjectKey,
-        }),
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.audit) {
-        throw new Error(payload?.error || "Could not run the pre-seal audit.");
-      }
-
-      if (receiptSealAuditRequestIdRef.current === requestId) {
-        setReceiptSealAudit(payload.audit);
-        setReceiptSealAuditStatement(deltaStatement);
-      }
-      return payload.audit;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not run the pre-seal audit.";
-      if (receiptSealAuditRequestIdRef.current === requestId) {
-        setReceiptSealAuditError(message);
-      }
-      return null;
-    } finally {
-      if (receiptSealAuditRequestIdRef.current === requestId) {
-        setReceiptSealAuditPending(false);
-      }
-    }
-  }, [activeProjectKey, receiptSealDelta, receiptSealDraft]);
-
-  useEffect(() => {
-    const draftId = String(receiptSealDraft?.id || "").trim();
-    if (!draftId) {
-      receiptSealImmediateAuditDraftRef.current = "";
-      return undefined;
-    }
-    if (receiptSealImmediateAuditDraftRef.current === draftId) {
-      return undefined;
-    }
-
-    receiptSealImmediateAuditDraftRef.current = draftId;
-    const normalizedDelta = String(receiptSealDelta || "").trim();
-    if (!normalizedDelta) return undefined;
-
-    void runReceiptSealAudit(receiptSealDraft, normalizedDelta);
-  }, [receiptSealDelta, receiptSealDraft, runReceiptSealAudit]);
-
-  useEffect(() => {
-    if (!receiptSealDraft?.id) return undefined;
-
-    const normalizedDelta = String(receiptSealDelta || "").trim();
-    if (!normalizedDelta) {
-      setReceiptSealAudit(null);
-      setReceiptSealAuditStatement("");
-      setReceiptSealAuditError("");
-      return undefined;
-    }
-    if (
-      normalizedDelta === receiptSealAuditStatement &&
-      (receiptSealAudit || receiptSealAuditPending)
-    ) {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void runReceiptSealAudit(receiptSealDraft, normalizedDelta);
-    }, 320);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    receiptSealAudit,
-    receiptSealAuditPending,
-    receiptSealAuditStatement,
-    receiptSealDelta,
-    receiptSealDraft,
-    runReceiptSealAudit,
-  ]);
-
   useEffect(() => {
     if (getReceiptsConnectionStatus !== "CONNECTED") return;
 
@@ -8313,107 +7724,6 @@ export default function WorkspaceShell({
       void retryReceiptRemoteSync(draft, { silent: true });
     });
   }, [getReceiptsConnectionStatus, projectDraftsState, retryReceiptRemoteSync]);
-
-  async function performSealReceiptDraft({
-    draft = receiptSealDraft,
-    deltaStatement: nextDeltaStatement = receiptSealDelta,
-    overrideAcknowledged: nextOverrideAcknowledged = receiptSealOverrideAcknowledged,
-    skipRootGate = false,
-    silentFeedback = false,
-  } = {}) {
-    if (!draft?.id) return null;
-    if (!skipRootGate && requireRootFor("receipt-seal")) {
-      return;
-    }
-
-    const deltaStatement = String(nextDeltaStatement || "").trim();
-    if (!deltaStatement) {
-      setReceiptSealAuditError("Write one operator sentence describing what changed.");
-      return null;
-    }
-
-    const audit =
-      receiptSealAudit &&
-      receiptSealDraft?.id === draft.id &&
-      receiptSealAuditStatement === deltaStatement
-        ? receiptSealAudit
-        : await runReceiptSealAudit(draft, deltaStatement);
-    if (!audit) {
-      return null;
-    }
-    if (audit?.requiresOverrideAcknowledgement && !nextOverrideAcknowledged) {
-      setReceiptSealAuditError("Acknowledge the attested overrides before sealing this receipt.");
-      return null;
-    }
-
-    const shouldOverride = Boolean(!audit.sealReady && audit.canOverride);
-    setReceiptPending(true);
-    try {
-      const response = await fetch("/api/workspace/receipt", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          draftId: draft.id,
-          deltaStatement,
-          projectKey: activeProjectKey,
-          overrideAudit: shouldOverride,
-          overrideAcknowledged: nextOverrideAcknowledged,
-        }),
-      });
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.draft?.id) {
-        if (payload?.audit) {
-          setReceiptSealAudit(payload.audit);
-          setReceiptSealAuditStatement(deltaStatement);
-        }
-        setReceiptSealAuditError(payload?.error || "Could not seal the receipt.");
-        throw new Error(payload?.error || "Could not seal the receipt.");
-      }
-
-      if (payload?.audit) {
-        setReceiptSealAudit(payload.audit);
-        setReceiptSealAuditStatement(deltaStatement);
-      }
-      upsertProjectDraft(payload.draft);
-      const remoteSealStatus = String(payload?.draft?.payload?.remoteSeal?.status || "").trim().toLowerCase();
-      const sealMessage =
-        remoteSealStatus === "sealed"
-          ? "Receipt sealed and verified."
-          : remoteSealStatus === "pending_create" || remoteSealStatus === "pending_seal"
-            ? "Receipt sealed locally. Courthouse sync is still pending."
-            : remoteSealStatus === "failed"
-              ? "Receipt sealed locally. Courthouse sync can retry from Receipts."
-              : "Receipt sealed.";
-      if (!silentFeedback) {
-        setFeedback(sealMessage, "success");
-      }
-      return payload.draft;
-    } catch (error) {
-      if (!silentFeedback) {
-        setFeedback(error instanceof Error ? error.message : "Could not seal the receipt.", "error");
-      }
-      return null;
-    } finally {
-      setReceiptPending(false);
-    }
-  }
-
-  async function sealReceiptDraft({ skipRootGate = false } = {}) {
-    const sealedDraft = await performSealReceiptDraft({
-      skipRootGate,
-    });
-    if (!sealedDraft?.id) return;
-
-    setReceiptSealDraft(null);
-    setReceiptSealDelta("");
-    setReceiptSealAudit(null);
-    setReceiptSealAuditError("");
-    setReceiptSealAuditStatement("");
-    setReceiptSealOverrideAcknowledged(false);
-  }
 
   async function toggleProjectPinned(project, nextPinned) {
     if (!project?.projectKey) return;
@@ -11564,211 +10874,6 @@ export default function WorkspaceShell({
     }
   }
 
-  const syncOperateOverlayState = useCallback((nextOverlay, { preferredFindingId = "" } = {}) => {
-    const normalizedOverlay =
-      nextOverlay && typeof nextOverlay === "object" ? nextOverlay : null;
-    const findings = Array.isArray(normalizedOverlay?.findings) ? normalizedOverlay.findings : [];
-    const preferredId = String(preferredFindingId || "").trim();
-
-    setOperateOverlayResult(normalizedOverlay);
-    setSelectedOperateFindingId((current) => {
-      if (!findings.length) return "";
-      if (preferredId && findings.some((finding) => finding?.findingId === preferredId)) {
-        return preferredId;
-      }
-      if (current && findings.some((finding) => finding?.findingId === current)) {
-        return current;
-      }
-      return String(findings[0]?.findingId || "").trim();
-    });
-  }, []);
-
-  const loadOperateOverlay = useCallback(async ({ silent = true } = {}) => {
-    if (!activeProjectKey || !inlineOperateDocumentKey) {
-      syncOperateOverlayState(null);
-      setOperateOverlayError("");
-      return null;
-    }
-
-    setOperateOverlayPending(true);
-    if (!silent) {
-      setOperateOverlayError("");
-    }
-
-    try {
-      const params = new URLSearchParams({
-        projectKey: activeProjectKey,
-        documentKey: inlineOperateDocumentKey,
-        mode: "overlay",
-      });
-      const response = await fetch(`/api/workspace/operate?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Could not load the latest inline Operate run.");
-      }
-
-      syncOperateOverlayState(payload);
-      setOperateOverlayError("");
-      return payload;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not load the latest inline Operate run.";
-      syncOperateOverlayState(null);
-      setOperateOverlayError(silent ? "" : message);
-      return null;
-    } finally {
-      setOperateOverlayPending(false);
-    }
-  }, [activeProjectKey, inlineOperateDocumentKey, syncOperateOverlayState]);
-
-  async function runInlineOperate() {
-    if (!canRunOperate || operateOverlayPending || !activeProjectKey || !inlineOperateDocumentKey) {
-      return null;
-    }
-
-    setOperateOverlayOpen(true);
-    setDesktopRightPanel(DESKTOP_RIGHT_PANELS.diagnostics);
-    setOperateOverlayPending(true);
-    setOperateOverlayError("");
-
-    try {
-      const response = await fetch("/api/workspace/operate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          projectKey: activeProjectKey,
-          documentKey: inlineOperateDocumentKey,
-          mode: "overlay",
-        }),
-      });
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Inline Operate could not read the current seed.");
-      }
-
-      syncOperateOverlayState(payload);
-      setOperateOverlayError("");
-      setFeedback(
-        payload?.stale
-          ? "Inline Operate landed, but the seed changed before it returned."
-          : payload?.coverage?.truncated
-            ? `Inline Operate covered ${payload.coverage.evaluatedBlockCount} of ${payload.coverage.totalBlockCount} blocks.`
-          : "Inline Operate attached findings to the current seed.",
-        payload?.stale || payload?.coverage?.truncated ? "warning" : "success",
-      );
-      return payload;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Inline Operate could not read the current seed.";
-      setOperateOverlayError(message);
-      setFeedback(message, "error");
-      return null;
-    } finally {
-      setOperateOverlayPending(false);
-    }
-  }
-
-  async function createAttestedOverride({
-    blockId = "",
-    spanStart = null,
-    spanEnd = null,
-    note = "",
-  } = {}) {
-    if (!activeProjectKey || !inlineOperateDocumentKey || !String(blockId || "").trim()) {
-      return null;
-    }
-
-    setOperateOverridePending(true);
-    try {
-      const response = await fetch("/api/workspace/operate/overrides", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          projectKey: activeProjectKey,
-          documentKey: inlineOperateDocumentKey,
-          blockId,
-          spanStart,
-          spanEnd,
-          note,
-        }),
-      });
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Could not save the attested override.");
-      }
-
-      await loadOperateOverlay({ silent: true });
-      setFeedback("Attested override saved.", "success");
-      return payload.override || null;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not save the attested override.";
-      setFeedback(message, "error");
-      return null;
-    } finally {
-      setOperateOverridePending(false);
-    }
-  }
-
-  async function deleteAttestedOverride(overrideId = "") {
-    const normalizedOverrideId = String(overrideId || "").trim();
-    if (!activeProjectKey || !inlineOperateDocumentKey || !normalizedOverrideId) {
-      return null;
-    }
-
-    setOperateOverridePending(true);
-    try {
-      const params = new URLSearchParams({
-        id: normalizedOverrideId,
-        projectKey: activeProjectKey,
-        documentKey: inlineOperateDocumentKey,
-      });
-      const response = await fetch(`/api/workspace/operate/overrides?${params.toString()}`, {
-        method: "DELETE",
-      });
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Could not remove the attested override.");
-      }
-
-      await loadOperateOverlay({ silent: true });
-      setFeedback("Attested override removed.", "success");
-      return true;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not remove the attested override.";
-      setFeedback(message, "error");
-      return false;
-    } finally {
-      setOperateOverridePending(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!activeProjectKey || !inlineOperateDocumentKey) {
-      syncOperateOverlayState(null);
-      setOperateOverlayError("");
-      return;
-    }
-
-    void loadOperateOverlay({ silent: true });
-  }, [
-    activeProjectKey,
-    inlineOperateDocumentKey,
-    loadOperateOverlay,
-    syncOperateOverlayState,
-  ]);
-
   async function runOperate() {
     if (!canRunOperate || operatePending) return;
 
@@ -12023,80 +11128,64 @@ export default function WorkspaceShell({
         workspaceMode,
       });
   const desktopEditorContent = (
-    <section className="assembler-ide-editor">
-      {cleanupOpen && canManageActiveSource ? (
-        <SourceCleanupTray
-          findValue={cleanupFind}
-          replaceValue={cleanupReplace}
-          pendingAction={cleanupPendingAction}
-          onFindChange={setCleanupFind}
-          onReplaceChange={setCleanupReplace}
-          onReplaceAll={() => void replaceAcrossSource()}
-          onDeleteMatches={() => void deleteMatchingBlocks()}
-          onClose={() => setCleanupOpen(false)}
-        />
-      ) : null}
-
-      <div className="assembler-ide-editor__stream">
-        {blocks.length ? (
-          <div className="assembler-document__blocks assembler-document__blocks--ide">
-            {blocks.map((block) => (
-              <BlockRow
-                key={block.id}
-                block={block}
-                documents={hydratedProjectDocuments}
-                finding={showingInlineOperateDocument ? operateOverlayFindingMap.get(block.id) || null : null}
-                showFinding={showingInlineOperateDocument && operateOverlayOpen}
-                findingSelected={
-                  String(operateOverlayFindingMap.get(block.id)?.findingId || "").trim() ===
-                  String(selectedOperateFindingId || "").trim()
-                }
-                blockRef={(element) => {
-                  blockRefs.current[block.id] = element;
-                }}
-                isFocused={block.id === focusBlockId}
-                isPlaying={block.id === currentBlock?.id && isPlaying}
-                isNext={block.id === nextBlock?.id}
-                isSelected={clipboard.some((item) => item.id === block.id)}
-                editMode={desktopEditorMode}
-                showNativeActions
-                actionPending={blockActionPendingId === block.id}
-                canDelete={
-                  desktopEditorMode &&
-                  canManageActiveSource &&
-                  !cleanupPendingAction &&
-                  !polishPending
-                }
-                saveState={blockSaveStates[block.id] || ""}
-                onFocus={focusBlock}
-                onAdd={addBlockToClipboard}
-                onDelete={(blockId) => void deleteBlock(blockId)}
-                onRemove={removeBlockFromClipboard}
-                onEdit={editBlock}
-                onKeepDraft={(targetBlock) => void resetBlockToDraft(targetBlock)}
-                onAcceptInference={(targetBlock, sentence) =>
-                  void acceptBlockInference(targetBlock, sentence)
-                }
-                onRecastTag={(targetBlock, primaryTag) =>
-                  void confirmBlockWorkingTag(targetBlock, primaryTag)
-                }
-                onOpenSourceWitness={(targetBlock) => void openBlockSourceWitness(targetBlock)}
-                onInspectFinding={(findingId) => {
-                  setOperateOverlayOpen(true);
-                  setDesktopRightPanel(DESKTOP_RIGHT_PANELS.diagnostics);
-                  setSelectedOperateFindingId(findingId);
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="assembler-ide-editor__empty">
-            <p>No blocks yet.</p>
-            <span>The artifact opens at line 1. Add text or carry evidence into it.</span>
-          </div>
-        )}
-      </div>
-    </section>
+    <WorkspaceDocumentWorkbench
+      className="assembler-ide-editor"
+      streamClassName="assembler-ide-editor__stream"
+      blocksClassName="assembler-document__blocks assembler-document__blocks--ide"
+      prefixContent={
+        cleanupOpen && canManageActiveSource ? (
+          <SourceCleanupTray
+            findValue={cleanupFind}
+            replaceValue={cleanupReplace}
+            pendingAction={cleanupPendingAction}
+            onFindChange={setCleanupFind}
+            onReplaceChange={setCleanupReplace}
+            onReplaceAll={() => void replaceAcrossSource()}
+            onDeleteMatches={() => void deleteMatchingBlocks()}
+            onClose={() => setCleanupOpen(false)}
+          />
+        ) : null
+      }
+      blocks={blocks}
+      documents={hydratedProjectDocuments}
+      operateOverlayFindingMap={operateOverlayFindingMap}
+      showingInlineOperateDocument={showingInlineOperateDocument}
+      operateOverlayOpen={operateOverlayOpen}
+      selectedOperateFindingId={selectedOperateFindingId}
+      blockRefs={blockRefs}
+      focusBlockId={focusBlockId}
+      currentBlockId={currentBlock?.id || ""}
+      nextBlockId={nextBlock?.id || ""}
+      isPlaying={isPlaying}
+      selectedBlockIds={clipboard.map((item) => item.id)}
+      editMode={desktopEditorMode}
+      showNativeActions
+      blockActionPendingId={blockActionPendingId}
+      canDeleteBlock={
+        desktopEditorMode &&
+        canManageActiveSource &&
+        !cleanupPendingAction &&
+        !polishPending
+      }
+      blockSaveStates={blockSaveStates}
+      emptyTitle="No blocks yet."
+      emptyDetail="The artifact opens at line 1. Add text or carry evidence into it."
+      testId="workspace-document-workbench"
+      onFocusBlock={focusBlock}
+      onAddBlock={addBlockToClipboard}
+      onDeleteBlock={(blockId) => void deleteBlock(blockId)}
+      onRemoveBlock={removeBlockFromClipboard}
+      onEditBlock={editBlock}
+      onKeepDraftBlock={(targetBlock) => void resetBlockToDraft(targetBlock)}
+      onAcceptBlockInference={(targetBlock, sentence) =>
+        void acceptBlockInference(targetBlock, sentence)
+      }
+      onRecastBlockTag={(targetBlock, primaryTag) =>
+        void confirmBlockWorkingTag(targetBlock, primaryTag)
+      }
+      onOpenSourceWitness={(targetBlock) => void openBlockSourceWitness(targetBlock)}
+      onRevealFinding={revealOperateOverlay}
+    />
   );
   const desktopIdeDiagnostics = (
     <WorkspaceDiagnosticsRail
