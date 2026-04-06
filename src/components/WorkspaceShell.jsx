@@ -97,6 +97,7 @@ import {
   getSeedDocument,
   listRealSourceDocuments,
 } from "@/lib/seed-model";
+import { buildFounderSeedState } from "@/lib/founder-renderer";
 import {
   buildRealityInstrumentIssue,
   buildWorkspaceRealityIssues,
@@ -6202,6 +6203,29 @@ export default function WorkspaceShell({
       excerpt: founderShellExcerpt || "",
     };
   }, [founderJourneyActive, founderShellExcerpt, founderShellSelectedBlock]);
+  const founderSeedState = useMemo(
+    () =>
+      buildFounderSeedState({
+        seedDocument: currentSeedDocument,
+        stateSummary: controlSurfaceViewModel?.stateSummary,
+        operateResult,
+        projectDrafts: projectDraftsState,
+      }),
+    [controlSurfaceViewModel?.stateSummary, currentSeedDocument, operateResult, projectDraftsState],
+  );
+
+  const founderFindingMap = founderJourneyActive && showingInlineOperateDocument
+    ? operateOverlayFindingMap
+    : null;
+
+  function handleFounderSelectBlock(blockId) {
+    focusBlock(blockId);
+
+    const finding = founderFindingMap?.get?.(blockId) || null;
+    if (finding?.findingId) {
+      setSelectedOperateFindingId(finding.findingId);
+    }
+  }
 
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
@@ -11609,11 +11633,16 @@ export default function WorkspaceShell({
       selectedBlockId={founderShellSelectedBlock?.id || ""}
       currentBlockId={currentBlock?.id || ""}
       nextBlockId={nextBlock?.id || ""}
-      onSelectBlock={focusBlock}
+      onSelectBlock={handleFounderSelectBlock}
       systemTitle={founderShellReadState?.title || ""}
       systemCopy={founderShellReadState?.copy || ""}
       systemExcerptLabel={founderShellReadState?.excerptLabel || ""}
       systemExcerpt={founderShellReadState?.excerpt || ""}
+      findingMap={founderFindingMap}
+      seedState={founderSeedState}
+      overridePending={operateOverridePending}
+      onCreateOverride={createAttestedOverride}
+      onDeleteOverride={(overrideId) => void deleteAttestedOverride(overrideId)}
       primaryAction={{
         label: "Next: Shape seed",
         title: "Shape the first seed.",

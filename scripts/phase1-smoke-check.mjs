@@ -16,6 +16,9 @@ async function main() {
     workspaceShell,
     workspaceStarter,
     founderShell,
+    loegosRenderer,
+    loegosExplainPanel,
+    founderRendererUtils,
     operateOverlay,
     overlayRail,
     receiptSealController,
@@ -41,6 +44,9 @@ async function main() {
     read("src/components/WorkspaceShell.jsx"),
     read("src/components/WorkspaceStarter.jsx"),
     read("src/components/founder/FounderShell.jsx"),
+    read("src/components/founder/LoegosRenderer.jsx"),
+    read("src/components/founder/LoegosExplainPanel.jsx"),
+    read("src/lib/founder-renderer.js"),
     read("src/lib/operate-overlay.js"),
     read("src/components/WorkspaceOperateOverlayRail.jsx"),
     read("src/components/workspace/useReceiptSealController.js"),
@@ -114,11 +120,20 @@ async function main() {
   assert.match(workspaceStarter, /workspace-starter-start-fresh/);
   assert.match(workspaceStarter, /workspace-starter-account-link/);
   assert.match(founderShell, /founder-shell/);
-  assert.match(founderShell, /Lœgos read/);
+  assert.match(founderShell, /LoegosRenderer/);
+  assert.match(founderShell, /LoegosExplainPanel/);
   assert.match(founderShell, /Open full workspace/);
   assert.match(founderShell, /Ask Seven/);
   assert.match(founderShell, /founder-shell-open-full-workspace/);
   assert.match(founderShell, /founder-shell-assistant-toggle/);
+  assert.match(loegosRenderer, /Lœgos Rendering/);
+  assert.match(loegosRenderer, /loegos-learner-toggle/);
+  assert.match(loegosRenderer, /founder-seed-state/);
+  assert.match(loegosExplainPanel, /Lœgos read/);
+  assert.match(loegosExplainPanel, /workspace-attest-block-input/);
+  assert.match(loegosExplainPanel, /workspace-attest-block-submit/);
+  assert.match(founderRendererUtils, /buildFounderSeedState/);
+  assert.match(founderRendererUtils, /buildLoegosBlockView/);
 
   assert.match(overlayRail, /Operate is partial/);
   assert.match(overlayRail, /attested/);

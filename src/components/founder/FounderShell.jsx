@@ -1,59 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import SignOutButton from "@/components/SignOutButton";
-
-function renderBlockContent(block = null) {
-  if (!block) return null;
-
-  const text = String(block?.text || "").replace(/^#{1,6}\s+/, "");
-  if (block?.kind === "heading") {
-    return <h2 className="founder-block__heading">{text}</h2>;
-  }
-
-  if (block?.kind === "list") {
-    return (
-      <div className="founder-block__list">
-        {String(block?.text || "")
-          .split("\n")
-          .map((line) => line.replace(/^[-+*]\s+/, "").trim())
-          .filter(Boolean)
-          .map((line, index) => (
-            <div key={`${block?.id || "block"}-line-${index}`} className="founder-block__list-line">
-              <span className="founder-block__bullet">•</span>
-              <span>{line}</span>
-            </div>
-          ))}
-      </div>
-    );
-  }
-
-  return <p className="founder-block__text">{text}</p>;
-}
-
-function FounderArtifactBlock({
-  block = null,
-  selected = false,
-  playing = false,
-  next = false,
-  onSelect,
-}) {
-  if (!block) return null;
-
-  return (
-    <button
-      type="button"
-      className={`founder-block ${selected ? "is-selected" : ""} ${playing ? "is-playing" : ""} ${
-        next ? "is-next" : ""
-      }`}
-      onClick={() => onSelect?.(block?.id)}
-      data-testid="founder-block"
-    >
-      <span className="founder-block__line">
-        {String((block?.sourcePosition || 0) + 1).padStart(3, "0")}
-      </span>
-      <div className="founder-block__body">{renderBlockContent(block)}</div>
-    </button>
-  );
-}
+import LoegosExplainPanel from "@/components/founder/LoegosExplainPanel";
+import LoegosRenderer from "@/components/founder/LoegosRenderer";
 
 export default function FounderShell({
   testId = "founder-shell",
@@ -78,8 +29,23 @@ export default function FounderShell({
   onToggleAssistant,
   assistant = null,
   player = null,
+  findingMap = null,
+  seedState = [],
+  overridePending = false,
+  onCreateOverride,
+  onDeleteOverride,
 }) {
+  const [learnerMode, setLearnerMode] = useState(false);
+  const [mobileExplainOpen, setMobileExplainOpen] = useState(false);
   const hasBlocks = Array.isArray(blocks) && blocks.length > 0;
+  const selectedBlock = useMemo(
+    () =>
+      (Array.isArray(blocks) ? blocks : []).find((block) => block.id === selectedBlockId) ||
+      blocks[0] ||
+      null,
+    [blocks, selectedBlockId],
+  );
+  const selectedFinding = selectedBlock ? findingMap?.get?.(selectedBlock.id) || null : null;
 
   return (
     <section className="founder-shell" data-testid={testId}>
@@ -95,80 +61,16 @@ export default function FounderShell({
             </div>
           </div>
 
-          <div className="founder-shell__session" aria-label="Account and session">
-            <button
-              type="button"
-              className="founder-shell__quiet-action"
-              data-testid="founder-shell-open-full-workspace"
-              onClick={onOpenFullWorkspace}
-            >
-              Open full workspace
-            </button>
-            <Link
-              href="/account"
-              className="founder-shell__session-link"
-              data-testid="workspace-account-link"
-            >
-              Account
-            </Link>
-            <SignOutButton className="founder-shell__session-signout">
-              Sign out
-            </SignOutButton>
-          </div>
-        </header>
-
-        <div className="founder-shell__body">
-          <main className="founder-shell__artifact" data-testid="founder-shell-artifact">
-            <div className="founder-shell__artifact-scroll">
-              {hasBlocks ? (
-                <div className="founder-shell__blocks">
-                  {blocks.map((block) => (
-                    <FounderArtifactBlock
-                      key={block.id}
-                      block={block}
-                      selected={block.id === selectedBlockId}
-                      playing={block.id === currentBlockId}
-                      next={block.id === nextBlockId}
-                      onSelect={onSelectBlock}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="founder-shell__empty">
-                  <span className="founder-shell__empty-label">{artifactKind}</span>
-                  <strong className="founder-shell__empty-title">No content yet.</strong>
-                  <p className="founder-shell__empty-copy">
-                    Add one real source, keep it raw, and the next step will shape the first seed.
-                  </p>
-                </div>
-              )}
-            </div>
-          </main>
-
-          <aside className="founder-shell__side">
-            <article className="founder-shell__panel" data-testid="founder-shell-read">
-              <span className="founder-shell__panel-eyebrow">Lœgos read</span>
-              <strong className="founder-shell__panel-title">
-                {systemTitle || "Reading stays literal here."}
-              </strong>
-              {systemCopy ? <p className="founder-shell__panel-copy">{systemCopy}</p> : null}
-              {systemExcerpt ? (
-                <div className="founder-shell__excerpt">
-                  {systemExcerptLabel ? (
-                    <span className="founder-shell__excerpt-label">{systemExcerptLabel}</span>
-                  ) : null}
-                  <p className="founder-shell__excerpt-copy">{systemExcerpt}</p>
-                </div>
-              ) : null}
-            </article>
-
-            <article className="founder-shell__panel founder-shell__panel--next" data-testid="founder-shell-next-step">
+          <div className="founder-shell__header-side">
+            <div className="founder-shell__next-step" data-testid="founder-shell-next-step">
               <span className="founder-shell__panel-eyebrow">Next step</span>
               <strong className="founder-shell__panel-title">
-                {primaryAction?.title || "Keep the next move obvious."}
+                {primaryAction?.title || "Keep one honest next move visible."}
               </strong>
               {primaryAction?.detail ? (
-                <p className="founder-shell__panel-copy">{primaryAction.detail}</p>
+                <p className="founder-shell__panel-copy founder-shell__next-copy">
+                  {primaryAction.detail}
+                </p>
               ) : null}
               <div className="founder-shell__panel-actions">
                 {primaryAction?.onClick ? (
@@ -192,8 +94,64 @@ export default function FounderShell({
                   </button>
                 ) : null}
               </div>
-            </article>
-          </aside>
+            </div>
+
+            <div className="founder-shell__session" aria-label="Account and session">
+              <button
+                type="button"
+                className="founder-shell__quiet-action"
+                data-testid="founder-shell-open-full-workspace"
+                onClick={onOpenFullWorkspace}
+              >
+                Open full workspace
+              </button>
+              <Link
+                href="/account"
+                className="founder-shell__session-link"
+                data-testid="workspace-account-link"
+              >
+                Account
+              </Link>
+              <SignOutButton className="founder-shell__session-signout">
+                Sign out
+              </SignOutButton>
+            </div>
+          </div>
+        </header>
+
+        <div className="founder-shell__body">
+          <main className="founder-shell__artifact" data-testid="founder-shell-artifact">
+            <div className="founder-shell__artifact-scroll">
+              <LoegosRenderer
+                blocks={hasBlocks ? blocks : []}
+                findingMap={findingMap}
+                selectedBlockId={selectedBlock?.id || ""}
+                currentBlockId={currentBlockId}
+                nextBlockId={nextBlockId}
+                learnerMode={learnerMode}
+                onToggleLearnerMode={() => setLearnerMode((value) => !value)}
+                onSelectBlock={(blockId) => {
+                  onSelectBlock?.(blockId);
+                  setMobileExplainOpen(true);
+                }}
+                seedState={seedState}
+              />
+            </div>
+          </main>
+
+          <LoegosExplainPanel
+            block={selectedBlock}
+            finding={selectedFinding}
+            contextTitle={systemTitle}
+            contextCopy={systemCopy}
+            contextExcerptLabel={systemExcerptLabel}
+            contextExcerpt={systemExcerpt}
+            mobileOpen={mobileExplainOpen}
+            onCloseMobile={() => setMobileExplainOpen(false)}
+            overridePending={overridePending}
+            onCreateOverride={onCreateOverride}
+            onDeleteOverride={onDeleteOverride}
+          />
         </div>
 
         {player ? <div className="founder-shell__player">{player}</div> : null}
