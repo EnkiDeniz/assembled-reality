@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { SkipBack, Rewind, Play, Pause, FastForward, SkipForward } from "lucide-react";
+import AiUtilityRail from "@/components/AiUtilityRail";
 import AssemblyWorkspaceScreen from "@/components/AssemblyWorkspaceScreen";
 import AssemblyLane from "@/components/AssemblyLane";
 import BoxHomeScreen from "@/components/BoxHomeScreen";
@@ -40,6 +41,7 @@ import WorkspaceDiagnosticsRail from "@/components/WorkspaceDiagnosticsRail";
 import WorkspaceDisclaimerGate from "@/components/WorkspaceDisclaimerGate";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
 import WorkspaceStarter from "@/components/WorkspaceStarter";
+import FounderShell from "@/components/founder/FounderShell";
 import WorkspaceDocumentWorkbench from "@/components/workspace/WorkspaceDocumentWorkbench";
 import { useOperateOverlayController } from "@/components/workspace/useOperateOverlayController";
 import { useReceiptSealController } from "@/components/workspace/useReceiptSealController";
@@ -5201,11 +5203,17 @@ export default function WorkspaceShell({
   const showStarterSeedEntry =
     Boolean(starterSeedEntrySourceKey) &&
     boxPhase === BOX_PHASES.create;
+  const founderJourneyActive = showStarterSourceSurface;
+  const founderShellSelectedBlock =
+    blocks.find((block) => block.id === (focusBlockId || currentBlock?.id || "")) ||
+    currentBlock ||
+    blocks[0] ||
+    null;
   const showDesktopUnifiedShell =
     !isMobileLayout &&
     !launchpadOpen &&
     !isFirstTimeSurface &&
-    !showStarterSourceSurface;
+    !founderJourneyActive;
   const showDesktopIde =
     showDesktopUnifiedShell &&
     !isListenMode;
@@ -6168,6 +6176,32 @@ export default function WorkspaceShell({
   const sevenSuggestions = buildSevenSuggestions(sevenContextFocusedBlock);
   const sevenThreadLoading =
     sevenThreadLoadingKey === (sevenContextDocument?.documentKey || "");
+  const founderShellExcerpt = String(
+    stripMarkdownSyntax(
+      founderShellSelectedBlock?.plainText ||
+        founderShellSelectedBlock?.text ||
+        "",
+    ),
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+  const founderShellReadState = useMemo(() => {
+    if (!founderJourneyActive) return null;
+
+    const selectedLabel = founderShellSelectedBlock
+      ? `Selected block ${String((founderShellSelectedBlock?.sourcePosition || 0) + 1).padStart(3, "0")}`
+      : "";
+
+    return {
+      title: founderShellSelectedBlock
+        ? "Raw source held steady."
+        : "Reading stays literal here.",
+      copy:
+        "This view is for the source as captured. Lœgos stays close to the text here, then the next step shapes it into the first seed.",
+      excerptLabel: selectedLabel,
+      excerpt: founderShellExcerpt || "",
+    };
+  }, [founderJourneyActive, founderShellExcerpt, founderShellSelectedBlock]);
 
   activeDocumentRef.current = activeDocument;
   blocksRef.current = blocks;
@@ -7404,6 +7438,11 @@ export default function WorkspaceShell({
       mode: WORKSPACE_MODES.listen,
       phase: BOX_PHASES.think,
     });
+  }
+
+  function openFounderFullWorkspace() {
+    setAiOpen(false);
+    clearStarterFlowState({ keepScopedProject: true });
   }
 
   function openProjectLaunchpad(projectKey, nextLaunchpadView = LAUNCHPAD_VIEWS.box) {
@@ -11558,6 +11597,110 @@ export default function WorkspaceShell({
     !starterSurfaceActive &&
     !showStarterSourceSurface &&
     !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes);
+  const founderSourceShell = founderJourneyActive ? (
+    <FounderShell
+      testId="workspace-source-view"
+      artifactKind="Source"
+      artifactTitle={activeDocument?.title || "Untitled source"}
+      artifactSubtitle={activeDocument?.subtitle || ""}
+      projectTitle={activeBoxTitle}
+      intro="See the source as captured, listen to it as-is, then take one clear next step into Lœgos."
+      blocks={blocks}
+      selectedBlockId={founderShellSelectedBlock?.id || ""}
+      currentBlockId={currentBlock?.id || ""}
+      nextBlockId={nextBlock?.id || ""}
+      onSelectBlock={focusBlock}
+      systemTitle={founderShellReadState?.title || ""}
+      systemCopy={founderShellReadState?.copy || ""}
+      systemExcerptLabel={founderShellReadState?.excerptLabel || ""}
+      systemExcerpt={founderShellReadState?.excerpt || ""}
+      primaryAction={{
+        label: "Next: Shape seed",
+        title: "Shape the first seed.",
+        detail:
+          "Keep the source raw here. The next move turns it into the first working seed you can operate on.",
+        testId: "workspace-source-next-shape-seed",
+        onClick: () => void openStarterSeedFlow(),
+      }}
+      secondaryAction={{
+        label: "Open box",
+        testId: "workspace-source-open-box",
+        onClick: () => {
+          clearStarterFlowState({ keepScopedProject: true });
+          openCurrentBoxHome(activeProjectKey);
+        },
+      }}
+      onOpenFullWorkspace={openFounderFullWorkspace}
+      assistantOpen={aiOpen}
+      onToggleAssistant={() => setAiOpen((value) => !value)}
+      assistant={
+        !isMobileLayout && aiOpen ? (
+          <AiUtilityRail
+            open
+            documentTitle={sevenContextDocument?.title || activeDocument.title}
+            thread={activeSevenThread}
+            inputRef={aiInputRef}
+            value={aiInput}
+            pending={aiPending}
+            loading={sevenThreadLoading}
+            errorMessage={sevenThreadError}
+            suggestions={sevenSuggestions}
+            onToggleOpen={() => setAiOpen(false)}
+            onChange={(nextValue) => {
+              setAiInput(nextValue);
+              if (sevenThreadError) {
+                setSevenThreadError("");
+              }
+            }}
+            onSubmit={runAiOperation}
+            onSuggestion={(prompt) => void runAiOperation(prompt)}
+            onStageMessage={stageSevenMessage}
+          />
+        ) : null
+      }
+      player={
+        <PlayerBar
+          workspaceMode={WORKSPACE_MODES.listen}
+          currentBlock={currentBlock}
+          currentIndex={currentIndex}
+          totalBlocks={blocks.length}
+          isPlaying={isPlaying}
+          loadingAudio={loadingAudio}
+          playbackAvailable={playbackAvailable}
+          rate={rate}
+          voiceCatalog={availableVoiceCatalog}
+          voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
+          providerLabel={providerLabel}
+          progress={progress}
+          deviceVoiceSupported={deviceVoiceSupported}
+          docked
+          onTogglePlayback={togglePlayback}
+          onSeekBack={() => seekAudio(-10)}
+          onSeekForward={() => seekAudio(10)}
+          onPreviousBlock={() => jumpToIndex(currentIndex - 1)}
+          onNextBlock={() => jumpToIndex(currentIndex + 1)}
+          onCycleRate={cycleRate}
+          onVoiceChange={(choice) => {
+            const changed =
+              choice?.provider !== voiceChoiceRef.current?.provider ||
+              String(choice?.voiceId || "") !== String(voiceChoiceRef.current?.voiceId || "");
+            if (
+              changed &&
+              (audioRef.current ||
+                speechUtteranceRef.current ||
+                playbackStateRef.current.active ||
+                playbackStateRef.current.paused)
+            ) {
+              stopPlayback();
+              setFeedback("Playback stopped so the new voice can take over.");
+            }
+            setVoiceChoice(choice);
+            setProviderLabel(choice?.label || "Voice");
+          }}
+        />
+      }
+    />
+  ) : null;
   const { shapeKey: activeMobileShape, verb: activeMobileVerb } = launchpadOpen
     ? { shapeKey: "aim", verb: "declare" }
     : getWorkspaceShapeAndVerb({
@@ -12118,6 +12261,8 @@ export default function WorkspaceShell({
           </section>
         ) : showDesktopUnifiedShell ? (
           desktopUnifiedShell
+        ) : founderJourneyActive ? (
+          founderSourceShell
         ) : isListenMode ? (
           <>
             <ListenSurface

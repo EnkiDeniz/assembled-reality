@@ -15,6 +15,7 @@ async function main() {
     workspacePage,
     workspaceShell,
     workspaceStarter,
+    founderShell,
     operateOverlay,
     overlayRail,
     receiptSealController,
@@ -39,6 +40,7 @@ async function main() {
     read("src/app/workspace/page.jsx"),
     read("src/components/WorkspaceShell.jsx"),
     read("src/components/WorkspaceStarter.jsx"),
+    read("src/components/founder/FounderShell.jsx"),
     read("src/lib/operate-overlay.js"),
     read("src/components/WorkspaceOperateOverlayRail.jsx"),
     read("src/components/workspace/useReceiptSealController.js"),
@@ -101,6 +103,7 @@ async function main() {
   assert.match(workspaceShell, /workspace-source-intake/);
   assert.match(workspaceShell, /workspace-source-next-shape-seed/);
   assert.match(workspaceShell, /workspace-source-open-box/);
+  assert.match(workspaceShell, /FounderShell/);
   assert.match(workspaceShell, /pendingInlineOperateSeedOpen/);
   assert.match(workspaceShell, /Switching to the live seed so inline Operate can reveal findings/);
   assert.match(workspaceShell, /DesktopSessionActions/);
@@ -110,6 +113,12 @@ async function main() {
   assert.match(workspaceStarter, /workspace-starter-open-box/);
   assert.match(workspaceStarter, /workspace-starter-start-fresh/);
   assert.match(workspaceStarter, /workspace-starter-account-link/);
+  assert.match(founderShell, /founder-shell/);
+  assert.match(founderShell, /Lœgos read/);
+  assert.match(founderShell, /Open full workspace/);
+  assert.match(founderShell, /Ask Seven/);
+  assert.match(founderShell, /founder-shell-open-full-workspace/);
+  assert.match(founderShell, /founder-shell-assistant-toggle/);
 
   assert.match(overlayRail, /Operate is partial/);
   assert.match(overlayRail, /attested/);

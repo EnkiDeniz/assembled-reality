@@ -1,7 +1,7 @@
-# Founder Shell v0.1
+# Founder Shell v0.2
 
 Date: 2026-04-06
-Status: Decision-ready frontend brief
+Status: Implementation-ready frontend brief
 Purpose: Define the founder-facing shell that should sit in front of the existing Full Box workspace.
 
 ## Why This Exists
@@ -343,6 +343,62 @@ Recommended state shape:
 - routing/page decides entry shell
 - Founder Shell composes only the minimal context it needs
 - Full Box continues to own the advanced state surface
+
+## Journey Placement
+
+Founder Shell is not the whole Foundermvp journey.
+It is the calm artifact surface inside that journey.
+
+The founder journey should remain:
+
+- Start
+- Add Source
+- Founder Shell on the active source artifact
+- Shape Seed
+- Full Box as the advanced layer
+
+Mount rules:
+
+- `/workspace` still opens the starter by default
+- starter-driven intake opens Founder Shell on the imported source
+- `Next: Shape seed` leaves Founder Shell and enters the real seed flow
+- explicit advanced links or the quiet hatch can open Full Box at any time
+
+This keeps Founder Shell from becoming a second app or a substitute for journey logic.
+
+## CTA Gating
+
+Founder Shell should never light up every possible next move at once.
+
+The primary CTA is stage-bound:
+
+- starter: `Add source`
+- source artifact in Founder Shell: `Next: Shape seed`
+- early seed shaping: keep shaping or open the advanced workspace if needed
+- only once a real seed exists: `Run Operate`
+- receipts and sealing should stay downstream, not appear in the first founder shell slice
+
+The rule is simple:
+
+- one page
+- one job
+- one next move
+
+## Graduation And Shared State
+
+Opening Full Box must feel like zooming into the same artifact, not switching apps.
+
+Rules:
+
+- Founder Shell and Full Box read from the same underlying project, document, selection, Operate, and override state
+- the quiet hatch should preserve the active artifact whenever possible
+- returning from Full Box back into the founder path is allowed when the journey still makes sense
+- no duplicated trees of truth, no parallel persistence rules, no fake founder-only objects
+
+The transition should feel like:
+
+- Founder Shell = less surface area on the same object
+- Full Box = more surface area on the same object
 
 ## Reuse Map
 
