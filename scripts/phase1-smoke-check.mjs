@@ -20,7 +20,10 @@ async function main() {
     workbench,
     packageJson,
     playwrightConfig,
+    playwrightCiConfig,
     e2eSmoke,
+    receiptSealDialog,
+    diagnosticsRail,
   ] = await Promise.all([
     read("prisma/schema.prisma"),
     read("src/app/api/workspace/operate/route.js"),
@@ -35,7 +38,10 @@ async function main() {
     read("src/components/workspace/WorkspaceDocumentWorkbench.jsx"),
     read("package.json"),
     read("playwright.config.mjs"),
+    read("playwright.ci.config.mjs"),
     read("tests/e2e/phase1-inline-operate.spec.mjs"),
+    read("src/components/ReceiptSealDialog.jsx"),
+    read("src/components/WorkspaceDiagnosticsRail.jsx"),
   ]);
 
   assert.match(schema, /model\s+ReaderOperateRun\s+\{/);
@@ -79,12 +85,21 @@ async function main() {
   assert.match(operateOverlayController, /createAttestedOverride/);
   assert.match(workbench, /workspace-document-workbench/);
   assert.match(workbench, /workspace-finding-inspect/);
+  assert.match(receiptSealDialog, /receipt-seal-blocked-reason/);
+  assert.match(receiptSealDialog, /data-draft-id/);
+  assert.match(diagnosticsRail, /workspace-latest-receipt-status/);
 
-  assert.match(packageJson, /"test:e2e": "playwright test"/);
+  assert.match(packageJson, /"test:e2e": "npm run test:e2e:local"/);
+  assert.match(packageJson, /"test:e2e:local": "playwright test --config=playwright.config.mjs"/);
+  assert.match(packageJson, /"test:e2e:ci": "playwright test --config=playwright.ci.config.mjs"/);
   assert.match(playwrightConfig, /tests\/e2e/);
-  assert.match(playwrightConfig, /npm run dev -- --port/);
+  assert.doesNotMatch(playwrightConfig, /webServer:/);
+  assert.match(playwrightCiConfig, /npm run dev -- --port/);
   assert.match(e2eSmoke, /dev-guardian/);
   assert.match(e2eSmoke, /receipt-override-acknowledgement/);
+  assert.match(e2eSmoke, /workspace-proof-metadata/);
+  assert.match(e2eSmoke, /workspace-latest-receipt-status/);
+  assert.match(e2eSmoke, /Acknowledge the attested overrides/);
 
   console.log("phase1-smoke-check: ok");
 }

@@ -12187,6 +12187,14 @@ export default function WorkspaceShell({
           />
         ) : null}
 
+        <div
+          hidden
+          data-testid="workspace-proof-metadata"
+          data-project-key={activeProjectKey || ""}
+          data-active-document-key={activeDocumentKey || ""}
+          data-latest-draft-id={receiptSummaryViewModel?.latestDraft?.id || receiptSealDraft?.id || ""}
+        />
+
         <ReceiptSealDialog
           open={Boolean(receiptSealDraft?.id)}
           draft={receiptSealDraft}

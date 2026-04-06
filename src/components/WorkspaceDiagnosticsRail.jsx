@@ -178,15 +178,24 @@ function BuildOutputCard({
 
   return (
     <div className="loegos-diagnostics__build">
-      <article className="loegos-diagnostics__build-card">
+      <article
+        className="loegos-diagnostics__build-card"
+        data-testid="workspace-latest-receipt-card"
+        data-draft-id={latestDraft?.id || ""}
+      >
         <div className="loegos-diagnostics__build-head">
           <span className="loegos-diagnostics__build-label">Compiled output</span>
-          <SignalChip
-            tone={latestDraft?.status === "SEALED" ? "clear" : latestDraft ? "active" : "neutral"}
-            subtle
+          <span
+            data-testid="workspace-latest-receipt-status"
+            data-status={latestDraft?.status || ""}
           >
-            {latestStatus}
-          </SignalChip>
+            <SignalChip
+              tone={latestDraft?.status === "SEALED" ? "clear" : latestDraft ? "active" : "neutral"}
+              subtle
+            >
+              {latestStatus}
+            </SignalChip>
+          </span>
         </div>
         <strong className="loegos-diagnostics__build-title">
           {latestDraft?.title || "No sealed receipt yet"}

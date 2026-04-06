@@ -22,4 +22,10 @@ export default defineConfig({
       height: 1100,
     },
   },
+  webServer: {
+    command: `npm run dev -- --port ${port}`,
+    url: baseURL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 });

@@ -40,7 +40,14 @@ export default function ReceiptSealDialog({
         : "Audit will update as you write";
 
   return (
-    <div className="assembler-sheet assembler-sheet--workspace is-open" data-testid="receipt-seal-dialog">
+    <div
+      className="assembler-sheet assembler-sheet--workspace is-open"
+      data-testid="receipt-seal-dialog"
+      data-draft-id={draft?.id || ""}
+      data-requires-override-acknowledgement={requiresOverrideAcknowledgement ? "true" : "false"}
+      data-can-override={audit?.canOverride ? "true" : "false"}
+      data-seal-ready={audit?.sealReady ? "true" : "false"}
+    >
       <div className="assembler-sheet__backdrop" onClick={pending ? undefined : onClose} aria-hidden="true" />
       <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--receipt-seal">
         <div className="assembler-sheet__header">
@@ -174,6 +181,14 @@ export default function ReceiptSealDialog({
                       I acknowledge that attested overrides will remain visible in the sealed receipt context.
                     </span>
                   </label>
+                ) : null}
+                {requiresOverrideAcknowledgement && !overrideAcknowledged ? (
+                  <p
+                    className="assembler-receipt-audit__summary-note"
+                    data-testid="receipt-seal-blocked-reason"
+                  >
+                    Seal is blocked until you acknowledge the attested overrides.
+                  </p>
                 ) : null}
               </div>
             ) : null}
