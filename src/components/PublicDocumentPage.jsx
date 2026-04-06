@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { ShapeNav, buildStaticShapeNav } from "@/components/LoegosSystem";
 import PublicFooterLinks from "@/components/PublicFooterLinks";
 import { publicSite } from "@/lib/public-site";
 
 function SectionItems({ items }) {
   return (
-    <ul className="public-page__items">
+    <ul className="loegos-public-document__list">
       {items.map((item) => (
-        <li key={item.title} className="public-page__item">
-          <span className="public-page__item-title">{item.title}</span>
+        <li key={item.title} className="loegos-public-document__item">
+          <span className="loegos-public-document__item-title">{item.title}</span>
           <p>{item.body}</p>
         </li>
       ))}
@@ -17,7 +18,7 @@ function SectionItems({ items }) {
 
 function SectionBullets({ bullets }) {
   return (
-    <ul className="public-page__bullets">
+    <ul className="loegos-public-document__bullets">
       {bullets.map((bullet) => (
         <li key={bullet}>{bullet}</li>
       ))}
@@ -27,7 +28,7 @@ function SectionBullets({ bullets }) {
 
 export default function PublicDocumentPage({ page, jsonLd = null }) {
   return (
-    <main className="public-page">
+    <main className="loegos-public-document">
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -35,41 +36,48 @@ export default function PublicDocumentPage({ page, jsonLd = null }) {
         />
       ) : null}
 
-      <section className="public-page__shell">
-        <div className="public-page__topbar">
-          <Link href="/" className="public-page__home-link">
-            {publicSite.mark}
-          </Link>
-        </div>
+      <section className="loegos-public-document__shell">
+        <section className="loegos-public-document__panel">
+          <div className="loegos-public-document__masthead">
+            <div className="loegos-public-document__brandline">
+              <Link href="/" className="loegos-wordmark">
+                {publicSite.mark} <span className="loegos-wordmark__sub">public documents</span>
+              </Link>
+              <span className="loegos-thesis">Navigate by shape. Act by verb.</span>
+            </div>
 
-        <header className="public-page__hero">
-          <span className="public-page__eyebrow">{page.label}</span>
-          <h1 className="public-page__title">{page.title}</h1>
-          <p className="public-page__lede">{page.lede}</p>
-          {page.notice ? <p className="public-page__notice">{page.notice}</p> : null}
-        </header>
+            <div className="loegos-public-document__hero">
+              <span className="loegos-kicker">{page.label}</span>
+              <h1 className="loegos-display">{page.title}</h1>
+              <p className="loegos-public-document__lede">{page.lede}</p>
+              {page.notice ? <p className="loegos-public-document__callout">{page.notice}</p> : null}
+            </div>
+          </div>
 
-        <div className="public-page__body">
-          {(page.sections || []).map((section) => (
-            <section
-              key={section.title || section.paragraphs?.[0] || section.callout}
-              className="public-page__section"
-            >
-              {section.title ? <h2>{section.title}</h2> : null}
-              {section.paragraphs?.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-              {section.items?.length ? <SectionItems items={section.items} /> : null}
-              {section.bullets?.length ? <SectionBullets bullets={section.bullets} /> : null}
-              {section.callout ? <p className="public-page__callout">{section.callout}</p> : null}
-            </section>
-          ))}
-        </div>
+          <ShapeNav items={buildStaticShapeNav("seal")} activeShape="seal" compact />
 
-        <footer className="public-page__footer">
-          <p className="public-page__footer-line">{publicSite.actionLine}</p>
-          <PublicFooterLinks align="start" />
-        </footer>
+          <div className="loegos-public-document__body">
+            {(page.sections || []).map((section) => (
+              <section
+                key={section.title || section.paragraphs?.[0] || section.callout}
+                className="loegos-public-document__section"
+              >
+                {section.title ? <h2>{section.title}</h2> : null}
+                {section.paragraphs?.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+                {section.items?.length ? <SectionItems items={section.items} /> : null}
+                {section.bullets?.length ? <SectionBullets bullets={section.bullets} /> : null}
+                {section.callout ? <p className="loegos-public-document__callout">{section.callout}</p> : null}
+              </section>
+            ))}
+          </div>
+
+          <footer className="loegos-public-document__footer">
+            <p>{publicSite.actionLine}</p>
+            <PublicFooterLinks align="start" />
+          </footer>
+        </section>
       </section>
     </main>
   );

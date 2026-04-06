@@ -1,26 +1,27 @@
 @import "./styles/tokens.css";
+@import "./styles/loegos-system.css";
 @import "./styles/base.css";
 @import "./styles/layout.css";
 @import "./styles/surfaces.css";
 
 :root {
-  --bg: #181818;
-  --panel: #1f1f1f;
-  --panel-2: #242424;
-  --panel-3: #2a2a2a;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.12);
-  --text: #ffffff;
-  --muted: rgba(255, 255, 255, 0.68);
-  --soft: rgba(255, 255, 255, 0.45);
-  --white: #ffffff;
-  --green: #339cff;
-  --cyan: #339cff;
-  --blue: #339cff;
-  --amber: #f59e0b;
+  --bg: var(--loegos-ground);
+  --panel: var(--loegos-surface-1);
+  --panel-2: var(--loegos-surface-2);
+  --panel-3: var(--loegos-surface-3);
+  --line: var(--loegos-line);
+  --line-strong: var(--loegos-line-strong);
+  --text: var(--loegos-text-primary);
+  --muted: var(--loegos-text-secondary);
+  --soft: var(--loegos-text-soft);
+  --white: var(--loegos-text-primary);
+  --green: var(--loegos-signal-clear);
+  --cyan: var(--loegos-brand);
+  --blue: var(--loegos-brand);
+  --amber: var(--loegos-signal-active);
   --pink: #f472b6;
-  --purple: #339cff;
-  --red: #ff6b6b;
+  --purple: var(--loegos-brand);
+  --red: var(--loegos-signal-alert);
   --shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
   --radius-xl: 22px;
   --radius-lg: 18px;
@@ -30,12 +31,12 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --font-copy: var(--font-ui);
-  --block-heading: #f8faf9;
+  --block-heading: var(--loegos-text-primary);
   --block-paragraph: rgba(255, 255, 255, 0.82);
-  --block-list: #339cff;
-  --block-quote: #f59e0b;
-  --block-ai: #339cff;
-  --block-edited: #339cff;
+  --block-list: var(--loegos-brand);
+  --block-quote: var(--loegos-signal-active);
+  --block-ai: var(--loegos-brand);
+  --block-edited: var(--loegos-brand);
 }
 
 * {
@@ -811,6 +812,44 @@ main {
 
 .intro-auth-inline__footer {
   margin-top: 10px;
+}
+
+.intro-auth-inline__footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.intro-proposal-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.82;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.intro-proposal-link:hover,
+.intro-proposal-link:focus-visible {
+  color: var(--text-secondary);
+  border-color: rgba(94, 167, 255, 0.28);
+  transform: translateY(-1px);
 }
 
 .public-footer-links {

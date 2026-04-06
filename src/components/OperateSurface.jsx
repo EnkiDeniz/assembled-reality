@@ -79,6 +79,8 @@ export default function OperateSurface({
   const includedDocuments = Array.isArray(result?.includedDocuments)
     ? result.includedDocuments
     : [];
+  const normalizedErrorMessage = String(errorMessage || "").trim();
+  const isRateLimited = normalizedErrorMessage.includes("429");
   const summaryLine = result
     ? [
         result.includedSourceCount
@@ -95,8 +97,8 @@ export default function OperateSurface({
     <section className="assembler-phase assembler-phase--operate">
       <header className="assembler-phase__header">
         <div className="assembler-phase__copy">
-          <span className="assembler-phase__eyebrow">Operate</span>
-          <h2 className="assembler-phase__title">Read the box.</h2>
+          <span className="assembler-phase__eyebrow">Weld</span>
+          <h2 className="assembler-phase__title">Operate on the box.</h2>
         </div>
         <div className="assembler-phase__meta">
           <span>{viewModel?.title || result?.boxTitle || "Untitled Box"}</span>
@@ -132,6 +134,23 @@ export default function OperateSurface({
             {receiptPending ? "Saving…" : "Save draft"}
           </button>
         </div>
+
+        {normalizedErrorMessage ? (
+          isRateLimited ? (
+            <div className="loegos-rate-limit" role="alert">
+              <h3 className="loegos-rate-limit__title">Operate is rate-limited right now.</h3>
+              <p className="loegos-rate-limit__body">
+                The user should see more than generic failure here. Wait a moment, keep the box
+                intact, then retry once capacity returns.
+              </p>
+            </div>
+          ) : (
+            <div className="loegos-rate-limit" role="alert">
+              <h3 className="loegos-rate-limit__title">Operate could not finish.</h3>
+              <p className="loegos-rate-limit__body">{normalizedErrorMessage}</p>
+            </div>
+          )
+        ) : null}
 
         {result ? (
           <div className="assembler-image-chooser__meta assembler-operate__surface-meta">

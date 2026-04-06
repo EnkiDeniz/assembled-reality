@@ -4,14 +4,20 @@ import Link from "next/link";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SkipBack, Rewind, Play, Pause, FastForward, SkipForward } from "lucide-react";
 import AiUtilityRail from "@/components/AiUtilityRail";
+import AssemblyWorkspaceScreen from "@/components/AssemblyWorkspaceScreen";
 import AssemblyLane from "@/components/AssemblyLane";
+import BoxHomeScreen from "@/components/BoxHomeScreen";
 import BoxManagementDialog from "@/components/BoxManagementDialog";
 import BoxesIndex from "@/components/BoxesIndex";
 import ConfirmationQueueDialog from "@/components/ConfirmationQueueDialog";
 import CloseMoveDialog from "@/components/CloseMoveDialog";
 import FirstBoxComposer from "@/components/FirstBoxComposer";
+import LaunchpadScreen from "@/components/LaunchpadScreen";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import OperateScreen from "@/components/OperateScreen";
+import ProjectHome from "@/components/ProjectHome";
 import RealityInstrument from "@/components/RealityInstrument";
+import ReceiptsScreen from "@/components/ReceiptsScreen";
 import RootBar from "@/components/RootBar";
 import RootEditor from "@/components/RootEditor";
 import OperateSurface from "@/components/OperateSurface";
@@ -79,6 +85,7 @@ import {
   buildWorkspaceRealityIssues,
   buildRealityInstrumentViewModel,
 } from "@/lib/reality-instrument";
+import { getPrimaryBoxPhaseForShape, getWorkspaceShapeAndVerb } from "@/lib/loegos-system";
 import {
   deleteVoiceMemoDraft,
   loadVoiceMemoDraft,
@@ -1837,12 +1844,16 @@ function WorkspaceLaunchpad({
   getReceiptsConnectionStatus = "DISCONNECTED",
   getReceiptsConnectionLastError = "",
   projectActionPending = "",
+  loadingDocumentKey = "",
+  getDocumentBlockCountLabel,
+  getDocumentKindLabel,
   onManageProjects,
   onToggleProjectPinned,
   onToggleProjectArchived,
   onOpenReceipts,
   onOpenDocument,
   onOpenProject,
+  onBrowseBoxes,
   onOpenRoot,
   onRunContextualAction,
   onInterpretWordLayer,
@@ -1879,6 +1890,20 @@ function WorkspaceLaunchpad({
     connectionLastError: getReceiptsConnectionLastError,
   });
   const resumeTarget = boxViewModel?.resumeTarget || null;
+  const guideDocument =
+    grouped.sources.find(
+      (document) => document?.documentType === "builtin" || document?.sourceType === "builtin",
+    ) || null;
+  const realSourceDocuments = grouped.sources.filter((document) => document !== guideDocument);
+  const currentPositionAction =
+    activeProjectKey
+      ? {
+          label: resumeTarget?.title ? "Resume" : "Return to box",
+          disabled: projectActionPending === activeProjectKey,
+          onClick: () => onResumeProject?.(activeProjectKey),
+        }
+      : null;
+
   if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.boxes) {
     return (
       <BoxesIndex
@@ -1898,39 +1923,64 @@ function WorkspaceLaunchpad({
   }
 
   return (
-    <AssemblyLane
-      viewModel={assemblyLaneViewModel}
-      onRunContextualAction={onRunContextualAction}
-      onInterpretWordLayer={onInterpretWordLayer}
-      wordLayerHypotheses={wordLayerHypotheses}
-      wordLayerHypothesesPending={wordLayerHypothesesPending}
-      wordLayerHypothesesError={wordLayerHypothesesError}
-      onOpenEntry={(entry) => {
-        if (entry?.actionKind === "root") {
-          onOpenRoot?.();
-          return;
-        }
+    <BoxHomeScreen
+      title={boxViewModel?.boxTitle || activeProject?.boxTitle || activeProject?.title || "Untitled Box"}
+      subtitle={
+        resumeTarget?.detail ||
+        "Orient in the box, inspect the latest materials, then enter the room that matches the next move."
+      }
+      activeShape="aim"
+      activeVerb="declare"
+    >
+      <ProjectHome
+        boxViewModel={boxViewModel}
+        activeProject={activeProject}
+        loadingDocumentKey={loadingDocumentKey}
+        guideDocument={guideDocument}
+        sourceDocuments={realSourceDocuments}
+        currentPositionAction={currentPositionAction}
+        onBrowseBoxes={onBrowseBoxes}
+        onOpenReceipts={onOpenReceipts}
+        onOpenDocument={onOpenDocument}
+        getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+        getDocumentKindLabel={getDocumentKindLabel}
+        sourceOpenMode={WORKSPACE_MODES.listen}
+      />
 
-        if (entry?.actionKind === "receipt") {
-          onOpenReceipts();
-          return;
-        }
+      <AssemblyLane
+        viewModel={assemblyLaneViewModel}
+        onRunContextualAction={onRunContextualAction}
+        onInterpretWordLayer={onInterpretWordLayer}
+        wordLayerHypotheses={wordLayerHypotheses}
+        wordLayerHypothesesPending={wordLayerHypothesesPending}
+        wordLayerHypothesesError={wordLayerHypothesesError}
+        onOpenEntry={(entry) => {
+          if (entry?.actionKind === "root") {
+            onOpenRoot?.();
+            return;
+          }
 
-        if (!entry?.documentKey) return;
+          if (entry?.actionKind === "receipt") {
+            onOpenReceipts();
+            return;
+          }
 
-        const openAsSeed = entry.actionKind === "seed";
-        onOpenDocument(
-          entry.documentKey,
-          WORKSPACE_MODES.assemble,
-          {
-            phase: openAsSeed ? BOX_PHASES.create : BOX_PHASES.think,
-          },
-        );
-      }}
-      onInspectEvidence={(entry) => {
-        onInspectEvidence?.(entry);
-      }}
-    />
+          if (!entry?.documentKey) return;
+
+          const openAsSeed = entry.actionKind === "seed";
+          onOpenDocument(
+            entry.documentKey,
+            WORKSPACE_MODES.assemble,
+            {
+              phase: openAsSeed ? BOX_PHASES.create : BOX_PHASES.think,
+            },
+          );
+        }}
+        onInspectEvidence={(entry) => {
+          onInspectEvidence?.(entry);
+        }}
+      />
+    </BoxHomeScreen>
   );
 }
 
@@ -10272,22 +10322,16 @@ export default function WorkspaceShell({
       : !launchpadOpen
         ? activeDocument
         : null;
-  const canOpenMobileSeed = Boolean(currentSeedDocument?.documentKey || realProjectSourceDocuments.length);
   const showMobileBottomNav =
     isMobileLayout &&
     !isFirstTimeSurface &&
     !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes);
-  const activeMobileTab = launchpadOpen
-    ? "lane"
-    : isListenMode
-      ? "listen"
-      : isReceiptsPhase
-        ? "receipts"
-        : isOperatePhase
-          ? "operate"
-          : isLanePhase
-            ? "lane"
-            : "seed";
+  const { shapeKey: activeMobileShape, verb: activeMobileVerb } = launchpadOpen
+    ? { shapeKey: "aim", verb: "declare" }
+    : getWorkspaceShapeAndVerb({
+        boxPhase: isListenMode ? BOX_PHASES.think : boxPhase,
+        workspaceMode,
+      });
 
   return (
     <main
@@ -10368,8 +10412,8 @@ export default function WorkspaceShell({
         </header>
 
         {launchpadOpen ? (
-          <section className="assembler-surface assembler-surface--launchpad" style={assemblySurfaceStyle}>
-            {showDesktopHomeToolbar ? (
+          <LaunchpadScreen
+            toolbar={showDesktopHomeToolbar ? (
               <WorkspaceToolbar
                 viewModel={controlSurfaceViewModel}
                 instrument={realityInstrumentViewModel}
@@ -10394,6 +10438,8 @@ export default function WorkspaceShell({
                 receiptAttentionTone={receiptPhaseAttentionTone}
               />
             ) : null}
+            style={assemblySurfaceStyle}
+          >
             <WorkspaceLaunchpad
               launchpadView={launchpadView}
               activeProject={activeProject}
@@ -10405,12 +10451,15 @@ export default function WorkspaceShell({
               getReceiptsConnectionLastError={getReceiptsConnectionLastError}
               projectActionPending={projectActionPending}
               loadingDocumentKey={loadingDocumentKey}
+              getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+              getDocumentKindLabel={getDocumentKindLabel}
               onManageProjects={() => openProjectManagement(activeProjectKey)}
               onToggleProjectPinned={toggleProjectPinned}
               onToggleProjectArchived={toggleProjectArchived}
               onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}
               onOpenProject={openProject}
+              onBrowseBoxes={openBoxesIndex}
               onOpenRoot={() => openRootEditorFor("voluntary")}
               onRunContextualAction={handleAssemblyLaneContextualAction}
               onInterpretWordLayer={handleInterpretWordLayer}
@@ -10428,7 +10477,7 @@ export default function WorkspaceShell({
               }}
               resumeSessionSummary={resumeSessionSummaryState}
             />
-          </section>
+          </LaunchpadScreen>
         ) : isFirstTimeSurface ? (
           <section className="assembler-surface assembler-surface--launchpad assembler-surface--first-box">
             <FirstBoxComposer
@@ -10539,7 +10588,7 @@ export default function WorkspaceShell({
             />
           </>
         ) : (
-          <>
+          <AssemblyWorkspaceScreen>
             {!isMobileLayout ? (
               <WorkspaceShelf
                 open={workspacePickerOpen}
@@ -10624,42 +10673,46 @@ export default function WorkspaceShell({
                   style={assemblySurfaceStyle}
                 >
                   {isReceiptsPhase ? (
-                    <LogView
-                      logEntries={activeDocument.logEntries || []}
-                      drafts={projectDraftsState}
-                      receiptSummary={receiptSummaryViewModel}
-                      receiptPending={receiptPending}
-                      activeDocumentTitle={currentSeedDocument?.title || activeDocument.title}
-                      onCreateReceipt={createReceiptDraft}
-                      onRunOperate={() => void runOperate()}
-                      onExportReceipt={exportReceipt}
-                      onExportDocument={exportDocument}
-                      onOpenGetReceipts={() => openGetReceiptsConnection()}
-                      onRetryRemoteSync={(draft) => void retryReceiptRemoteSync(draft)}
-                      onOpenVerifyUrl={(url) => {
-                        if (url && typeof window !== "undefined") {
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }
-                      }}
-                      onSealReceipt={openReceiptSealDialog}
-                      isMobileLayout={isMobileLayout}
-                    />
+                    <ReceiptsScreen>
+                      <LogView
+                        logEntries={activeDocument.logEntries || []}
+                        drafts={projectDraftsState}
+                        receiptSummary={receiptSummaryViewModel}
+                        receiptPending={receiptPending}
+                        activeDocumentTitle={currentSeedDocument?.title || activeDocument.title}
+                        onCreateReceipt={createReceiptDraft}
+                        onRunOperate={() => void runOperate()}
+                        onExportReceipt={exportReceipt}
+                        onExportDocument={exportDocument}
+                        onOpenGetReceipts={() => openGetReceiptsConnection()}
+                        onRetryRemoteSync={(draft) => void retryReceiptRemoteSync(draft)}
+                        onOpenVerifyUrl={(url) => {
+                          if (url && typeof window !== "undefined") {
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }
+                        }}
+                        onSealReceipt={openReceiptSealDialog}
+                        isMobileLayout={isMobileLayout}
+                      />
+                    </ReceiptsScreen>
                   ) : isOperatePhase ? (
-                    <OperateSurface
-                      viewModel={operateViewModel}
-                      pending={operatePending}
-                      errorMessage={operateError}
-                      result={operateResult}
-                      receiptPending={receiptPending}
-                      onRunOperate={() => void runOperate()}
-                      onDraftReceipt={() =>
-                        void createReceiptDraft({
-                          mode: "operate",
-                          operateResult,
-                        })
-                      }
-                      onAskSeven={() => void askSevenToAuditOperate()}
-                    />
+                    <OperateScreen>
+                      <OperateSurface
+                        viewModel={operateViewModel}
+                        pending={operatePending}
+                        errorMessage={operateError}
+                        result={operateResult}
+                        receiptPending={receiptPending}
+                        onRunOperate={() => void runOperate()}
+                        onDraftReceipt={() =>
+                          void createReceiptDraft({
+                            mode: "operate",
+                            operateResult,
+                          })
+                        }
+                        onAskSeven={() => void askSevenToAuditOperate()}
+                      />
+                    </OperateScreen>
                   ) : isCreatePhase ? (
                     <SeedSurface
                       viewModel={createViewModel}
@@ -10857,25 +10910,30 @@ export default function WorkspaceShell({
                 setProviderLabel(choice?.label || "Voice");
               }}
             />
-          </>
+          </AssemblyWorkspaceScreen>
         )}
 
         {showMobileBottomNav ? (
           <MobileBottomNav
-            activeTab={activeMobileTab}
-            canOpenSeed={canOpenMobileSeed}
-            confirmationCount={seedViewModel?.confirmationCount || 0}
-            stateTone={controlSurfaceViewModel?.stateColorTokens || null}
-            isLooping={Boolean(controlSurfaceViewModel?.isLooping)}
-            onGoHome={() => openCurrentBoxHome(activeProjectKey)}
-            onGoListen={openMobileListenSurface}
-            onGoSeed={openMobileSeedSurface}
-            onGoReceipts={openReceiptsSurface}
-            onOpenAdd={() => openWorkspacePicker("add")}
-            onOpenConfirmation={() => {
-              setConfirmationFocus(null);
-              setConfirmationOpen(true);
+            activeShape={activeMobileShape}
+            activeVerb={activeMobileVerb}
+            onSelectShape={(shapeKey) => {
+              const nextPhase = getPrimaryBoxPhaseForShape(shapeKey);
+              if (shapeKey === "aim") {
+                openCurrentBoxHome(activeProjectKey);
+                return;
+              }
+              if (shapeKey === "reality") {
+                openMobileListenSurface();
+                return;
+              }
+              if (shapeKey === "seal") {
+                openReceiptsSurface();
+                return;
+              }
+              void handleSelectBoxPhase(nextPhase);
             }}
+            onOpenAdd={() => openWorkspacePicker("add")}
           />
         ) : null}
 

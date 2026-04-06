@@ -48,8 +48,8 @@ export default function ReceiptSurface({
     <section className="assembler-phase assembler-phase--receipts">
       <header className="assembler-phase__header">
         <div className="assembler-phase__copy">
-          <span className="assembler-phase__eyebrow">Receipts</span>
-          <h2 className="assembler-phase__title">Preserve the proof.</h2>
+          <span className="assembler-phase__eyebrow">Seal</span>
+          <h2 className="assembler-phase__title">Review, seal, and share the proof.</h2>
         </div>
         <div className="assembler-phase__meta">
           <span>{summary.draftCount} draft{summary.draftCount === 1 ? "" : "s"}</span>

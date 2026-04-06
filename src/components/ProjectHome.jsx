@@ -1,4 +1,9 @@
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
+import {
+  AssembledCard,
+  BoxMetric,
+  SignalChip,
+} from "@/components/LoegosSystem";
 
 function formatReceiptModeLabel(value = "") {
   const normalized = String(value || "").trim().toLowerCase();
@@ -129,84 +134,112 @@ export default function ProjectHome({
   }
 
   return (
-    <div className="assembler-project-home assembler-project-home--compressed">
-      <section className="assembler-project-home__masthead">
-        <div className="assembler-project-home__copy">
-          <span className="assembler-project-home__eyebrow">Box home</span>
-          <h1 className="assembler-project-home__title">{boxTitle}</h1>
-          {showOnboarding ? (
-            <p className="assembler-project-home__subtitle">Add a source. Shape the seed.</p>
-          ) : null}
-          <div className="assembler-project-home__meta">
-            <span>
-              {boxViewModel?.realSourceCount || 0} real source
-              {(boxViewModel?.realSourceCount || 0) === 1 ? "" : "s"}
-            </span>
-            <span>{boxViewModel?.hasSeed ? "Seed ready" : "No seed yet"}</span>
-            <span>
-              {receiptSummary.draftCount || 0} proof draft
-              {(receiptSummary.draftCount || 0) === 1 ? "" : "s"}
-            </span>
-          </div>
-        </div>
+    <div className="loegos-box-home">
+      <section className="loegos-box-home__panel">
+        <div className="loegos-box-home__grid">
+          <div className="loegos-box-home__stack">
+            <div className="loegos-box-home__resume">
+              <span className="loegos-kicker">Box home</span>
+              <h1 className="loegos-box-home__resume-title">{boxTitle}</h1>
+              <p className="loegos-box-home__resume-copy">
+                {showOnboarding
+                  ? "Add a source, then enter Reality or Weld."
+                  : "Resume the object, review the latest proof, or move into the room that matches the next step."}
+              </p>
+            </div>
 
-        <button
-          type="button"
-          className="assembler-project-home__secondary-button"
-          onClick={onBrowseBoxes}
-        >
-          All boxes
-        </button>
-      </section>
-
-      <div className="assembler-project-home__layout assembler-project-home__layout--compressed">
-        <section className="assembler-project-home__panel">
-          <div className="assembler-project-home__section-head">
-            <span>Resume</span>
+            <div className="loegos-box-home__metrics">
+              <BoxMetric
+                label="Reality"
+                value={boxViewModel?.realSourceCount || 0}
+                detail={`Real source${(boxViewModel?.realSourceCount || 0) === 1 ? "" : "s"}`}
+              />
+              <BoxMetric
+                label="Weld"
+                value={boxViewModel?.hasSeed ? "Ready" : "Idle"}
+                detail={boxViewModel?.hasSeed ? "Seed is live." : "No seed yet."}
+              />
+              <BoxMetric
+                label="Seal"
+                value={receiptSummary.draftCount || 0}
+                detail={`Proof draft${(receiptSummary.draftCount || 0) === 1 ? "" : "s"}`}
+              />
+              <BoxMetric label="Return" value={boxViewModel?.resumeTarget?.verb || "Resume"} detail={boxViewModel?.resumeTarget?.detail || "The line is clear when the box is ready."} />
+            </div>
           </div>
-          <div className="assembler-project-home__compact-copy">
-            <strong className="assembler-project-home__compact-title">
-              {boxViewModel?.resumeTarget?.title || "No active position yet"}
-            </strong>
-            <p className="assembler-project-home__compact-detail">
-              {boxViewModel?.resumeTarget?.detail || "The line is clear when the box is ready."}
-            </p>
-            {currentPositionAction ? (
+
+          <AssembledCard
+            shapeKey="aim"
+            label="Next move"
+            title={boxViewModel?.resumeTarget?.title || "No active position yet"}
+            body={boxViewModel?.resumeTarget?.detail || "The line is clear when the box is ready."}
+            signal={boxViewModel?.hasSeed ? "Active" : "Waiting"}
+            signalTone={boxViewModel?.hasSeed ? "active" : "neutral"}
+            stageCount={boxViewModel?.hasSeed ? 4 : 2}
+            footer="Orientation"
+            action={currentPositionAction ? (
               <button
                 type="button"
-                className="assembler-project-home__primary-button"
+                className="terminal-button is-primary"
                 onClick={currentPositionAction.onClick}
                 disabled={currentPositionAction.disabled}
               >
                 {currentPositionAction.label}
               </button>
-            ) : null}
-          </div>
-        </section>
+            ) : (
+              <button
+                type="button"
+                className="terminal-button"
+                onClick={onBrowseBoxes}
+              >
+                All boxes
+              </button>
+            )}
+          />
+        </div>
+      </section>
 
-        <section className="assembler-project-home__panel">
-          <div className="assembler-project-home__section-head">
-            <span>Proof</span>
+      <div className="loegos-box-home__cards">
+        <AssembledCard
+          shapeKey="reality"
+          label="Reality"
+          title={recentSources[0]?.title || "No recent sources"}
+          body={recentSources[0] ? "Capture, listen, and inspect the materials currently inside this box." : "Add a source to give the box something to inspect."}
+          detail={`${recentSources.length} recent source${recentSources.length === 1 ? "" : "s"}`}
+          signal={recentSources.length ? "Active" : "Waiting"}
+          signalTone={recentSources.length ? "active" : "neutral"}
+          stageCount={recentSources.length ? 3 : 1}
+          footer="Recent sources"
+        />
+        <AssembledCard
+          shapeKey="seal"
+          label="Seal"
+          title={proofLine}
+          body={proofDetail}
+          detail={`${recentDrafts.length} recent proof item${recentDrafts.length === 1 ? "" : "s"}`}
+          signal={recentDrafts.length ? "Verified" : "Unknown"}
+          signalTone={recentDrafts.length ? "clear" : "neutral"}
+          stageCount={recentDrafts.length ? 5 : 2}
+          footer="Proof"
+          action={(
             <button
               type="button"
-              className="assembler-project-home__section-action"
+              className="terminal-button"
               onClick={onOpenReceipts}
             >
               Review proof
             </button>
-          </div>
-          <div className="assembler-project-home__compact-copy">
-            <strong className="assembler-project-home__compact-title">{proofLine}</strong>
-            <p className="assembler-project-home__compact-detail">{proofDetail}</p>
-          </div>
-        </section>
+          )}
+        />
       </div>
 
-      <div className="assembler-project-home__layout">
-        <section className="assembler-project-home__panel assembler-project-home__panel--sources">
-          <div className="assembler-project-home__section-head">
-            <span>Recent sources</span>
-            <span>{recentSources.length}</span>
+      <div className="loegos-box-home__grid">
+        <section className="loegos-box-home__panel">
+          <div className="loegos-box-home__section-head">
+            <h2 className="loegos-box-home__section-title">Recent sources</h2>
+            <SignalChip tone={recentSources.length ? "active" : "neutral"}>
+              {recentSources.length}
+            </SignalChip>
           </div>
 
           <div className="assembler-project-home__list">
@@ -223,16 +256,18 @@ export default function ProjectHome({
               ))
             ) : (
               <p className="assembler-project-home__empty">
-                {showOnboarding ? "Add a source. Shape the seed." : "No sources yet."}
+                {showOnboarding ? "Add a source. Then enter Reality." : "No sources yet."}
               </p>
             )}
           </div>
         </section>
 
-        <section className="assembler-project-home__panel">
-          <div className="assembler-project-home__section-head">
-            <span>Recent proof</span>
-            <span>{recentDrafts.length}</span>
+        <section className="loegos-box-home__panel">
+          <div className="loegos-box-home__section-head">
+            <h2 className="loegos-box-home__section-title">Recent proof</h2>
+            <SignalChip tone={recentDrafts.length ? "clear" : "neutral"}>
+              {recentDrafts.length}
+            </SignalChip>
           </div>
 
           <div className="assembler-project-home__receipt-panel">
@@ -240,7 +275,7 @@ export default function ProjectHome({
               recentDrafts.map((draft) => <ReceiptRow key={draft.id} draft={draft} />)
             ) : (
               <p className="assembler-project-home__empty">
-                Local proof. Portable when sealed.
+                Proof appears here once a draft is created or sealed.
               </p>
             )}
           </div>

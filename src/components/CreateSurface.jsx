@@ -16,8 +16,8 @@ export default function CreateSurface({
     <section className="assembler-phase assembler-phase--create">
       <header className="assembler-phase__header">
         <div className="assembler-phase__copy">
-          <span className="assembler-phase__eyebrow">Seed</span>
-          <h2 className="assembler-phase__title">Shape the seed.</h2>
+          <span className="assembler-phase__eyebrow">Weld</span>
+          <h2 className="assembler-phase__title">Stage and rewrite the object.</h2>
         </div>
         <div className="assembler-phase__meta">
           <span>{viewModel?.boxTitle || "Untitled Box"}</span>
@@ -31,14 +31,14 @@ export default function CreateSurface({
       ) : (
         <div className="assembler-phase__empty">
           <div className="assembler-phase__empty-copy">
-            <span className="assembler-phase__empty-label">Seed</span>
+            <span className="assembler-phase__empty-label">Weld</span>
             <h3 className="assembler-phase__empty-title">
               {currentAssemblyDocument?.title || "No active seed yet"}
             </h3>
             <p className="assembler-phase__empty-text">
               {currentAssemblyDocument
-                ? "Open the seed. Keep shaping."
-                : "Keep staging. Shape when the line is clear."}
+                ? "Open the seed. Keep welding."
+                : "Keep staging until the object is clear enough to rewrite."}
             </p>
           </div>
 
@@ -54,7 +54,7 @@ export default function CreateSurface({
               onClick={onAssemble}
               disabled={!selectedBlockCount}
             >
-              {selectedBlockCount ? "Shape from staging" : "Add blocks to staging"}
+              {selectedBlockCount ? "Weld from staging" : "Add blocks to staging"}
             </button>
           </div>
         </div>
