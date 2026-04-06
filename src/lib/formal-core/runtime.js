@@ -186,16 +186,6 @@ function normalizeSignal(value = "") {
   return "neutral";
 }
 
-function signalWeight(signal = "neutral") {
-  return FORMAL_SIGNALS[normalizeSignal(signal)]?.weight || 0;
-}
-
-function strongerSignal(left = "neutral", right = "neutral") {
-  const leftWeight = signalWeight(left);
-  const rightWeight = signalWeight(right);
-  return leftWeight >= rightWeight ? normalizeSignal(left) : normalizeSignal(right);
-}
-
 function composeSignal(signals = []) {
   const normalized = (Array.isArray(signals) ? signals : [])
     .map((value) => normalizeSignal(value))

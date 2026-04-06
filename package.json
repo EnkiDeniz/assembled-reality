@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "lint": "eslint .",
+    "test:smoke": "node scripts/phase1-smoke-check.mjs",
     "audit:guardian": "node scripts/check-guardian-compliance.mjs",
     "start": "next start",
     "postinstall": "prisma generate"

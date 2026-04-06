@@ -1249,6 +1249,32 @@
   gap: 8px;
 }
 
+.loegos-diagnostics__header-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.loegos-diagnostics__header-tab {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--loegos-text-soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.loegos-diagnostics__header-tab.is-active {
+  border-color: rgba(94, 167, 255, 0.26);
+  background: rgba(94, 167, 255, 0.12);
+  color: var(--loegos-text-primary);
+}
+
 .loegos-diagnostics__eyebrow,
 .loegos-diagnostics__section-head,
 .loegos-diagnostics__sentence-label,
@@ -1375,6 +1401,10 @@
   min-height: 0;
 }
 
+.loegos-diagnostics__section--seven-teaser {
+  gap: 10px;
+}
+
 .loegos-diagnostics__thread-message.is-assistant {
   background: rgba(94, 167, 255, 0.06);
 }
@@ -1416,6 +1446,102 @@
   padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--loegos-text-primary);
+  resize: vertical;
+}
+
+.loegos-diagnostics__finding-list,
+.loegos-diagnostics__inspect,
+.loegos-diagnostics__inspect-section,
+.loegos-diagnostics__inspect-override,
+.loegos-diagnostics__inspect-spans {
+  display: grid;
+  gap: 10px;
+}
+
+.loegos-diagnostics__finding-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  color: inherit;
+  text-align: left;
+}
+
+.loegos-diagnostics__finding-row.is-active {
+  border-color: rgba(94, 167, 255, 0.24);
+  background: rgba(94, 167, 255, 0.08);
+}
+
+.loegos-diagnostics__finding-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.loegos-diagnostics__finding-title,
+.loegos-diagnostics__inspect-label {
+  color: var(--loegos-text-soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.loegos-diagnostics__finding-detail,
+.loegos-diagnostics__inspect-copy,
+.loegos-diagnostics__inspect-note,
+.loegos-diagnostics__inspect-evidence p,
+.loegos-diagnostics__inspect-span p {
+  margin: 0;
+  color: var(--loegos-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.loegos-diagnostics__finding-meta,
+.loegos-diagnostics__inspect-head,
+.loegos-diagnostics__inspect-span-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.loegos-diagnostics__inspect {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.loegos-diagnostics__inspect-evidence,
+.loegos-diagnostics__inspect-span {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.loegos-diagnostics__inspect-evidence strong {
+  color: var(--loegos-text-primary);
+  font-size: 13px;
+}
+
+.loegos-diagnostics__inspect-textarea {
+  width: 100%;
+  min-height: 74px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
   background: rgba(0, 0, 0, 0.2);
   color: var(--loegos-text-primary);
   resize: vertical;

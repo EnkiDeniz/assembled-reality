@@ -54,7 +54,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "assembled-reality",
     title: "Assembled Reality",
-    relativePath: "docs/First seed/# ASSEMBLED REALITY/# ASSEMBLED REALITY.md",
+    relativePath: "pivot/source documents/assembled_reality_v07_final.md",
     sourceRole: "theory",
     sourceClassification: "load_bearing",
     evidenceBasis: "direct-text",
@@ -104,7 +104,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "monolith-does-not-move",
     title: "A monolith does not move.",
-    relativePath: "docs/First seed/A monolith does not move./A monolith does not move..md",
+    relativePath: "pivot/source documents/monolith_canon.md",
     sourceRole: "theory",
     sourceClassification: "latent",
     evidenceBasis: "direct-text",
@@ -114,7 +114,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "echo-canon",
     title: "Echo Canon",
-    relativePath: "docs/First seed/ECHO CANON/ECHO CANON.md",
+    relativePath: "pivot/source documents/echo_canon_first_seed.md",
     sourceRole: "theory",
     sourceClassification: "latent",
     evidenceBasis: "direct-text",

@@ -84,10 +84,6 @@ export default function RootEditor({
   const activeDomains = selectedDomains.length ? selectedDomains : suggestedDomains;
   const removedSuggested = suggestedDomains.filter((domain) => !activeDomains.includes(domain));
   const stateTone = stateSummary?.colorTokens || getAssemblyColorTokens(stateSummary?.colorStep);
-  const rootWordCount = useMemo(
-    () => rootText.trim().split(/\s+/).filter(Boolean).length,
-    [rootText],
-  );
   const rootValidationMessage = !hasRoot ? validateRootText(rootText) : "";
   const glossValidationMessage = !rootGloss.trim() ? "Add a gloss so the Root can travel." : "";
   const rationaleValidationMessage =

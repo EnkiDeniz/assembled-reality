@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { appEnv } from "@/lib/env";
 import { buildAssemblyIndexEvent } from "@/lib/assembly-architecture";
 import { getReaderDocumentDataForUser, listReaderDocumentsForUser } from "@/lib/reader-documents";
+import {
+  buildLocalSourceEvidenceForBlocks,
+  buildOperateOverrideSummary,
+  buildOperateOverlayPrompt,
+  buildOperateSourceFingerprint,
+  buildOverlayCandidateBlocks,
+  coerceOperateOverlayPayload,
+  mergeOperateOverlayWithOverrides,
+  OPERATE_OVERLAY_ENGINE_KIND,
+  OPERATE_OVERLAY_ENGINE_VERSION,
+  OPERATE_OVERLAY_PROMPT_VERSION,
+  OPERATE_OVERLAY_SCHEMA_VERSION,
+} from "@/lib/operate-overlay";
 import { PRODUCT_NAME } from "@/lib/product-language";
 import {
   coerceOperateResult,
@@ -9,6 +22,11 @@ import {
   listOperateIncludedDocuments,
 } from "@/lib/operate";
 import { getProjectByKey, getProjectDocuments } from "@/lib/project-model";
+import {
+  createReaderOperateRunForUser,
+  getLatestReaderOperateRunForUser,
+  listReaderAttestedOverridesForUser,
+} from "@/lib/reader-operate";
 import { listReaderProjectsForUser, updateReaderProjectForUser } from "@/lib/reader-projects";
 import { getRequiredSession } from "@/lib/server-session";
 import { buildBoxSource, buildOperateSourceSummary } from "@/lib/source-model";
@@ -72,6 +90,64 @@ const OPERATE_RESPONSE_SCHEMA = {
     "level_rationales",
     "next_move",
   ],
+};
+const OPERATE_OVERLAY_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    blocks: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          blockId: { type: "string" },
+          signal: {
+            type: "string",
+            enum: ["green", "amber", "red"],
+          },
+          trustLevel: {
+            type: "string",
+            enum: ["L1", "L2", "L3"],
+          },
+          rationale: { type: "string" },
+          uncertainty: { type: "string" },
+          evidenceIds: {
+            type: "array",
+            items: { type: "string" },
+          },
+          spans: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                text: { type: "string" },
+                start: { type: "integer", minimum: 0 },
+                end: { type: "integer", minimum: 1 },
+                signal: {
+                  type: "string",
+                  enum: ["green", "amber", "red"],
+                },
+                reason: { type: "string" },
+              },
+              required: ["text", "start", "end", "signal", "reason"],
+            },
+          },
+        },
+        required: [
+          "blockId",
+          "signal",
+          "trustLevel",
+          "rationale",
+          "uncertainty",
+          "evidenceIds",
+          "spans",
+        ],
+      },
+    },
+  },
+  required: ["blocks"],
 };
 
 function extractMessageText(payload) {
@@ -196,68 +272,79 @@ function buildOperatePrompt({
   return { systemPrompt, userPrompt };
 }
 
-export async function POST(request) {
-  const session = await getRequiredSession();
-  if (!session) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+function createOverlayResponse({
+  run = null,
+  mergedPayload = null,
+  stale = false,
+  overrideSummary = null,
+  documentKey = "",
+} = {}) {
+  const payload = mergedPayload && typeof mergedPayload === "object" ? mergedPayload : {};
+  const summary = payload.summary && typeof payload.summary === "object"
+    ? payload.summary
+    : {
+        redCount: 0,
+        amberCount: 0,
+        greenCount: 0,
+        overrideCount: 0,
+        activeOverrideCount: 0,
+        staleOverrideCount: 0,
+        orphanedOverrideCount: 0,
+      };
 
-  if (!appEnv.openai.enabled) {
-    return NextResponse.json(
-      { ok: false, error: OPERATE_UNAVAILABLE_MESSAGE },
-      { status: 503 },
-    );
-  }
+  return {
+    ok: true,
+    mode: "overlay",
+    runId: run?.id || "",
+    documentKey,
+    sourceFingerprint: run?.sourceFingerprint || "",
+    stale: Boolean(stale),
+    blocks: Array.isArray(payload.blocks) ? payload.blocks : [],
+    findings: Array.isArray(payload.findings) ? payload.findings : [],
+    summary,
+    overrideSummary:
+      overrideSummary && typeof overrideSummary === "object" ? overrideSummary : summary,
+  };
+}
 
-  const body = await request.json().catch(() => null);
-  const projectKey = String(body?.projectKey || "").trim();
-  const documentKey = String(body?.documentKey || "").trim();
-  const includeAssembly = body?.includeAssembly !== false;
-  const includeGuide = body?.includeGuide === true;
-
-  const documents = await listReaderDocumentsForUser(session.user.id);
-  const projects = await listReaderProjectsForUser(session.user.id, documents);
+async function loadOperateContextForUser(
+  userId,
+  {
+    projectKey = "",
+    documentKey = "",
+    includeAssembly = true,
+    includeGuide = false,
+  } = {},
+) {
+  const documents = await listReaderDocumentsForUser(userId);
+  const projects = await listReaderProjectsForUser(userId, documents);
   const activeProject = getProjectByKey(projects, projectKey);
 
   if (!activeProject) {
-    return NextResponse.json(
-      { ok: false, error: "Box not found." },
-      { status: 404 },
-    );
+    return {
+      error: "Box not found.",
+      status: 404,
+    };
   }
 
   const boxDocuments = getProjectDocuments(documents, activeProject);
-  const {
-    includedDocuments: includedDocumentSummaries,
-    includedSourceCount,
-    includesAssembly,
-    canOperate,
-  } = listOperateIncludedDocuments(activeProject, boxDocuments, {
+  const operateState = listOperateIncludedDocuments(activeProject, boxDocuments, {
     preferredDocumentKey: documentKey,
     includeAssembly,
     includeGuide,
   });
 
-  if (!canOperate) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Add a real source or assembly before running Operate.",
-      },
-      { status: 400 },
-    );
+  if (!operateState.canOperate) {
+    return {
+      error: "Add a real source or assembly before running Operate.",
+      status: 400,
+    };
   }
 
   const fullDocuments = await Promise.all(
-    includedDocumentSummaries.map(async (document) => {
-      const fullDocument = await getReaderDocumentDataForUser(
-        session.user.id,
-        document.documentKey,
-      );
-
-      if (!fullDocument) {
-        return null;
-      }
+    operateState.includedDocuments.map(async (document) => {
+      const fullDocument = await getReaderDocumentDataForUser(userId, document.documentKey);
+      if (!fullDocument) return null;
 
       return {
         ...fullDocument,
@@ -268,13 +355,10 @@ export async function POST(request) {
   const resolvedDocuments = fullDocuments.filter(Boolean);
 
   if (resolvedDocuments.length === 0) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Operate could not load the box material.",
-      },
-      { status: 502 },
-    );
+    return {
+      error: "Operate could not load the box material.",
+      status: 502,
+    };
   }
 
   const currentAssemblyDocument = getOperateAssemblyDocument(
@@ -282,12 +366,305 @@ export async function POST(request) {
     resolvedDocuments,
     documentKey,
   );
-  const promptDocuments = buildOperatePromptDocuments(resolvedDocuments);
+  const sourceDocuments = resolvedDocuments.filter(
+    (document) => document.operateRole === "source",
+  );
+
+  return {
+    activeProject,
+    documents,
+    projects,
+    resolvedDocuments,
+    currentAssemblyDocument,
+    sourceDocuments,
+    includedSourceCount: operateState.includedSourceCount,
+    includesAssembly: operateState.includesAssembly,
+  };
+}
+
+async function buildOverlayRuntimeContext(userId, context = {}) {
+  const currentAssemblyDocument = context?.currentAssemblyDocument || null;
+  const sourceDocuments = Array.isArray(context?.sourceDocuments) ? context.sourceDocuments : [];
+
+  if (!currentAssemblyDocument?.documentKey) {
+    return {
+      error: "Open the current seed before running inline Operate.",
+      status: 400,
+    };
+  }
+
+  if (!sourceDocuments.length) {
+    return {
+      error: "Add a real source before running inline Operate.",
+      status: 400,
+    };
+  }
+
+  const overrides = await listReaderAttestedOverridesForUser(userId, {
+    projectId: context?.activeProject?.id || null,
+    documentKey: currentAssemblyDocument.documentKey,
+  });
+  const candidateBlocks = buildOverlayCandidateBlocks(currentAssemblyDocument);
+  if (!candidateBlocks.length) {
+    return {
+      error: "Add text to the current seed before running inline Operate.",
+      status: 400,
+    };
+  }
+  const evidenceMap = buildLocalSourceEvidenceForBlocks(candidateBlocks, sourceDocuments);
+  const sourceFingerprint = buildOperateSourceFingerprint({
+    workingDocument: currentAssemblyDocument,
+    sourceDocuments,
+    overrides,
+  });
+
+  return {
+    overrides,
+    candidateBlocks,
+    evidenceMap,
+    sourceFingerprint,
+  };
+}
+
+async function getCurrentOverlayStateForUser(userId, context = {}) {
+  const latestAssemblyDocument = context?.currentAssemblyDocument?.documentKey
+    ? await getReaderDocumentDataForUser(userId, context.currentAssemblyDocument.documentKey)
+    : null;
+  const latestSourceDocuments = (
+    await Promise.all(
+      (Array.isArray(context?.sourceDocuments) ? context.sourceDocuments : []).map((document) =>
+        getReaderDocumentDataForUser(userId, document.documentKey),
+      ),
+    )
+  ).filter(Boolean);
+  const overrides = latestAssemblyDocument?.documentKey
+    ? await listReaderAttestedOverridesForUser(userId, {
+        projectId: context?.activeProject?.id || null,
+        documentKey: latestAssemblyDocument.documentKey,
+      })
+    : [];
+
+  return {
+    currentAssemblyDocument: latestAssemblyDocument || context?.currentAssemblyDocument || null,
+    sourceDocuments: latestSourceDocuments.length
+      ? latestSourceDocuments
+      : Array.isArray(context?.sourceDocuments)
+        ? context.sourceDocuments
+        : [],
+    overrides,
+  };
+}
+
+async function runOverlayOperate({
+  session,
+  projectKey = "",
+  documentKey = "",
+} = {}) {
+  const baseContext = await loadOperateContextForUser(session.user.id, {
+    projectKey,
+    documentKey,
+    includeAssembly: true,
+    includeGuide: false,
+  });
+  if (baseContext?.error) {
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: baseContext.error },
+      { status: baseContext.status || 400 },
+    );
+  }
+
+  const runtimeContext = await buildOverlayRuntimeContext(session.user.id, baseContext);
+  if (runtimeContext?.error) {
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: runtimeContext.error },
+      { status: runtimeContext.status || 400 },
+    );
+  }
+
+  const { systemPrompt, userPrompt } = buildOperateOverlayPrompt({
+    boxTitle: baseContext.activeProject?.boxTitle || baseContext.activeProject?.title || "Untitled Box",
+    workingDocument: baseContext.currentAssemblyDocument,
+    candidateBlocks: runtimeContext.candidateBlocks,
+    evidenceMap: runtimeContext.evidenceMap,
+  });
+
+  let response;
+  let payload;
+
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${appEnv.openai.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: appEnv.openai.textModel,
+        input: [
+          {
+            role: "system",
+            content: [{ type: "input_text", text: systemPrompt }],
+          },
+          {
+            role: "user",
+            content: [{ type: "input_text", text: userPrompt }],
+          },
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "operate_overlay_result",
+            strict: true,
+            schema: OPERATE_OVERLAY_RESPONSE_SCHEMA,
+          },
+        },
+      }),
+      cache: "no-store",
+    });
+
+    payload = await response.json().catch(() => null);
+  } catch (error) {
+    console.error("Operate overlay request crashed.", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: OPERATE_UNAVAILABLE_MESSAGE },
+      { status: 503 },
+    );
+  }
+
+  if (!response?.ok) {
+    const message =
+      payload?.error?.message || payload?.error?.code || OPERATE_UNAVAILABLE_MESSAGE;
+    console.error("Operate overlay request failed.", {
+      status: response?.status,
+      detail: message,
+    });
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: OPERATE_UNAVAILABLE_MESSAGE },
+      { status: response?.status || 503 },
+    );
+  }
+
+  const outputText = extractMessageText(payload);
+  if (!outputText) {
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: "Operate returned an empty finding payload." },
+      { status: 502 },
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(outputText);
+  } catch {
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: "Operate returned an invalid finding payload." },
+      { status: 502 },
+    );
+  }
+
+  const coercedPayload = coerceOperateOverlayPayload(parsed, {
+    candidateBlocks: runtimeContext.candidateBlocks,
+    evidenceMap: runtimeContext.evidenceMap,
+  });
+  const latestOverlayState = await getCurrentOverlayStateForUser(session.user.id, baseContext);
+  const latestFingerprint = buildOperateSourceFingerprint({
+    workingDocument: latestOverlayState.currentAssemblyDocument,
+    sourceDocuments: latestOverlayState.sourceDocuments,
+    overrides: latestOverlayState.overrides,
+  });
+  const stale = latestFingerprint !== runtimeContext.sourceFingerprint;
+  const persistedRun = await createReaderOperateRunForUser(session.user.id, {
+    projectId: baseContext.activeProject?.id || null,
+    documentKey: baseContext.currentAssemblyDocument.documentKey,
+    mode: "overlay",
+    schemaVersion: OPERATE_OVERLAY_SCHEMA_VERSION,
+    engineKind: OPERATE_OVERLAY_ENGINE_KIND,
+    engineVersion: OPERATE_OVERLAY_ENGINE_VERSION,
+    modelName: appEnv.openai.textModel,
+    promptVersion: OPERATE_OVERLAY_PROMPT_VERSION,
+    sourceFingerprint: runtimeContext.sourceFingerprint,
+    stale,
+    payloadJson: coercedPayload,
+  });
+  const mergedPayload = mergeOperateOverlayWithOverrides(
+    persistedRun?.payloadJson || coercedPayload,
+    latestOverlayState.overrides,
+    latestOverlayState.currentAssemblyDocument,
+  );
+  const overrideSummary = buildOperateOverrideSummary(
+    latestOverlayState.overrides,
+    latestOverlayState.currentAssemblyDocument,
+  );
+
+  try {
+    await updateReaderProjectForUser(session.user.id, baseContext.activeProject.projectKey, {
+      appendEvents: [
+        buildAssemblyIndexEvent("operate_ran", {
+          at: new Date().toISOString(),
+          move: `Operate ran inline across ${baseContext.currentAssemblyDocument.title || "the seed"}.`,
+          return:
+            stale
+              ? "The inline read persisted, but the surface moved before it landed."
+              : "Inline findings are attached to the current seed.",
+          echo: `overlay · ${mergedPayload.summary?.greenCount || 0}/${mergedPayload.summary?.amberCount || 0}/${mergedPayload.summary?.redCount || 0}`,
+          context: {
+            mode: "overlay",
+            documentKey: baseContext.currentAssemblyDocument.documentKey,
+            primaryDocumentKey: baseContext.currentAssemblyDocument.documentKey,
+            runId: persistedRun?.id || "",
+            stale,
+            sourceFingerprint: runtimeContext.sourceFingerprint,
+            relatedSourceDocumentKeys: latestOverlayState.sourceDocuments.map((document) => document.documentKey),
+          },
+        }),
+      ],
+    });
+  } catch (error) {
+    console.error("Operate overlay event recording failed.", {
+      boxKey: baseContext.activeProject.projectKey,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return NextResponse.json(
+    createOverlayResponse({
+      run: persistedRun,
+      mergedPayload,
+      stale,
+      overrideSummary,
+      documentKey: baseContext.currentAssemblyDocument.documentKey,
+    }),
+  );
+}
+
+async function runSummaryOperate({
+  session,
+  projectKey = "",
+  documentKey = "",
+  includeAssembly = true,
+  includeGuide = false,
+} = {}) {
+  const operateContext = await loadOperateContextForUser(session.user.id, {
+    projectKey,
+    documentKey,
+    includeAssembly,
+    includeGuide,
+  });
+  if (operateContext?.error) {
+    return NextResponse.json(
+      { ok: false, error: operateContext.error },
+      { status: operateContext.status || 400 },
+    );
+  }
+
+  const promptDocuments = buildOperatePromptDocuments(operateContext.resolvedDocuments);
   const { systemPrompt, userPrompt } = buildOperatePrompt({
-    boxTitle: activeProject.boxTitle || activeProject.title || "Untitled Box",
+    boxTitle: operateContext.activeProject.boxTitle || operateContext.activeProject.title || "Untitled Box",
     promptDocuments,
-    includesAssembly,
-    includedSourceCount,
+    includesAssembly: operateContext.includesAssembly,
+    includedSourceCount: operateContext.includedSourceCount,
   });
 
   const ranAt = new Date().toISOString();
@@ -358,8 +735,8 @@ export async function POST(request) {
     let result;
     try {
       result = coerceOperateResult(parsed, {
-        boxKey: activeProject.projectKey,
-        boxTitle: activeProject.boxTitle || activeProject.title || "Untitled Box",
+        boxKey: operateContext.activeProject.projectKey,
+        boxTitle: operateContext.activeProject.boxTitle || operateContext.activeProject.title || "Untitled Box",
         ranAt,
         includedDocuments: promptDocuments.map((document) => ({
           documentKey: document.documentKey,
@@ -368,8 +745,8 @@ export async function POST(request) {
           blockCount: document.blockCount,
           truncated: document.truncated,
         })),
-        includedSourceCount,
-        includesAssembly,
+        includedSourceCount: operateContext.includedSourceCount,
+        includesAssembly: operateContext.includesAssembly,
       });
     } catch (error) {
       return NextResponse.json(
@@ -385,7 +762,7 @@ export async function POST(request) {
     }
 
     try {
-      await updateReaderProjectForUser(session.user.id, activeProject.projectKey, {
+      await updateReaderProjectForUser(session.user.id, operateContext.activeProject.projectKey, {
         appendEvents: [
           buildAssemblyIndexEvent("operate_ran", {
             at: ranAt,
@@ -394,22 +771,22 @@ export async function POST(request) {
             echo: `${result.convergence} · gradient ${result.gradient}`,
             context: {
               documentKey:
-                currentAssemblyDocument?.documentKey ||
+                operateContext.currentAssemblyDocument?.documentKey ||
                 documentKey ||
-                resolvedDocuments[0]?.documentKey ||
+                operateContext.resolvedDocuments[0]?.documentKey ||
                 "",
               primaryDocumentKey:
-                currentAssemblyDocument?.documentKey ||
+                operateContext.currentAssemblyDocument?.documentKey ||
                 documentKey ||
-                resolvedDocuments[0]?.documentKey ||
+                operateContext.resolvedDocuments[0]?.documentKey ||
                 "",
               gradient: result.gradient,
               convergence: result.convergence,
               trustFloor: result.trustFloor,
               trustCeiling: result.trustCeiling,
               nextMove: result.nextMove,
-              relatedSourceDocumentKeys: resolvedDocuments
-                .filter((document) => document.documentKey !== currentAssemblyDocument?.documentKey)
+              relatedSourceDocumentKeys: operateContext.resolvedDocuments
+                .filter((document) => document.documentKey !== operateContext.currentAssemblyDocument?.documentKey)
                 .map((document) => document.documentKey),
             },
           }),
@@ -417,16 +794,20 @@ export async function POST(request) {
       });
     } catch (error) {
       console.error("Operate event recording failed.", {
-        boxKey: activeProject.projectKey,
+        boxKey: operateContext.activeProject.projectKey,
         error: error instanceof Error ? error.message : String(error),
       });
     }
 
     return NextResponse.json({
       ok: true,
+      mode: "summary",
       result,
       auditDocumentKey:
-        currentAssemblyDocument?.documentKey || documentKey || resolvedDocuments[0]?.documentKey || "",
+        operateContext.currentAssemblyDocument?.documentKey ||
+        documentKey ||
+        operateContext.resolvedDocuments[0]?.documentKey ||
+        "",
     });
   } catch (error) {
     console.error("Operate request crashed.", {
@@ -437,4 +818,124 @@ export async function POST(request) {
       { status: 503 },
     );
   }
+}
+
+export async function GET(request) {
+  const session = await getRequiredSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const projectKey = String(searchParams.get("projectKey") || searchParams.get("project") || "").trim();
+  const documentKey = String(searchParams.get("documentKey") || searchParams.get("document") || "").trim();
+  const mode = String(searchParams.get("mode") || "overlay").trim().toLowerCase();
+
+  if (mode !== "overlay") {
+    return NextResponse.json(
+      { ok: false, error: "Only overlay retrieval is supported here." },
+      { status: 400 },
+    );
+  }
+
+  const operateContext = await loadOperateContextForUser(session.user.id, {
+    projectKey,
+    documentKey,
+    includeAssembly: true,
+    includeGuide: false,
+  });
+  if (operateContext?.error) {
+    return NextResponse.json(
+      { ok: false, mode: "overlay", error: operateContext.error },
+      { status: operateContext.status || 400 },
+    );
+  }
+
+  const latestRun = await getLatestReaderOperateRunForUser(session.user.id, {
+    projectId: operateContext.activeProject?.id || null,
+    documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
+    mode: "overlay",
+  });
+  const overrides = await listReaderAttestedOverridesForUser(session.user.id, {
+    projectId: operateContext.activeProject?.id || null,
+    documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
+  });
+  const currentFingerprint = buildOperateSourceFingerprint({
+    workingDocument: operateContext.currentAssemblyDocument,
+    sourceDocuments: operateContext.sourceDocuments,
+    overrides,
+  });
+  const overrideSummary = buildOperateOverrideSummary(
+    overrides,
+    operateContext.currentAssemblyDocument,
+  );
+
+  if (!latestRun?.id) {
+    return NextResponse.json(
+      createOverlayResponse({
+        run: null,
+        mergedPayload: {
+          blocks: [],
+          findings: [],
+          summary: overrideSummary,
+        },
+        stale: true,
+        overrideSummary,
+        documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
+      }),
+    );
+  }
+
+  const stale = Boolean(latestRun.stale) || latestRun.sourceFingerprint !== currentFingerprint;
+  const mergedPayload = mergeOperateOverlayWithOverrides(
+    latestRun.payloadJson,
+    overrides,
+    operateContext.currentAssemblyDocument,
+  );
+
+  return NextResponse.json(
+    createOverlayResponse({
+      run: latestRun,
+      mergedPayload,
+      stale,
+      overrideSummary,
+      documentKey: operateContext.currentAssemblyDocument?.documentKey || "",
+    }),
+  );
+}
+
+export async function POST(request) {
+  const session = await getRequiredSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!appEnv.openai.enabled) {
+    return NextResponse.json(
+      { ok: false, error: OPERATE_UNAVAILABLE_MESSAGE },
+      { status: 503 },
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  const projectKey = String(body?.projectKey || "").trim();
+  const documentKey = String(body?.documentKey || "").trim();
+  const mode = String(body?.mode || "summary").trim().toLowerCase() === "overlay" ? "overlay" : "summary";
+  const includeAssembly = body?.includeAssembly !== false;
+  const includeGuide = body?.includeGuide === true;
+  if (mode === "overlay") {
+    return runOverlayOperate({
+      session,
+      projectKey,
+      documentKey,
+    });
+  }
+
+  return runSummaryOperate({
+    session,
+    projectKey,
+    documentKey,
+    includeAssembly,
+    includeGuide,
+  });
 }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { appEnv } from "@/lib/env";
 import {
   normalizeWorkspaceBlocks,
-  normalizeWorkspaceBlockKind,
   stripMarkdownSyntax,
 } from "@/lib/document-blocks";
 import { PRODUCT_NAME } from "@/lib/product-language";
@@ -19,74 +18,6 @@ function inferOperation(prompt) {
     return "extracted";
   }
   return "summarized";
-}
-
-function buildKeywordSet(prompt) {
-  return new Set(
-    String(prompt || "")
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .map((part) => part.trim())
-      .filter((part) => part.length > 3),
-  );
-}
-
-function fallbackAiResult({ prompt, documentKey, blocks, selectedBlocks, clipboardBlocks }) {
-  const operation = inferOperation(prompt);
-  const focus = selectedBlocks.length
-    ? selectedBlocks
-    : clipboardBlocks.length
-      ? clipboardBlocks
-      : blocks;
-  const keywords = buildKeywordSet(prompt);
-  const matched =
-    keywords.size === 0
-      ? focus.slice(0, 3)
-      : focus.filter((block) => {
-          const haystack = `${block.plainText || ""} ${block.text || ""}`.toLowerCase();
-          for (const keyword of keywords) {
-            if (haystack.includes(keyword)) return true;
-          }
-          return false;
-        });
-  const resultBlocks = (matched.length ? matched : focus.slice(0, 3)).slice(0, 3);
-  const combinedText = resultBlocks
-    .map((block) => stripMarkdownSyntax(block.text || block.plainText || ""))
-    .filter(Boolean)
-    .join(" ");
-  const sourceCount = new Set(
-    resultBlocks.map((block) => block.sourceDocumentKey || block.documentKey).filter(Boolean),
-  ).size;
-
-  const summaryText =
-    operation === "synthesized"
-      ? `Working synthesis from ${sourceCount || 1} source document${sourceCount === 1 ? "" : "s"}: ${combinedText}`
-      : operation === "extracted"
-        ? `Matched passages for "${prompt}": ${combinedText}`
-        : `Working summary for "${prompt}": ${combinedText}`;
-
-  return normalizeWorkspaceBlocks(
-    [
-      {
-        id: `ai-${Date.now()}-1`,
-        documentKey,
-        sourceDocumentKey: documentKey,
-        sourcePosition: 0,
-        kind: normalizeWorkspaceBlockKind("", summaryText),
-        text: summaryText,
-        plainText: summaryText,
-        author: "ai",
-        operation,
-        isEditable: true,
-        isPlayable: true,
-      },
-    ],
-    {
-      documentKey,
-      defaultSourceDocumentKey: documentKey,
-      defaultIsEditable: true,
-    },
-  );
 }
 
 function extractOutputText(payload) {
@@ -264,33 +195,21 @@ export async function POST(request) {
     return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
   }
 
-  try {
-    const results = appEnv.openai.enabled
-      ? await runOpenAiWorkspaceOperation({
-          prompt,
-          documentKey,
-          title,
-          blocks,
-          selectedBlocks,
-          clipboardBlocks,
-        })
-      : fallbackAiResult({
-          prompt,
-          documentKey,
-          blocks,
-          selectedBlocks,
-          clipboardBlocks,
-        });
+  if (!appEnv.openai.enabled) {
+    return NextResponse.json(
+      {
+        error: "Workspace AI is unavailable right now.",
+        unavailable: true,
+      },
+      { status: 503 },
+    );
+  }
 
-    return NextResponse.json({
-      ok: true,
-      operation: results[0]?.operation || inferOperation(prompt),
-      blocks: results,
-    });
-  } catch {
-    const fallback = fallbackAiResult({
+  try {
+    const results = await runOpenAiWorkspaceOperation({
       prompt,
       documentKey,
+      title,
       blocks,
       selectedBlocks,
       clipboardBlocks,
@@ -298,9 +217,16 @@ export async function POST(request) {
 
     return NextResponse.json({
       ok: true,
-      operation: fallback[0]?.operation || inferOperation(prompt),
-      blocks: fallback,
-      fallback: true,
+      operation: results[0]?.operation || inferOperation(prompt),
+      blocks: results,
     });
+  } catch (error) {
+    return NextResponse.json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Workspace AI is unavailable right now.",
+      unavailable: true,
+    }, { status: 503 });
   }
 }

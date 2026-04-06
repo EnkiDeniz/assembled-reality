@@ -27,6 +27,11 @@ import {
   listReadingReceiptDraftsForProjectForUser,
   updateReadingReceiptDraftForUser,
 } from "@/lib/reader-db";
+import { buildOperateOverrideSummary } from "@/lib/operate-overlay";
+import {
+  getLatestReaderOperateRunForUser,
+  listReaderAttestedOverridesForUser,
+} from "@/lib/reader-operate";
 import { getProjectByKey, getProjectDocuments } from "@/lib/project-model";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
 import {
@@ -185,6 +190,7 @@ export async function PUT(request) {
   const deltaStatement = String(body?.deltaStatement || "").trim();
   const projectKey = String(body?.projectKey || "").trim();
   const overrideAudit = Boolean(body?.overrideAudit);
+  const overrideAcknowledged = Boolean(body?.overrideAcknowledged);
 
   if (!draftId || !deltaStatement) {
     return NextResponse.json(
@@ -214,12 +220,35 @@ export async function PUT(request) {
     targetDocument,
     deltaStatement,
   });
+  const projectId = hydratedProject?.id || rawProject?.id || null;
+  const [operateRun, overrides] = await Promise.all([
+    getLatestReaderOperateRunForUser(session.user.id, {
+      projectId,
+      documentKey: draft.documentKey,
+      mode: "overlay",
+    }),
+    listReaderAttestedOverridesForUser(session.user.id, {
+      projectId,
+      documentKey: draft.documentKey,
+    }),
+  ]);
+  const overrideSummary = buildOperateOverrideSummary(overrides, targetDocument);
+  const enrichedAudit = {
+    ...audit,
+    operateRunId: operateRun?.id || "",
+    overrideSummary,
+    warnings:
+      overrideSummary.activeOverrideCount > 0
+        ? [`${overrideSummary.activeOverrideCount} attested override${overrideSummary.activeOverrideCount === 1 ? "" : "s"} will be disclosed at seal.`]
+        : [],
+    requiresOverrideAcknowledgement: overrideSummary.activeOverrideCount > 0,
+  };
 
   if (!audit.canOverride) {
     return NextResponse.json(
       {
-        error: audit.summary || "The receipt is not ready to seal yet.",
-        audit,
+        error: enrichedAudit.summary || "The receipt is not ready to seal yet.",
+        audit: enrichedAudit,
       },
       { status: 400 },
     );
@@ -228,8 +257,18 @@ export async function PUT(request) {
   if (!audit.sealReady && !overrideAudit) {
     return NextResponse.json(
       {
-        error: audit.summary || "Review the pre-seal audit before sealing this receipt.",
-        audit,
+        error: enrichedAudit.summary || "Review the pre-seal audit before sealing this receipt.",
+        audit: enrichedAudit,
+      },
+      { status: 409 },
+    );
+  }
+
+  if (overrideSummary.activeOverrideCount > 0 && !overrideAcknowledged) {
+    return NextResponse.json(
+      {
+        error: "Acknowledge the attested overrides before sealing this receipt.",
+        audit: enrichedAudit,
       },
       { status: 409 },
     );
@@ -244,10 +283,14 @@ export async function PUT(request) {
     sealedAt: localSealedAt,
     evidenceSnapshot,
     sealAudit: {
-      summary: audit.summary,
-      checks: audit.checks,
-      usedFallback: audit.usedFallback,
+      summary: enrichedAudit.summary,
+      checks: enrichedAudit.checks,
+      usedFallback: enrichedAudit.usedFallback,
       overrideApplied: !audit.sealReady && overrideAudit,
+      operateRunId: enrichedAudit.operateRunId,
+      overrideSummary,
+      warnings: enrichedAudit.warnings,
+      overrideAcknowledged,
     },
   };
   let sealedDraft = await updateReadingReceiptDraftForUser(session.user.id, draftId, {
@@ -298,7 +341,7 @@ export async function PUT(request) {
   }
 
   if (!projectKey) {
-    return NextResponse.json({ ok: true, draft: sealedDraft, audit, remoteSync });
+    return NextResponse.json({ ok: true, draft: sealedDraft, audit: enrichedAudit, remoteSync });
   }
 
   const projectDocuments = getProjectDocuments(allDocuments, hydratedProject);
@@ -338,6 +381,7 @@ export async function PUT(request) {
         evidenceDomains: evidenceSnapshot.domains,
         evidenceSourceDocumentKeys: evidenceSnapshot.sourceDocumentKeys,
         overrideApplied: !audit.sealReady && overrideAudit,
+        overrideCount: overrideSummary.activeOverrideCount,
         remoteSealStatus: remoteSeal?.status || null,
         sealHash: remoteSeal?.sealHash || null,
         verifyUrl: remoteSeal?.verifyUrl || null,
@@ -387,7 +431,7 @@ export async function PUT(request) {
     ok: true,
     draft: sealedDraft,
     state: nextStateSummary,
-    audit,
+    audit: enrichedAudit,
     remoteSync,
   });
 }

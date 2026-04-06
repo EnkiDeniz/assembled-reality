@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function InlineAssist({
   error = "",
@@ -11,33 +11,29 @@ export default function InlineAssist({
   onApply,
   onDismiss,
 }) {
-  const [panelOpen, setPanelOpen] = useState(false);
-
-  useEffect(() => {
-    if (!visible) {
-      setPanelOpen(false);
-    }
-  }, [visible]);
+  const [panelOpenKey, setPanelOpenKey] = useState("");
 
   if (!visible || !error) return null;
 
   const assistAvailable = Boolean(onRequestAssist);
   const hasSuggestions = Array.isArray(suggestions) && suggestions.length > 0;
   const stepToken = `var(--assembly-step-${assemblyStep}-text)`;
+  const panelKey = `${assemblyStep}:${error}`;
+  const panelOpen = panelOpenKey === panelKey;
 
   function handleOpen() {
     if (assistPending) return;
-    setPanelOpen(true);
+    setPanelOpenKey(panelKey);
     onRequestAssist?.();
   }
 
   function handleApply(suggestion) {
     onApply?.(suggestion);
-    setPanelOpen(false);
+    setPanelOpenKey("");
   }
 
   function handleClose() {
-    setPanelOpen(false);
+    setPanelOpenKey("");
     onDismiss?.();
   }
 

@@ -5,6 +5,7 @@ import {
   ShapeGlyph,
   SignalChip,
 } from "@/components/LoegosSystem";
+import WorkspaceOperateOverlayRail from "@/components/WorkspaceOperateOverlayRail";
 import { buildWorkspaceBlockProvenanceView } from "@/lib/workspace-provenance";
 
 function joinClasses(...values) {
@@ -232,6 +233,11 @@ export default function WorkspaceDiagnosticsRail({
   operateResult = null,
   operatePending = false,
   operateError = "",
+  operateOverlay = null,
+  operateOverlayOpen = false,
+  operateOverlayPending = false,
+  operateOverlayError = "",
+  selectedOperateFindingId = "",
   receiptSummary = null,
   receiptPending = false,
   confirmationCount = 0,
@@ -243,11 +249,17 @@ export default function WorkspaceDiagnosticsRail({
   pendingInput = false,
   inputError = "",
   suggestions = [],
+  activeView = "diagnostics",
+  onSelectView,
   onInputChange,
   onSubmit,
   onSuggestion,
   onStageMessage,
   onRunOperate,
+  onToggleOperateOverlay,
+  onSelectOperateFinding,
+  onCreateOperateOverride,
+  onDeleteOperateOverride,
   onOpenReceipts,
   onDraftReceipt,
   onSealLatestDraft,
@@ -274,6 +286,7 @@ export default function WorkspaceDiagnosticsRail({
     ...(formalState?.diagnostics?.warnings || []),
     ...(formalState?.diagnostics?.infos || []),
   ]);
+  const showingSeven = activeView === "seven";
   const edgeMap = Array.isArray(hex?.edges) ? hex.edges : [];
   const preflightChecks = [
     {
@@ -320,9 +333,22 @@ export default function WorkspaceDiagnosticsRail({
         <div className="loegos-diagnostics__copy">
           <span className="loegos-diagnostics__eyebrow">Compiler</span>
           <h2 className="loegos-diagnostics__title">Debugger + build state</h2>
-          <p className="loegos-diagnostics__detail">
-            Preflight, contradictions, Operate, and build output stay beside the open artifact.
-          </p>
+          <div className="loegos-diagnostics__header-tabs" role="tablist" aria-label="Diagnostics views">
+            <button
+              type="button"
+              className={`loegos-diagnostics__header-tab ${!showingSeven ? "is-active" : ""}`}
+              onClick={() => onSelectView?.("diagnostics")}
+            >
+              Diagnostics
+            </button>
+            <button
+              type="button"
+              className={`loegos-diagnostics__header-tab ${showingSeven ? "is-active" : ""}`}
+              onClick={() => onSelectView?.("seven")}
+            >
+              Seven
+            </button>
+          </div>
         </div>
         <div className="loegos-diagnostics__header-meta">
           <SettlementHex stageCount={hex?.settlementStage || 0} label={`stage ${hex?.settlementStage || 0}`} />
@@ -337,6 +363,8 @@ export default function WorkspaceDiagnosticsRail({
         </div>
       </div>
 
+      {!showingSeven ? (
+        <>
       <section className="loegos-diagnostics__section">
         <div className="loegos-diagnostics__section-head">
           <span>1. Seal preflight</span>
@@ -357,9 +385,9 @@ export default function WorkspaceDiagnosticsRail({
             type="button"
             className="terminal-button is-primary"
             onClick={onRunOperate}
-            disabled={operatePending}
+            disabled={operateOverlayPending}
           >
-            {operatePending ? "Compiling…" : "Run Operate"}
+            {operateOverlayPending ? "Running…" : "Run inline Operate"}
           </button>
           <button type="button" className="terminal-button" onClick={onOpenReceipts}>
             Open receipts
@@ -395,7 +423,26 @@ export default function WorkspaceDiagnosticsRail({
 
       <section className="loegos-diagnostics__section">
         <div className="loegos-diagnostics__section-head">
-          <span>4. Convergence + Operate</span>
+          <span>4. Inline Operate</span>
+          <span>{operateOverlay?.runId ? "inspectable" : "not run"}</span>
+        </div>
+        <WorkspaceOperateOverlayRail
+          overlay={operateOverlay}
+          open={operateOverlayOpen}
+          pending={operateOverlayPending}
+          errorMessage={operateOverlayError}
+          selectedFindingId={selectedOperateFindingId}
+          onToggleOpen={onToggleOperateOverlay}
+          onRunOperate={onRunOperate}
+          onSelectFinding={onSelectOperateFinding}
+          onCreateOverride={onCreateOperateOverride}
+          onDeleteOverride={onDeleteOperateOverride}
+        />
+      </section>
+
+      <section className="loegos-diagnostics__section">
+        <div className="loegos-diagnostics__section-head">
+          <span>5. Summary Operate</span>
           <span>{toPercent(primaryCard?.convergencePercent)}%</span>
         </div>
         <ConvergenceBar
@@ -409,7 +456,7 @@ export default function WorkspaceDiagnosticsRail({
 
       <section className="loegos-diagnostics__section">
         <div className="loegos-diagnostics__section-head">
-          <span>5. Trust / depth / settlement</span>
+          <span>6. Trust / depth / settlement</span>
           <span>{hex?.greenEdgeCount || 0}/6 edges</span>
         </div>
         <div className="loegos-diagnostics__metrics">
@@ -441,11 +488,29 @@ export default function WorkspaceDiagnosticsRail({
           onDraftReceipt={onDraftReceipt}
           onSealLatestDraft={onSealLatestDraft}
           receiptPending={receiptPending}
-          operateReady={Boolean(operateResult)}
+          operateReady={Boolean(operateResult || operateOverlay?.runId)}
         />
       </section>
+      <section className="loegos-diagnostics__section loegos-diagnostics__section--seven-teaser">
+        <div className="loegos-diagnostics__section-head">
+          <span>Seven</span>
+          <button
+            type="button"
+            className="loegos-diagnostics__header-tab"
+            onClick={() => onSelectView?.("seven")}
+          >
+            Open
+          </button>
+        </div>
+        <p className="loegos-diagnostics__empty">
+          Seven stays inference-first here. Open the thread for reroutes, contradiction traces, or missing-evidence reads.
+        </p>
+      </section>
+        </>
+      ) : null}
 
-      <section className="loegos-diagnostics__section loegos-diagnostics__section--seven">
+      {showingSeven ? (
+        <section className="loegos-diagnostics__section loegos-diagnostics__section--seven">
         <div className="loegos-diagnostics__section-head">
           <span>Seven</span>
           <span>{documentTitle || "Current box"}</span>
@@ -527,7 +592,8 @@ export default function WorkspaceDiagnosticsRail({
             {pendingInput ? "Reading…" : "Ask Seven"}
           </button>
         </div>
-      </section>
+        </section>
+      ) : null}
     </aside>
   );
 }

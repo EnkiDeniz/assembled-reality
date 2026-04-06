@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getProjectByKey, getProjectDocuments } from "@/lib/project-model";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
 import { getReadingReceiptDraftByIdForUser } from "@/lib/reader-db";
+import { buildOperateOverrideSummary } from "@/lib/operate-overlay";
+import {
+  getLatestReaderOperateRunForUser,
+  listReaderAttestedOverridesForUser,
+} from "@/lib/reader-operate";
 import { getReaderProjectForUser, listReaderProjectsForUser } from "@/lib/reader-projects";
 import { buildReceiptSealAudit } from "@/lib/receipt-seal-audit";
 import { getRequiredSession } from "@/lib/server-session";
@@ -46,9 +51,32 @@ export async function POST(request) {
     targetDocument,
     deltaStatement,
   });
+  const projectId = hydratedProject?.id || rawProject?.id || null;
+  const [operateRun, overrides] = await Promise.all([
+    getLatestReaderOperateRunForUser(session.user.id, {
+      projectId,
+      documentKey: draft.documentKey,
+      mode: "overlay",
+    }),
+    listReaderAttestedOverridesForUser(session.user.id, {
+      projectId,
+      documentKey: draft.documentKey,
+    }),
+  ]);
+  const overrideSummary = buildOperateOverrideSummary(overrides, targetDocument);
+  const enrichedAudit = {
+    ...audit,
+    operateRunId: operateRun?.id || "",
+    overrideSummary,
+    warnings:
+      overrideSummary.activeOverrideCount > 0
+        ? [`${overrideSummary.activeOverrideCount} attested override${overrideSummary.activeOverrideCount === 1 ? "" : "s"} will be disclosed at seal.`]
+        : [],
+    requiresOverrideAcknowledgement: overrideSummary.activeOverrideCount > 0,
+  };
 
   return NextResponse.json({
     ok: true,
-    audit,
+    audit: enrichedAudit,
   });
 }

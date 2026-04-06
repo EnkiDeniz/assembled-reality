@@ -8,6 +8,8 @@ export default function ReceiptSealDialog({
   audit = null,
   auditPending = false,
   auditError = "",
+  overrideAcknowledged = false,
+  onChangeOverrideAcknowledged,
   pending = false,
   onRefreshAudit,
   onClose,
@@ -15,11 +17,15 @@ export default function ReceiptSealDialog({
 }) {
   if (!open) return null;
 
-  const canSeal = Boolean(audit) && !auditPending && !pending && (
+  const requiresOverrideAcknowledgement = Boolean(audit?.requiresOverrideAcknowledgement);
+  const canSealBase = Boolean(audit) && !auditPending && !pending && (
     Boolean(audit.sealReady) || Boolean(audit.canOverride)
   );
+  const canSeal = canSealBase && (!requiresOverrideAcknowledgement || overrideAcknowledged);
   const primaryLabel = pending
     ? "Sealing…"
+    : requiresOverrideAcknowledgement && !overrideAcknowledged
+      ? "Acknowledge overrides to seal"
     : audit?.sealReady
       ? "Seal receipt"
       : audit?.canOverride
@@ -124,6 +130,51 @@ export default function ReceiptSealDialog({
                 </article>
               ))}
             </div>
+
+            {audit?.warnings?.length || audit?.overrideSummary?.overrideCount ? (
+              <div className="assembler-receipt-audit__summary">
+                <div className="assembler-receipt-audit__section-head">
+                  <span className="assembler-receipt-audit__label">Attested overrides</span>
+                  <span className="assembler-receipt-audit__hint">
+                    {audit?.overrideSummary?.activeOverrideCount || 0} active
+                  </span>
+                </div>
+                <p className="assembler-receipt-audit__summary-note">
+                  {audit?.overrideSummary?.overrideCount || 0} override
+                  {(audit?.overrideSummary?.overrideCount || 0) === 1 ? "" : "s"} are attached to this receipt path.
+                </p>
+                {audit?.overrideSummary?.staleOverrideCount ? (
+                  <p className="assembler-receipt-audit__summary-note">
+                    {audit.overrideSummary.staleOverrideCount} override
+                    {audit.overrideSummary.staleOverrideCount === 1 ? "" : "s"} no longer match current text.
+                  </p>
+                ) : null}
+                {audit?.overrideSummary?.orphanedOverrideCount ? (
+                  <p className="assembler-receipt-audit__summary-note">
+                    {audit.overrideSummary.orphanedOverrideCount} override
+                    {audit.overrideSummary.orphanedOverrideCount === 1 ? "" : "s"} lost their target block.
+                  </p>
+                ) : null}
+                {(audit?.warnings || []).map((warning) => (
+                  <p key={warning} className="assembler-receipt-audit__summary-note">
+                    {warning}
+                  </p>
+                ))}
+                {requiresOverrideAcknowledgement ? (
+                  <label className="assembler-receipt-audit__acknowledgement">
+                    <input
+                      type="checkbox"
+                      checked={overrideAcknowledged}
+                      onChange={(event) => onChangeOverrideAcknowledged?.(event.target.checked)}
+                      disabled={pending}
+                    />
+                    <span>
+                      I acknowledge that attested overrides will remain visible in the sealed receipt context.
+                    </span>
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </div>
 
