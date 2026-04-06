@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pickPreferredOperateFindingId } from "@/lib/operate-overlay";
 
 export function useOperateOverlayController({
@@ -14,6 +14,9 @@ export function useOperateOverlayController({
   const [operateOverlayResult, setOperateOverlayResult] = useState(null);
   const [operateOverridePending, setOperateOverridePending] = useState(false);
   const [selectedOperateFindingId, setSelectedOperateFindingId] = useState("");
+  const requestCounterRef = useRef(0);
+  const latestAppliedRequestIdRef = useRef(0);
+  const pendingRequestCountRef = useRef(0);
 
   const operateOverlayFindingMap = useMemo(
     () =>
@@ -44,6 +47,32 @@ export function useOperateOverlayController({
     });
   }, []);
 
+  const beginOperateOverlayRequest = useCallback(() => {
+    pendingRequestCountRef.current += 1;
+    setOperateOverlayPending(true);
+    requestCounterRef.current += 1;
+    return requestCounterRef.current;
+  }, []);
+
+  const finishOperateOverlayRequest = useCallback(() => {
+    pendingRequestCountRef.current = Math.max(0, pendingRequestCountRef.current - 1);
+    if (pendingRequestCountRef.current === 0) {
+      setOperateOverlayPending(false);
+    }
+  }, []);
+
+  const applyOperateOverlayResponse = useCallback(
+    (requestId, nextOverlay, { preferredFindingId = "" } = {}) => {
+      if (requestId < latestAppliedRequestIdRef.current) {
+        return false;
+      }
+      latestAppliedRequestIdRef.current = requestId;
+      syncOperateOverlayState(nextOverlay, { preferredFindingId });
+      return true;
+    },
+    [syncOperateOverlayState],
+  );
+
   const loadOperateOverlay = useCallback(
     async ({ silent = true } = {}) => {
       if (!activeProjectKey || !documentKey) {
@@ -52,7 +81,7 @@ export function useOperateOverlayController({
         return null;
       }
 
-      setOperateOverlayPending(true);
+      const requestId = beginOperateOverlayRequest();
       if (!silent) {
         setOperateOverlayError("");
       }
@@ -72,20 +101,31 @@ export function useOperateOverlayController({
           throw new Error(payload?.error || "Could not load the latest inline Operate run.");
         }
 
-        syncOperateOverlayState(payload);
-        setOperateOverlayError("");
+        if (applyOperateOverlayResponse(requestId, payload)) {
+          setOperateOverlayError("");
+        }
         return payload;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Could not load the latest inline Operate run.";
-        syncOperateOverlayState(null);
-        setOperateOverlayError(silent ? "" : message);
+        if (requestId >= latestAppliedRequestIdRef.current) {
+          latestAppliedRequestIdRef.current = requestId;
+          syncOperateOverlayState(null);
+          setOperateOverlayError(silent ? "" : message);
+        }
         return null;
       } finally {
-        setOperateOverlayPending(false);
+        finishOperateOverlayRequest();
       }
     },
-    [activeProjectKey, documentKey, syncOperateOverlayState],
+    [
+      activeProjectKey,
+      applyOperateOverlayResponse,
+      beginOperateOverlayRequest,
+      documentKey,
+      finishOperateOverlayRequest,
+      syncOperateOverlayState,
+    ],
   );
 
   const revealOperateOverlay = useCallback(
@@ -100,12 +140,12 @@ export function useOperateOverlayController({
   );
 
   const runInlineOperate = useCallback(async () => {
-    if (!canRunOperate || operateOverlayPending || !activeProjectKey || !documentKey) {
+    if (!canRunOperate || !activeProjectKey || !documentKey) {
       return null;
     }
 
     revealOperateOverlay();
-    setOperateOverlayPending(true);
+    const requestId = beginOperateOverlayRequest();
     setOperateOverlayError("");
 
     try {
@@ -126,10 +166,13 @@ export function useOperateOverlayController({
         throw new Error(payload?.error || "Inline Operate could not read the current seed.");
       }
 
-      syncOperateOverlayState(payload, {
-        preferredFindingId: pickPreferredOperateFindingId(payload),
-      });
-      setOperateOverlayError("");
+      if (
+        applyOperateOverlayResponse(requestId, payload, {
+          preferredFindingId: pickPreferredOperateFindingId(payload),
+        })
+      ) {
+        setOperateOverlayError("");
+      }
       setFeedback(
         payload?.stale
           ? "Inline Operate landed, but the seed changed before it returned."
@@ -142,20 +185,24 @@ export function useOperateOverlayController({
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Inline Operate could not read the current seed.";
-      setOperateOverlayError(message);
+      if (requestId >= latestAppliedRequestIdRef.current) {
+        latestAppliedRequestIdRef.current = requestId;
+        setOperateOverlayError(message);
+      }
       setFeedback(message, "error");
       return null;
     } finally {
-      setOperateOverlayPending(false);
+      finishOperateOverlayRequest();
     }
   }, [
     activeProjectKey,
+    applyOperateOverlayResponse,
+    beginOperateOverlayRequest,
     canRunOperate,
     documentKey,
-    operateOverlayPending,
+    finishOperateOverlayRequest,
     revealOperateOverlay,
     setFeedback,
-    syncOperateOverlayState,
   ]);
 
   const createAttestedOverride = useCallback(

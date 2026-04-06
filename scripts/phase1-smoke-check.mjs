@@ -76,12 +76,16 @@ async function main() {
   assert.match(operateOverlay, /attestedCount/);
   assert.match(operateOverlay, /buildOperateOverlayCoverage/);
   assert.match(operateOverlay, /pickPreferredOperateFindingId/);
+  assert.match(operateOverlay, /documentOrder/);
 
   assert.match(workspaceShell, /useOperateOverlayController/);
   assert.match(workspaceShell, /useReceiptSealController/);
   assert.match(workspaceShell, /WorkspaceDocumentWorkbench/);
   assert.match(workspaceShell, /pendingInlineOperateSeedOpen/);
   assert.match(workspaceShell, /Switching to the live seed so inline Operate can reveal findings/);
+  assert.match(workspaceShell, /DesktopSessionActions/);
+  assert.match(workspaceShell, /workspace-account-link/);
+  assert.match(workspaceShell, /Current seed is empty\./);
 
   assert.match(overlayRail, /Operate is partial/);
   assert.match(overlayRail, /attested/);
@@ -92,12 +96,16 @@ async function main() {
   assert.match(receiptSealController, /performSealReceiptDraft/);
   assert.match(operateOverlayController, /runInlineOperate/);
   assert.match(operateOverlayController, /createAttestedOverride/);
+  assert.match(operateOverlayController, /latestAppliedRequestIdRef/);
+  assert.match(operateOverlayController, /beginOperateOverlayRequest/);
   assert.match(workbench, /workspace-document-workbench/);
   assert.match(workbench, /workspace-finding-inspect/);
   assert.match(workbench, /workspace-selected-finding-evidence-preview/);
   assert.match(receiptSealDialog, /receipt-seal-blocked-reason/);
   assert.match(receiptSealDialog, /data-draft-id/);
   assert.match(diagnosticsRail, /workspace-latest-receipt-status/);
+  assert.match(diagnosticsRail, /workspace-shell-state-callout/);
+  assert.match(diagnosticsRail, /Compiler state follows the live seed\./);
 
   assert.match(packageJson, /"test:e2e": "npm run test:e2e:local"/);
   assert.match(packageJson, /"test:e2e:local": "node scripts\/run-phase1-e2e-local\.mjs"/);

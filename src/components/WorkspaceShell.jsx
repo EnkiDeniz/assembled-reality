@@ -31,6 +31,7 @@ import OperateSurface from "@/components/OperateSurface";
 import ReceiptSurface from "@/components/ReceiptSurface";
 import ReceiptSealDialog from "@/components/ReceiptSealDialog";
 import SeedSurface from "@/components/SeedSurface";
+import SignOutButton from "@/components/SignOutButton";
 import SourceRail from "@/components/SourceRail";
 import StagingPanel from "@/components/StagingPanel";
 import ThinkSurface from "@/components/ThinkSurface";
@@ -3135,6 +3136,25 @@ function DesktopIconButton({
   );
 }
 
+function DesktopSessionActions() {
+  return (
+    <div className="assembler-ide-shell__session" aria-label="Account and session">
+      <Link
+        href="/account"
+        className="assembler-ide-shell__session-link"
+        data-testid="workspace-account-link"
+      >
+        Account
+      </Link>
+      <SignOutButton
+        className="assembler-ide-shell__session-signout"
+      >
+        Sign out
+      </SignOutButton>
+    </div>
+  );
+}
+
 function DesktopTabStrip({
   tabs = [],
   activeDocumentKey = "",
@@ -5943,8 +5963,8 @@ export default function WorkspaceShell({
           desktopEditorMode && canManageActiveSource && !cleanupPendingAction && !polishPending
         }
         blockSaveStates={blockSaveStates}
-        emptyTitle="No blocks yet."
-        emptyDetail="The artifact opens at line 1. Add text or carry evidence into it."
+        emptyTitle={workbenchEmptyTitle}
+        emptyDetail={workbenchEmptyDetail}
         testId="workspace-document-surface"
         onFocusBlock={focusBlock}
         onAddBlock={addBlockToClipboard}
@@ -11199,6 +11219,14 @@ export default function WorkspaceShell({
       : !launchpadOpen
         ? activeDocument
         : null;
+  const workbenchEmptyTitle = showingInlineOperateDocument
+    ? "Current seed is empty."
+    : "Current document is empty.";
+  const workbenchEmptyDetail = showingInlineOperateDocument
+    ? "Add or shape draft text, then run inline Operate."
+    : currentSeedDocument?.title
+      ? `This surface has no visible blocks. Compiler state still follows ${currentSeedDocument.title}.`
+      : "Add text or carry evidence into the current surface.";
   const showMobileBottomNav =
     isMobileLayout &&
     !isFirstTimeSurface &&
@@ -11250,8 +11278,8 @@ export default function WorkspaceShell({
         !polishPending
       }
       blockSaveStates={blockSaveStates}
-      emptyTitle="No blocks yet."
-      emptyDetail="The artifact opens at line 1. Add text or carry evidence into it."
+      emptyTitle={workbenchEmptyTitle}
+      emptyDetail={workbenchEmptyDetail}
       testId="workspace-document-workbench"
       onFocusBlock={focusBlock}
       onAddBlock={addBlockToClipboard}
@@ -11290,6 +11318,9 @@ export default function WorkspaceShell({
       confirmationCount={workspaceIdeState.editorState.confirmationCount}
       clipboardCount={clipboard.length}
       stagedCount={stagedAiBlocks.length}
+      activeDocumentTitle={activeDocument.title}
+      currentSeedTitle={currentSeedDocument?.title || ""}
+      viewingCurrentSeed={showingInlineOperateDocument}
       thread={activeSevenThread}
       documentTitle={sevenContextDocument?.title || activeDocument.title}
       inputValue={aiInput}
@@ -11382,36 +11413,39 @@ export default function WorkspaceShell({
         }`}
       >
         <aside className="assembler-ide-shell__iconbar" aria-label="Workspace tools">
-          <DesktopIconButton
-            kind="box"
-            label="Project tree"
-            active={desktopLeftPanel === DESKTOP_LEFT_PANELS.tree}
-            onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.tree)}
-          />
-          <DesktopIconButton
-            kind="search"
-            label="Search"
-            active={desktopLeftPanel === DESKTOP_LEFT_PANELS.search}
-            onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.search)}
-          />
-          <DesktopIconButton
-            kind="seven"
-            label="Diagnostics"
-            active={desktopRightPanel !== DESKTOP_RIGHT_PANELS.collapsed}
-            onClick={toggleDesktopDiagnostics}
-          />
-          <DesktopIconButton
-            kind="listen"
-            label="Player"
-            active={desktopPlayerState !== DESKTOP_PLAYER_STATES.collapsed}
-            onClick={() => toggleDesktopPlayer()}
-          />
-          <DesktopIconButton
-            kind="manage"
-            label="Settings"
-            active={desktopLeftPanel === DESKTOP_LEFT_PANELS.settings}
-            onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.settings)}
-          />
+          <div className="assembler-ide-shell__iconbar-main">
+            <DesktopIconButton
+              kind="box"
+              label="Project tree"
+              active={desktopLeftPanel === DESKTOP_LEFT_PANELS.tree}
+              onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.tree)}
+            />
+            <DesktopIconButton
+              kind="search"
+              label="Search"
+              active={desktopLeftPanel === DESKTOP_LEFT_PANELS.search}
+              onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.search)}
+            />
+            <DesktopIconButton
+              kind="seven"
+              label="Diagnostics"
+              active={desktopRightPanel !== DESKTOP_RIGHT_PANELS.collapsed}
+              onClick={toggleDesktopDiagnostics}
+            />
+            <DesktopIconButton
+              kind="listen"
+              label="Player"
+              active={desktopPlayerState !== DESKTOP_PLAYER_STATES.collapsed}
+              onClick={() => toggleDesktopPlayer()}
+            />
+            <DesktopIconButton
+              kind="manage"
+              label="Settings"
+              active={desktopLeftPanel === DESKTOP_LEFT_PANELS.settings}
+              onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.settings)}
+            />
+          </div>
+          <DesktopSessionActions />
         </aside>
 
         <div className="assembler-ide-shell__main">

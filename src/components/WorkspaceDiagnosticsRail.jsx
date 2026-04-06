@@ -254,6 +254,9 @@ export default function WorkspaceDiagnosticsRail({
   confirmationCount = 0,
   clipboardCount = 0,
   stagedCount = 0,
+  activeDocumentTitle = "",
+  currentSeedTitle = "",
+  viewingCurrentSeed = true,
   thread = null,
   documentTitle = "",
   inputValue = "",
@@ -298,6 +301,9 @@ export default function WorkspaceDiagnosticsRail({
     ...(formalState?.diagnostics?.infos || []),
   ]);
   const showingSeven = activeView === "seven";
+  const hasVisibleBlocks = Array.isArray(blocks)
+    ? blocks.some((block) => String(block?.plainText || block?.text || "").trim())
+    : false;
   const edgeMap = Array.isArray(hex?.edges) ? hex.edges : [];
   const preflightChecks = [
     {
@@ -337,6 +343,22 @@ export default function WorkspaceDiagnosticsRail({
         : "Add reality evidence before sealing.",
     },
   ];
+  const shellStateMessage = !currentSeedTitle
+    ? {
+        title: "No live seed yet.",
+        detail: "Add a source or shape the first seed before compiler and seal checks become meaningful.",
+      }
+    : !viewingCurrentSeed
+      ? {
+          title: "Compiler state follows the live seed.",
+          detail: `You are looking at ${activeDocumentTitle || "another document"}, while compiler and seal state still reflect ${currentSeedTitle}. Open the seed to resolve blocked state on the draft itself.`,
+        }
+      : !hasVisibleBlocks
+        ? {
+            title: "Current seed is empty.",
+            detail: "Add or shape draft text first. Compiler and seal checks stay blocked because there is nothing to compile yet.",
+          }
+        : null;
 
   return (
     <aside className="loegos-diagnostics" aria-label="Box diagnostics" data-testid="workspace-diagnostics-rail">
@@ -376,6 +398,12 @@ export default function WorkspaceDiagnosticsRail({
 
       {!showingSeven ? (
         <>
+      {shellStateMessage ? (
+        <article className="loegos-diagnostics__callout" data-testid="workspace-shell-state-callout">
+          <strong>{shellStateMessage.title}</strong>
+          <p>{shellStateMessage.detail}</p>
+        </article>
+      ) : null}
       <section className="loegos-diagnostics__section">
         <div className="loegos-diagnostics__section-head">
           <span>1. Seal preflight</span>

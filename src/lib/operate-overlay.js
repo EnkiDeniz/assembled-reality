@@ -352,21 +352,32 @@ function getFindingSelectionSignal(finding = null) {
 export function pickPreferredOperateFindingId(payload = null) {
   const findings = Array.isArray(payload?.findings) ? payload.findings : [];
   if (!findings.length) return "";
+  const blockOrder = new Map(
+    (Array.isArray(payload?.blocks) ? payload.blocks : [])
+      .filter(Boolean)
+      .map((block, index) => [String(block?.blockId || "").trim(), index]),
+  );
 
   const preferredFinding = findings
-    .map((finding, index) => ({
+    .map((finding, index) => {
+      const blockId = String(finding?.blockId || "").trim();
+      const documentOrder = blockOrder.has(blockId) ? blockOrder.get(blockId) : index;
+      return {
       finding,
       index,
+      documentOrder,
       signalRank:
         FINDING_SELECTION_SIGNAL_RANK[getFindingSelectionSignal(finding)] ??
         FINDING_SELECTION_SIGNAL_RANK.amber,
       hasRationale: Boolean(String(finding?.rationale || "").trim()),
       evidenceCount: Array.isArray(finding?.evidence) ? finding.evidence.length : 0,
-    }))
+      };
+    })
     .sort((left, right) => {
       if (left.signalRank !== right.signalRank) return left.signalRank - right.signalRank;
       if (left.hasRationale !== right.hasRationale) return left.hasRationale ? -1 : 1;
       if (left.evidenceCount !== right.evidenceCount) return right.evidenceCount - left.evidenceCount;
+      if (left.documentOrder !== right.documentOrder) return left.documentOrder - right.documentOrder;
       return left.index - right.index;
     })[0];
 
