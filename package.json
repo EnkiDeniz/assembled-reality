@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "test:smoke": "node scripts/phase1-smoke-check.mjs",
     "test:e2e": "npm run test:e2e:local",
-    "test:e2e:local": "playwright test --config=playwright.config.mjs",
+    "test:e2e:local": "node scripts/run-phase1-e2e-local.mjs",
     "test:e2e:ci": "playwright test --config=playwright.ci.config.mjs",
     "audit:guardian": "node scripts/check-guardian-compliance.mjs",
     "start": "next start",

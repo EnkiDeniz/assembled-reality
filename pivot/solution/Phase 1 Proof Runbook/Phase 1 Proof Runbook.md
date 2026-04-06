@@ -33,18 +33,25 @@ The loop is only considered real when a non-author human can complete it and und
 npm run dev -- --port 3003
 ```
 
-2. Reset the local guardian workspace:
+2. In the same browser you will use for the proof, open the reset URL first:
 
-```bash
-curl -s "http://127.0.0.1:3003/api/auth/dev-guardian?action=reset"
-curl -s "http://127.0.0.1:3003/api/auth/dev-guardian"
+```text
+http://127.0.0.1:3003/api/auth/dev-guardian?action=reset
 ```
 
-3. Open:
+3. In that same browser, open the guardian login URL so the browser itself receives the `httpOnly` session cookie:
+
+```text
+http://127.0.0.1:3003/api/auth/dev-guardian
+```
+
+4. Then open:
 
 ```text
 http://127.0.0.1:3003/workspace
 ```
+
+Do not use `curl` for local proof login. The guardian route sets an `httpOnly` session cookie, so the browser that will run the proof must be the client that hits the login URL.
 
 ### Expected Visible States
 

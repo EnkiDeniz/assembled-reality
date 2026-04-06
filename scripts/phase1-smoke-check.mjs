@@ -19,6 +19,7 @@ async function main() {
     operateOverlayController,
     workbench,
     packageJson,
+    localE2eRunner,
     playwrightConfig,
     playwrightCiConfig,
     e2eSmoke,
@@ -37,6 +38,7 @@ async function main() {
     read("src/components/workspace/useOperateOverlayController.js"),
     read("src/components/workspace/WorkspaceDocumentWorkbench.jsx"),
     read("package.json"),
+    read("scripts/run-phase1-e2e-local.mjs"),
     read("playwright.config.mjs"),
     read("playwright.ci.config.mjs"),
     read("tests/e2e/phase1-inline-operate.spec.mjs"),
@@ -90,12 +92,16 @@ async function main() {
   assert.match(diagnosticsRail, /workspace-latest-receipt-status/);
 
   assert.match(packageJson, /"test:e2e": "npm run test:e2e:local"/);
-  assert.match(packageJson, /"test:e2e:local": "playwright test --config=playwright.config.mjs"/);
+  assert.match(packageJson, /"test:e2e:local": "node scripts\/run-phase1-e2e-local\.mjs"/);
   assert.match(packageJson, /"test:e2e:ci": "playwright test --config=playwright.ci.config.mjs"/);
+  assert.match(localE2eRunner, /OPENAI_API_KEY is required for the proof loop/);
+  assert.match(localE2eRunner, /playwright\.config\.mjs/);
   assert.match(playwrightConfig, /tests\/e2e/);
   assert.doesNotMatch(playwrightConfig, /webServer:/);
   assert.match(playwrightCiConfig, /npm run dev -- --port/);
   assert.match(e2eSmoke, /dev-guardian/);
+  assert.doesNotMatch(e2eSmoke, /test\.skip/);
+  assert.match(e2eSmoke, /test\.beforeAll/);
   assert.match(e2eSmoke, /receipt-override-acknowledgement/);
   assert.match(e2eSmoke, /workspace-proof-metadata/);
   assert.match(e2eSmoke, /workspace-latest-receipt-status/);

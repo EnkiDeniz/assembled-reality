@@ -10,6 +10,10 @@ Use that document for:
 - preview human proof with real sign-in
 - the exact golden path required to call Phase 1 proven
 
+Important local note:
+
+- For local proof, open the `dev-guardian` URLs in the browser itself. Do not use `curl`, because the guardian login sets an `httpOnly` browser session cookie.
+
 For automation:
 
 - `npm run test:e2e:local` is the current authoritative browser guardrail
