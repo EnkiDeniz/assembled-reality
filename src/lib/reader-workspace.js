@@ -99,9 +99,8 @@ function serializeVoicePreferences(profile) {
   };
 }
 
-async function resolveWorkspaceOwner(userId) {
-  const resolved = await getReaderProfileByUserId(userId);
-  if (!resolved?.profile) {
+function buildWorkspaceOwner(userId, resolved = null) {
+  if (!resolved?.profile?.id) {
     return null;
   }
 
@@ -110,6 +109,16 @@ async function resolveWorkspaceOwner(userId) {
     profileId: resolved.profile.id,
     profile: resolved.profile,
   };
+}
+
+async function resolveWorkspaceOwner(userId, resolved = null) {
+  const preloadedOwner = buildWorkspaceOwner(userId, resolved);
+  if (preloadedOwner) {
+    return preloadedOwner;
+  }
+
+  const nextResolved = await getReaderProfileByUserId(userId);
+  return buildWorkspaceOwner(userId, nextResolved);
 }
 
 async function ensureThreadRecord(owner, documentKey) {
@@ -239,8 +248,12 @@ export async function loadListeningSessionForUser(
 export async function buildResumeSessionSummaryForUser(
   userId,
   documentKeys = [],
+  ownerOverride = null,
 ) {
-  const owner = await resolveWorkspaceOwner(userId);
+  const owner =
+    ownerOverride?.profileId
+      ? ownerOverride
+      : await resolveWorkspaceOwner(userId, ownerOverride);
   if (!owner) return null;
 
   const normalizedDocumentKeys = Array.isArray(documentKeys)

@@ -180,6 +180,12 @@ export default async function WorkspacePage({ searchParams }) {
     redirect("/");
   }
 
+  const readerDataPromise = safeWorkspaceRead(
+    "getReaderProfileByUserId",
+    () => getReaderProfileByUserId(session.user.id),
+    null,
+  );
+
   const resolvedSearchParams = await searchParams;
   const requestedDocumentKey = String(resolvedSearchParams?.document || "").trim();
   const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
@@ -311,17 +317,30 @@ export default async function WorkspacePage({ searchParams }) {
     ].find(Boolean) ||
     documents[0]?.documentKey ||
     PRIMARY_WORKSPACE_DOCUMENT_KEY;
-  const resumeSessionSummary = await safeWorkspaceRead(
-    "buildResumeSessionSummaryForUser",
-    () =>
-      shouldSuppressExampleResume
-        ? null
-        : buildResumeSessionSummaryForUser(
+  const shouldReadResumeSessionSummary =
+    !shouldSuppressExampleResume && !requestedDocumentKey;
+  const initialReaderData = shouldReadResumeSessionSummary
+    ? await readerDataPromise
+    : null;
+  const resumeOwner = initialReaderData?.profile?.id
+    ? {
+        userId: session.user.id,
+        profileId: initialReaderData.profile.id,
+        profile: initialReaderData.profile,
+      }
+    : null;
+  const resumeSessionSummary = shouldReadResumeSessionSummary
+    ? await safeWorkspaceRead(
+        "buildResumeSessionSummaryForUser",
+        () =>
+          buildResumeSessionSummaryForUser(
             session.user.id,
             initialProject?.documentKeys || documents.map((document) => document.documentKey),
+            resumeOwner,
           ),
-    null,
-  );
+        null,
+      )
+    : null;
   const mobileResumeDocumentKey =
     shouldSuppressExampleResume
       ? ""
@@ -399,11 +418,7 @@ export default async function WorkspacePage({ searchParams }) {
         }),
       [],
     ),
-    safeWorkspaceRead(
-      "getReaderProfileByUserId",
-      () => getReaderProfileByUserId(session.user.id),
-      null,
-    ),
+    readerDataPromise,
   ]);
 
   const voiceCatalog = getVoiceCatalog({

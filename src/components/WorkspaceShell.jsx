@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SkipBack, Rewind, Play, Pause, FastForward, SkipForward } from "lucide-react";
 import AssemblyWorkspaceScreen from "@/components/AssemblyWorkspaceScreen";
 import AssemblyLane from "@/components/AssemblyLane";
@@ -4384,6 +4392,8 @@ export default function WorkspaceShell({
   const hydratedProjectDocuments = projectDocuments.map((document) =>
     applyDocumentLogState(documentCache[document.documentKey] || document, documentLogs),
   );
+  const deferredHydratedProjectDocuments = useDeferredValue(hydratedProjectDocuments);
+  const deferredProjectDraftsState = useDeferredValue(projectDraftsState);
   const projectDocumentsByKey = useMemo(
     () =>
       new Map(
@@ -4523,8 +4533,13 @@ export default function WorkspaceShell({
     stagedCount: stagedAiBlocks.length,
   });
   const formalBoxState = useMemo(
-    () => buildFormalBoxState(activeProject, hydratedProjectDocuments, projectDraftsState),
-    [activeProject, hydratedProjectDocuments, projectDraftsState],
+    () =>
+      buildFormalBoxState(
+        activeProject,
+        deferredHydratedProjectDocuments,
+        deferredProjectDraftsState,
+      ),
+    [activeProject, deferredHydratedProjectDocuments, deferredProjectDraftsState],
   );
   const formalSealCheck = useMemo(
     () =>

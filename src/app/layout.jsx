@@ -75,11 +75,14 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }) {
+  const analyticsEnabled =
+    process.env.NODE_ENV === "production" && Boolean(process.env.VERCEL);
+
   return (
     <html lang="en" className={`${mono.variable} ${editorial.variable}`}>
       <body>
         <Providers>{children}</Providers>
-        <Analytics />
+        {analyticsEnabled ? <Analytics /> : null}
       </body>
     </html>
   );
