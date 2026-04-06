@@ -1,9 +1,15 @@
+import { buildWorkspaceBlockProvenanceView } from "@/lib/workspace-provenance";
+
 function getDocumentTitle(documents = [], documentKey = "") {
   return (
     documents.find((document) => document.documentKey === documentKey)?.title ||
     documentKey ||
     "document"
   );
+}
+
+function getBlockProvenance(block, documents = []) {
+  return buildWorkspaceBlockProvenanceView(block, documents);
 }
 
 export default function StagingPanel({
@@ -64,9 +70,17 @@ export default function StagingPanel({
               {stagedBlocks.map((block, index) => (
                 <div key={block.id} className="assembler-staging-panel__row is-staged">
                   <span className="assembler-staging-panel__index">AI</span>
-                  <span className="assembler-staging-panel__text">
-                    {block.plainText || block.text}
-                  </span>
+                  <div className="assembler-staging-panel__main">
+                    <span className="assembler-staging-panel__source">
+                      {getBlockProvenance(block, documents).label}
+                    </span>
+                    <span className="assembler-staging-panel__text">
+                      {block.plainText || block.text}
+                    </span>
+                    <span className="assembler-staging-panel__provenance">
+                      {getBlockProvenance(block, documents).detail}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     className="assembler-tiny-button"
@@ -114,6 +128,9 @@ export default function StagingPanel({
                   <div className="assembler-staging-panel__main">
                     <span className="assembler-staging-panel__source">
                       {getDocumentTitle(documents, block.sourceDocumentKey || block.documentKey)}
+                    </span>
+                    <span className="assembler-staging-panel__provenance">
+                      {getBlockProvenance(block, documents).label} · {getBlockProvenance(block, documents).compact}
                     </span>
                     <span className="assembler-staging-panel__text">
                       {block.plainText || block.text}

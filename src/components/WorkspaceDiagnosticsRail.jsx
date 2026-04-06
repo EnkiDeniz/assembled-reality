@@ -5,6 +5,7 @@ import {
   ShapeGlyph,
   SignalChip,
 } from "@/components/LoegosSystem";
+import { buildWorkspaceBlockProvenanceView } from "@/lib/workspace-provenance";
 
 function joinClasses(...values) {
   return values.filter(Boolean).join(" ");
@@ -50,26 +51,39 @@ function toPercent(value) {
   return Math.max(0, Math.round(numeric));
 }
 
-function DiagnosticsList({ items = [], emptyMessage = "No findings." }) {
+function DiagnosticsList({ items = [], emptyMessage = "No findings.", blockMap = null, documents = [] }) {
   return (
     <div className="loegos-diagnostics__list">
       {items.length ? (
-        items.map((item, index) => (
-          <article key={`${item?.code || "diagnostic"}-${item?.targetId || index}`} className="loegos-diagnostics__item">
-            <div className="loegos-diagnostics__item-head">
-              <SignalChip tone={getDiagnosticTone(item?.level)} subtle>
-                {item?.level || "info"}
-              </SignalChip>
-              {item?.code ? (
-                <span className="loegos-diagnostics__item-code">{item.code}</span>
+        items.map((item, index) => {
+          const targetBlock =
+            blockMap instanceof Map ? blockMap.get(String(item?.targetId || "").trim()) || null : null;
+          const provenance = targetBlock
+            ? buildWorkspaceBlockProvenanceView(targetBlock, documents)
+            : null;
+
+          return (
+            <article key={`${item?.code || "diagnostic"}-${item?.targetId || index}`} className="loegos-diagnostics__item">
+              <div className="loegos-diagnostics__item-head">
+                <SignalChip tone={getDiagnosticTone(item?.level)} subtle>
+                  {item?.level || "info"}
+                </SignalChip>
+                {item?.code ? (
+                  <span className="loegos-diagnostics__item-code">{item.code}</span>
+                ) : null}
+              </div>
+              <p className="loegos-diagnostics__item-message">{item?.message || ""}</p>
+              {provenance ? (
+                <p className="loegos-diagnostics__item-target">
+                  {provenance.label} · {provenance.compact}
+                </p>
               ) : null}
-            </div>
-            <p className="loegos-diagnostics__item-message">{item?.message || ""}</p>
-            {item?.detail ? (
-              <p className="loegos-diagnostics__item-detail">{item.detail}</p>
-            ) : null}
-          </article>
-        ))
+              {item?.detail ? (
+                <p className="loegos-diagnostics__item-detail">{item.detail}</p>
+              ) : null}
+            </article>
+          );
+        })
       ) : (
         <p className="loegos-diagnostics__empty">{emptyMessage}</p>
       )}
@@ -212,6 +226,8 @@ function BuildOutputCard({
 
 export default function WorkspaceDiagnosticsRail({
   formalState = null,
+  blocks = [],
+  documents = [],
   sealCheck = null,
   operateResult = null,
   operatePending = false,
@@ -238,8 +254,15 @@ export default function WorkspaceDiagnosticsRail({
 }) {
   const primaryCard = formalState?.primaryCard || null;
   const hex = primaryCard?.hex || { edges: [], settlementStage: 0, greenEdgeCount: 0 };
-  const blocks = Array.isArray(formalState?.blocks) ? formalState.blocks : [];
-  const depthReady = blocks.some((block) => Number(block?.depth || 0) >= 3);
+  const formalBlocks = Array.isArray(formalState?.blocks) ? formalState.blocks : [];
+  const blockMap = Array.isArray(blocks)
+    ? new Map(
+        blocks
+          .filter(Boolean)
+          .map((block) => [String(block?.id || "").trim(), block]),
+      )
+    : new Map();
+  const depthReady = formalBlocks.some((block) => Number(block?.depth || 0) >= 3);
   const evidenceReady = Boolean(primaryCard?.realityBlockCount > 0);
   const messages = Array.isArray(thread?.messages) ? thread.messages.slice(-3) : [];
   const blockingDiagnostics = uniqueDiagnostics([
@@ -351,6 +374,8 @@ export default function WorkspaceDiagnosticsRail({
         </div>
         <DiagnosticsList
           items={blockingDiagnostics}
+          blockMap={blockMap}
+          documents={documents}
           emptyMessage="No blocking contradictions are active."
         />
       </section>
@@ -362,6 +387,8 @@ export default function WorkspaceDiagnosticsRail({
         </div>
         <DiagnosticsList
           items={parseDiagnostics}
+          blockMap={blockMap}
+          documents={documents}
           emptyMessage="No shadow types or parse warnings are active."
         />
       </section>
@@ -387,7 +414,7 @@ export default function WorkspaceDiagnosticsRail({
         </div>
         <div className="loegos-diagnostics__metrics">
           <BoxMetric label="Trust floor" value={primaryCard?.trustFloor || "L1"} detail={primaryCard?.trustCeiling ? `ceiling ${primaryCard.trustCeiling}` : ""} />
-          <BoxMetric label="Depth ready" value={depthReady ? "yes" : "early"} detail={`${blocks.length} typed block${blocks.length === 1 ? "" : "s"}`} />
+          <BoxMetric label="Depth ready" value={depthReady ? "yes" : "early"} detail={`${formalBlocks.length} typed block${formalBlocks.length === 1 ? "" : "s"}`} />
           <BoxMetric label="In stage" value={clipboardCount + stagedCount} detail="Unresolved assembly state" />
         </div>
         <div className="loegos-diagnostics__edge-list">

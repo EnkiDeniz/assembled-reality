@@ -328,6 +328,12 @@ export default async function WorkspacePage({ searchParams }) {
       : String(resumeSessionSummary?.documentKey || "").trim() ||
         getLatestRealProjectDocumentKey(initialProject, initialProjectDocuments) ||
         "";
+  const desktopResumeDocumentKey =
+    String(requestedDocumentKey || "").trim() ||
+    String(resumeSessionSummary?.documentKey || "").trim() ||
+    String(initialProject?.currentAssemblyDocumentKey || "").trim() ||
+    String(initialAssembleDocumentKey || "").trim() ||
+    "";
 
   const defaultMode =
     requestedMode === "listen" || requestedMode === "assemble"
@@ -342,7 +348,8 @@ export default async function WorkspacePage({ searchParams }) {
     (!shouldAutoOpenExample &&
       !isFirstTime &&
       !requestedDocumentKey &&
-      (!mobileRequest || !mobileResumeDocumentKey));
+      (!mobileRequest || !mobileResumeDocumentKey) &&
+      (mobileRequest || !desktopResumeDocumentKey));
   const initialDocumentCandidates = [
     requestedDocumentKey,
     mobileRequest

@@ -86,12 +86,20 @@ import {
   buildWorkspaceRealityIssues,
   buildRealityInstrumentViewModel,
 } from "@/lib/reality-instrument";
+import {
+  ASSEMBLY_CONFIRMATION_STATUSES,
+  ASSEMBLY_PRIMARY_TAGS,
+} from "@/lib/assembly-architecture";
 import { getPrimaryBoxPhaseForShape, getWorkspaceShapeAndVerb } from "@/lib/loegos-system";
 import {
   buildFormalBoxState,
   buildFormalSealCheck,
   buildFormalSentenceAnnotations,
 } from "@/lib/formal-core/runtime";
+import {
+  buildWorkspaceBlockProvenanceView,
+  buildWorkspaceTransferredBlock,
+} from "@/lib/workspace-provenance";
 import {
   deleteVoiceMemoDraft,
   loadVoiceMemoDraft,
@@ -501,7 +509,45 @@ function buildSevenSuggestions(focusedBlock = null) {
   ];
 }
 
-function buildStagedBlocksFromSevenMessage(document, message) {
+function mapFormalShapeToConfirmationTag(shapeKey = "") {
+  const normalized = String(shapeKey || "").trim().toLowerCase();
+  if (normalized === "aim") return ASSEMBLY_PRIMARY_TAGS.aim;
+  if (normalized === "reality") return ASSEMBLY_PRIMARY_TAGS.evidence;
+  return ASSEMBLY_PRIMARY_TAGS.story;
+}
+
+function getConfirmationStateView(block = null) {
+  const status = String(block?.confirmationStatus || "").trim().toLowerCase();
+  const tag = String(block?.primaryTag || "").trim().toLowerCase();
+
+  if (status === ASSEMBLY_CONFIRMATION_STATUSES.confirmed) {
+    return {
+      label: tag ? `${tag} confirmed` : "confirmed",
+      tone: "green",
+    };
+  }
+
+  if (status === ASSEMBLY_CONFIRMATION_STATUSES.discarded) {
+    return {
+      label: "discarded",
+      tone: "red",
+    };
+  }
+
+  return {
+    label: "draft",
+    tone: "neutral",
+  };
+}
+
+function buildBlockMetaDetail(block = null) {
+  if (!block) return "";
+  const currentTag = String(block?.primaryTag || "").trim().toLowerCase();
+  if (!currentTag || currentTag === ASSEMBLY_PRIMARY_TAGS.unconfirmed) return "";
+  return currentTag;
+}
+
+function buildStagedBlocksFromSevenMessage(document, message, projectKey = "") {
   const text = String(message?.content || "").trim();
   if (!text || !document?.documentKey) {
     return [];
@@ -523,6 +569,15 @@ function buildStagedBlocksFromSevenMessage(document, message) {
     operation: "synthesized",
     isEditable: true,
     isPlayable: true,
+    provenance: {
+      transferKind: "recast",
+      importedFromProjectKey: String(projectKey || "").trim(),
+      importedFromDocumentKey: document.documentKey,
+      importedFromBlockId: "",
+      importedFromTitle: document.title || document.documentKey,
+      carriedAt: new Date().toISOString(),
+      carriedBy: "seven",
+    },
   }));
 
   return normalizeWorkspaceBlocks(blocks, {
@@ -1291,7 +1346,16 @@ function mergeClipboard(existing, incoming) {
   const seen = new Set(existing.map((item) => item.id));
 
   incoming.forEach((item) => {
-    if (seen.has(item.id)) return;
+    if (seen.has(item.id)) {
+      const existingIndex = next.findIndex((entry) => entry.id === item.id);
+      if (existingIndex >= 0 && item?.provenance && !next[existingIndex]?.provenance) {
+        next[existingIndex] = {
+          ...next[existingIndex],
+          provenance: item.provenance,
+        };
+      }
+      return;
+    }
     seen.add(item.id);
     next.push(item);
   });
@@ -3280,17 +3344,20 @@ function formatShapeLabel(shapeKey = "") {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function BlockFormalAnnotations({ block }) {
-  const annotation = useMemo(
+function BlockFormalAnnotations({ block, annotation = null }) {
+  const resolvedAnnotation = useMemo(
     () =>
+      annotation ||
       buildFormalSentenceAnnotations(block?.plainText || block?.text || "", {
         sentenceIdPrefix: block?.id || "block",
         signalHint: getFormalSignalHintForBlock(block),
       }),
-    [block],
+    [annotation, block],
   );
-  const primarySentence = annotation.sentences[0] || null;
-  const diagnostics = Array.isArray(annotation.diagnostics) ? annotation.diagnostics.slice(0, 2) : [];
+  const primarySentence = resolvedAnnotation.sentences[0] || null;
+  const diagnostics = Array.isArray(resolvedAnnotation.diagnostics)
+    ? resolvedAnnotation.diagnostics.slice(0, 2)
+    : [];
 
   if (!primarySentence && diagnostics.length === 0) return null;
 
@@ -3327,11 +3394,14 @@ function BlockFormalAnnotations({ block }) {
 
 function BlockRow({
   block,
+  documents = [],
   isFocused,
   isPlaying,
   isNext,
   isSelected,
   editMode,
+  showNativeActions = false,
+  actionPending = false,
   canDelete = false,
   saveState,
   onFocus,
@@ -3339,8 +3409,30 @@ function BlockRow({
   onDelete,
   onRemove,
   onEdit,
+  onKeepDraft,
+  onAcceptInference,
+  onRecastTag,
+  onOpenSourceWitness,
   blockRef,
 }) {
+  const [recastOpen, setRecastOpen] = useState(false);
+  const annotation = useMemo(
+    () =>
+      buildFormalSentenceAnnotations(block?.plainText || block?.text || "", {
+        sentenceIdPrefix: block?.id || "block",
+        signalHint: getFormalSignalHintForBlock(block),
+      }),
+    [block],
+  );
+  const primarySentence = annotation.sentences[0] || null;
+  const provenanceView = useMemo(
+    () => buildWorkspaceBlockProvenanceView(block, documents),
+    [block, documents],
+  );
+  const confirmationState = useMemo(() => getConfirmationStateView(block), [block]);
+  const currentTag = buildBlockMetaDetail(block);
+  const controlsDisabled = actionPending || saveState === "saving";
+
   return (
     <article
       ref={blockRef}
@@ -3430,7 +3522,87 @@ function BlockRow({
         {block.author === "ai" ? (
           <span className="assembler-block__badge">AI-GENERATED · {block.operation}</span>
         ) : null}
-        <BlockFormalAnnotations block={block} />
+        <div className="assembler-block__runtime">
+          <div className="assembler-block__runtime-row">
+            <SignalChip tone={confirmationState.tone} subtle>
+              {confirmationState.label}
+            </SignalChip>
+            {currentTag ? (
+              <span className="assembler-block__runtime-detail">working tag · {currentTag}</span>
+            ) : null}
+          </div>
+          <div className="assembler-block__runtime-row">
+            <span className="assembler-block__runtime-label">{provenanceView.label}</span>
+            <span className="assembler-block__runtime-detail">{provenanceView.detail}</span>
+          </div>
+        </div>
+        <BlockFormalAnnotations block={block} annotation={annotation} />
+        {showNativeActions ? (
+          <div className="assembler-block__actions">
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={() => onKeepDraft?.(block)}
+              disabled={controlsDisabled}
+            >
+              Keep draft
+            </button>
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={() => onAcceptInference?.(block, primarySentence)}
+              disabled={controlsDisabled || !primarySentence?.shapeKey}
+            >
+              Accept read
+            </button>
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={() => setRecastOpen((value) => !value)}
+              disabled={controlsDisabled}
+            >
+              Recast tag
+            </button>
+            <button
+              type="button"
+              className={`assembler-tiny-button ${isSelected ? "is-active" : ""}`}
+              onClick={() => (isSelected ? onRemove(block.id) : onAdd(block))}
+              disabled={controlsDisabled}
+            >
+              {isSelected ? "Remove from weld" : "Stage into weld"}
+            </button>
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={() => onOpenSourceWitness?.(block)}
+              disabled={controlsDisabled || !String(block?.sourceDocumentKey || block?.documentKey || "").trim()}
+            >
+              Open witness
+            </button>
+          </div>
+        ) : null}
+        {showNativeActions && recastOpen ? (
+          <div className="assembler-block__recast">
+            {[
+              ["Aim", ASSEMBLY_PRIMARY_TAGS.aim],
+              ["Evidence", ASSEMBLY_PRIMARY_TAGS.evidence],
+              ["Story", ASSEMBLY_PRIMARY_TAGS.story],
+            ].map(([label, tag]) => (
+              <button
+                key={tag}
+                type="button"
+                className={`assembler-tiny-button ${currentTag === tag ? "is-active" : ""}`}
+                onClick={() => {
+                  setRecastOpen(false);
+                  onRecastTag?.(block, tag);
+                }}
+                disabled={controlsDisabled}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -3748,7 +3920,15 @@ function MobileComposeSheet({
               {stagedBlocks.map((block, index) => (
                 <div key={block.id} className="assembler-mobile-clipboard__row is-staged">
                   <span className="assembler-mobile-clipboard__source">7</span>
-                  <span className="assembler-mobile-clipboard__text">{block.plainText || block.text}</span>
+                  <div className="assembler-mobile-clipboard__main">
+                    <span className="assembler-mobile-clipboard__source">
+                      {buildWorkspaceBlockProvenanceView(block, documents).label}
+                    </span>
+                    <span className="assembler-mobile-clipboard__text">{block.plainText || block.text}</span>
+                    <span className="assembler-mobile-clipboard__detail">
+                      {buildWorkspaceBlockProvenanceView(block, documents).detail}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     className="assembler-tiny-button"
@@ -3778,6 +3958,9 @@ function MobileComposeSheet({
                       {getDocumentTitle(block.sourceDocumentKey || block.documentKey)}
                     </span>
                     <span className="assembler-mobile-clipboard__text">{block.plainText || block.text}</span>
+                    <span className="assembler-mobile-clipboard__detail">
+                      {buildWorkspaceBlockProvenanceView(block, documents).label} · {buildWorkspaceBlockProvenanceView(block, documents).compact}
+                    </span>
                   </div>
                   <div className="assembler-mobile-clipboard__actions">
                     <button
@@ -4123,6 +4306,7 @@ export default function WorkspaceShell({
   const [dismissedInstrumentKeys, setDismissedInstrumentKeys] = useState({});
   const [lastModeByProjectKey, setLastModeByProjectKey] = useState({});
   const [blockSaveStates, setBlockSaveStates] = useState({});
+  const [blockActionPendingId, setBlockActionPendingId] = useState("");
   const [projectDraftsState, setProjectDraftsState] = useState(projectDrafts);
   const [projectActionPending, setProjectActionPending] = useState("");
   const [boxManagementOpen, setBoxManagementOpen] = useState(false);
@@ -4199,6 +4383,13 @@ export default function WorkspaceShell({
   const projectDocuments = getProjectDocuments(documentsState, activeProject);
   const hydratedProjectDocuments = projectDocuments.map((document) =>
     applyDocumentLogState(documentCache[document.documentKey] || document, documentLogs),
+  );
+  const projectDocumentsByKey = useMemo(
+    () =>
+      new Map(
+        hydratedProjectDocuments.map((document) => [String(document?.documentKey || "").trim(), document]),
+      ),
+    [hydratedProjectDocuments],
   );
   const realProjectSourceDocuments = listRealSourceDocuments(hydratedProjectDocuments);
   const latestRealSourceDocument =
@@ -5192,6 +5383,7 @@ export default function WorkspaceShell({
           <BlockRow
             key={block.id}
             block={block}
+            documents={hydratedProjectDocuments}
             blockRef={(element) => {
               blockRefs.current[block.id] = element;
             }}
@@ -5200,6 +5392,8 @@ export default function WorkspaceShell({
             isNext={block.id === nextBlock?.id}
             isSelected={clipboard.some((item) => item.id === block.id)}
             editMode={desktopEditorMode}
+            showNativeActions={showDesktopIde}
+            actionPending={blockActionPendingId === block.id}
             canDelete={desktopEditorMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
             saveState={blockSaveStates[block.id] || ""}
             onFocus={focusBlock}
@@ -5207,6 +5401,10 @@ export default function WorkspaceShell({
             onDelete={(blockId) => void deleteBlock(blockId)}
             onRemove={removeBlockFromClipboard}
             onEdit={editBlock}
+            onKeepDraft={(targetBlock) => void resetBlockToDraft(targetBlock)}
+            onAcceptInference={(targetBlock, sentence) => void acceptBlockInference(targetBlock, sentence)}
+            onRecastTag={(targetBlock, primaryTag) => void confirmBlockWorkingTag(targetBlock, primaryTag)}
+            onOpenSourceWitness={(targetBlock) => void openBlockSourceWitness(targetBlock)}
           />
         ))}
       </div>
@@ -7692,22 +7890,6 @@ export default function WorkspaceShell({
     });
   }
 
-  function openMobileSeedSurface() {
-    if (!currentSeedDocument?.documentKey && realProjectSourceDocuments.length) {
-      void handleSelectBoxPhase(BOX_PHASES.create);
-      return;
-    }
-
-    if (!currentSeedDocument?.documentKey) {
-      openCurrentBoxHome(activeProjectKey);
-      return;
-    }
-
-    void enterWorkspace(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
-      phase: BOX_PHASES.create,
-    });
-  }
-
   function openReceiptsSurface() {
     const targetDocumentKey =
       currentSeedDocument?.documentKey ||
@@ -9390,7 +9572,17 @@ export default function WorkspaceShell({
       appendLog("PASTED", `${result.sourceDocument.title} staged from clipboard`, {
         documentKey: result.sourceDocument.documentKey,
       });
-      setClipboard((previous) => mergeClipboard(previous, pastedBlocks));
+      setClipboard((previous) =>
+        mergeClipboard(
+          previous,
+          pastedBlocks.map((block) =>
+            carryBlock(block, {
+              carriedBy: "human",
+              transferKind: "clipboard",
+            }),
+          ),
+        ),
+      );
       setLaunchpadOpen(false);
       setAiOpen(false);
       setBoxPhase(BOX_PHASES.create);
@@ -9420,11 +9612,37 @@ export default function WorkspaceShell({
 
   pasteIntoWorkspaceRef.current = pasteIntoWorkspace;
 
-  function addBlockToClipboard(block) {
-    const alreadySelected = clipboard.some((item) => item.id === block.id);
-    if (alreadySelected) return;
+  function buildNextDocumentFromBlocks(document, nextBlocks) {
+    return {
+      ...document,
+      blocks: nextBlocks,
+      rawMarkdown: buildWorkspaceMarkdown({
+        title: document.title,
+        subtitle: document.subtitle || "",
+        blocks: nextBlocks,
+        sectionTitle: document.isAssembly ? "Seed" : "Document",
+      }),
+    };
+  }
 
-    setClipboard((previous) => mergeClipboard(previous, [block]));
+  function carryBlock(block, { carriedBy = "human", transferKind = "" } = {}) {
+    return buildWorkspaceTransferredBlock(block, {
+      documents: projectDocumentsByKey,
+      projectKey: activeProjectKey,
+      carriedBy,
+      transferKind,
+    });
+  }
+
+  function addBlockToClipboard(block) {
+    const carriedBlock = carryBlock(block);
+    const alreadySelected = clipboard.some((item) => item.id === block.id);
+    if (alreadySelected) {
+      setClipboard((previous) => mergeClipboard(previous, [carriedBlock]));
+      return;
+    }
+
+    setClipboard((previous) => mergeClipboard(previous, [carriedBlock]));
     appendLog("SELECTED", `${activeDocument.title} — block ${block.sourcePosition + 1} → staging`, {
       documentKey: activeDocument.documentKey,
       blockIds: [block.id],
@@ -9437,6 +9655,119 @@ export default function WorkspaceShell({
 
   function removeClipboardIndex(index) {
     setClipboard((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  async function resetBlockToDraft(block) {
+    if (!activeDocument?.isEditable || !block?.id) return;
+
+    const nextBlocks = activeDocument.blocks.map((entry) =>
+      entry.id === block.id
+        ? {
+            ...entry,
+            primaryTag: ASSEMBLY_PRIMARY_TAGS.unconfirmed,
+            secondaryTag: "",
+            domain: "",
+            confirmationStatus: ASSEMBLY_CONFIRMATION_STATUSES.unconfirmed,
+            resolvedAt: null,
+            discardedAt: null,
+            updatedAt: new Date().toISOString(),
+          }
+        : entry,
+    );
+    const nextDocument = buildNextDocumentFromBlocks(activeDocument, nextBlocks);
+
+    setBlockActionPendingId(block.id);
+    upsertDocument(nextDocument);
+    appendLog("DRAFT", `${activeDocument.title} — block ${block.sourcePosition + 1} kept as draft`, {
+      documentKey: activeDocument.documentKey,
+      blockIds: [block.id],
+    });
+
+    try {
+      await saveDocument(nextDocument);
+      setFeedback(`Block ${block.sourcePosition + 1} is back in draft state.`, "success");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not keep this block as draft.", "error");
+    } finally {
+      setBlockActionPendingId((current) => (current === block.id ? "" : current));
+    }
+  }
+
+  async function confirmBlockWorkingTag(block, primaryTag = ASSEMBLY_PRIMARY_TAGS.story) {
+    if (!block?.id || !activeProjectKey || confirmationPending) return;
+
+    const resolvedPrimaryTag = String(primaryTag || ASSEMBLY_PRIMARY_TAGS.story).trim().toLowerCase();
+    const resolvedDomain =
+      resolvedPrimaryTag === ASSEMBLY_PRIMARY_TAGS.story
+        ? block?.suggestedDomain || block?.domain || "vision"
+        : resolvedPrimaryTag === ASSEMBLY_PRIMARY_TAGS.evidence
+          ? block?.suggestedDomain || block?.domain || "completion"
+          : block?.suggestedDomain || block?.domain || "vision";
+
+    setBlockActionPendingId(block.id);
+    setConfirmationPending(true);
+
+    try {
+      const response = await fetch("/api/workspace/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: activeProjectKey,
+          documentKey: activeDocument.documentKey,
+          blockId: block.id,
+          action: "confirm",
+          primaryTag: resolvedPrimaryTag,
+          domain: resolvedDomain,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.document) {
+        throw new Error(payload?.error || "Could not confirm this block.");
+      }
+
+      upsertDocument(payload.document, { replaceLogs: true });
+      setFeedback(
+        `Block ${block.sourcePosition + 1} now carries ${resolvedPrimaryTag}.`,
+        "success",
+      );
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not confirm this block.", "error");
+    } finally {
+      setConfirmationPending(false);
+      setBlockActionPendingId((current) => (current === block.id ? "" : current));
+    }
+  }
+
+  async function acceptBlockInference(block, sentence) {
+    const shapeKey = sentence?.shapeKey || "";
+    if (!shapeKey) {
+      setFeedback("Seven could not infer a stable shape for this block yet.", "error");
+      return;
+    }
+
+    await confirmBlockWorkingTag(block, mapFormalShapeToConfirmationTag(shapeKey));
+  }
+
+  async function openBlockSourceWitness(block) {
+    const targetDocumentKey = String(
+      block?.sourceDocumentKey ||
+        block?.provenance?.importedFromDocumentKey ||
+        block?.documentKey ||
+        "",
+    ).trim();
+
+    if (!targetDocumentKey) {
+      setFeedback("No witness document is attached to this block yet.", "error");
+      return;
+    }
+
+    await loadDocument(targetDocumentKey, {
+      mode: WORKSPACE_MODES.assemble,
+      phase: BOX_PHASES.think,
+    });
   }
 
   async function editBlock(blockId, nextText) {
@@ -9476,16 +9807,7 @@ export default function WorkspaceShell({
           }
         : block,
     );
-    const nextDocument = {
-      ...activeDocument,
-      blocks: nextBlocks,
-      rawMarkdown: buildWorkspaceMarkdown({
-        title: activeDocument.title,
-        subtitle: activeDocument.subtitle || "",
-        blocks: nextBlocks,
-        sectionTitle: activeDocument.isAssembly ? "Seed" : "Document",
-        }),
-    };
+    const nextDocument = buildNextDocumentFromBlocks(activeDocument, nextBlocks);
 
     setBlockSaveStates((previous) => ({
       ...previous,
@@ -10195,7 +10517,11 @@ export default function WorkspaceShell({
   }
 
   function stageSevenMessage(message) {
-    const nextBlocks = buildStagedBlocksFromSevenMessage(sevenContextDocument, message);
+    const nextBlocks = buildStagedBlocksFromSevenMessage(
+      sevenContextDocument,
+      message,
+      activeProjectKey,
+    );
     if (!nextBlocks.length) {
       setFeedback("Seven didn't return anything you can stage.", "error");
       return;
@@ -10208,12 +10534,17 @@ export default function WorkspaceShell({
   function acceptStagedBlock(index) {
     const block = stagedAiBlocks[index];
     if (!block) return;
-    setClipboard((previous) => mergeClipboard(previous, [block]));
+    setClipboard((previous) => mergeClipboard(previous, [carryBlock(block, { carriedBy: "seven" })]));
     setStagedAiBlocks((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
   }
 
   function acceptAllStagedBlocks() {
-    setClipboard((previous) => mergeClipboard(previous, stagedAiBlocks));
+    setClipboard((previous) =>
+      mergeClipboard(
+        previous,
+        stagedAiBlocks.map((block) => carryBlock(block, { carriedBy: "seven" })),
+      ),
+    );
     setStagedAiBlocks([]);
   }
 
@@ -10607,6 +10938,8 @@ export default function WorkspaceShell({
   const desktopIdeDiagnostics = (
     <WorkspaceDiagnosticsRail
       formalState={workspaceIdeState.diagnosticsState.formalBoxState}
+      blocks={blocks}
+      documents={hydratedProjectDocuments}
       sealCheck={workspaceIdeState.diagnosticsState.formalSealCheck}
       operateResult={workspaceIdeState.diagnosticsState.operateResult}
       operatePending={workspaceIdeState.diagnosticsState.operatePending}

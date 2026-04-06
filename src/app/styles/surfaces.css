@@ -917,6 +917,14 @@
   line-height: 1.5;
 }
 
+.assembler-staging-panel__provenance {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 1040px) {
   .assembler-project-home__masthead,
   .assembler-project-home__layout {

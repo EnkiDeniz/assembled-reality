@@ -1031,6 +1031,7 @@
 .loegos-diagnostics__detail,
 .loegos-diagnostics__empty,
 .loegos-diagnostics__item-detail,
+.loegos-diagnostics__item-target,
 .loegos-diagnostics__sentence-detail,
 .loegos-diagnostics__build-detail,
 .loegos-diagnostics__check-detail,
@@ -1091,6 +1092,15 @@
   margin: 0;
   color: var(--loegos-text-primary);
   line-height: 1.55;
+}
+
+.loegos-diagnostics__item-target {
+  margin: 0;
+  color: var(--loegos-text-soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .loegos-diagnostics__convergence {

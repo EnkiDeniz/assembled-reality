@@ -202,6 +202,12 @@ main {
   color: var(--red);
 }
 
+.assembler-tiny-button.is-active {
+  border-color: rgba(94, 167, 255, 0.22);
+  background: rgba(94, 167, 255, 0.1);
+  color: var(--white);
+}
+
 .terminal-input,
 .terminal-textarea {
   width: 100%;
@@ -2697,6 +2703,38 @@ main {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.assembler-block__runtime {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.assembler-block__runtime-row,
+.assembler-block__actions,
+.assembler-block__recast {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assembler-block__runtime-label,
+.assembler-block__runtime-detail {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.assembler-block__runtime-detail {
+  color: var(--muted);
+}
+
+.assembler-block__actions,
+.assembler-block__recast {
+  margin-top: 2px;
+}
+
 .assembler-block__formal-head,
 .assembler-block__formal-note {
   display: flex;
@@ -4486,6 +4524,14 @@ main {
   color: var(--text);
   font-size: 13px;
   line-height: 1.55;
+}
+
+.assembler-mobile-clipboard__detail {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .assembler-mobile-clipboard__actions {

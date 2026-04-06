@@ -3,6 +3,7 @@ import {
   normalizeAssemblyBlockFields,
 } from "@/lib/assembly-architecture";
 import { WORKSPACE_LOG_ACTION_COLORS } from "@/lib/design-tokens";
+import { normalizeWorkspaceBlockProvenance } from "@/lib/workspace-provenance";
 
 const BLOCK_KIND_MAP = {
   heading: "heading",
@@ -132,6 +133,7 @@ export function normalizeWorkspaceBlock(input, options = {}) {
     sectionLabel: input?.sectionLabel || "",
     sectionTitle: input?.sectionTitle || "",
     sourceTitle: cleanDisplayTitle(input?.sourceTitle || ""),
+    provenance: normalizeWorkspaceBlockProvenance(input?.provenance),
     ...architectureFields,
   };
 }

@@ -258,6 +258,7 @@ function buildStoredWorkspaceMeta({
       sectionLabel: block.sectionLabel,
       sectionTitle: block.sectionTitle,
       sourceTitle: block.sourceTitle,
+      provenance: block.provenance,
       primaryTag: block.primaryTag,
       secondaryTag: block.secondaryTag,
       domain: block.domain,
