@@ -10,6 +10,13 @@ For the founder-specific "whoa" session on a real repo document, use:
 
 - [Founder Wow Proof Session](../Founder%20Wow%20Proof%20Session/Founder%20Wow%20Proof%20Session.md)
 
+The current founder-facing path is now intentionally source-first:
+
+- start on the calm starter
+- add one source
+- confirm the imported source opens in the raw source view
+- only then move to `Next: Shape seed`
+
 ## Golden Path
 
 1. Open the seeded workspace.

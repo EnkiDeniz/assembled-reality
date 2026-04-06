@@ -38,16 +38,22 @@ Current note:
 ## Flow
 
 1. Open or create the `Founder Wow Proof` box.
-2. Upload the primary markdown file through the real markdown/source intake path.
-3. Confirm the file appears as a source in the box.
-4. Ensure a live seed exists for the box.
-5. Open the current seed document as the active workbench surface.
-6. Run inline Operate.
-7. Let the app auto-focus the first meaningful finding.
-8. Read the selected block, the inline evidence teaser, and the synchronized inspect panel together.
+2. From the calm starter, choose `Add source`.
+3. Upload the primary markdown file through the real markdown/source intake path.
+4. Confirm the imported source opens in the raw source view, not the dense box/runtime.
+5. Read the text, try listen, and confirm `Next: Shape seed` is the obvious next move.
+6. Use `Next: Shape seed` to enter the real seed flow.
+7. Ensure a live seed exists and open the current seed document as the active workbench surface.
+8. Run inline Operate.
+9. Let the app auto-focus the first meaningful finding.
+10. Read the selected block, the inline evidence teaser, and the synchronized inspect panel together.
 
 ## Expected Visible States
 
+- [ ] The app starts from the calm starter rather than the dense box/runtime.
+- [ ] The imported source opens in a dedicated source view with raw text clearly visible.
+- [ ] The source view keeps playback controls on the same screen.
+- [ ] `Next: Shape seed` is visible and understandable without guessing.
 - [ ] The app lands on the current seed before the inline findings matter.
 - [ ] At least one block is auto-selected after Operate completes.
 - [ ] The selected block is scrolled into view.

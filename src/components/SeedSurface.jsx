@@ -6,6 +6,7 @@ export default function SeedSurface({
   seedViewModel,
   activeDocument = null,
   currentSeedDocument = null,
+  sourceFirstEntry = null,
   suggestion = null,
   suggestionPending = false,
   onOpenSeed,
@@ -16,6 +17,7 @@ export default function SeedSurface({
   onEditSuggestion,
   onDismissSuggestion,
   onDismissRerouteContext,
+  onReturnToSource,
   isMobileLayout = false,
   children,
 }) {
@@ -27,6 +29,34 @@ export default function SeedSurface({
     (activeDocument?.isAssembly || activeDocument?.documentType === "assembly");
   return (
     <section className="assembler-phase assembler-phase--create">
+      {sourceFirstEntry ? (
+        <section
+          className="assembler-seed-surface__starter-guide"
+          data-testid="workspace-shape-seed-guide"
+        >
+          <div className="assembler-seed-surface__starter-guide-copy">
+            <span className="assembler-seed-surface__eyebrow">Next step</span>
+            <strong>Shape the first seed.</strong>
+            <p>
+              Turn <strong>{sourceFirstEntry.sourceTitle || "this source"}</strong> into the
+              first working seed. Start in plain language, then refine it once the seed exists.
+            </p>
+          </div>
+          <div className="assembler-seed-surface__starter-guide-actions">
+            {onReturnToSource ? (
+              <button
+                type="button"
+                className="terminal-button"
+                data-testid="workspace-shape-seed-back-to-source"
+                onClick={onReturnToSource}
+              >
+                Back to source
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       <header className="assembler-phase__header assembler-phase__header--seed">
         <div className="assembler-phase__copy">
           <span className="assembler-phase__eyebrow">Seed</span>
@@ -110,9 +140,11 @@ export default function SeedSurface({
               {currentSeedDocument?.title || "No active seed yet"}
             </h3>
             <p className="assembler-phase__empty-text">
-              {currentSeedDocument
-                ? "Open seed."
-                : "Stage. Shape. Seal."}
+              {sourceFirstEntry
+                ? "Start by shaping the source into the first seed draft. Keep it simple and concrete."
+                : currentSeedDocument
+                  ? "Open seed."
+                  : "Stage. Shape. Seal."}
             </p>
           </div>
 

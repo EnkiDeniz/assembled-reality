@@ -20,6 +20,7 @@ async function main() {
     receiptSealController,
     operateOverlayController,
     workbench,
+    seedSurface,
     packageJson,
     localE2eRunner,
     playwrightConfig,
@@ -43,6 +44,7 @@ async function main() {
     read("src/components/workspace/useReceiptSealController.js"),
     read("src/components/workspace/useOperateOverlayController.js"),
     read("src/components/workspace/WorkspaceDocumentWorkbench.jsx"),
+    read("src/components/SeedSurface.jsx"),
     read("package.json"),
     read("scripts/run-phase1-e2e-local.mjs"),
     read("playwright.config.mjs"),
@@ -90,8 +92,15 @@ async function main() {
   assert.match(workspaceShell, /WorkspaceStarter/);
   assert.match(workspaceShell, /starterScopedProjectKey/);
   assert.match(workspaceShell, /showStarterSourceSurface/);
+  assert.match(workspaceShell, /starterSeedEntrySourceKey/);
   assert.match(workspaceShell, /openStarterSourceIntake/);
   assert.match(workspaceShell, /openStarterImportedSource/);
+  assert.match(workspaceShell, /openStarterSeedFlow/);
+  assert.match(workspaceShell, /returnToStarterSourceView/);
+  assert.match(workspaceShell, /workspace-source-view/);
+  assert.match(workspaceShell, /workspace-source-intake/);
+  assert.match(workspaceShell, /workspace-source-next-shape-seed/);
+  assert.match(workspaceShell, /workspace-source-open-box/);
   assert.match(workspaceShell, /pendingInlineOperateSeedOpen/);
   assert.match(workspaceShell, /Switching to the live seed so inline Operate can reveal findings/);
   assert.match(workspaceShell, /DesktopSessionActions/);
@@ -116,6 +125,8 @@ async function main() {
   assert.match(workbench, /workspace-document-workbench/);
   assert.match(workbench, /workspace-finding-inspect/);
   assert.match(workbench, /workspace-selected-finding-evidence-preview/);
+  assert.match(seedSurface, /workspace-shape-seed-guide/);
+  assert.match(seedSurface, /workspace-shape-seed-back-to-source/);
   assert.match(receiptSealDialog, /receipt-seal-blocked-reason/);
   assert.match(receiptSealDialog, /data-draft-id/);
   assert.match(diagnosticsRail, /workspace-latest-receipt-status/);
@@ -141,9 +152,11 @@ async function main() {
   assert.match(e2eSmoke, /workspace-latest-receipt-status/);
   assert.match(e2eSmoke, /Acknowledge the attested overrides/);
   assert.match(proofRunbook, /Founder Wow Proof Session/);
+  assert.match(proofRunbook, /source view/i);
   assert.match(founderWowRunbook, /Founder Wow Proof/);
   assert.match(founderWowRunbook, /problem-statement-editor-first\.md/);
   assert.match(founderWowRunbook, /AR Version 2 Build Plan\.md/);
+  assert.match(founderWowRunbook, /Next: Shape seed/);
 
   console.log("phase1-smoke-check: ok");
 }

@@ -1650,6 +1650,7 @@ function MobileSheetAction({
 function MobileSourceSheet({
   open = false,
   intent = "switch",
+  sourceFirst = false,
   boxTitle = "Untitled Box",
   activeDocument = null,
   currentSeedDocument = null,
@@ -1672,6 +1673,7 @@ function MobileSourceSheet({
 
   const normalizedLink = extractSingleUrlText(manualLink);
   const title = intent === "add" ? "Add source" : "Switch source";
+  const sourceFirstIntake = sourceFirst && intent === "add";
   const activeSeedDocument =
     activeDocument?.documentKey && activeDocument.documentKey === currentSeedDocument?.documentKey
       ? currentSeedDocument
@@ -1683,7 +1685,7 @@ function MobileSourceSheet({
   );
   const summaryEntries = [];
 
-  if (activeDocument?.documentKey) {
+  if (!sourceFirstIntake && activeDocument?.documentKey) {
     summaryEntries.push({
       key: `summary-${activeDocument.documentKey}`,
       eyebrow: activeSeedDocument ? "Current seed" : "Current",
@@ -1702,7 +1704,11 @@ function MobileSourceSheet({
     });
   }
 
-  if (currentSeedDocument?.documentKey && currentSeedDocument.documentKey !== activeDocument?.documentKey) {
+  if (
+    !sourceFirstIntake &&
+    currentSeedDocument?.documentKey &&
+    currentSeedDocument.documentKey !== activeDocument?.documentKey
+  ) {
     summaryEntries.push({
       key: `summary-${currentSeedDocument.documentKey}`,
       eyebrow: "Seed",
@@ -1824,7 +1830,10 @@ function MobileSourceSheet({
   return (
     <div className="assembler-sheet assembler-sheet--workspace is-open">
       <div className="assembler-sheet__backdrop" onClick={onClose} aria-hidden="true" />
-      <div className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--mobile-source">
+      <div
+        className="assembler-sheet__panel assembler-sheet__panel--workspace assembler-sheet__panel--mobile-source"
+        data-testid={sourceFirstIntake ? "workspace-source-intake" : undefined}
+      >
         <div className="assembler-sheet__header">
           <div className="assembler-home__copy">
             <span className="assembler-sheet__eyebrow">{boxTitle}</span>
@@ -1858,7 +1867,7 @@ function MobileSourceSheet({
           ) : null}
 
           {intent === "add" ? addSection : switchSection}
-          {intent === "add" ? switchSection : addSection}
+          {!sourceFirstIntake ? (intent === "add" ? switchSection : addSection) : null}
         </div>
       </div>
     </div>
@@ -2213,6 +2222,7 @@ function ListenSurface({
   onOpenLog,
   onExportDocument,
   starterNextStepVisible = false,
+  sourceFirstView = false,
   onOpenBox,
   onNextShapeSeed,
   isMobileLayout = false,
@@ -2221,7 +2231,7 @@ function ListenSurface({
 
   return (
     <>
-      {!isMobileLayout ? (
+      {!isMobileLayout && !sourceFirstView ? (
         <div className="assembler-listen__chrome">
           <div className="assembler-listen__topbar">
             <button
@@ -2321,10 +2331,27 @@ function ListenSurface({
       ) : null}
 
       <section className="assembler-surface assembler-surface--listen">
-        <div className="assembler-listen">
-          {activeDocument.subtitle || activeDocumentWarning || instrumentViewModel ? (
-            <div className="assembler-listen__lead">
+        <div
+          className={`assembler-listen ${sourceFirstView ? "is-source-first" : ""}`}
+          data-testid={sourceFirstView ? "workspace-source-view" : undefined}
+        >
+          {sourceFirstView ? (
+            <div className="assembler-listen__source-intro">
+              <span className="assembler-listen__source-eyebrow">Source</span>
+              <h1 className="assembler-listen__source-title">{activeDocument.title}</h1>
+              <p className="assembler-listen__source-copy">
+                This is the source as captured. Read it as-is, listen to it,
+                then shape it into something Lœgos can work with.
+              </p>
               {activeDocument.subtitle ? (
+                <p className="assembler-listen__source-subtitle">{activeDocument.subtitle}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {(!sourceFirstView && activeDocument.subtitle) || activeDocumentWarning || instrumentViewModel ? (
+            <div className="assembler-listen__lead">
+              {!sourceFirstView && activeDocument.subtitle ? (
                 <p className="assembler-listen__subtitle">{activeDocument.subtitle}</p>
               ) : null}
               {instrumentViewModel ? (
@@ -2345,20 +2372,18 @@ function ListenSurface({
               data-testid="workspace-starter-source-next"
             >
               <div className="assembler-listen__starter-next-copy">
-                <span className="assembler-listen__starter-next-eyebrow">
-                  Imported source
-                </span>
-                <strong>This is the source as captured.</strong>
+                <span className="assembler-listen__starter-next-eyebrow">Next step</span>
+                <strong>Shape the first seed from this source.</strong>
                 <p>
-                  Read it, listen to it, and keep it in its raw form first. When
-                  you are ready, move into seed shaping.
+                  Keep the source raw here. The next step turns it into something
+                  you can work with, inspect, and eventually Operate on.
                 </p>
               </div>
               <div className="assembler-listen__starter-next-actions">
                 <button
                   type="button"
                   className="terminal-button is-primary"
-                  data-testid="workspace-starter-next-shape-seed"
+                  data-testid="workspace-source-next-shape-seed"
                   onClick={() => onNextShapeSeed?.()}
                 >
                   Next: Shape seed
@@ -2366,7 +2391,7 @@ function ListenSurface({
                 <button
                   type="button"
                   className="terminal-button"
-                  data-testid="workspace-starter-open-box"
+                  data-testid="workspace-source-open-box"
                   onClick={() => onOpenBox?.()}
                 >
                   Open box
@@ -2654,6 +2679,7 @@ function DeleteDocumentDialog({
 function DropAnythingSheet({
   open = false,
   pending = false,
+  sourceFirst = false,
   onClose,
   onUpload,
   onPhoto,
@@ -2681,6 +2707,7 @@ function DropAnythingSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="drop-anything-title"
+        data-testid={sourceFirst ? "workspace-source-intake" : undefined}
       >
         <div className="assembler-image-chooser__header">
           <div className="assembler-image-chooser__copy">
@@ -4625,6 +4652,7 @@ export default function WorkspaceShell({
   const [voiceMemoDraft, setVoiceMemoDraft] = useState(null);
   const [starterIntakeActive, setStarterIntakeActive] = useState(false);
   const [starterSourceDocumentKey, setStarterSourceDocumentKey] = useState("");
+  const [starterSeedEntrySourceKey, setStarterSeedEntrySourceKey] = useState("");
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
@@ -4702,6 +4730,12 @@ export default function WorkspaceShell({
     getOperateAssemblyDocument(activeProject, hydratedProjectDocuments, activeDocumentKey) ||
     null;
   const currentSeedDocument = currentAssemblyDocument;
+  const starterSeedEntryDocument =
+    String(starterSeedEntrySourceKey || "").trim()
+      ? projectDocumentsByKey.get(String(starterSeedEntrySourceKey || "").trim()) ||
+        documentCache[String(starterSeedEntrySourceKey || "").trim()] ||
+        null
+      : null;
   const operateState = listOperateIncludedDocuments(activeProject, hydratedProjectDocuments, {
     preferredDocumentKey: activeDocumentKey,
     includeAssembly: true,
@@ -5164,6 +5198,9 @@ export default function WorkspaceShell({
     Boolean(starterSourceDocumentKey) &&
     starterSourceDocumentKey === activeDocumentKey &&
     isListenMode;
+  const showStarterSeedEntry =
+    Boolean(starterSeedEntrySourceKey) &&
+    boxPhase === BOX_PHASES.create;
   const showDesktopUnifiedShell =
     !isMobileLayout &&
     !launchpadOpen &&
@@ -5901,10 +5938,17 @@ export default function WorkspaceShell({
     });
   }
 
-  const workbenchEmptyTitle = showingInlineOperateDocument
+  const sourceFirstSeedEntryActive =
+    showStarterSeedEntry &&
+    workspaceIdeState.editorState.blockCount === 0;
+  const workbenchEmptyTitle = sourceFirstSeedEntryActive
+    ? "Shape the first seed."
+    : showingInlineOperateDocument
     ? "Current seed is empty."
     : "Current document is empty.";
-  const workbenchEmptyDetail = showingInlineOperateDocument
+  const workbenchEmptyDetail = sourceFirstSeedEntryActive
+    ? `Start with the clearest line from ${starterSeedEntryDocument?.title || "the source"}, then shape it into the first seed draft.`
+    : showingInlineOperateDocument
     ? "Add or shape draft text, then run inline Operate."
     : currentSeedDocument?.title
       ? `This surface has no visible blocks. Compiler state still follows ${currentSeedDocument.title}.`
@@ -5926,12 +5970,14 @@ export default function WorkspaceShell({
               {workspaceIdeState.editorState.blockCount} block
               {workspaceIdeState.editorState.blockCount === 1 ? "" : "s"}
             </SignalChip>
-            <SignalChip
-              tone={formalSealCheck?.canSeal ? "clear" : formalBoxState?.hardErrorCount ? "alert" : "active"}
-              subtle
-            >
-              {formalBoxState?.primaryCard?.convergencePercent || 0}% convergence
-            </SignalChip>
+            {!sourceFirstSeedEntryActive ? (
+              <SignalChip
+                tone={formalSealCheck?.canSeal ? "clear" : formalBoxState?.hardErrorCount ? "alert" : "active"}
+                subtle
+              >
+                {formalBoxState?.primaryCard?.convergencePercent || 0}% convergence
+              </SignalChip>
+            ) : null}
           </div>
           <h2 className="assembler-document__title">{activeDocument.title}</h2>
           {activeDocument.subtitle ? (
@@ -7203,9 +7249,12 @@ export default function WorkspaceShell({
     setBoxManagementOpen(true);
   }
 
-  function clearStarterFlowState({ keepScopedProject = false } = {}) {
+  function clearStarterFlowState({ keepScopedProject = false, keepSeedEntry = false } = {}) {
     setStarterIntakeActive(false);
     setStarterSourceDocumentKey("");
+    if (!keepSeedEntry) {
+      setStarterSeedEntrySourceKey("");
+    }
     if (!keepScopedProject) {
       setStarterScopedProjectKey("");
     }
@@ -7307,6 +7356,7 @@ export default function WorkspaceShell({
       setActiveProjectKey(targetProjectKey);
     }
     setStarterScopedProjectKey(targetProjectKey);
+    setStarterSeedEntrySourceKey("");
 
     if (isMobileLayout) {
       openWorkspacePicker("add");
@@ -7322,6 +7372,7 @@ export default function WorkspaceShell({
 
     setStarterIntakeActive(false);
     setStarterSourceDocumentKey(normalizedDocumentKey);
+    setStarterSeedEntrySourceKey("");
     setLaunchpadOpen(false);
     setDropAnythingOpen(false);
     setWorkspacePickerOpen(false);
@@ -7337,8 +7388,22 @@ export default function WorkspaceShell({
   }
 
   async function openStarterSeedFlow() {
-    clearStarterFlowState({ keepScopedProject: true });
+    const sourceDocumentKey = String(starterSourceDocumentKey || activeDocumentKey || "").trim();
+    setStarterSeedEntrySourceKey(sourceDocumentKey);
+    clearStarterFlowState({ keepScopedProject: true, keepSeedEntry: true });
     await handleSelectBoxPhase(BOX_PHASES.create, { skipRootGate: false });
+  }
+
+  async function returnToStarterSourceView() {
+    const sourceDocumentKey = String(starterSeedEntrySourceKey || "").trim();
+    if (!sourceDocumentKey) return;
+
+    setStarterSourceDocumentKey(sourceDocumentKey);
+    setStarterSeedEntrySourceKey("");
+    await loadDocument(sourceDocumentKey, {
+      mode: WORKSPACE_MODES.listen,
+      phase: BOX_PHASES.think,
+    });
   }
 
   function openProjectLaunchpad(projectKey, nextLaunchpadView = LAUNCHPAD_VIEWS.box) {
@@ -8756,6 +8821,10 @@ export default function WorkspaceShell({
   function handleSelectBoxPhase(nextPhase, options = {}) {
     const normalizedPhase = normalizeBoxPhase(nextPhase, BOX_PHASES.lane);
     const skipRootGate = Boolean(options?.skipRootGate);
+
+    if (normalizedPhase !== BOX_PHASES.create && starterSeedEntrySourceKey) {
+      setStarterSeedEntrySourceKey("");
+    }
 
     if (normalizedPhase !== BOX_PHASES.create) {
       setMobileComposeOpen(false);
@@ -12082,9 +12151,10 @@ export default function WorkspaceShell({
                   phase: BOX_PHASES.receipts,
                 });
               }}
-              instrumentViewModel={documentInstrumentViewModel}
+              instrumentViewModel={showStarterSourceSurface ? null : documentInstrumentViewModel}
               onExportDocument={exportDocument}
               starterNextStepVisible={showStarterSourceSurface}
+              sourceFirstView={showStarterSourceSurface}
               onOpenBox={() => {
                 clearStarterFlowState({ keepScopedProject: true });
                 openCurrentBoxHome(activeProjectKey);
@@ -12279,6 +12349,13 @@ export default function WorkspaceShell({
                       seedViewModel={seedViewModel}
                       activeDocument={activeDocument}
                       currentSeedDocument={currentSeedDocument}
+                      sourceFirstEntry={
+                        showStarterSeedEntry
+                          ? {
+                              sourceTitle: starterSeedEntryDocument?.title || "Source",
+                            }
+                          : null
+                      }
                       suggestion={seedSuggestion}
                       suggestionPending={seedSuggestionPending}
                       onOpenSeed={() => {
@@ -12301,6 +12378,9 @@ export default function WorkspaceShell({
                       }}
                       onDismissSuggestion={dismissSeedSuggestion}
                       onDismissRerouteContext={clearActiveRerouteContext}
+                      onReturnToSource={
+                        showStarterSeedEntry ? () => void returnToStarterSourceView() : null
+                      }
                       isMobileLayout={isMobileLayout}
                     >
                       {documentWorkbench}
@@ -12521,6 +12601,7 @@ export default function WorkspaceShell({
           <MobileSourceSheet
             open={workspacePickerOpen}
             intent={workspacePickerIntent}
+            sourceFirst={starterSurfaceActive}
             boxTitle={activeBoxTitle}
             activeDocument={
               starterSurfaceActive ? null : mobileSourceDocument || sevenContextDocument
@@ -12754,6 +12835,7 @@ export default function WorkspaceShell({
         <DropAnythingSheet
           open={dropAnythingOpen}
           pending={uploading || Boolean(pastePendingMode)}
+          sourceFirst={starterSurfaceActive}
           onClose={() => setDropAnythingOpen(false)}
           onUpload={() => {
             if (starterSurfaceActive) {

@@ -5,6 +5,7 @@ function StarterAction({
   label,
   detail,
   primary = false,
+  compact = false,
   pending = false,
   testId = "",
   onClick,
@@ -12,7 +13,7 @@ function StarterAction({
   return (
     <button
       type="button"
-      className={`assembler-starter__action ${primary ? "is-primary" : ""}`}
+      className={`assembler-starter__action ${primary ? "is-primary" : ""} ${compact ? "is-compact" : ""}`}
       data-testid={testId || undefined}
       onClick={onClick}
       disabled={pending}
@@ -90,13 +91,6 @@ export default function WorkspaceStarter({
             detail="Browse an existing box and enter from its calmer home screen."
             onClick={onOpenBoxes}
           />
-          <StarterAction
-            pending={pending}
-            testId="workspace-starter-start-fresh"
-            label={pending ? "Creating box…" : "Start fresh"}
-            detail="Create a new Untitled Box and stay here until you are ready to add something."
-            onClick={onStartFresh}
-          />
         </div>
 
         <footer className="assembler-starter__footer">
@@ -104,6 +98,14 @@ export default function WorkspaceStarter({
             This MVP is intentionally source-first: add one real thing, read it,
             listen to it, then take the next step into seed shaping.
           </p>
+          <StarterAction
+            compact
+            pending={pending}
+            testId="workspace-starter-start-fresh"
+            label={pending ? "Creating box…" : "Start fresh"}
+            detail="Create a new Untitled Box and stay here until you are ready to add something."
+            onClick={onStartFresh}
+          />
         </footer>
       </div>
     </section>
