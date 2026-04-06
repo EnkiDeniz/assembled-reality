@@ -581,6 +581,80 @@
   gap: 10px;
 }
 
+.assembler-source-rail__runtime {
+  display: grid;
+  gap: 14px;
+  margin: 0 16px;
+  padding: 16px;
+  border: 1px solid rgba(94, 167, 255, 0.16);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(94, 167, 255, 0.08), rgba(255, 255, 255, 0.025)),
+    rgba(255, 255, 255, 0.015);
+}
+
+.assembler-source-rail__runtime-head,
+.assembler-source-rail__runtime-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assembler-source-rail__runtime-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.assembler-source-rail__runtime-title {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.assembler-source-rail__runtime-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.assembler-source-rail__runtime-metric {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.assembler-source-rail__runtime-metric span {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-source-rail__runtime-metric strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.assembler-source-rail__runtime-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assembler-source-rail__runtime-link:hover,
+.assembler-source-rail__runtime-link:focus-visible {
+  color: var(--text-primary);
+}
+
 .assembler-source-rail__list {
   display: grid;
   gap: 8px;
@@ -1589,6 +1663,10 @@
   }
 
   .assembler-details-panel__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assembler-source-rail__runtime-metrics {
     grid-template-columns: 1fr;
   }
 }

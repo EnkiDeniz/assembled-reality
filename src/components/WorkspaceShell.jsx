@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SkipBack, Rewind, Play, Pause, FastForward, SkipForward } from "lucide-react";
-import AiUtilityRail from "@/components/AiUtilityRail";
 import AssemblyWorkspaceScreen from "@/components/AssemblyWorkspaceScreen";
 import AssemblyLane from "@/components/AssemblyLane";
 import BoxHomeScreen from "@/components/BoxHomeScreen";
@@ -28,7 +27,9 @@ import SourceRail from "@/components/SourceRail";
 import StagingPanel from "@/components/StagingPanel";
 import ThinkSurface from "@/components/ThinkSurface";
 import WorkspaceControlSurface from "@/components/WorkspaceControlSurface";
+import WorkspaceDiagnosticsRail from "@/components/WorkspaceDiagnosticsRail";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
+import { ShapeGlyph, SignalChip } from "@/components/LoegosSystem";
 import {
   buildWorkspaceMarkdown,
   createWorkspaceLogEntry,
@@ -86,6 +87,11 @@ import {
   buildRealityInstrumentViewModel,
 } from "@/lib/reality-instrument";
 import { getPrimaryBoxPhaseForShape, getWorkspaceShapeAndVerb } from "@/lib/loegos-system";
+import {
+  buildFormalBoxState,
+  buildFormalSealCheck,
+  buildFormalSentenceAnnotations,
+} from "@/lib/formal-core/runtime";
 import {
   deleteVoiceMemoDraft,
   loadVoiceMemoDraft,
@@ -393,7 +399,7 @@ function buildFeedbackInstrumentIssue(message, tone = "", options = {}) {
       : [
           {
             key: recovery ? "instrument-interpret" : "instrument-interpret",
-            label: "Interpret with Seven",
+            label: "Infer with Seven",
             disabled: Boolean(options?.disableInterpret),
           },
           { key: "instrument-dismiss", label: "Dismiss" },
@@ -418,15 +424,15 @@ function buildInstrumentAssistPrompt(intent = "", context = {}) {
     return `Rewrite this Root and gloss into a cleaner operator form without changing the intent: ${normalizeInstrumentText(context?.rootText)} ${normalizeInstrumentText(context?.rootGloss)}`;
   }
   if (normalizedIntent === "receipt-interpret") {
-    return "Interpret this pre-seal audit and name the smallest honest move before sealing.";
+    return "Infer the weakest pre-seal gap here and name the smallest honest move before sealing.";
   }
   if (normalizedIntent === "conflict-orient") {
-    return "Interpret this save conflict and name the safest next move.";
+    return "Infer the safest next move from this save conflict.";
   }
   if (normalizedIntent === "voice-recovery") {
-    return "Interpret this preserved voice memo state and name the clearest recovery move.";
+    return "Infer the clearest recovery move from this preserved voice memo state.";
   }
-  return "Interpret this reality state and name the clearest next move.";
+  return "Infer the clearest next move from this reality state.";
 }
 
 function buildWordLayerInstrumentContext(viewModel = null, wordLayer = null) {
@@ -1362,6 +1368,7 @@ function buildWorkspaceUrl(
     launchpad = false,
     launchpadView = "",
     mode = "",
+    phase = "",
   } = {},
 ) {
   const params = new URLSearchParams();
@@ -1372,6 +1379,11 @@ function buildWorkspaceUrl(
 
   if (isWorkspaceMode(mode)) {
     params.set("mode", mode);
+  }
+
+  const normalizedPhase = Object.values(BOX_PHASES).includes(phase) ? phase : "";
+  if (normalizedPhase) {
+    params.set("phase", normalizedPhase);
   }
 
   if (launchpad) {
@@ -3248,6 +3260,71 @@ function DesktopAssemblySidecar({
   );
 }
 
+function getFormalSignalHintForBlock(block = null) {
+  if (!block) return "neutral";
+  if (block.author === "ai" || block.operation === "edited") return "amber";
+  if (String(block.confirmationStatus || "").trim().toLowerCase() === "confirmed") return "green";
+  return "neutral";
+}
+
+function getFormalDiagnosticTone(level = "") {
+  const normalized = String(level || "").trim().toLowerCase();
+  if (normalized === "error") return "alert";
+  if (normalized === "warn") return "active";
+  return "neutral";
+}
+
+function formatShapeLabel(shapeKey = "") {
+  const normalized = String(shapeKey || "").trim();
+  if (!normalized) return "Unknown";
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function BlockFormalAnnotations({ block }) {
+  const annotation = useMemo(
+    () =>
+      buildFormalSentenceAnnotations(block?.plainText || block?.text || "", {
+        sentenceIdPrefix: block?.id || "block",
+        signalHint: getFormalSignalHintForBlock(block),
+      }),
+    [block],
+  );
+  const primarySentence = annotation.sentences[0] || null;
+  const diagnostics = Array.isArray(annotation.diagnostics) ? annotation.diagnostics.slice(0, 2) : [];
+
+  if (!primarySentence && diagnostics.length === 0) return null;
+
+  return (
+    <div className="assembler-block__formal">
+      <div className="assembler-block__formal-head">
+        {primarySentence ? (
+          <div className="assembler-block__formal-shape">
+            <ShapeGlyph shapeKey={primarySentence.shapeKey} size={14} />
+            <span>Reads as {formatShapeLabel(primarySentence.shapeKey)}</span>
+          </div>
+        ) : null}
+        {primarySentence?.signal ? (
+          <SignalChip tone={primarySentence.signal} subtle>
+            {primarySentence.signal}
+          </SignalChip>
+        ) : null}
+      </div>
+      {diagnostics.length ? (
+        <div className="assembler-block__formal-notes">
+          {diagnostics.map((diagnostic, index) => (
+            <div key={`${diagnostic.code || "formal"}-${index}`} className="assembler-block__formal-note">
+              <SignalChip tone={getFormalDiagnosticTone(diagnostic.level)} subtle>
+                {diagnostic.level || "info"}
+              </SignalChip>
+              <span>{diagnostic.message}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function BlockRow({
   block,
   isFocused,
@@ -3353,6 +3430,7 @@ function BlockRow({
         {block.author === "ai" ? (
           <span className="assembler-block__badge">AI-GENERATED · {block.operation}</span>
         ) : null}
+        <BlockFormalAnnotations block={block} />
       </div>
     </article>
   );
@@ -3984,7 +4062,7 @@ export default function WorkspaceShell({
         ? BOX_PHASES.create
         : BOX_PHASES.lane),
   );
-  const [editMode, setEditMode] = useState(false);
+  const [, setEditMode] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [clipboard, setClipboard] = useState([]);
   const [stagedAiBlocks, setStagedAiBlocks] = useState([]);
@@ -4253,6 +4331,79 @@ export default function WorkspaceShell({
     clipboardCount: clipboard.length,
     stagedCount: stagedAiBlocks.length,
   });
+  const formalBoxState = useMemo(
+    () => buildFormalBoxState(activeProject, hydratedProjectDocuments, projectDraftsState),
+    [activeProject, hydratedProjectDocuments, projectDraftsState],
+  );
+  const formalSealCheck = useMemo(
+    () =>
+      buildFormalSealCheck(
+        formalBoxState,
+        receiptSealDraft || receiptSummaryViewModel?.latestDraft || null,
+      ),
+    [formalBoxState, receiptSealDraft, receiptSummaryViewModel?.latestDraft],
+  );
+  const workspaceIdeState = useMemo(() => {
+    const primaryCard = formalBoxState?.primaryCard || null;
+    const diagnostics = formalBoxState?.diagnostics || {
+      errors: [],
+      warnings: [],
+      infos: [],
+      shadowTypes: [],
+    };
+    const unresolvedCount =
+      (diagnostics.errors?.length || 0) +
+      (diagnostics.warnings?.length || 0) +
+      (diagnostics.shadowTypes?.length || 0);
+    const branchCount =
+      Math.max(0, clipboard.length + stagedAiBlocks.length) +
+      (formalSealCheck?.canSeal ? 0 : primaryCard?.derivedWeldAvailable ? 1 : 0);
+
+    return {
+      projectTree: {
+        branchCount,
+        receiptCount: receiptSummaryViewModel?.draftCount || 0,
+        settlementStage: primaryCard?.hex?.settlementStage || 0,
+        convergencePercent: primaryCard?.convergencePercent || 0,
+        trustFloor: primaryCard?.trustFloor || "L1",
+        trustCeiling: primaryCard?.trustCeiling || "L1",
+        canSeal: Boolean(formalSealCheck?.canSeal),
+        errorCount: diagnostics.errors?.length || 0,
+      },
+      editorState: {
+        activeDocumentKey: activeDocument?.documentKey || "",
+        activeDocumentTitle: activeDocument?.title || "Untitled document",
+        activeDocumentKind: getDocumentKindLabel(activeDocument),
+        blockCount: blocks.length,
+        confirmationCount: controlSurfaceViewModel?.confirmationCount || 0,
+      },
+      diagnosticsState: {
+        formalBoxState,
+        formalSealCheck,
+        operateResult,
+        operatePending,
+        operateError,
+      },
+      buildState: {
+        latestReceipt: receiptSummaryViewModel?.latestDraft || null,
+        receiptCount: receiptSummaryViewModel?.draftCount || 0,
+        warningCount: unresolvedCount,
+        settlementStage: primaryCard?.hex?.settlementStage || 0,
+      },
+    };
+  }, [
+    activeDocument,
+    blocks.length,
+    clipboard.length,
+    controlSurfaceViewModel?.confirmationCount,
+    formalBoxState,
+    formalSealCheck,
+    operateError,
+    operatePending,
+    operateResult,
+    receiptSummaryViewModel,
+    stagedAiBlocks.length,
+  ]);
   const assemblyLaneViewModel = buildBoxAssemblyLaneViewModel({
     activeProject,
     projectDocuments: hydratedProjectDocuments,
@@ -4410,6 +4561,11 @@ export default function WorkspaceShell({
   const nextBlock = blocks[currentIndex + 1] || null;
   const progress = blocks.length ? ((currentIndex + 1) / blocks.length) * 100 : 0;
   const isListenMode = workspaceMode === WORKSPACE_MODES.listen;
+  const showDesktopIde =
+    !isMobileLayout &&
+    !launchpadOpen &&
+    !isFirstTimeSurface &&
+    !isListenMode;
   const thinkSourceSummary =
     thinkViewModel?.activeSource?.operateSummary ||
     thinkViewModel?.activeSource?.metaLine ||
@@ -4467,7 +4623,7 @@ export default function WorkspaceShell({
       moveSpace: [
         {
           key: "instrument-interpret",
-          label: "Interpret with Seven",
+          label: "Infer with Seven",
           disabled: !canInterpretInstrument,
         },
         { key: "instrument-dismiss", label: "Dismiss" },
@@ -4507,7 +4663,7 @@ export default function WorkspaceShell({
           { key: "receipt-refresh-audit", label: receiptSealAuditPending ? "Auditing…" : "Refresh audit", disabled: receiptSealAuditPending || receiptPending },
           {
             key: "instrument-interpret",
-            label: "Interpret with Seven",
+            label: "Infer with Seven",
             disabled: !canInterpretInstrument,
           },
         ],
@@ -4575,7 +4731,7 @@ export default function WorkspaceShell({
           { key: "open-confirmation", label: "Inspect evidence" },
           {
             key: "instrument-interpret",
-            label: "Interpret with Seven",
+            label: "Infer with Seven",
             disabled: !canInterpretInstrument,
           },
         ],
@@ -4599,7 +4755,7 @@ export default function WorkspaceShell({
         severity: "warning",
         priority: 74,
         label: "Seal warning",
-        headline: "The seal can proceed, but the line needs interpretation.",
+        headline: "The seal can proceed, but the line still needs human interpretation.",
         summary: warningCheck.message,
         compactSummary: warningCheck.message,
         evidence: [{ label: "Check", value: warningCheck.label }],
@@ -4609,7 +4765,7 @@ export default function WorkspaceShell({
           { key: "receipt-seal", label: "Seal anyway", disabled: receiptPending || !receiptSealAudit?.canOverride },
           {
             key: "instrument-interpret",
-            label: "Interpret with Seven",
+            label: "Infer with Seven",
             disabled: !canInterpretInstrument,
           },
         ],
@@ -4659,7 +4815,7 @@ export default function WorkspaceShell({
           { key: "voice-discard", label: "Discard" },
           {
             key: "instrument-interpret",
-            label: "Interpret with Seven",
+            label: "Infer with Seven",
             disabled: !canInterpretInstrument,
           },
         ],
@@ -4688,7 +4844,7 @@ export default function WorkspaceShell({
           { key: "voice-close", label: "Close recorder" },
           {
             key: "instrument-interpret",
-            label: "Interpret with Seven",
+            label: "Infer with Seven",
             disabled: !canInterpretInstrument,
           },
         ],
@@ -4874,6 +5030,11 @@ export default function WorkspaceShell({
     }
   }, [realityInstrumentViewModel?.hasIssue]);
 
+  const desktopEditorMode =
+    !isMobileLayout &&
+    workspaceMode === WORKSPACE_MODES.assemble &&
+    Boolean(activeDocument?.isEditable);
+
   const documentWorkbench = (
     <div className="assembler-document">
       <div className="assembler-document__header">
@@ -4894,6 +5055,21 @@ export default function WorkspaceShell({
             {activeDocument.derivationModel ? (
               <span>{activeDocument.derivationModel}</span>
             ) : null}
+          </div>
+          <div className="assembler-document__ide-status">
+            <SignalChip tone="neutral" subtle>
+              {workspaceIdeState.editorState.activeDocumentKind}
+            </SignalChip>
+            <SignalChip tone="active" subtle>
+              {workspaceIdeState.editorState.blockCount} block
+              {workspaceIdeState.editorState.blockCount === 1 ? "" : "s"}
+            </SignalChip>
+            <SignalChip
+              tone={formalSealCheck?.canSeal ? "clear" : formalBoxState?.hardErrorCount ? "alert" : "active"}
+              subtle
+            >
+              {formalBoxState?.primaryCard?.convergencePercent || 0}% convergence
+            </SignalChip>
           </div>
           {activeDocumentAsset ? (
             <div className="assembler-document__asset">
@@ -5023,8 +5199,8 @@ export default function WorkspaceShell({
             isPlaying={block.id === currentBlock?.id && isPlaying}
             isNext={block.id === nextBlock?.id}
             isSelected={clipboard.some((item) => item.id === block.id)}
-            editMode={editMode}
-            canDelete={editMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
+            editMode={desktopEditorMode}
+            canDelete={desktopEditorMode && canManageActiveSource && !cleanupPendingAction && !polishPending}
             saveState={blockSaveStates[block.id] || ""}
             onFocus={focusBlock}
             onAdd={addBlockToClipboard}
@@ -5776,7 +5952,7 @@ export default function WorkspaceShell({
     const fallbackTargetDocument = targetDocument || activeDocument;
 
     if (!fallbackTargetDocument?.documentKey) {
-      setFeedback("Open a source or seed before asking Seven to interpret this state.", "error");
+      setFeedback("Open a source or seed before asking Seven to infer from this state.", "error");
       return null;
     }
 
@@ -6196,40 +6372,72 @@ export default function WorkspaceShell({
   }
 
   function openProject(projectKey) {
-    openProjectLaunchpad(projectKey, LAUNCHPAD_VIEWS.box);
+    resumeProject(projectKey);
   }
 
-  function resumeProject(projectKey = activeProjectKey) {
-    if (!projectKey || typeof window === "undefined") return;
-
-    if (projectKey !== activeProjectKey) {
-      setProjectActionPending(projectKey);
-      window.location.assign(
-        buildWorkspaceUrl("", projectKey, {
-          mode: WORKSPACE_MODES.listen,
-        }),
-      );
-      return;
-    }
-
+  function resolveProjectResumeState(projectKey = activeProjectKey) {
+    const targetProject = getProjectByKey(hydratedProjects, projectKey) || activeProject;
+    const targetDocuments = getProjectDocuments(documentsState, targetProject);
+    const targetSeedDocument =
+      getSeedDocument(targetProject, targetDocuments, "") ||
+      getOperateAssemblyDocument(targetProject, targetDocuments, "") ||
+      null;
+    const targetRealSources = listRealSourceDocuments(targetDocuments);
+    const latestTargetRealSource =
+      [...targetRealSources].sort((left, right) => {
+        const rightTimestamp = Date.parse(right?.updatedAt || right?.createdAt || "");
+        const leftTimestamp = Date.parse(left?.updatedAt || left?.createdAt || "");
+        return (Number.isNaN(rightTimestamp) ? 0 : rightTimestamp) - (Number.isNaN(leftTimestamp) ? 0 : leftTimestamp);
+      })[0] || null;
+    const sameProject = projectKey === activeProjectKey;
+    const resumedListeningKey = sameProject
+      ? String(resumeSessionSummaryState?.documentKey || "").trim()
+      : "";
     const resumeDocumentKey =
-      String(resumeSessionSummaryState?.documentKey || "").trim() ||
-      String(currentSeedDocument?.documentKey || "").trim() ||
-      String(latestRealSourceDocument?.documentKey || "").trim() ||
+      resumedListeningKey ||
+      String(targetSeedDocument?.documentKey || "").trim() ||
+      String(latestTargetRealSource?.documentKey || "").trim() ||
       "";
     const resumeMode =
-      String(resumeSessionSummaryState?.documentKey || "").trim() || !currentSeedDocument?.documentKey
+      resumedListeningKey || !targetSeedDocument?.documentKey
         ? WORKSPACE_MODES.listen
         : WORKSPACE_MODES.assemble;
     const resumePhase =
       resumeMode === WORKSPACE_MODES.assemble ? BOX_PHASES.create : BOX_PHASES.think;
 
-    if (resumeDocumentKey) {
+    return {
+      documentKey: resumeDocumentKey,
+      mode: resumeMode,
+      phase: resumePhase,
+    };
+  }
+
+  function resumeProject(projectKey = activeProjectKey) {
+    if (!projectKey || typeof window === "undefined") return;
+    const resumeState = resolveProjectResumeState(projectKey);
+
+    if (projectKey !== activeProjectKey) {
+      setProjectActionPending(projectKey);
+      window.location.assign(
+        resumeState.documentKey
+          ? buildWorkspaceUrl(resumeState.documentKey, projectKey, {
+              mode: resumeState.mode,
+              phase: resumeState.phase,
+            })
+          : buildWorkspaceUrl("", projectKey, {
+              launchpad: true,
+              launchpadView: LAUNCHPAD_VIEWS.box,
+            }),
+      );
+      return;
+    }
+
+    if (resumeState.documentKey) {
       void enterWorkspace(
-        resumeDocumentKey,
-        resumeMode,
+        resumeState.documentKey,
+        resumeState.mode,
         {
-          phase: resumePhase,
+          phase: resumeState.phase,
         },
       );
       return;
@@ -8666,7 +8874,7 @@ export default function WorkspaceShell({
               { key: "conflict-load-latest", label: "Load latest" },
               {
                 key: "instrument-interpret",
-                label: "Interpret with Seven",
+                label: "Infer with Seven",
                 disabled: !sevenContextDocument?.documentKey,
               },
               { key: "instrument-dismiss", label: "Keep local cleanup" },
@@ -9332,7 +9540,7 @@ export default function WorkspaceShell({
               { key: "conflict-load-latest", label: "Load latest" },
               {
                 key: "instrument-interpret",
-                label: "Interpret with Seven",
+                label: "Infer with Seven",
                 disabled: !sevenContextDocument?.documentKey,
               },
               { key: "instrument-dismiss", label: "Keep local edit" },
@@ -10332,6 +10540,108 @@ export default function WorkspaceShell({
         boxPhase: isListenMode ? BOX_PHASES.think : boxPhase,
         workspaceMode,
       });
+  const desktopIdeCenterContent = isReceiptsPhase ? (
+    <ReceiptsScreen>
+      <ReceiptSurface
+        logEntries={activeDocument.logEntries || []}
+        drafts={projectDraftsState}
+        receiptSummary={receiptSummaryViewModel}
+        receiptPending={receiptPending}
+        activeDocumentTitle={currentSeedDocument?.title || activeDocument.title}
+        onCreateReceipt={createReceiptDraft}
+        onRunOperate={() => void runOperate()}
+        onExportReceipt={exportReceipt}
+        onExportDocument={exportDocument}
+        onOpenGetReceipts={() => openGetReceiptsConnection()}
+        onRetryRemoteSync={(draft) => void retryReceiptRemoteSync(draft)}
+        onOpenVerifyUrl={(url) => {
+          if (url && typeof window !== "undefined") {
+            window.open(url, "_blank", "noopener,noreferrer");
+          }
+        }}
+        onSealReceipt={openReceiptSealDialog}
+        isMobileLayout={false}
+      />
+    </ReceiptsScreen>
+  ) : (
+    <section className="loegos-ide-editor-shell">
+      <div className="loegos-ide-editor-shell__intro">
+        <div className="loegos-ide-editor-shell__copy">
+          <span className="loegos-ide-editor-shell__eyebrow">Editor</span>
+          <h2 className="loegos-ide-editor-shell__title">Write the current block stack.</h2>
+          <p className="loegos-ide-editor-shell__detail">
+            The center stays for authored blocks. Diagnostics, compile state, and seal readiness stay beside it.
+          </p>
+        </div>
+        <div className="loegos-ide-editor-shell__meta">
+          <SignalChip tone="neutral" subtle>
+            {workspaceIdeState.editorState.activeDocumentTitle}
+          </SignalChip>
+          {isOperatePhase ? (
+            <SignalChip tone="active" subtle>
+              Operate diagnostics live on the right
+            </SignalChip>
+          ) : null}
+        </div>
+      </div>
+      {documentWorkbench}
+      {isCreatePhase || clipboard.length || stagedAiBlocks.length ? (
+        <ClipboardTray
+          embedded
+          stagedBlocks={stagedAiBlocks}
+          clipboard={clipboard}
+          documents={hydratedProjectDocuments}
+          onAcceptStagedBlock={acceptStagedBlock}
+          onAcceptAllStagedBlocks={acceptAllStagedBlocks}
+          onClearStagedBlocks={() => setStagedAiBlocks([])}
+          onRemoveClipboardIndex={removeClipboardIndex}
+          onReorderClipboard={(index, delta) =>
+            setClipboard((previous) => moveListItem(previous, index, delta))
+          }
+          onClearClipboard={() => setClipboard([])}
+          onAssemble={assembleClipboard}
+        />
+      ) : null}
+    </section>
+  );
+  const desktopIdeDiagnostics = (
+    <WorkspaceDiagnosticsRail
+      formalState={workspaceIdeState.diagnosticsState.formalBoxState}
+      sealCheck={workspaceIdeState.diagnosticsState.formalSealCheck}
+      operateResult={workspaceIdeState.diagnosticsState.operateResult}
+      operatePending={workspaceIdeState.diagnosticsState.operatePending}
+      operateError={workspaceIdeState.diagnosticsState.operateError}
+      receiptSummary={receiptSummaryViewModel}
+      receiptPending={receiptPending}
+      confirmationCount={workspaceIdeState.editorState.confirmationCount}
+      clipboardCount={clipboard.length}
+      stagedCount={stagedAiBlocks.length}
+      thread={activeSevenThread}
+      documentTitle={sevenContextDocument?.title || activeDocument.title}
+      inputValue={aiInput}
+      pendingInput={aiPending}
+      inputError={sevenThreadError}
+      suggestions={sevenSuggestions}
+      onInputChange={(nextValue) => {
+        setAiInput(nextValue);
+        if (sevenThreadError) {
+          setSevenThreadError("");
+        }
+      }}
+      onSubmit={runAiOperation}
+      onSuggestion={(prompt) => void runAiOperation(prompt)}
+      onStageMessage={stageSevenMessage}
+      onRunOperate={() => void runOperate()}
+      onOpenReceipts={openReceiptsSurface}
+      onDraftReceipt={() =>
+        void createReceiptDraft({
+          mode: "operate",
+          operateResult,
+        })
+      }
+      onSealLatestDraft={openReceiptSealDialog}
+    />
+  );
 
   return (
     <main
@@ -10613,7 +10923,7 @@ export default function WorkspaceShell({
 
             <div
               className={`assembler-workbench assembler-workbench--next ${isMobileLayout ? "is-mobile" : ""} ${
-                isOperatePhase || isReceiptsPhase ? "is-takeover" : ""
+                (isOperatePhase || isReceiptsPhase) && !showDesktopIde ? "is-takeover" : ""
               }`}
             >
               {!isMobileLayout ? (
@@ -10624,7 +10934,9 @@ export default function WorkspaceShell({
                   guideDocument={guideSourceDocument}
                   sourceDocuments={visibleSourceDocuments}
                   assemblyDocuments={visibleAssemblyDocuments}
+                  buildState={workspaceIdeState.projectTree}
                   onOpenProjectHome={() => openCurrentBoxHome(activeProjectKey)}
+                  onOpenReceipts={openReceiptsSurface}
                   onUpload={() => fileInputRef.current?.click()}
                   onOpenPhoto={openPhotoIntake}
                   onPasteSource={() => void pasteIntoWorkspace("source")}
@@ -10632,7 +10944,7 @@ export default function WorkspaceShell({
                     void enterWorkspace(documentKey, mode, options);
                   }}
                   uploading={uploading}
-                  sourceOpenMode={WORKSPACE_MODES.listen}
+                  sourceOpenMode={showDesktopIde ? WORKSPACE_MODES.assemble : WORKSPACE_MODES.listen}
                   ActionIcon={WorkspaceActionIcon}
                   getDocumentBlockCountLabel={getDocumentBlockCountLabel}
                   getDocumentKindLabel={getDocumentKindLabel}
@@ -10668,11 +10980,13 @@ export default function WorkspaceShell({
 
                 <section
                   className={`assembler-surface assembler-surface--workbench ${
-                    isOperatePhase || isReceiptsPhase ? "is-takeover" : ""
+                    (isOperatePhase || isReceiptsPhase) && !showDesktopIde ? "is-takeover" : ""
                   }`}
                   style={assemblySurfaceStyle}
                 >
-                  {isReceiptsPhase ? (
+                  {showDesktopIde ? (
+                    desktopIdeCenterContent
+                  ) : isReceiptsPhase ? (
                     <ReceiptsScreen>
                       <LogView
                         logEntries={activeDocument.logEntries || []}
@@ -10791,7 +11105,9 @@ export default function WorkspaceShell({
 
               </div>
 
-              {!isMobileLayout && (isLanePhase || isThinkPhase || isCreatePhase) ? (
+              {showDesktopIde ? (
+                desktopIdeDiagnostics
+              ) : !isMobileLayout && (isLanePhase || isThinkPhase || isCreatePhase) ? (
                 <DesktopAssemblySidecar
                   activePanel={activeDesktopSidecar}
                   stageCount={desktopStageCount}

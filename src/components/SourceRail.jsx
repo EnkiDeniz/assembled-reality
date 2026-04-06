@@ -1,4 +1,5 @@
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
+import { SettlementHex, SignalChip } from "@/components/LoegosSystem";
 
 function formatTrustLabel(value = "") {
   const normalized = String(value || "").trim();
@@ -97,7 +98,9 @@ export default function SourceRail({
   guideDocument = null,
   sourceDocuments = [],
   assemblyDocuments = [],
+  buildState = null,
   onOpenProjectHome,
+  onOpenReceipts,
   onUpload,
   onOpenPhoto,
   onPasteSource,
@@ -127,7 +130,7 @@ export default function SourceRail({
             className="assembler-source-rail__action"
             onClick={onOpenProjectHome}
           >
-            Assembly lane
+            Box home
           </button>
           <button
             type="button"
@@ -154,6 +157,62 @@ export default function SourceRail({
           </button>
         </div>
       </div>
+
+      {buildState ? (
+        <section className="assembler-source-rail__runtime">
+          <div className="assembler-source-rail__runtime-head">
+            <div className="assembler-source-rail__runtime-copy">
+              <span className="assembler-source-rail__eyebrow">Runtime</span>
+              <strong className="assembler-source-rail__runtime-title">
+                IDE state stays live.
+              </strong>
+            </div>
+            <SettlementHex
+              stageCount={buildState.settlementStage || 0}
+              label={`stage ${buildState.settlementStage || 0}`}
+            />
+          </div>
+
+          <div className="assembler-source-rail__runtime-metrics">
+            <div className="assembler-source-rail__runtime-metric">
+              <span>Convergence</span>
+              <strong>{buildState.convergencePercent || 0}%</strong>
+            </div>
+            <div className="assembler-source-rail__runtime-metric">
+              <span>Trust</span>
+              <strong>{buildState.trustFloor || "L1"}</strong>
+            </div>
+            <div className="assembler-source-rail__runtime-metric">
+              <span>Branches</span>
+              <strong>{buildState.branchCount || 0}</strong>
+            </div>
+            <div className="assembler-source-rail__runtime-metric">
+              <span>Receipts</span>
+              <strong>{buildState.receiptCount || 0}</strong>
+            </div>
+          </div>
+
+          <div className="assembler-source-rail__runtime-footer">
+            <SignalChip
+              tone={buildState.canSeal ? "clear" : buildState.errorCount ? "alert" : "active"}
+              subtle
+            >
+              {buildState.canSeal
+                ? "ready to seal"
+                : buildState.errorCount
+                  ? `${buildState.errorCount} blockers`
+                  : "in progress"}
+            </SignalChip>
+            <button
+              type="button"
+              className="assembler-source-rail__runtime-link"
+              onClick={onOpenReceipts}
+            >
+              Open build output
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <div className="assembler-source-rail__scroll">
         <section className="assembler-source-rail__section">

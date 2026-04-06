@@ -99,6 +99,7 @@ export function getSignalTone(value = "") {
     normalized === "released" ||
     normalized === "connected" ||
     normalized === "clear" ||
+    normalized === "green" ||
     normalized === "success" ||
     normalized === "sealed"
   ) {
@@ -108,6 +109,7 @@ export function getSignalTone(value = "") {
   if (
     normalized === "partial" ||
     normalized === "active" ||
+    normalized === "amber" ||
     normalized === "committing" ||
     normalized === "draft" ||
     normalized === "pending" ||
@@ -119,6 +121,7 @@ export function getSignalTone(value = "") {
   if (
     normalized === "unverified" ||
     normalized === "alert" ||
+    normalized === "red" ||
     normalized === "rate-limited" ||
     normalized === "error" ||
     normalized === "failed" ||

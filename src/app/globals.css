@@ -2367,6 +2367,13 @@ main {
   letter-spacing: 0.12em;
 }
 
+.assembler-document__ide-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .assembler-document__asset {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
@@ -2680,6 +2687,44 @@ main {
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.assembler-block__formal {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.assembler-block__formal-head,
+.assembler-block__formal-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assembler-block__formal-shape {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-block__formal-notes {
+  display: grid;
+  gap: 6px;
+}
+
+.assembler-block__formal-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .assembler-block__editor {
