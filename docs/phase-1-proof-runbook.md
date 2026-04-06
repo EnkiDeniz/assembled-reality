@@ -9,6 +9,7 @@ Use that document for:
 - local human proof with `dev-guardian`
 - preview human proof with real sign-in
 - the exact golden path required to call Phase 1 proven
+- the linked founder-wow session on a real repo document
 
 Important local note:
 

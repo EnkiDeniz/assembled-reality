@@ -25,6 +25,8 @@ async function main() {
     e2eSmoke,
     receiptSealDialog,
     diagnosticsRail,
+    proofRunbook,
+    founderWowRunbook,
   ] = await Promise.all([
     read("prisma/schema.prisma"),
     read("src/app/api/workspace/operate/route.js"),
@@ -44,6 +46,8 @@ async function main() {
     read("tests/e2e/phase1-inline-operate.spec.mjs"),
     read("src/components/ReceiptSealDialog.jsx"),
     read("src/components/WorkspaceDiagnosticsRail.jsx"),
+    read("pivot/solution/Phase 1 Proof Runbook/Phase 1 Proof Runbook.md"),
+    read("pivot/solution/Founder Wow Proof Session/Founder Wow Proof Session.md"),
   ]);
 
   assert.match(schema, /model\s+ReaderOperateRun\s+\{/);
@@ -71,10 +75,13 @@ async function main() {
   assert.match(operateOverlay, /displaySignal/);
   assert.match(operateOverlay, /attestedCount/);
   assert.match(operateOverlay, /buildOperateOverlayCoverage/);
+  assert.match(operateOverlay, /pickPreferredOperateFindingId/);
 
   assert.match(workspaceShell, /useOperateOverlayController/);
   assert.match(workspaceShell, /useReceiptSealController/);
   assert.match(workspaceShell, /WorkspaceDocumentWorkbench/);
+  assert.match(workspaceShell, /pendingInlineOperateSeedOpen/);
+  assert.match(workspaceShell, /Switching to the live seed so inline Operate can reveal findings/);
 
   assert.match(overlayRail, /Operate is partial/);
   assert.match(overlayRail, /attested/);
@@ -87,6 +94,7 @@ async function main() {
   assert.match(operateOverlayController, /createAttestedOverride/);
   assert.match(workbench, /workspace-document-workbench/);
   assert.match(workbench, /workspace-finding-inspect/);
+  assert.match(workbench, /workspace-selected-finding-evidence-preview/);
   assert.match(receiptSealDialog, /receipt-seal-blocked-reason/);
   assert.match(receiptSealDialog, /data-draft-id/);
   assert.match(diagnosticsRail, /workspace-latest-receipt-status/);
@@ -106,6 +114,10 @@ async function main() {
   assert.match(e2eSmoke, /workspace-proof-metadata/);
   assert.match(e2eSmoke, /workspace-latest-receipt-status/);
   assert.match(e2eSmoke, /Acknowledge the attested overrides/);
+  assert.match(proofRunbook, /Founder Wow Proof Session/);
+  assert.match(founderWowRunbook, /Founder Wow Proof/);
+  assert.match(founderWowRunbook, /problem-statement-editor-first\.md/);
+  assert.match(founderWowRunbook, /AR Version 2 Build Plan\.md/);
 
   console.log("phase1-smoke-check: ok");
 }

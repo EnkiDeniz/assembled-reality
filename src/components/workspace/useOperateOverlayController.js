@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { pickPreferredOperateFindingId } from "@/lib/operate-overlay";
 
 export function useOperateOverlayController({
   activeProjectKey = "",
@@ -125,7 +126,9 @@ export function useOperateOverlayController({
         throw new Error(payload?.error || "Inline Operate could not read the current seed.");
       }
 
-      syncOperateOverlayState(payload);
+      syncOperateOverlayState(payload, {
+        preferredFindingId: pickPreferredOperateFindingId(payload),
+      });
       setOperateOverlayError("");
       setFeedback(
         payload?.stale

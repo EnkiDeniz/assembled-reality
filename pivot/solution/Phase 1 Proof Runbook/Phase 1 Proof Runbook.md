@@ -6,6 +6,10 @@ Use this runbook to prove the current Phase 1 loop with a human before treating 
 
 The loop is only considered real when a non-author human can complete it and understand why the product blocked or allowed seal.
 
+For the founder-specific "whoa" session on a real repo document, use:
+
+- [Founder Wow Proof Session](../Founder%20Wow%20Proof%20Session/Founder%20Wow%20Proof%20Session.md)
+
 ## Golden Path
 
 1. Open the seeded workspace.
@@ -102,6 +106,15 @@ Use the same checklist as local proof:
 
 - Pass if the same loop works with real preview auth.
 - Fail if the loop is confusing, blocked, or visually ambiguous.
+
+## Founder Wow Proof
+
+Use the dedicated founder-wow session doc for the real-file proof pass:
+
+- [Founder Wow Proof Session](../Founder%20Wow%20Proof%20Session/Founder%20Wow%20Proof%20Session.md)
+
+This is not a replacement for the local or preview human proof loops.
+It is the "does the text actually light up in a way that feels real?" check.
 
 ## Sign-off
 

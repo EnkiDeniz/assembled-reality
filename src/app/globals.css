@@ -3206,6 +3206,36 @@ button.assembler-ide-statusbar__segment {
   color: var(--soft);
 }
 
+.assembler-block__operate-evidence {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.assembler-block__operate-evidence-label {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.assembler-block__operate-evidence-title {
+  color: var(--white);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.assembler-block__operate-evidence-copy {
+  margin: 0;
+  color: var(--soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .assembler-block__operate-span {
   padding: 0;
   border: 0;

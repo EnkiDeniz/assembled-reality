@@ -11,6 +11,11 @@ export const MAX_OVERLAY_BLOCKS = 24;
 export const MAX_EVIDENCE_PER_BLOCK = 4;
 export const MAX_SPANS_PER_BLOCK = 4;
 export const MIN_EVIDENCE_FOR_L3 = 2;
+const FINDING_SELECTION_SIGNAL_RANK = Object.freeze({
+  red: 0,
+  amber: 1,
+  green: 2,
+});
 
 function normalizeText(value = "") {
   return stripMarkdownSyntax(String(value || ""))
@@ -334,6 +339,38 @@ function buildEmptyOperateSummary() {
     staleOverrideCount: 0,
     orphanedOverrideCount: 0,
   };
+}
+
+function getFindingSelectionSignal(finding = null) {
+  const displaySignal = normalizeDisplaySignal(finding?.displaySignal || finding?.signal);
+  if (displaySignal === "override") {
+    return normalizeSignal(finding?.baseSignal || finding?.signal);
+  }
+  return normalizeSignal(displaySignal);
+}
+
+export function pickPreferredOperateFindingId(payload = null) {
+  const findings = Array.isArray(payload?.findings) ? payload.findings : [];
+  if (!findings.length) return "";
+
+  const preferredFinding = findings
+    .map((finding, index) => ({
+      finding,
+      index,
+      signalRank:
+        FINDING_SELECTION_SIGNAL_RANK[getFindingSelectionSignal(finding)] ??
+        FINDING_SELECTION_SIGNAL_RANK.amber,
+      hasRationale: Boolean(String(finding?.rationale || "").trim()),
+      evidenceCount: Array.isArray(finding?.evidence) ? finding.evidence.length : 0,
+    }))
+    .sort((left, right) => {
+      if (left.signalRank !== right.signalRank) return left.signalRank - right.signalRank;
+      if (left.hasRationale !== right.hasRationale) return left.hasRationale ? -1 : 1;
+      if (left.evidenceCount !== right.evidenceCount) return right.evidenceCount - left.evidenceCount;
+      return left.index - right.index;
+    })[0];
+
+  return String(preferredFinding?.finding?.findingId || "").trim();
 }
 
 function normalizeFindingSpan(span = null, text = "") {

@@ -4511,6 +4511,7 @@ export default function WorkspaceShell({
   const [desktopReferenceTabs, setDesktopReferenceTabs] = useState([]);
   const [desktopAssemblyOpen, setDesktopAssemblyOpen] = useState(false);
   const [pendingDesktopAnchor, setPendingDesktopAnchor] = useState("");
+  const [pendingInlineOperateSeedOpen, setPendingInlineOperateSeedOpen] = useState("");
   const [desktopSidecarPanel, setDesktopSidecarPanel] = useState(() =>
     getDefaultDesktopSidecarPanel(
       requestedWorkspaceMode === WORKSPACE_MODES.assemble ||
@@ -4697,6 +4698,20 @@ export default function WorkspaceShell({
   const showingInlineOperateDocument =
     Boolean(inlineOperateDocumentKey) &&
     String(activeDocument?.documentKey || "").trim() === inlineOperateDocumentKey;
+  const selectedOperateFinding = useMemo(() => {
+    const findings = Array.isArray(operateOverlayResult?.findings)
+      ? operateOverlayResult.findings
+      : [];
+    return (
+      findings.find(
+        (finding) =>
+          String(finding?.findingId || "").trim() ===
+          String(selectedOperateFindingId || "").trim(),
+      ) ||
+      findings[0] ||
+      null
+    );
+  }, [operateOverlayResult, selectedOperateFindingId]);
   const activeDocumentWarning = getPrimaryDiagnosticMessage({
     diagnostics: activeDocument?.intakeDiagnostics,
   });
@@ -4716,6 +4731,33 @@ export default function WorkspaceShell({
     activeDocument?.documentType !== "assembly" &&
     Boolean(activeDocument?.isEditable);
   const showActiveDocumentTools = canManageActiveSource || canDeleteActiveDocument;
+
+  async function runSeedVisibleInlineOperate() {
+    if (!inlineOperateDocumentKey) {
+      setFeedback("Shape or open the current seed before running inline Operate.", "warning");
+      return null;
+    }
+
+    if (!showingInlineOperateDocument) {
+      setPendingInlineOperateSeedOpen(inlineOperateDocumentKey);
+      setFeedback(
+        "Switching to the live seed so inline Operate can reveal findings on the current draft.",
+        "warning",
+      );
+      const opened = await loadDocument(inlineOperateDocumentKey, {
+        mode: WORKSPACE_MODES.assemble,
+        phase: BOX_PHASES.create,
+      });
+      if (!opened) {
+        setPendingInlineOperateSeedOpen("");
+      }
+      return null;
+    }
+
+    setPendingInlineOperateSeedOpen("");
+    return runInlineOperate();
+  }
+
   const activeRerouteContext = activeProjectKey
     ? rerouteContextByProjectKey[activeProjectKey] || null
     : null;
@@ -5653,6 +5695,44 @@ export default function WorkspaceShell({
     artifactDocument?.documentKey,
     pendingDesktopAnchor,
   ]);
+
+  useEffect(() => {
+    if (!pendingInlineOperateSeedOpen) return;
+    if (!inlineOperateDocumentKey) {
+      setPendingInlineOperateSeedOpen("");
+      return;
+    }
+    if (pendingInlineOperateSeedOpen !== inlineOperateDocumentKey) {
+      setPendingInlineOperateSeedOpen("");
+      return;
+    }
+    if (!showingInlineOperateDocument) return;
+
+    setPendingInlineOperateSeedOpen("");
+    void runInlineOperate();
+  }, [
+    inlineOperateDocumentKey,
+    pendingInlineOperateSeedOpen,
+    runInlineOperate,
+    showingInlineOperateDocument,
+  ]);
+
+  useEffect(() => {
+    const blockId = String(selectedOperateFinding?.blockId || "").trim();
+    if (!blockId || !showingInlineOperateDocument) return;
+
+    setFocusBlockId(blockId);
+    const element = blockRefs.current[blockId];
+    if (!element) {
+      setPendingDesktopAnchor(blockId);
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [selectedOperateFinding, showingInlineOperateDocument]);
 
   function revealDesktopBlock(blockId = "", { preferArtifact = false } = {}) {
     if (!blockId) return;
@@ -8335,7 +8415,7 @@ export default function WorkspaceShell({
   }
 
   async function loadDocument(documentKey, options = {}) {
-    if (!documentKey) return;
+    if (!documentKey) return false;
     const nextMode = normalizeWorkspaceMode(options.mode || workspaceMode, workspaceMode);
     const nextDocumentSummary = documentsState.find((document) => document.documentKey === documentKey);
     const nextPhase = normalizeBoxPhase(
@@ -8356,7 +8436,7 @@ export default function WorkspaceShell({
         setPlayheadBlockId(nextFocusBlockId);
       }
       updateUrl(documentKey, activeProjectKey, { mode: nextMode });
-      return;
+      return true;
     }
 
     if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
@@ -8386,8 +8466,10 @@ export default function WorkspaceShell({
       }
       updateUrl(documentKey, activeProjectKey, { mode: nextMode });
       setFeedback(`Opened ${documentsState.find((document) => document.documentKey === documentKey)?.title || "document"}.`);
+      return true;
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Could not load the document.", "error");
+      return false;
     } finally {
       setLoadingDocumentKey("");
     }
@@ -11227,7 +11309,7 @@ export default function WorkspaceShell({
       onSubmit={runAiOperation}
       onSuggestion={(prompt) => void runAiOperation(prompt)}
       onStageMessage={stageSevenMessage}
-      onRunOperate={() => void runInlineOperate()}
+      onRunOperate={() => void runSeedVisibleInlineOperate()}
       onToggleOperateOverlay={() => setOperateOverlayOpen((current) => !current)}
       onSelectOperateFinding={setSelectedOperateFindingId}
       onCreateOperateOverride={(payload) => void createAttestedOverride(payload)}

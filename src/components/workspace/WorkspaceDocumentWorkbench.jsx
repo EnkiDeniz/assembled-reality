@@ -69,6 +69,25 @@ function formatOverlaySignalLabel(signal = "") {
   return "Partial";
 }
 
+function buildOperateEvidenceTeaser(finding = null) {
+  const evidence = Array.isArray(finding?.evidence) ? finding.evidence[0] || null : null;
+  if (!evidence) return null;
+
+  const sourceTitle = String(evidence?.documentTitle || evidence?.documentKey || "Source").trim();
+  const excerpt = String(evidence?.excerpt || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const preview =
+    excerpt.length > 160 ? `${excerpt.slice(0, 159).trim()}…` : excerpt;
+
+  if (!sourceTitle && !preview) return null;
+
+  return {
+    sourceTitle: sourceTitle || "Source",
+    excerpt: preview || "Local evidence is attached to this finding.",
+  };
+}
+
 function BlockFormalAnnotations({ block, annotation = null, hidePrimaryShape = false }) {
   const resolvedAnnotation = useMemo(
     () =>
@@ -126,6 +145,7 @@ function BlockOperateFinding({
   if (!finding) return null;
 
   const spans = Array.isArray(finding?.spans) ? finding.spans : [];
+  const evidenceTeaser = selected ? buildOperateEvidenceTeaser(finding) : null;
 
   return (
     <div
@@ -166,6 +186,18 @@ function BlockOperateFinding({
           Underlying machine read: {formatOverlaySignalLabel(finding?.baseSignal || finding?.signal)} at{" "}
           {finding?.baseTrustLevel || finding?.trustLevel || "L1"}.
         </p>
+      ) : null}
+      {evidenceTeaser ? (
+        <article
+          className="assembler-block__operate-evidence"
+          data-testid="workspace-selected-finding-evidence-preview"
+        >
+          <span className="assembler-block__operate-evidence-label">Witness</span>
+          <strong className="assembler-block__operate-evidence-title">
+            {evidenceTeaser.sourceTitle}
+          </strong>
+          <p className="assembler-block__operate-evidence-copy">{evidenceTeaser.excerpt}</p>
+        </article>
       ) : null}
 
       {spans.length ? (
