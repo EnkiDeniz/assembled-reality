@@ -5805,6 +5805,14 @@ export default function WorkspaceShell({
     });
   }
 
+  const workbenchEmptyTitle = showingInlineOperateDocument
+    ? "Current seed is empty."
+    : "Current document is empty.";
+  const workbenchEmptyDetail = showingInlineOperateDocument
+    ? "Add or shape draft text, then run inline Operate."
+    : currentSeedDocument?.title
+      ? `This surface has no visible blocks. Compiler state still follows ${currentSeedDocument.title}.`
+      : "Add text or carry evidence into the current surface.";
   const documentWorkbench = (
     <div
       className={`assembler-document ${showDesktopIde ? "is-ide" : ""} ${
@@ -11219,14 +11227,6 @@ export default function WorkspaceShell({
       : !launchpadOpen
         ? activeDocument
         : null;
-  const workbenchEmptyTitle = showingInlineOperateDocument
-    ? "Current seed is empty."
-    : "Current document is empty.";
-  const workbenchEmptyDetail = showingInlineOperateDocument
-    ? "Add or shape draft text, then run inline Operate."
-    : currentSeedDocument?.title
-      ? `This surface has no visible blocks. Compiler state still follows ${currentSeedDocument.title}.`
-      : "Add text or carry evidence into the current surface.";
   const showMobileBottomNav =
     isMobileLayout &&
     !isFirstTimeSurface &&
