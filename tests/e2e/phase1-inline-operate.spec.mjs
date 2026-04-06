@@ -25,6 +25,16 @@ test("guardian can run inline operate, attest, and hit seal acknowledgement", as
     await page.getByTestId("workspace-disclaimer-submit").click();
   }
 
+  const starter = page.getByTestId("workspace-starter");
+  await expect(starter).toBeVisible();
+  await expect(page.getByTestId("workspace-starter-add-source")).toBeVisible();
+  await expect(page.getByTestId("workspace-starter-open-box")).toBeVisible();
+  await expect(page.getByTestId("workspace-starter-start-fresh")).toBeVisible();
+  await expect(page.getByTestId("workspace-starter-account-link")).toBeVisible();
+
+  await page.getByTestId("workspace-starter-open-box").click();
+  await page.getByRole("button", { name: /^Resume$/ }).click();
+
   await expect(page.getByTestId("workspace-document-workbench")).toBeVisible();
   await expect(page.getByTestId("workspace-diagnostics-rail")).toBeVisible();
 

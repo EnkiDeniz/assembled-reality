@@ -193,6 +193,16 @@ export default async function WorkspacePage({ searchParams }) {
   const requestedLaunchpadView = String(resolvedSearchParams?.launchpadView || "").trim().toLowerCase();
   const requestedMode = String(resolvedSearchParams?.mode || "").trim().toLowerCase();
   const requestedPhase = String(resolvedSearchParams?.phase || "").trim().toLowerCase();
+  const hasExplicitLaunchpadView =
+    requestedLaunchpadView === "start" ||
+    requestedLaunchpadView === "box" ||
+    requestedLaunchpadView === "boxes";
+  const defaultStarterEntry =
+    !requestedDocumentKey &&
+    !requestedMode &&
+    !requestedPhase &&
+    !requestedLaunchpad &&
+    !hasExplicitLaunchpadView;
   const connectedIntegration = String(resolvedSearchParams?.connected || "").trim().toLowerCase();
   const integrationError = String(resolvedSearchParams?.error || "").trim();
   const headerStore = await headers();
@@ -265,8 +275,10 @@ export default async function WorkspacePage({ searchParams }) {
     realDocuments.length === 0 &&
     !hasSeed;
   const initialLaunchpadView =
-    requestedLaunchpadView === "box" || requestedLaunchpadView === "boxes"
+    hasExplicitLaunchpadView
       ? requestedLaunchpadView
+      : defaultStarterEntry
+        ? "start"
       : requestedProjectKey || shouldAutoOpenExample || !mobileRequest
         ? "box"
         : "boxes";
@@ -363,7 +375,9 @@ export default async function WorkspacePage({ searchParams }) {
         ? "assemble"
         : "listen";
   const showLaunchpadInitially =
+    defaultStarterEntry ||
     requestedLaunchpad ||
+    hasExplicitLaunchpadView ||
     (!shouldAutoOpenExample &&
       !isFirstTime &&
       !requestedDocumentKey &&
@@ -443,6 +457,9 @@ export default async function WorkspacePage({ searchParams }) {
       defaultVoiceChoice={voiceCatalog[0] || null}
       showLaunchpadInitially={showLaunchpadInitially}
       initialLaunchpadView={initialLaunchpadView}
+      initialStarterProjectKey={
+        initialLaunchpadView === "start" && requestedProjectKey ? requestedProjectKey : ""
+      }
       resumeSessionSummary={resumeSessionSummary}
       initialEntryState={isFirstTime ? "first-time" : "returning"}
       initialBoxPhase={initialBoxPhase}

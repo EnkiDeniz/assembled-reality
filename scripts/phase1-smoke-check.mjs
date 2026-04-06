@@ -12,7 +12,9 @@ async function main() {
     operateOverridesRoute,
     receiptRoute,
     workspaceAiRoute,
+    workspacePage,
     workspaceShell,
+    workspaceStarter,
     operateOverlay,
     overlayRail,
     receiptSealController,
@@ -33,7 +35,9 @@ async function main() {
     read("src/app/api/workspace/operate/overrides/route.js"),
     read("src/app/api/workspace/receipt/route.js"),
     read("src/app/api/workspace/ai/route.js"),
+    read("src/app/workspace/page.jsx"),
     read("src/components/WorkspaceShell.jsx"),
+    read("src/components/WorkspaceStarter.jsx"),
     read("src/lib/operate-overlay.js"),
     read("src/components/WorkspaceOperateOverlayRail.jsx"),
     read("src/components/workspace/useReceiptSealController.js"),
@@ -70,6 +74,8 @@ async function main() {
 
   assert.match(workspaceAiRoute, /unavailable:\s*true/);
   assert.doesNotMatch(workspaceAiRoute, /fallbackBlocks/);
+  assert.match(workspacePage, /defaultStarterEntry/);
+  assert.match(workspacePage, /"start"/);
 
   assert.match(operateOverlay, /Local evidence did not survive validation/);
   assert.match(operateOverlay, /displaySignal/);
@@ -81,11 +87,20 @@ async function main() {
   assert.match(workspaceShell, /useOperateOverlayController/);
   assert.match(workspaceShell, /useReceiptSealController/);
   assert.match(workspaceShell, /WorkspaceDocumentWorkbench/);
+  assert.match(workspaceShell, /WorkspaceStarter/);
+  assert.match(workspaceShell, /starterScopedProjectKey/);
+  assert.match(workspaceShell, /showStarterSourceSurface/);
+  assert.match(workspaceShell, /openStarterSourceIntake/);
+  assert.match(workspaceShell, /openStarterImportedSource/);
   assert.match(workspaceShell, /pendingInlineOperateSeedOpen/);
   assert.match(workspaceShell, /Switching to the live seed so inline Operate can reveal findings/);
   assert.match(workspaceShell, /DesktopSessionActions/);
   assert.match(workspaceShell, /workspace-account-link/);
   assert.match(workspaceShell, /Current seed is empty\./);
+  assert.match(workspaceStarter, /workspace-starter-add-source/);
+  assert.match(workspaceStarter, /workspace-starter-open-box/);
+  assert.match(workspaceStarter, /workspace-starter-start-fresh/);
+  assert.match(workspaceStarter, /workspace-starter-account-link/);
 
   assert.match(overlayRail, /Operate is partial/);
   assert.match(overlayRail, /attested/);
@@ -118,6 +133,9 @@ async function main() {
   assert.match(e2eSmoke, /dev-guardian/);
   assert.doesNotMatch(e2eSmoke, /test\.skip/);
   assert.match(e2eSmoke, /test\.beforeAll/);
+  assert.match(e2eSmoke, /await expect\(starter\)\.toBeVisible/);
+  assert.match(e2eSmoke, /workspace-starter-open-box/);
+  assert.match(e2eSmoke, /workspace-starter-account-link/);
   assert.match(e2eSmoke, /receipt-override-acknowledgement/);
   assert.match(e2eSmoke, /workspace-proof-metadata/);
   assert.match(e2eSmoke, /workspace-latest-receipt-status/);

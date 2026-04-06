@@ -39,6 +39,7 @@ import WorkspaceControlSurface from "@/components/WorkspaceControlSurface";
 import WorkspaceDiagnosticsRail from "@/components/WorkspaceDiagnosticsRail";
 import WorkspaceDisclaimerGate from "@/components/WorkspaceDisclaimerGate";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
+import WorkspaceStarter from "@/components/WorkspaceStarter";
 import WorkspaceDocumentWorkbench from "@/components/workspace/WorkspaceDocumentWorkbench";
 import { useOperateOverlayController } from "@/components/workspace/useOperateOverlayController";
 import { useReceiptSealController } from "@/components/workspace/useReceiptSealController";
@@ -127,6 +128,7 @@ const WORKSPACE_MODES = {
   assemble: "assemble",
 };
 const LAUNCHPAD_VIEWS = Object.freeze({
+  start: "start",
   boxes: "boxes",
   box: "box",
 });
@@ -1941,6 +1943,7 @@ function MobileBoxSheet({
 function WorkspaceLaunchpad({
   launchpadView = LAUNCHPAD_VIEWS.boxes,
   activeProject,
+  starterProject = null,
   activeProjectKey,
   projects,
   documents,
@@ -1956,8 +1959,10 @@ function WorkspaceLaunchpad({
   onToggleProjectArchived,
   onOpenReceipts,
   onOpenDocument,
-  onOpenProject,
+  onOpenProjectHome,
   onBrowseBoxes,
+  onAddStarterSource,
+  onStartFresh,
   onOpenRoot,
   onRunContextualAction,
   onInterpretWordLayer,
@@ -2007,6 +2012,21 @@ function WorkspaceLaunchpad({
           onClick: () => onResumeProject?.(activeProjectKey),
         }
       : null;
+  const showScopedStarter =
+    !currentAssemblyDocument &&
+    realSourceDocuments.length === 0;
+
+  if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.start) {
+    return (
+      <WorkspaceStarter
+        scopedProject={starterProject}
+        pending={projectActionPending === "__starter__"}
+        onAddSource={onAddStarterSource}
+        onOpenBoxes={onBrowseBoxes}
+        onStartFresh={onStartFresh}
+      />
+    );
+  }
 
   if (normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.boxes) {
     return (
@@ -2016,12 +2036,24 @@ function WorkspaceLaunchpad({
         projects={projects}
         resumeTarget={resumeTarget}
         projectActionPending={projectActionPending}
-        onOpenProjectHome={onOpenProject}
+        onOpenProjectHome={onOpenProjectHome}
         onResumeProject={onResumeProject}
         onManageProjects={onManageProjects}
         onOpenIntake={onOpenIntake}
         onToggleProjectPinned={onToggleProjectPinned}
         onToggleProjectArchived={onToggleProjectArchived}
+      />
+    );
+  }
+
+  if (showScopedStarter) {
+    return (
+      <WorkspaceStarter
+        scopedProject={activeProject}
+        pending={projectActionPending === "__starter__"}
+        onAddSource={onAddStarterSource}
+        onOpenBoxes={onBrowseBoxes}
+        onStartFresh={onStartFresh}
       />
     );
   }
@@ -2180,6 +2212,9 @@ function ListenSurface({
   loadingDocumentKey,
   onOpenLog,
   onExportDocument,
+  starterNextStepVisible = false,
+  onOpenBox,
+  onNextShapeSeed,
   isMobileLayout = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -2301,6 +2336,42 @@ function ListenSurface({
               ) : activeDocumentWarning ? (
                 <p className="assembler-listen__warning">{activeDocumentWarning}</p>
               ) : null}
+            </div>
+          ) : null}
+
+          {starterNextStepVisible ? (
+            <div
+              className="assembler-listen__starter-next"
+              data-testid="workspace-starter-source-next"
+            >
+              <div className="assembler-listen__starter-next-copy">
+                <span className="assembler-listen__starter-next-eyebrow">
+                  Imported source
+                </span>
+                <strong>This is the source as captured.</strong>
+                <p>
+                  Read it, listen to it, and keep it in its raw form first. When
+                  you are ready, move into seed shaping.
+                </p>
+              </div>
+              <div className="assembler-listen__starter-next-actions">
+                <button
+                  type="button"
+                  className="terminal-button is-primary"
+                  data-testid="workspace-starter-next-shape-seed"
+                  onClick={() => onNextShapeSeed?.()}
+                >
+                  Next: Shape seed
+                </button>
+                <button
+                  type="button"
+                  className="terminal-button"
+                  data-testid="workspace-starter-open-box"
+                  onClick={() => onOpenBox?.()}
+                >
+                  Open box
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -4346,6 +4417,7 @@ export default function WorkspaceShell({
   defaultVoiceChoice,
   showLaunchpadInitially = false,
   initialLaunchpadView = LAUNCHPAD_VIEWS.boxes,
+  initialStarterProjectKey = "",
   resumeSessionSummary = null,
   initialEntryState = "returning",
   initialBoxPhase = "",
@@ -4407,6 +4479,9 @@ export default function WorkspaceShell({
     : "";
   const [activeProjectKey, setActiveProjectKey] = useState(
     initialProjectKey || projects?.[0]?.projectKey || DEFAULT_PROJECT_KEY,
+  );
+  const [starterScopedProjectKey, setStarterScopedProjectKey] = useState(
+    initialStarterProjectKey || "",
   );
   const [documentCache, setDocumentCache] = useState({
     [initialDocument.documentKey]: initialDocument,
@@ -4548,6 +4623,8 @@ export default function WorkspaceShell({
   const [voiceRecorderLevel, setVoiceRecorderLevel] = useState(0);
   const [voiceRecorderError, setVoiceRecorderError] = useState("");
   const [voiceMemoDraft, setVoiceMemoDraft] = useState(null);
+  const [starterIntakeActive, setStarterIntakeActive] = useState(false);
+  const [starterSourceDocumentKey, setStarterSourceDocumentKey] = useState("");
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
@@ -4963,13 +5040,27 @@ export default function WorkspaceShell({
     resolvedEntryMode === "first-time" &&
     !currentSeedDocument?.documentKey &&
     realProjectSourceDocuments.length === 0;
+  const normalizedLaunchpadSurface = normalizeLaunchpadView(
+    launchpadView,
+    LAUNCHPAD_VIEWS.boxes,
+  );
+  const showStarterLaunchpad =
+    launchpadOpen && normalizedLaunchpadSurface === LAUNCHPAD_VIEWS.start;
+  const showScopedStarterLaunchpad =
+    launchpadOpen &&
+    normalizedLaunchpadSurface === LAUNCHPAD_VIEWS.box &&
+    !currentSeedDocument?.documentKey &&
+    realProjectSourceDocuments.length === 0;
+  const starterSurfaceActive =
+    showStarterLaunchpad || showScopedStarterLaunchpad;
   const showDesktopHomeToolbar =
     !isMobileLayout &&
     launchpadOpen &&
-    normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box;
+    normalizedLaunchpadSurface === LAUNCHPAD_VIEWS.box &&
+    !showScopedStarterLaunchpad;
   const isHomeSurface =
     launchpadOpen &&
-    normalizeLaunchpadView(launchpadView, LAUNCHPAD_VIEWS.boxes) === LAUNCHPAD_VIEWS.box;
+    normalizedLaunchpadSurface === LAUNCHPAD_VIEWS.box;
   const recordSessionCheckpoint = useCallback(async (reason = "activity", { useBeacon = false } = {}) => {
     const projectKey = String(activeProjectKey || "").trim();
     if (!projectKey) return;
@@ -5069,10 +5160,15 @@ export default function WorkspaceShell({
   const nextBlock = blocks[currentIndex + 1] || null;
   const progress = blocks.length ? ((currentIndex + 1) / blocks.length) * 100 : 0;
   const isListenMode = workspaceMode === WORKSPACE_MODES.listen;
+  const showStarterSourceSurface =
+    Boolean(starterSourceDocumentKey) &&
+    starterSourceDocumentKey === activeDocumentKey &&
+    isListenMode;
   const showDesktopUnifiedShell =
     !isMobileLayout &&
     !launchpadOpen &&
-    !isFirstTimeSurface;
+    !isFirstTimeSurface &&
+    !showStarterSourceSurface;
   const showDesktopIde =
     showDesktopUnifiedShell &&
     !isListenMode;
@@ -7107,6 +7203,144 @@ export default function WorkspaceShell({
     setBoxManagementOpen(true);
   }
 
+  function clearStarterFlowState({ keepScopedProject = false } = {}) {
+    setStarterIntakeActive(false);
+    setStarterSourceDocumentKey("");
+    if (!keepScopedProject) {
+      setStarterScopedProjectKey("");
+    }
+  }
+
+  function openStarterLaunchpad(projectKey = "") {
+    const normalizedProjectKey = String(projectKey || "").trim();
+
+    if (workspaceMode === WORKSPACE_MODES.listen && currentBlock) {
+      void persistListeningSession("paused", {
+        documentKey: activeDocument.documentKey,
+        block: currentBlock,
+      });
+    }
+
+    stopPlayback();
+    setAiOpen(false);
+    setEditMode(false);
+    setBoxPhase(BOX_PHASES.lane);
+    setListenPickerOpen(false);
+    setWorkspacePickerOpen(false);
+    setMobileBoxSheetOpen(false);
+    setDropAnythingOpen(false);
+    setPhotoIntakeOpen(false);
+    closeVoiceRecorderRef.current?.();
+    setMobileComposeOpen(false);
+    clearStarterFlowState({
+      keepScopedProject: Boolean(normalizedProjectKey),
+    });
+    setStarterScopedProjectKey(normalizedProjectKey);
+    if (normalizedProjectKey) {
+      setActiveProjectKey(normalizedProjectKey);
+    }
+    setLaunchpadView(LAUNCHPAD_VIEWS.start);
+    setLaunchpadOpen(true);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(
+        {},
+        "",
+        buildWorkspaceUrl("", normalizedProjectKey, {
+          launchpad: true,
+          launchpadView: LAUNCHPAD_VIEWS.start,
+        }),
+      );
+    }
+  }
+
+  async function createStarterProject({ openIntake = false } = {}) {
+    setProjectActionPending("__starter__");
+
+    try {
+      const response = await fetch("/api/workspace/project", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: "Untitled Box",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.project?.projectKey) {
+        throw new Error(payload?.error || "Could not create the box.");
+      }
+
+      applyProjectPayload(payload.project);
+      openStarterLaunchpad(payload.project.projectKey);
+      setFeedback(`Created ${payload.project.title || "Untitled Box"}.`, "success");
+
+      if (openIntake) {
+        if (isMobileLayout) {
+          openWorkspacePicker("add");
+        } else {
+          setDropAnythingOpen(true);
+        }
+      }
+
+      return payload.project.projectKey;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not create the box.";
+      setFeedback(message, "error");
+      return "";
+    } finally {
+      setProjectActionPending("");
+    }
+  }
+
+  async function openStarterSourceIntake() {
+    let targetProjectKey = String(starterScopedProjectKey || "").trim();
+
+    if (!targetProjectKey) {
+      targetProjectKey = await createStarterProject();
+      if (!targetProjectKey) return;
+    }
+
+    if (targetProjectKey !== activeProjectKey) {
+      setActiveProjectKey(targetProjectKey);
+    }
+    setStarterScopedProjectKey(targetProjectKey);
+
+    if (isMobileLayout) {
+      openWorkspacePicker("add");
+      return;
+    }
+
+    setDropAnythingOpen(true);
+  }
+
+  async function openStarterImportedSource(documentKey = "") {
+    const normalizedDocumentKey = String(documentKey || "").trim();
+    if (!normalizedDocumentKey) return false;
+
+    setStarterIntakeActive(false);
+    setStarterSourceDocumentKey(normalizedDocumentKey);
+    setLaunchpadOpen(false);
+    setDropAnythingOpen(false);
+    setWorkspacePickerOpen(false);
+    setPhotoIntakeOpen(false);
+    setMobileComposeOpen(false);
+    setAiOpen(false);
+    setBoxPhase(BOX_PHASES.think);
+
+    return loadDocument(normalizedDocumentKey, {
+      mode: WORKSPACE_MODES.listen,
+      phase: BOX_PHASES.think,
+    });
+  }
+
+  async function openStarterSeedFlow() {
+    clearStarterFlowState({ keepScopedProject: true });
+    await handleSelectBoxPhase(BOX_PHASES.create, { skipRootGate: false });
+  }
+
   function openProjectLaunchpad(projectKey, nextLaunchpadView = LAUNCHPAD_VIEWS.box) {
     if (!projectKey || typeof window === "undefined") return;
 
@@ -7130,6 +7364,12 @@ export default function WorkspaceShell({
       setPhotoIntakeOpen(false);
       closeVoiceRecorderRef.current?.();
       setMobileComposeOpen(false);
+      clearStarterFlowState({
+        keepScopedProject: nextLaunchpadView === LAUNCHPAD_VIEWS.start,
+      });
+      setStarterScopedProjectKey(
+        nextLaunchpadView === LAUNCHPAD_VIEWS.start ? projectKey : "",
+      );
       setLaunchpadView(nextLaunchpadView);
       setLaunchpadOpen(true);
       window.history.replaceState(
@@ -7249,6 +7489,7 @@ export default function WorkspaceShell({
     setPhotoIntakeOpen(false);
     closeVoiceRecorderRef.current?.();
     setMobileComposeOpen(false);
+    clearStarterFlowState();
     setLaunchpadView(LAUNCHPAD_VIEWS.boxes);
     setLaunchpadOpen(true);
     if (typeof window !== "undefined") {
@@ -8630,6 +8871,7 @@ export default function WorkspaceShell({
     if (!normalizedUrl) {
       throw new Error("Paste a valid public link.");
     }
+    const sourceFirstStarterFlow = starterIntakeActive;
 
     const response = await fetch("/api/workspace/link", {
       method: "POST",
@@ -8650,7 +8892,11 @@ export default function WorkspaceShell({
     upsertDocument(payload.document, { replaceLogs: true });
     attachDocumentToActiveProject(payload.document, { role: "SOURCE" });
     setLaunchpadOpen(false);
-    await loadDocument(payload.document.documentKey, { phase: BOX_PHASES.think });
+    if (sourceFirstStarterFlow) {
+      await openStarterImportedSource(payload.document.documentKey);
+    } else {
+      await loadDocument(payload.document.documentKey, { phase: BOX_PHASES.think });
+    }
 
     const intakeWarning = getPrimaryDiagnosticMessage(payload.intake);
     setFeedback(
@@ -9203,6 +9449,7 @@ export default function WorkspaceShell({
     const audioLike = isAudioFileLike(file);
     const normalizedImageMode = normalizeImageDerivationMode(options.derivationMode);
     const sourceKind = options.sourceKind || "";
+    const sourceFirstStarterFlow = starterIntakeActive;
 
     if (sourceKind !== "voice" && !imageLike && !isLaunchSupportedUpload(file)) {
       const message = getLaunchUploadBlockedMessage(file, sourceKind);
@@ -9256,7 +9503,11 @@ export default function WorkspaceShell({
       }
       setLaunchpadOpen(false);
       setPendingImageIntake(null);
-      await loadDocument(payload.document.documentKey, { phase: BOX_PHASES.think });
+      if (sourceFirstStarterFlow) {
+        await openStarterImportedSource(payload.document.documentKey);
+      } else {
+        await loadDocument(payload.document.documentKey, { phase: BOX_PHASES.think });
+      }
       const intakeWarning = getPrimaryDiagnosticMessage(payload.intake);
       setFeedback(
         intakeWarning
@@ -9802,6 +10053,7 @@ export default function WorkspaceShell({
 
   async function pasteIntoWorkspace(mode, payload = null, options = {}) {
     if (pastePendingMode) return;
+    const sourceFirstStarterFlow = starterIntakeActive;
 
     try {
       const clipboardPayload = payload || (await readClipboardPayloadFromNavigator());
@@ -9908,7 +10160,11 @@ export default function WorkspaceShell({
         setBoxPhase(BOX_PHASES.think);
         setPendingImageIntake(null);
         setPendingLinkIntake(null);
-        await loadDocument(result.document.documentKey, { phase: BOX_PHASES.think });
+        if (sourceFirstStarterFlow) {
+          await openStarterImportedSource(result.document.documentKey);
+        } else {
+          await loadDocument(result.document.documentKey, { phase: BOX_PHASES.think });
+        }
 
         const intakeWarning = getPrimaryDiagnosticMessage(result.intake);
         setFeedback(
@@ -11230,6 +11486,8 @@ export default function WorkspaceShell({
   const showMobileBottomNav =
     isMobileLayout &&
     !isFirstTimeSurface &&
+    !starterSurfaceActive &&
+    !showStarterSourceSurface &&
     !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes);
   const { shapeKey: activeMobileShape, verb: activeMobileVerb } = launchpadOpen
     ? { shapeKey: "aim", verb: "declare" }
@@ -11654,7 +11912,7 @@ export default function WorkspaceShell({
       ) : null}
 
       <div className="assembler-shell">
-        {!showDesktopUnifiedShell ? (
+        {!showDesktopUnifiedShell && !starterSurfaceActive && !showStarterSourceSurface ? (
           <header className="assembler-header assembler-header--minimal">
             <div className="assembler-header__actions">
               {isMobileLayout ? (
@@ -11712,6 +11970,11 @@ export default function WorkspaceShell({
             <WorkspaceLaunchpad
               launchpadView={launchpadView}
               activeProject={activeProject}
+              starterProject={
+                starterScopedProjectKey
+                  ? getProjectByKey(hydratedProjects, starterScopedProjectKey) || null
+                  : null
+              }
               activeProjectKey={activeProjectKey}
               projects={hydratedProjects}
               documents={hydratedProjectDocuments}
@@ -11727,8 +11990,14 @@ export default function WorkspaceShell({
               onToggleProjectArchived={toggleProjectArchived}
               onOpenReceipts={openReceiptsSurface}
               onOpenDocument={enterWorkspace}
-              onOpenProject={openProject}
+              onOpenProjectHome={openCurrentBoxHome}
               onBrowseBoxes={openBoxesIndex}
+              onAddStarterSource={() => {
+                void openStarterSourceIntake();
+              }}
+              onStartFresh={() => {
+                void createStarterProject();
+              }}
               onOpenRoot={() => openRootEditorFor("voluntary")}
               onRunContextualAction={handleAssemblyLaneContextualAction}
               onInterpretWordLayer={handleInterpretWordLayer}
@@ -11791,9 +12060,11 @@ export default function WorkspaceShell({
               nextBlockId={nextBlock?.id || null}
               onFocusBlock={focusBlock}
               onSwitchToAssemble={() =>
-                openMode(WORKSPACE_MODES.assemble, activeDocument.documentKey, {
-                  phase: BOX_PHASES.create,
-                })
+                showStarterSourceSurface
+                  ? void openStarterSeedFlow()
+                  : openMode(WORKSPACE_MODES.assemble, activeDocument.documentKey, {
+                      phase: BOX_PHASES.create,
+                    })
               }
               pickerOpen={listenPickerOpen}
               onTogglePicker={() => setListenPickerOpen((value) => !value)}
@@ -11813,6 +12084,12 @@ export default function WorkspaceShell({
               }}
               instrumentViewModel={documentInstrumentViewModel}
               onExportDocument={exportDocument}
+              starterNextStepVisible={showStarterSourceSurface}
+              onOpenBox={() => {
+                clearStarterFlowState({ keepScopedProject: true });
+                openCurrentBoxHome(activeProjectKey);
+              }}
+              onNextShapeSeed={() => void openStarterSeedFlow()}
               lastUsedMode={lastUsedMode}
               aiOpen={aiOpen}
               isMobileLayout={isMobileLayout}
@@ -12245,7 +12522,9 @@ export default function WorkspaceShell({
             open={workspacePickerOpen}
             intent={workspacePickerIntent}
             boxTitle={activeBoxTitle}
-            activeDocument={mobileSourceDocument || sevenContextDocument}
+            activeDocument={
+              starterSurfaceActive ? null : mobileSourceDocument || sevenContextDocument
+            }
             currentSeedDocument={currentSeedDocument}
             documents={hydratedProjectDocuments}
             activeDocumentKey={activeDocumentKey}
@@ -12253,11 +12532,34 @@ export default function WorkspaceShell({
             onOpenDocument={(documentKey, mode, options = {}) => {
               void enterWorkspace(documentKey, mode, options);
             }}
-            onUpload={() => fileInputRef.current?.click()}
-            onOpenPhoto={openPhotoIntake}
-            onPasteSource={() => void pasteIntoWorkspace("source")}
-            onOpenSpeak={openVoiceRecorder}
+            onUpload={() => {
+              if (starterSurfaceActive) {
+                setStarterIntakeActive(true);
+              }
+              fileInputRef.current?.click();
+            }}
+            onOpenPhoto={() => {
+              if (starterSurfaceActive) {
+                setStarterIntakeActive(true);
+              }
+              openPhotoIntake();
+            }}
+            onPasteSource={() => {
+              if (starterSurfaceActive) {
+                setStarterIntakeActive(true);
+              }
+              void pasteIntoWorkspace("source");
+            }}
+            onOpenSpeak={() => {
+              if (starterSurfaceActive) {
+                setStarterIntakeActive(true);
+              }
+              openVoiceRecorder();
+            }}
             onImportLink={(url) => {
+              if (starterSurfaceActive) {
+                setStarterIntakeActive(true);
+              }
               void importLinkFromIntake(url);
             }}
             onClose={closeWorkspacePicker}
@@ -12454,21 +12756,36 @@ export default function WorkspaceShell({
           pending={uploading || Boolean(pastePendingMode)}
           onClose={() => setDropAnythingOpen(false)}
           onUpload={() => {
+            if (starterSurfaceActive) {
+              setStarterIntakeActive(true);
+            }
             setDropAnythingOpen(false);
             fileInputRef.current?.click();
           }}
           onPhoto={() => {
+            if (starterSurfaceActive) {
+              setStarterIntakeActive(true);
+            }
             openPhotoIntake();
           }}
           onPaste={() => {
+            if (starterSurfaceActive) {
+              setStarterIntakeActive(true);
+            }
             setDropAnythingOpen(false);
             void pasteIntoWorkspace("source");
           }}
           onSpeak={() => {
+            if (starterSurfaceActive) {
+              setStarterIntakeActive(true);
+            }
             setDropAnythingOpen(false);
             openVoiceRecorder();
           }}
           onImportLink={(url) => {
+            if (starterSurfaceActive) {
+              setStarterIntakeActive(true);
+            }
             void importLinkFromIntake(url);
           }}
         />

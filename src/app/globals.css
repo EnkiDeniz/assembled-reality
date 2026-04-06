@@ -4312,6 +4312,49 @@ button.assembler-ide-statusbar__segment {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.assembler-listen__starter-next {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(138, 193, 255, 0.22);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(138, 193, 255, 0.12), transparent 52%),
+    rgba(16, 18, 18, 0.9);
+}
+
+.assembler-listen__starter-next-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-listen__starter-next-eyebrow {
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-listen__starter-next-copy strong {
+  color: var(--white);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.assembler-listen__starter-next-copy p {
+  margin: 0;
+  color: rgba(228, 233, 232, 0.8);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.assembler-listen__starter-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .assembler-listen__subtitle,
 .assembler-listen__warning {
   max-width: 44rem;
@@ -7430,6 +7473,146 @@ button.assembler-ide-statusbar__segment {
   min-height: 24px;
 }
 
+.assembler-starter {
+  position: relative;
+  width: min(920px, 100%);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.assembler-starter__panel {
+  display: grid;
+  gap: 24px;
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 34px;
+  background:
+    linear-gradient(135deg, rgba(138, 193, 255, 0.09), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 72%),
+    rgba(12, 14, 14, 0.94);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.28);
+}
+
+.assembler-starter__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.assembler-starter__copy {
+  display: grid;
+  gap: 12px;
+}
+
+.assembler-starter__eyebrow {
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.assembler-starter__title {
+  margin: 0;
+  color: var(--white);
+  font-family: var(--font-copy);
+  font-size: clamp(2.1rem, 4vw, 3.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.assembler-starter__subtitle,
+.assembler-starter__scope,
+.assembler-starter__footer p {
+  margin: 0;
+  max-width: 42rem;
+  color: rgba(228, 233, 232, 0.8);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.assembler-starter__scope strong {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.assembler-starter__session {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+  flex-wrap: wrap;
+}
+
+.assembler-starter__session-link,
+.assembler-starter__session-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(16, 18, 18, 0.88);
+  color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.assembler-starter__session-signout {
+  cursor: pointer;
+}
+
+.assembler-starter__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.assembler-starter__action {
+  display: grid;
+  gap: 6px;
+  min-height: 156px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: rgba(16, 18, 18, 0.88);
+  color: var(--text);
+  text-align: left;
+}
+
+.assembler-starter__action.is-primary {
+  background:
+    linear-gradient(135deg, rgba(138, 193, 255, 0.13), transparent 55%),
+    rgba(16, 18, 18, 0.9);
+  border-color: rgba(138, 193, 255, 0.26);
+}
+
+.assembler-starter__action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.assembler-starter__action-label {
+  color: var(--white);
+  font-family: var(--font-copy);
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.assembler-starter__action-detail {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.assembler-starter__footer {
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .assembler-first-box {
   position: relative;
   width: min(880px, 100%);
@@ -8797,18 +8980,32 @@ button.assembler-ide-statusbar__segment {
 }
 
 @media (max-width: 820px) {
+  .assembler-starter {
+    padding: 0;
+  }
+
   .assembler-first-box {
     padding: 0;
   }
 
+  .assembler-starter__panel,
   .assembler-first-box__panel {
     padding: 20px 18px;
     border-radius: 26px;
   }
 
+  .assembler-starter__actions,
   .assembler-first-box__capture,
   .assembler-first-box__footer {
     grid-template-columns: 1fr;
+  }
+
+  .assembler-starter__header {
+    grid-template-columns: 1fr;
+  }
+
+  .assembler-starter__session {
+    justify-self: start;
   }
 
   .assembler-first-box__segments {
@@ -8825,6 +9022,7 @@ button.assembler-ide-statusbar__segment {
     min-height: 112px;
   }
 
+  .assembler-listen__starter-next-actions,
   .assembler-seed-update__actions,
   .assembler-first-box__write-actions {
     flex-direction: column;
