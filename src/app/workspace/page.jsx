@@ -349,9 +349,9 @@ export default async function WorkspacePage({ searchParams }) {
         "";
   const desktopResumeDocumentKey =
     String(requestedDocumentKey || "").trim() ||
-    String(resumeSessionSummary?.documentKey || "").trim() ||
     String(initialProject?.currentAssemblyDocumentKey || "").trim() ||
     String(initialAssembleDocumentKey || "").trim() ||
+    String(resumeSessionSummary?.documentKey || "").trim() ||
     "";
 
   const defaultMode =

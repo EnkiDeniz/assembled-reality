@@ -3042,6 +3042,13 @@ function SourceCleanupTray({
 
 function WorkspaceToolbar({
   viewModel,
+  artifactTitle = "",
+  artifactRoleLabel = "Artifact",
+  artifactKindLabel = "",
+  artifactBlockCount = 0,
+  artifactConvergence = 0,
+  artifactCanSeal = false,
+  artifactBlockerCount = 0,
   instrument = null,
   activeSidecar = "",
   onSetBoxPhase,
@@ -3063,6 +3070,13 @@ function WorkspaceToolbar({
   return (
     <WorkspaceControlSurface
       viewModel={viewModel}
+      artifactTitle={artifactTitle}
+      artifactRoleLabel={artifactRoleLabel}
+      artifactKindLabel={artifactKindLabel}
+      artifactBlockCount={artifactBlockCount}
+      artifactConvergence={artifactConvergence}
+      artifactCanSeal={artifactCanSeal}
+      artifactBlockerCount={artifactBlockerCount}
       instrument={instrument}
       isMobileLayout={isMobileLayout}
       activeSidecar={activeSidecar}
@@ -3353,7 +3367,7 @@ function formatShapeLabel(shapeKey = "") {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function BlockFormalAnnotations({ block, annotation = null }) {
+function BlockFormalAnnotations({ block, annotation = null, hidePrimaryShape = false }) {
   const resolvedAnnotation = useMemo(
     () =>
       annotation ||
@@ -3368,12 +3382,12 @@ function BlockFormalAnnotations({ block, annotation = null }) {
     ? resolvedAnnotation.diagnostics.slice(0, 2)
     : [];
 
-  if (!primarySentence && diagnostics.length === 0) return null;
+  if ((!primarySentence || hidePrimaryShape) && diagnostics.length === 0) return null;
 
   return (
     <div className="assembler-block__formal">
       <div className="assembler-block__formal-head">
-        {primarySentence ? (
+        {primarySentence && !hidePrimaryShape ? (
           <div className="assembler-block__formal-shape">
             <ShapeGlyph shapeKey={primarySentence.shapeKey} size={14} />
             <span>Reads as {formatShapeLabel(primarySentence.shapeKey)}</span>
@@ -3441,6 +3455,14 @@ function BlockRow({
   const confirmationState = useMemo(() => getConfirmationStateView(block), [block]);
   const currentTag = buildBlockMetaDetail(block);
   const controlsDisabled = actionPending || saveState === "saving";
+  const primaryShapeKey = primarySentence?.shapeKey || "";
+  const showContextActions = showNativeActions && (isFocused || isSelected || recastOpen);
+  const originLabel =
+    block.sectionLabel ||
+    block.sourceTitle ||
+    block.sourceDocumentKey ||
+    block.documentKey ||
+    "Artifact";
 
   return (
     <article
@@ -3457,54 +3479,33 @@ function BlockRow({
     >
       <div className="assembler-block__stripe" aria-hidden="true" />
 
-      <div className="assembler-block__select">
-        {isSelected ? (
-          <button
-            type="button"
-            className="assembler-block__toggle is-selected"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemove(block.id);
-            }}
-          >
-            −
-          </button>
+      <div className="assembler-block__gutter">
+        <span className="assembler-block__line-number">
+          {String(block.sourcePosition + 1).padStart(3, "0")}
+        </span>
+        {primaryShapeKey ? (
+          <div className="assembler-block__gutter-shape">
+            <ShapeGlyph shapeKey={primaryShapeKey} size={13} />
+            <span>{formatShapeLabel(primaryShapeKey)}</span>
+          </div>
         ) : (
-          <button
-            type="button"
-            className="assembler-block__toggle"
-            onClick={(event) => {
-              event.stopPropagation();
-              onAdd(block);
-            }}
-          >
-            +
-          </button>
+          <span className="assembler-block__gutter-detail">Untyped</span>
         )}
-
-        {canDelete ? (
-          <button
-            type="button"
-            className="assembler-block__icon assembler-block__icon--danger"
-            aria-label={`Delete block ${block.sourcePosition + 1}`}
-            title={`Delete block ${block.sourcePosition + 1}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete(block.id);
-            }}
-          >
-            <SourceActionIcon kind="delete" />
-          </button>
+        <SignalChip tone={confirmationState.tone} subtle className="assembler-block__gutter-chip">
+          {confirmationState.label}
+        </SignalChip>
+        {currentTag ? (
+          <span className="assembler-block__gutter-detail">tag · {currentTag}</span>
+        ) : null}
+        <span className="assembler-block__gutter-detail">{originLabel}</span>
+        {provenanceView?.compact ? (
+          <span className="assembler-block__gutter-detail">
+            {provenanceView.label} · {provenanceView.compact}
+          </span>
         ) : null}
       </div>
 
       <div className="assembler-block__body">
-        <div className="assembler-block__meta">
-          <span>{String(block.sourcePosition + 1).padStart(3, "0")}</span>
-          <span>{block.sectionLabel || block.sourceTitle || block.sourceDocumentKey}</span>
-          <span>{block.author === "ai" ? "AI" : block.operation}</span>
-        </div>
-
         {editMode && block.isEditable ? (
           <BlockEditor
             key={`${block.id}:${block.updatedAt || block.text}`}
@@ -3531,22 +3532,12 @@ function BlockRow({
         {block.author === "ai" ? (
           <span className="assembler-block__badge">AI-GENERATED · {block.operation}</span>
         ) : null}
-        <div className="assembler-block__runtime">
-          <div className="assembler-block__runtime-row">
-            <SignalChip tone={confirmationState.tone} subtle>
-              {confirmationState.label}
-            </SignalChip>
-            {currentTag ? (
-              <span className="assembler-block__runtime-detail">working tag · {currentTag}</span>
-            ) : null}
-          </div>
-          <div className="assembler-block__runtime-row">
-            <span className="assembler-block__runtime-label">{provenanceView.label}</span>
-            <span className="assembler-block__runtime-detail">{provenanceView.detail}</span>
-          </div>
-        </div>
-        <BlockFormalAnnotations block={block} annotation={annotation} />
-        {showNativeActions ? (
+        <BlockFormalAnnotations
+          block={block}
+          annotation={annotation}
+          hidePrimaryShape={Boolean(primaryShapeKey)}
+        />
+        {showContextActions ? (
           <div className="assembler-block__actions">
             <button
               type="button"
@@ -3588,9 +3579,19 @@ function BlockRow({
             >
               Open witness
             </button>
+            {canDelete ? (
+              <button
+                type="button"
+                className="assembler-tiny-button is-danger"
+                onClick={() => onDelete(block.id)}
+                disabled={controlsDisabled}
+              >
+                Delete
+              </button>
+            ) : null}
           </div>
         ) : null}
-        {showNativeActions && recastOpen ? (
+        {showContextActions && recastOpen ? (
           <div className="assembler-block__recast">
             {[
               ["Aim", ASSEMBLY_PRIMARY_TAGS.aim],
@@ -5265,30 +5266,37 @@ export default function WorkspaceShell({
   const desktopEditorMode =
     !isMobileLayout &&
     workspaceMode === WORKSPACE_MODES.assemble &&
-    Boolean(activeDocument?.isEditable);
+    Boolean(activeDocument?.isEditable) &&
+    Boolean(activeDocument?.isAssembly || activeDocument?.documentType === "assembly");
+  const artifactDocumentKey =
+    String(activeProject?.currentAssemblyDocumentKey || "").trim() ||
+    String(currentSeedDocument?.documentKey || "").trim() ||
+    String(
+      activeDocument?.isAssembly || activeDocument?.documentType === "assembly"
+        ? activeDocument?.documentKey
+        : "",
+    ).trim() ||
+    "";
+  const isArtifactDocument = Boolean(
+    activeDocument?.isAssembly || activeDocument?.documentType === "assembly",
+  );
+  const documentRoleLabel = isArtifactDocument ? "Artifact" : "Reference source";
+  const documentMetaItems = [
+    getDocumentBlockCountLabel(activeDocument),
+    activeDocument.sourceFiles?.length ? activeDocument.sourceFiles.join(", ") : "",
+    activeDocument.derivationModel || "",
+  ].filter(Boolean);
 
   const documentWorkbench = (
-    <div className="assembler-document">
-      <div className="assembler-document__header">
-        <div>
-          <h2 className="assembler-document__title">{activeDocument.title}</h2>
-          {activeDocument.subtitle ? (
-            <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
-          ) : null}
-        </div>
-
-        <div className="assembler-document__side">
-          <div className="assembler-document__meta">
-            <span>{getDocumentKindLabel(activeDocument)}</span>
-            <span>{getDocumentBlockCountLabel(activeDocument)}</span>
-            {activeDocument.sourceFiles?.length ? (
-              <span>{activeDocument.sourceFiles.join(", ")}</span>
-            ) : null}
-            {activeDocument.derivationModel ? (
-              <span>{activeDocument.derivationModel}</span>
-            ) : null}
-          </div>
-          <div className="assembler-document__ide-status">
+    <div
+      className={`assembler-document ${showDesktopIde ? "is-ide" : ""} ${
+        isArtifactDocument ? "is-artifact" : "is-reference"
+      }`}
+    >
+      <div className={`assembler-document__header ${showDesktopIde ? "is-ide" : ""}`}>
+        <div className="assembler-document__identity">
+          <div className="assembler-document__eyebrow-row">
+            <span className="assembler-document__eyebrow">{documentRoleLabel}</span>
             <SignalChip tone="neutral" subtle>
               {workspaceIdeState.editorState.activeDocumentKind}
             </SignalChip>
@@ -5303,46 +5311,47 @@ export default function WorkspaceShell({
               {formalBoxState?.primaryCard?.convergencePercent || 0}% convergence
             </SignalChip>
           </div>
-          {activeDocumentAsset ? (
-            <div className="assembler-document__asset">
-              {activeDocumentAsset.kind === "image" ? (
-                <img
-                  className="assembler-document__asset-thumb"
-                  src={activeDocumentAsset.url}
-                  alt={`Original image for ${activeDocument.title}`}
-                />
-              ) : (
-                <div className="assembler-document__asset-thumb assembler-document__asset-thumb--icon">
-                  {activeDocumentAsset.kind === "audio" ? "AUDIO" : "LINK"}
-                </div>
-              )}
-              <div className="assembler-document__asset-copy">
-                <span className="assembler-document__asset-badge">
-                  {getDocumentKindLabel(activeDocument).toUpperCase()}
+          <h2 className="assembler-document__title">{activeDocument.title}</h2>
+          {activeDocument.subtitle ? (
+            <p className="assembler-document__subtitle">{activeDocument.subtitle}</p>
+          ) : null}
+          {documentMetaItems.length ? (
+            <div className="assembler-document__meta-line">
+              {documentMetaItems.map((item) => (
+                <span key={item} className="assembler-document__meta-item">
+                  {item}
                 </span>
-                <span className="assembler-document__asset-label">
-                  {getSourceAssetLabel(activeDocumentAsset)}
-                </span>
-                {activeDocumentAsset.kind === "audio" && activeDocumentAsset.durationMs ? (
-                  <span className="assembler-document__asset-detail">
-                    {formatAssetDuration(activeDocumentAsset.durationMs)}
-                  </span>
-                ) : null}
-                <a
-                  className="assembler-document__asset-link"
-                  href={activeDocumentAsset.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {activeDocumentAsset.kind === "image"
-                    ? "Open original image"
-                    : activeDocumentAsset.kind === "audio"
-                      ? "Open original audio"
-                      : "Open original link"}
-                </a>
-              </div>
+              ))}
             </div>
           ) : null}
+          {activeDocumentAsset ? (
+            <div className="assembler-document__witness">
+              <span className="assembler-document__witness-label">Source witness</span>
+              <a
+                className="assembler-document__witness-link"
+                href={activeDocumentAsset.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {getSourceAssetLabel(activeDocumentAsset)}
+              </a>
+              {activeDocumentAsset.kind === "audio" && activeDocumentAsset.durationMs ? (
+                <span className="assembler-document__witness-detail">
+                  {formatAssetDuration(activeDocumentAsset.durationMs)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          {documentInstrumentViewModel ? (
+            <RealityInstrument
+              viewModel={documentInstrumentViewModel}
+              variant="inline"
+              onMove={handleRealityInstrumentMove}
+            />
+          ) : null}
+        </div>
+
+        <div className={`assembler-document__side ${showDesktopIde ? "is-ide" : ""}`}>
           {isMobileLayout && showActiveDocumentTools ? (
             <button
               type="button"
@@ -5395,13 +5404,6 @@ export default function WorkspaceShell({
                 />
               ) : null}
             </div>
-          ) : null}
-          {documentInstrumentViewModel ? (
-            <RealityInstrument
-              viewModel={documentInstrumentViewModel}
-              variant="inline"
-              onMove={handleRealityInstrumentMove}
-            />
           ) : null}
         </div>
       </div>
@@ -10912,50 +10914,8 @@ export default function WorkspaceShell({
         boxPhase: isListenMode ? BOX_PHASES.think : boxPhase,
         workspaceMode,
       });
-  const desktopIdeCenterContent = isReceiptsPhase ? (
-    <ReceiptsScreen>
-      <ReceiptSurface
-        logEntries={activeDocument.logEntries || []}
-        drafts={projectDraftsState}
-        receiptSummary={receiptSummaryViewModel}
-        receiptPending={receiptPending}
-        activeDocumentTitle={currentSeedDocument?.title || activeDocument.title}
-        onCreateReceipt={createReceiptDraft}
-        onRunOperate={() => void runOperate()}
-        onExportReceipt={exportReceipt}
-        onExportDocument={exportDocument}
-        onOpenGetReceipts={() => openGetReceiptsConnection()}
-        onRetryRemoteSync={(draft) => void retryReceiptRemoteSync(draft)}
-        onOpenVerifyUrl={(url) => {
-          if (url && typeof window !== "undefined") {
-            window.open(url, "_blank", "noopener,noreferrer");
-          }
-        }}
-        onSealReceipt={openReceiptSealDialog}
-        isMobileLayout={false}
-      />
-    </ReceiptsScreen>
-  ) : (
+  const desktopIdeCenterContent = (
     <section className="loegos-ide-editor-shell">
-      <div className="loegos-ide-editor-shell__intro">
-        <div className="loegos-ide-editor-shell__copy">
-          <span className="loegos-ide-editor-shell__eyebrow">Editor</span>
-          <h2 className="loegos-ide-editor-shell__title">Write the current block stack.</h2>
-          <p className="loegos-ide-editor-shell__detail">
-            The center stays for authored blocks. Diagnostics, compile state, and seal readiness stay beside it.
-          </p>
-        </div>
-        <div className="loegos-ide-editor-shell__meta">
-          <SignalChip tone="neutral" subtle>
-            {workspaceIdeState.editorState.activeDocumentTitle}
-          </SignalChip>
-          {isOperatePhase ? (
-            <SignalChip tone="active" subtle>
-              Operate diagnostics live on the right
-            </SignalChip>
-          ) : null}
-        </div>
-      </div>
       {documentWorkbench}
       {isCreatePhase || clipboard.length || stagedAiBlocks.length ? (
         <ClipboardTray
@@ -11307,6 +11267,7 @@ export default function WorkspaceShell({
               {!isMobileLayout ? (
                 <SourceRail
                   activeProject={activeProject}
+                  artifactDocumentKey={artifactDocumentKey}
                   activeDocumentKey={activeDocumentKey}
                   loadingDocumentKey={loadingDocumentKey}
                   guideDocument={guideSourceDocument}
@@ -11333,6 +11294,13 @@ export default function WorkspaceShell({
                 {!isMobileLayout ? (
                   <WorkspaceToolbar
                     viewModel={controlSurfaceViewModel}
+                    artifactTitle={activeDocument.title}
+                    artifactRoleLabel={documentRoleLabel}
+                    artifactKindLabel={workspaceIdeState.editorState.activeDocumentKind}
+                    artifactBlockCount={workspaceIdeState.editorState.blockCount}
+                    artifactConvergence={formalBoxState?.primaryCard?.convergencePercent || 0}
+                    artifactCanSeal={Boolean(formalSealCheck?.canSeal)}
+                    artifactBlockerCount={formalBoxState?.hardErrorCount || 0}
                     instrument={realityInstrumentViewModel}
                     activeSidecar={activeDesktopSidecar}
                     onSetBoxPhase={handleSelectBoxPhase}

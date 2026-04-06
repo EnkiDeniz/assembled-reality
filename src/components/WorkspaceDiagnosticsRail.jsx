@@ -318,10 +318,10 @@ export default function WorkspaceDiagnosticsRail({
     <aside className="loegos-diagnostics" aria-label="Box diagnostics">
       <div className="loegos-diagnostics__header">
         <div className="loegos-diagnostics__copy">
-          <span className="loegos-diagnostics__eyebrow">Diagnostics</span>
-          <h2 className="loegos-diagnostics__title">Compile state stays next to the work.</h2>
+          <span className="loegos-diagnostics__eyebrow">Compiler</span>
+          <h2 className="loegos-diagnostics__title">Debugger + build state</h2>
           <p className="loegos-diagnostics__detail">
-            Seven infers, the runtime computes, and the human remains the interpreter and committer of record.
+            Preflight, contradictions, Operate, and build output stay beside the open artifact.
           </p>
         </div>
         <div className="loegos-diagnostics__header-meta">

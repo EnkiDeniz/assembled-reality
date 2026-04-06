@@ -6,10 +6,11 @@ function formatTrustLabel(value = "") {
   return normalized ? `${normalized} trust` : "";
 }
 
-function buildSourceBadges(sourceSummary) {
+function buildSourceBadges(sourceSummary, role = "source") {
   if (!sourceSummary) return [];
 
   return [
+    role === "artifact" ? "Artifact" : "",
     sourceSummary.trustProfile?.exampleSourceClassificationLabel || "",
     sourceSummary.badge || "",
     sourceSummary.originLabel || "",
@@ -31,6 +32,7 @@ function buildSourceProvenanceLine(sourceSummary, document) {
 
 function SourceRailRow({
   document,
+  role = "source",
   activeDocumentKey,
   loadingDocumentKey,
   onListen,
@@ -43,11 +45,15 @@ function SourceRailRow({
   const active = document.documentKey === activeDocumentKey;
   const isGuide =
     document?.documentType === "builtin" || document?.sourceType === "builtin";
-  const badges = buildSourceBadges(sourceSummary);
+  const badges = buildSourceBadges(sourceSummary, role);
   const provenanceLine = buildSourceProvenanceLine(sourceSummary, document);
 
   return (
-    <div className={`assembler-source-rail__row ${active ? "is-active" : ""} ${isGuide ? "is-guide" : ""}`}>
+    <div
+      className={`assembler-source-rail__row ${active ? "is-active" : ""} ${isGuide ? "is-guide" : ""} ${
+        role === "artifact" ? "is-artifact" : ""
+      }`}
+    >
       <button
         type="button"
         className="assembler-source-rail__quick"
@@ -93,6 +99,7 @@ function SourceRailRow({
 
 export default function SourceRail({
   activeProject,
+  artifactDocumentKey = "",
   activeDocumentKey,
   loadingDocumentKey = "",
   guideDocument = null,
@@ -106,7 +113,6 @@ export default function SourceRail({
   onPasteSource,
   onOpenDocument,
   uploading = false,
-  sourceOpenMode = "listen",
   ActionIcon,
   getDocumentBlockCountLabel,
   getDocumentKindLabel,
@@ -115,6 +121,11 @@ export default function SourceRail({
   const sourceRows = guideDocument
     ? [guideDocument, ...sourceDocuments]
     : sourceDocuments;
+  const artifactRows = [...assemblyDocuments].sort((left, right) => {
+    const leftPinned = left?.documentKey === artifactDocumentKey ? 1 : 0;
+    const rightPinned = right?.documentKey === artifactDocumentKey ? 1 : 0;
+    return rightPinned - leftPinned;
+  });
 
   return (
     <aside className="assembler-source-rail">
@@ -130,7 +141,7 @@ export default function SourceRail({
             className="assembler-source-rail__action"
             onClick={onOpenProjectHome}
           >
-            Box home
+            Overview
           </button>
           <button
             type="button"
@@ -217,6 +228,34 @@ export default function SourceRail({
       <div className="assembler-source-rail__scroll">
         <section className="assembler-source-rail__section">
           <div className="assembler-source-rail__section-head">
+            <span>Artifact</span>
+            <span>{artifactRows.length}</span>
+          </div>
+
+          <div className="assembler-source-rail__list">
+            {artifactRows.length ? (
+              artifactRows.map((document) => (
+                <SourceRailRow
+                  key={document.documentKey}
+                  document={document}
+                  role="artifact"
+                  activeDocumentKey={activeDocumentKey}
+                  loadingDocumentKey={loadingDocumentKey}
+                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
+                  onOpen={() => onOpenDocument(document.documentKey, "assemble", { phase: "create" })}
+                  _ActionIcon={ActionIcon}
+                  getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+                  getDocumentKindLabel={getDocumentKindLabel}
+                />
+              ))
+            ) : (
+              <p className="assembler-source-rail__empty">No artifact is pinned yet.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="assembler-source-rail__section">
+          <div className="assembler-source-rail__section-head">
             <span>Sources</span>
             <span>{sourceRows.length}</span>
           </div>
@@ -230,7 +269,7 @@ export default function SourceRail({
                   activeDocumentKey={activeDocumentKey}
                   loadingDocumentKey={loadingDocumentKey}
                   onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
-                  onOpen={() => onOpenDocument(document.documentKey, sourceOpenMode, { phase: "think" })}
+                  onOpen={() => onOpenDocument(document.documentKey, "assemble", { phase: "create" })}
                   _ActionIcon={ActionIcon}
                   getDocumentBlockCountLabel={getDocumentBlockCountLabel}
                   getDocumentKindLabel={getDocumentKindLabel}
@@ -242,31 +281,25 @@ export default function SourceRail({
           </div>
         </section>
 
-        <section className="assembler-source-rail__section">
+        <section className="assembler-source-rail__section assembler-source-rail__section--receipts">
           <div className="assembler-source-rail__section-head">
-            <span>Seeds</span>
-            <span>{assemblyDocuments.length}</span>
+            <span>Receipts</span>
+            <span>{buildState?.receiptCount || 0}</span>
           </div>
 
-          <div className="assembler-source-rail__list">
-            {assemblyDocuments.length ? (
-              assemblyDocuments.map((document) => (
-                <SourceRailRow
-                  key={document.documentKey}
-                  document={document}
-                  activeDocumentKey={activeDocumentKey}
-                  loadingDocumentKey={loadingDocumentKey}
-                  onListen={() => onOpenDocument(document.documentKey, "listen", { phase: "think" })}
-                  onOpen={() => onOpenDocument(document.documentKey, "assemble", { phase: "create" })}
-                  _ActionIcon={ActionIcon}
-                  getDocumentBlockCountLabel={getDocumentBlockCountLabel}
-                  getDocumentKindLabel={getDocumentKindLabel}
-                />
-              ))
-            ) : (
-              <p className="assembler-source-rail__empty">No seed yet.</p>
-            )}
-          </div>
+          <button
+            type="button"
+            className="assembler-source-rail__receipt-card"
+            onClick={onOpenReceipts}
+          >
+            <span className="assembler-source-rail__receipt-label">Build output</span>
+            <strong className="assembler-source-rail__receipt-title">
+              {buildState?.receiptCount ? "Open the latest receipts" : "No sealed receipt yet"}
+            </strong>
+            <span className="assembler-source-rail__receipt-detail">
+              Receipts stay outside the editable file world.
+            </span>
+          </button>
         </section>
       </div>
     </aside>

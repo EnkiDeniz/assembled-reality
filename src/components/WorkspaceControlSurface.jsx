@@ -1,117 +1,148 @@
 import Popover from "@/components/Popover";
 import {
-  ShapeNav,
   SignalChip,
-  VerbToolbar,
-  buildLoegosNavItems,
 } from "@/components/LoegosSystem";
 import RealityInstrument from "@/components/RealityInstrument";
-import {
-  getPrimaryBoxPhaseForShape,
-  getWorkspaceShapeAndVerb,
-} from "@/lib/loegos-system";
 import { PRODUCT_MARK } from "@/lib/product-language";
 
 export default function WorkspaceControlSurface({
   viewModel,
+  artifactTitle = "",
+  artifactRoleLabel = "Artifact",
+  artifactKindLabel = "",
+  artifactBlockCount = 0,
+  artifactConvergence = 0,
+  artifactCanSeal = false,
+  artifactBlockerCount = 0,
   isMobileLayout = false,
   onOpenBoxes,
   onOpenBoxHome,
-  onSelectPhase,
   onOpenIntake,
   onOpenSpeak,
-  onOpenSeven,
-  onOpenStage,
   onRunOperate,
   onOpenReceipts,
   onManageBox,
   onOpenConfirmation,
   instrument = null,
   onInstrumentMove,
-  receiptAttentionTone = "",
   onOpenRoot,
 }) {
   const confirmationCount = viewModel?.confirmationCount || 0;
   const hasRoot = viewModel?.hasRoot;
   const rootText = viewModel?.rootText || "";
   const stateSummary = viewModel?.stateSummary;
-  const { shapeKey: activeShape, verb: activeVerb } = getWorkspaceShapeAndVerb({
-    boxPhase: viewModel?.boxPhase,
-  });
-  const shapeItems = buildLoegosNavItems({
-    activeShape,
-    activeVerb,
-    badges: {
-      seal: receiptAttentionTone
-        ? {
-            label: receiptAttentionTone === "alert" ? "attention" : receiptAttentionTone,
-            tone: receiptAttentionTone,
-          }
-        : null,
-    },
-  });
-
-  function handleSelectShape(nextShape) {
-    onSelectPhase?.(getPrimaryBoxPhaseForShape(nextShape));
-  }
-
-  function handleSelectVerb(nextVerb) {
-    if (activeShape === "aim") {
-      onOpenRoot?.();
-      return;
-    }
-
-    if (activeShape === "reality") {
-      if (nextVerb === "capture") {
-        onOpenIntake?.();
-        return;
-      }
-      if (nextVerb === "listen") {
-        onOpenSpeak?.();
-        return;
-      }
-      onSelectPhase?.("think");
-      return;
-    }
-
-    if (activeShape === "weld") {
-      if (nextVerb === "operate") {
-        onSelectPhase?.("operate");
-        return;
-      }
-      if (nextVerb === "stage") {
-        onOpenStage?.();
-      }
-      onSelectPhase?.("create");
-      return;
-    }
-
-    onOpenReceipts?.();
-  }
 
   return (
     <div className="instrument-bar-wrapper">
       <div className="loegos-workspace-control">
         <div className="loegos-workspace-control__topline">
-          <button
-            type="button"
-            className="loegos-workspace-control__brand"
-            onClick={onOpenBoxes}
-            aria-label="All boxes"
-          >
-            {PRODUCT_MARK}
-          </button>
+          <div className="loegos-workspace-control__identity">
+            <button
+              type="button"
+              className="loegos-workspace-control__brand"
+              onClick={onOpenBoxes}
+              aria-label="All boxes"
+            >
+              {PRODUCT_MARK}
+            </button>
 
-          <div className="loegos-workspace-control__utilities">
-            {!isMobileLayout ? (
+            <Popover
+              align="start"
+              trigger={
+                <button
+                  type="button"
+                  className="loegos-workspace-control__box"
+                  aria-label={`Current box: ${viewModel?.currentBoxTitle || "Untitled Box"}`}
+                >
+                  <span>{viewModel?.currentBoxTitle || "Untitled Box"}</span>
+                  {stateSummary?.chipLabel ? (
+                    <SignalChip tone={stateSummary?.tone || "neutral"} subtle>
+                      {stateSummary.chipLabel}
+                    </SignalChip>
+                  ) : null}
+                </button>
+              }
+            >
+              <div className="assembler-popover__label">Current box</div>
+              <div className="assembler-popover__item" style={{ cursor: "default" }}>
+                <span>{viewModel?.currentBoxTitle || "Untitled Box"}</span>
+                {stateSummary?.chipLabel ? (
+                  <span
+                    className="assembler-assembly-chip assembler-popover__item-meta"
+                    style={{
+                      "--assembly-tone": stateSummary?.colorTokens?.fill,
+                      "--assembly-tone-soft": stateSummary?.colorTokens?.soft,
+                      "--assembly-tone-border": stateSummary?.colorTokens?.border,
+                      "--assembly-tone-glow": stateSummary?.colorTokens?.glow,
+                      "--assembly-tone-text": stateSummary?.colorTokens?.text,
+                    }}
+                  >
+                    {stateSummary.chipLabel}
+                  </span>
+                ) : null}
+              </div>
+              <div className="assembler-popover__separator" />
               <button
                 type="button"
-                className="loegos-workspace-control__utility"
-                onClick={onManageBox}
+                className="assembler-popover__item"
+                onClick={onOpenBoxHome}
               >
-                Manage box
+                Box overview
               </button>
-            ) : null}
+              <button
+                type="button"
+                className="assembler-popover__item"
+                onClick={onOpenBoxes}
+              >
+                All boxes
+              </button>
+              {!isMobileLayout ? (
+                <button
+                  type="button"
+                  className="assembler-popover__item"
+                  onClick={onManageBox}
+                >
+                  Manage box
+                </button>
+              ) : null}
+            </Popover>
+          </div>
+
+          <div className="loegos-workspace-control__artifact">
+            <span className="loegos-workspace-control__artifact-label">{artifactRoleLabel}</span>
+            <strong className="loegos-workspace-control__artifact-title">
+              {artifactTitle || "Untitled artifact"}
+            </strong>
+            <div className="loegos-workspace-control__artifact-chips">
+              {artifactKindLabel ? (
+                <SignalChip tone="neutral" subtle>
+                  {artifactKindLabel}
+                </SignalChip>
+              ) : null}
+              <SignalChip tone="active" subtle>
+                {artifactBlockCount} block{artifactBlockCount === 1 ? "" : "s"}
+              </SignalChip>
+              <SignalChip
+                tone={artifactCanSeal ? "clear" : artifactBlockerCount ? "alert" : "active"}
+                subtle
+              >
+                {artifactCanSeal
+                  ? "ready to seal"
+                  : artifactBlockerCount
+                    ? `${artifactBlockerCount} blockers`
+                    : `${artifactConvergence}% convergence`}
+              </SignalChip>
+            </div>
+          </div>
+
+          <div className="loegos-workspace-control__utilities">
+            <button
+              type="button"
+              className="loegos-workspace-control__utility"
+              onClick={onOpenReceipts}
+            >
+              Receipts
+            </button>
             <button
               type="button"
               className="loegos-workspace-control__utility"
@@ -126,76 +157,17 @@ export default function WorkspaceControlSurface({
             >
               Add source
             </button>
-          </div>
-        </div>
-
-        <Popover
-          align="start"
-          trigger={
-            <button
-              type="button"
-              className="loegos-workspace-control__box"
-              aria-label={`Current box: ${viewModel?.currentBoxTitle || "Untitled Box"}`}
-            >
-              <span>{viewModel?.currentBoxTitle || "Untitled Box"}</span>
-              {stateSummary?.chipLabel ? (
-                <SignalChip tone={stateSummary?.tone || "neutral"} subtle>
-                  {stateSummary.chipLabel}
-                </SignalChip>
-              ) : null}
-            </button>
-          }
-        >
-          <div className="assembler-popover__label">Current box</div>
-          <div className="assembler-popover__item" style={{ cursor: "default" }}>
-            <span>{viewModel?.currentBoxTitle || "Untitled Box"}</span>
-            {stateSummary?.chipLabel ? (
-              <span
-                className="assembler-assembly-chip assembler-popover__item-meta"
-                style={{
-                  "--assembly-tone": stateSummary?.colorTokens?.fill,
-                  "--assembly-tone-soft": stateSummary?.colorTokens?.soft,
-                  "--assembly-tone-border": stateSummary?.colorTokens?.border,
-                  "--assembly-tone-glow": stateSummary?.colorTokens?.glow,
-                  "--assembly-tone-text": stateSummary?.colorTokens?.text,
-                }}
+            {!isMobileLayout ? (
+              <button
+                type="button"
+                className="loegos-workspace-control__utility"
+                onClick={onManageBox}
               >
-                {stateSummary.chipLabel}
-              </span>
+                Manage box
+              </button>
             ) : null}
           </div>
-          <div className="assembler-popover__separator" />
-          <button
-            type="button"
-            className="assembler-popover__item"
-            onClick={onOpenBoxHome}
-          >
-            Box home
-          </button>
-          <button
-            type="button"
-            className="assembler-popover__item"
-            onClick={onOpenBoxes}
-          >
-            All boxes
-          </button>
-          {!isMobileLayout ? (
-            <button
-              type="button"
-              className="assembler-popover__item"
-              onClick={onManageBox}
-            >
-              Manage box
-            </button>
-          ) : null}
-        </Popover>
-
-        <ShapeNav
-          items={shapeItems}
-          activeShape={activeShape}
-          compact
-          onSelect={handleSelectShape}
-        />
+        </div>
 
         <div className="loegos-workspace-control__meta">
           <button
@@ -205,12 +177,12 @@ export default function WorkspaceControlSurface({
             title={hasRoot ? rootText : "Declare the box root"}
             aria-label={hasRoot ? `Root: ${rootText}` : "Declare the box root"}
           >
-            {hasRoot ? rootText : "Declare the box root"}
+            {hasRoot ? rootText : "Declare root"}
           </button>
 
           <div className="loegos-workspace-control__signal-row">
             <span className="loegos-workspace-control__summary">
-              {stateSummary?.body || stateSummary?.label || "Shape navigation keeps the room stable while the tools change."}
+              {stateSummary?.body || stateSummary?.label || "Continue editing the open artifact while diagnostics and build state stay beside it."}
             </span>
             {confirmationCount > 0 ? (
               <button
@@ -233,12 +205,6 @@ export default function WorkspaceControlSurface({
             ) : null}
           </div>
         </div>
-
-        <VerbToolbar
-          shapeKey={activeShape}
-          activeVerb={activeVerb}
-          onSelect={handleSelectVerb}
-        />
       </div>
 
       {instrument ? (

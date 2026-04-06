@@ -372,6 +372,11 @@
   border-color: rgba(51, 156, 255, 0.22);
 }
 
+.assembler-source-rail__row.is-artifact {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
 .assembler-project-home__row-quick,
 .assembler-source-rail__quick,
 .assembler-utility-rail__toggle {
@@ -658,6 +663,37 @@
 .assembler-source-rail__list {
   display: grid;
   gap: 8px;
+}
+
+.assembler-source-rail__receipt-card {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+}
+
+.assembler-source-rail__receipt-label {
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-source-rail__receipt-title {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.assembler-source-rail__receipt-detail {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .assembler-utility-rail {

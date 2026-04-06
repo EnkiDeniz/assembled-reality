@@ -2348,6 +2348,11 @@ main {
   margin: 0 auto;
 }
 
+.assembler-document.is-ide {
+  max-width: none;
+  margin: 0;
+}
+
 .assembler-document__header {
   display: flex;
   align-items: flex-start;
@@ -2358,11 +2363,42 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
+.assembler-document__header.is-ide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+}
+
+.assembler-document__identity {
+  display: grid;
+  gap: 8px;
+}
+
+.assembler-document__eyebrow-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.assembler-document__eyebrow {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .assembler-document__side {
   display: grid;
   justify-items: end;
   gap: 8px;
   max-width: 420px;
+}
+
+.assembler-document__side.is-ide {
+  max-width: 300px;
 }
 
 .assembler-document__title {
@@ -2395,6 +2431,48 @@ main {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.assembler-document__meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.assembler-document__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.assembler-document__witness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  color: var(--soft);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-document__witness-label {
+  color: var(--muted);
+}
+
+.assembler-document__witness-link {
+  color: var(--green);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-document__witness-detail {
+  color: var(--soft);
 }
 
 .assembler-document__asset {
@@ -2500,8 +2578,7 @@ main {
   color: var(--red);
 }
 
-.assembler-icon-button:disabled,
-.assembler-block__icon:disabled {
+.assembler-icon-button:disabled {
   opacity: 0.4;
   cursor: default;
 }
@@ -2544,14 +2621,15 @@ main {
 
 .assembler-document__blocks {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .assembler-block {
   position: relative;
-  display: flex;
-  gap: 12px;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 3px 168px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
   padding: 0;
   border-radius: 6px;
   background: transparent;
@@ -2612,67 +2690,45 @@ main {
   border-radius: 999px;
 }
 
-.assembler-block__select {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-top: 10px;
+.assembler-block__gutter {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 10px 0 12px;
 }
 
-.assembler-block__toggle {
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: transparent;
+.assembler-block__line-number,
+.assembler-block__gutter-detail {
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assembler-block__line-number {
   color: var(--muted);
-  padding: 0;
 }
 
-.assembler-block__toggle.is-selected {
-  border-color: rgba(34, 197, 94, 0.4);
-  color: var(--green);
-}
-
-.assembler-block__icon {
+.assembler-block__gutter-shape {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--soft);
+  gap: 8px;
+  color: var(--text);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.assembler-block__icon svg {
-  width: 12px;
-  height: 12px;
-}
-
-.assembler-block__icon--danger {
-  color: var(--red);
+.assembler-block__gutter-chip {
+  width: fit-content;
 }
 
 .assembler-block__body {
   flex: 1;
   min-width: 0;
-  padding: 8px 0 12px;
-}
-
-.assembler-block__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 6px;
-  color: var(--soft);
-  font-size: 9px;
-  opacity: 0.72;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: 10px 0 12px;
 }
 
 .assembler-block__text {
@@ -2720,13 +2776,6 @@ main {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.assembler-block__runtime {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.assembler-block__runtime-row,
 .assembler-block__actions,
 .assembler-block__recast {
   display: flex;
@@ -2735,21 +2784,9 @@ main {
   gap: 8px;
 }
 
-.assembler-block__runtime-label,
-.assembler-block__runtime-detail {
-  color: var(--soft);
-  font-family: var(--font-code);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-
-.assembler-block__runtime-detail {
-  color: var(--muted);
-}
-
 .assembler-block__actions,
 .assembler-block__recast {
-  margin-top: 2px;
+  margin-top: 10px;
 }
 
 .assembler-block__formal-head,
@@ -8079,6 +8116,14 @@ main {
 
   .assembler-document__blocks {
     gap: 2px;
+  }
+
+  .assembler-document__header.is-ide {
+    grid-template-columns: 1fr;
+  }
+
+  .assembler-block {
+    grid-template-columns: 3px minmax(96px, 124px) minmax(0, 1fr);
   }
 
   .assembler-cleanup {
