@@ -1,5 +1,5 @@
 export const LOEGOS_ORIGIN_TEMPLATE_ID = "loegos-origin-example";
-export const LOEGOS_ORIGIN_TEMPLATE_VERSION = 2;
+export const LOEGOS_ORIGIN_TEMPLATE_VERSION = 3;
 export const LOEGOS_ORIGIN_PROJECT_KEY = "loegos-origin-example";
 export const LOEGOS_ORIGIN_BOX_TITLE = "How Lœgos Assembled Itself";
 export const LOEGOS_ORIGIN_BOX_SUBTITLE =
@@ -140,6 +140,17 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
     evidenceBasis: "direct-text",
     chronologyAuthority: "contextual",
     occurredAt: "2026-04-05T16:11:57-04:00",
+  },
+  {
+    id: "built-by-hand",
+    title: "We Built Lœgos by Hand Before the Tool Existed",
+    relativePath:
+      "docs/First seed/# We Built Lœgos by Hand Before the Tool Existed/# We Built Lœgos by Hand Before the Tool Existed.md",
+    sourceRole: "evidence-spine",
+    sourceClassification: "proof_witness",
+    evidenceBasis: "direct-text",
+    chronologyAuthority: "primary",
+    occurredAt: "2026-04-06T06:00:00-04:00",
   },
   {
     id: "loegos-origin-receipt-arc",
@@ -442,9 +453,22 @@ export const LOEGOS_ORIGIN_MOVE_DEFS = Object.freeze([
     proofStatus: "witness",
     linkedSourceIds: ["whats-in-the-box", "ghost-operator", "operator-sentences"],
   },
+  {
+    id: "built-by-hand-founding-session",
+    title: "The product was built by hand before the tool existed",
+    detail:
+      "Three AI threads ran in parallel for eight hours. The founder carried blocks between them manually. Every Lœgos primitive was improvised before the language had names.",
+    occurredAt: "2026-04-06T06:00:00-04:00",
+    groupId: "proof",
+    stageStatus: "sealed",
+    proofStatus: "sealed",
+    linkedSourceIds: ["built-by-hand", "loegos-origin-receipt-arc", "loegos-git-history"],
+    linkedReceiptId: "loegos-origin-sealed-receipt",
+    isLakinMoment: false,
+  },
 ]);
 
-export const LOEGOS_ORIGIN_CURRENT_SEED_MOVE_ID = "word-layer-reads-the-box";
+export const LOEGOS_ORIGIN_CURRENT_SEED_MOVE_ID = "built-by-hand-founding-session";
 export const LOEGOS_ORIGIN_CURRENT_SEED_OCCURRED_AT =
   LOEGOS_ORIGIN_MOVE_DEFS.find((move) => move.id === LOEGOS_ORIGIN_CURRENT_SEED_MOVE_ID)
     ?.occurredAt ||
