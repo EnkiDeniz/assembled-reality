@@ -127,9 +127,9 @@ export const publicPages = {
     title: PRODUCT_MARK,
     metaTitle: "Loegos",
     description: PRODUCT_SENTENCE,
-    quote: "Meaning is an assembled object.",
+    quote: "The language tool for speaking with reality.",
     lede:
-      "Loegos is an invite-only, desktop-first web workbench for solo operators. The box is an assembly lane: sources enter, meaning is shaped, proof closes moves, and the box can prove how it got here.",
+      "Lœgos is an invite-only, desktop-first IDE for turning promises, evidence, and decisions into receipts. You declare an aim, capture what reality gives back, diagnose convergence, and seal what survived.",
     sections: [
       {
         title: "The assembly lane",

@@ -366,6 +366,16 @@ main {
   line-height: 1.5;
 }
 
+.auth-shell__meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-family: var(--font-code);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .account-shell__signout {
   min-height: 36px;
   padding: 0 4px;

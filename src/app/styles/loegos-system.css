@@ -502,6 +502,43 @@
   border-top: 1px solid var(--loegos-line);
 }
 
+.loegos-entry__lede--support {
+  max-width: 48ch;
+}
+
+.loegos-entry__boundary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.loegos-entry__boundary-item,
+.loegos-entry__sequence-step,
+.loegos-entry__room-detail,
+.loegos-entry__stack-title,
+.loegos-entry__auth-notes span {
+  color: var(--loegos-text-soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.loegos-entry__boundary-item,
+.loegos-entry__sequence-step {
+  padding: 10px 12px;
+  border: 1px solid var(--loegos-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--loegos-text-secondary);
+}
+
+.loegos-entry__sequence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .loegos-entry__panel,
 .loegos-public-document__panel,
 .loegos-account__panel,
@@ -530,6 +567,13 @@
   gap: 8px;
 }
 
+.loegos-entry__auth-notes {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--loegos-line);
+}
+
 .loegos-entry__panel-title {
   margin: 0;
   color: var(--loegos-text-primary);
@@ -549,6 +593,29 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.loegos-entry__stack,
+.loegos-entry__system-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.loegos-entry__stack-item,
+.loegos-entry__system-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--loegos-line);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.loegos-entry__stack-body {
+  color: var(--loegos-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .loegos-entry__room {
@@ -575,6 +642,12 @@
   color: var(--loegos-text-secondary);
   font-size: 13px;
   line-height: 1.55;
+}
+
+.loegos-entry__signal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .loegos-entry__footer,
@@ -1230,6 +1303,8 @@
 
 @media (max-width: 1120px) {
   .loegos-shape-nav,
+  .loegos-entry__stack,
+  .loegos-entry__system-row,
   .loegos-entry__rooms,
   .loegos-box-home__metrics,
   .loegos-account__metrics {
@@ -1264,6 +1339,8 @@
   }
 
   .loegos-shape-nav,
+  .loegos-entry__stack,
+  .loegos-entry__system-row,
   .loegos-entry__rooms,
   .loegos-box-home__cards,
   .loegos-box-home__metrics,

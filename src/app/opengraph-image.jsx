@@ -185,10 +185,9 @@ export default function OpenGraphImage() {
                   flexWrap: "wrap",
                 }}
               >
-                <MetaPill>Speak</MetaPill>
-                <MetaPill>Listen</MetaPill>
-                <MetaPill>Assemble</MetaPill>
-                <MetaPill>Keep the receipt</MetaPill>
+                <MetaPill>Write blocks</MetaPill>
+                <MetaPill>Infer diagnostics</MetaPill>
+                <MetaPill>Seal receipts</MetaPill>
               </div>
               <div
                 style={{
