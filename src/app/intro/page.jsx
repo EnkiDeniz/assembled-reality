@@ -1,12 +1,11 @@
-import { getServerSession } from "next-auth";
 import IntroLanding from "@/components/IntroLanding";
-import { authOptions } from "@/lib/auth";
 import { appEnv } from "@/lib/env";
+import { getOptionalSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntroPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getOptionalSession();
 
   return (
     <IntroLanding

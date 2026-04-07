@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import AccountShell from "@/components/AccountShell";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
 import {
   listReadingReceiptDraftsForUser,
   getReaderProfileByUserId,
 } from "@/lib/reader-db";
+import { getRequiredSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +48,7 @@ function resolveAccountNotice(searchParams = {}) {
 }
 
 export default async function AccountPage({ searchParams }) {
-  const session = await getServerSession(authOptions);
+  const session = await getRequiredSession();
   if (!session?.user?.id) {
     redirect("/");
   }

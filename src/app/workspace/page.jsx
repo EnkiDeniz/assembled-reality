@@ -1,8 +1,6 @@
-import { getServerSession } from "next-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import WorkspaceShell from "@/components/WorkspaceShell";
-import { authOptions } from "@/lib/auth";
 import { appEnv } from "@/lib/env";
 import {
   getVoiceCatalog,
@@ -26,6 +24,7 @@ import {
 } from "@/lib/reader-db";
 import { ensureLoegosOriginExampleForUser } from "@/lib/loegos-origin-example";
 import { buildResumeSessionSummaryForUser } from "@/lib/reader-workspace";
+import { getRequiredSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
@@ -165,6 +164,18 @@ function decodeNoticeValue(value = "") {
   }
 }
 
+async function measureWorkspaceStep(label, action) {
+  const startedAt = Date.now();
+  try {
+    const result = await action();
+    console.info(`[workspace] ${label} ${Date.now() - startedAt}ms`);
+    return result;
+  } catch (error) {
+    console.error(`[workspace] ${label} failed after ${Date.now() - startedAt}ms`, error);
+    throw error;
+  }
+}
+
 async function safeWorkspaceRead(label, action, fallback) {
   try {
     return await action();
@@ -175,7 +186,7 @@ async function safeWorkspaceRead(label, action, fallback) {
 }
 
 export default async function WorkspacePage({ searchParams }) {
-  const session = await getServerSession(authOptions);
+  const session = await measureWorkspaceStep("getRequiredSession", () => getRequiredSession());
   if (!session?.user?.id) {
     redirect("/");
   }
@@ -230,36 +241,44 @@ export default async function WorkspacePage({ searchParams }) {
             tone: "error",
           }
         : null;
-  let documents = await safeWorkspaceRead(
-    "listReaderDocumentsForUser",
-    () => listReaderDocumentsForUser(session.user.id),
-    [],
+  let documents = await measureWorkspaceStep("listReaderDocumentsForUser", () =>
+    safeWorkspaceRead(
+      "listReaderDocumentsForUser",
+      () => listReaderDocumentsForUser(session.user.id),
+      [],
+    ),
   );
-  const exampleBootstrap = await safeWorkspaceRead(
-    "ensureLoegosOriginExampleForUser",
-    () => ensureLoegosOriginExampleForUser(session.user.id, { documents }),
-    {
-      hadRealHistory: listRealHistoryDocuments(documents).length > 0,
-      hasExampleProject: false,
-      exampleProjectKey: "",
-      autoOpenProjectKey: "",
-      dismissed: false,
-      refreshed: false,
-    },
+  const exampleBootstrap = await measureWorkspaceStep("ensureLoegosOriginExampleForUser", () =>
+    safeWorkspaceRead(
+      "ensureLoegosOriginExampleForUser",
+      () => ensureLoegosOriginExampleForUser(session.user.id, { documents }),
+      {
+        hadRealHistory: listRealHistoryDocuments(documents).length > 0,
+        hasExampleProject: false,
+        exampleProjectKey: "",
+        autoOpenProjectKey: "",
+        dismissed: false,
+        refreshed: false,
+      },
+    ),
   );
   const hasExampleDocuments = documents.some((document) => isSystemExampleDocument(document));
   if (exampleBootstrap.refreshed || (exampleBootstrap.hasExampleProject && !hasExampleDocuments)) {
-    documents = await safeWorkspaceRead(
-      "listReaderDocumentsForUser seeded example",
-      () => listReaderDocumentsForUser(session.user.id),
-      documents,
+    documents = await measureWorkspaceStep("listReaderDocumentsForUser seeded example", () =>
+      safeWorkspaceRead(
+        "listReaderDocumentsForUser seeded example",
+        () => listReaderDocumentsForUser(session.user.id),
+        documents,
+      ),
     );
   }
 
-  const projects = await safeWorkspaceRead(
-    "listReaderProjectsForUser",
-    () => listReaderProjectsForUser(session.user.id, documents),
-    () => buildProjectsFromDocuments(documents),
+  const projects = await measureWorkspaceStep("listReaderProjectsForUser", () =>
+    safeWorkspaceRead(
+      "listReaderProjectsForUser",
+      () => listReaderProjectsForUser(session.user.id, documents),
+      () => buildProjectsFromDocuments(documents),
+    ),
   );
   const realDocuments = listRealDocuments(documents);
   const hasSeed = documents.some(

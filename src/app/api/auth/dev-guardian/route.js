@@ -1,11 +1,56 @@
 import { NextResponse } from "next/server";
-import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
-import { appEnv } from "@/lib/env";
-import { ensureReaderProfileForUser } from "@/lib/reader-db";
+import {
+  clearDevGuardianSessionCache,
+  DEV_GUARDIAN_COOKIE_NAME,
+  DEV_GUARDIAN_COOKIE_VALUE,
+} from "@/lib/server-session";
 
 const GUARDIAN_EMAIL = "guardian@loegos.local";
-const GUARDIAN_NAME = "Guardian";
+const DEV_COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+
+function normalizeGuardianRunId(value = "") {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+
+  if (normalized) return normalized;
+  return `run-${Date.now().toString(36)}`;
+}
+
+function buildGuardianCookieResponse({ action = "login", cookieName, extra = null } = {}) {
+  const response = NextResponse.json({
+    ok: true,
+    action,
+    ...(extra && typeof extra === "object" ? extra : {}),
+  });
+
+  response.cookies.set(cookieName, "", { path: "/", maxAge: 0 });
+  response.cookies.set(DEV_GUARDIAN_COOKIE_NAME, DEV_GUARDIAN_COOKIE_VALUE, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: DEV_COOKIE_MAX_AGE,
+  });
+
+  return response;
+}
+
+function buildGuardianClearResponse({ action = "cleared", cookieName, extra = null } = {}) {
+  const response = NextResponse.json({
+    ok: true,
+    action,
+    ...(extra && typeof extra === "object" ? extra : {}),
+  });
+
+  response.cookies.set(cookieName, "", { path: "/", maxAge: 0 });
+  response.cookies.set(DEV_GUARDIAN_COOKIE_NAME, "", { path: "/", maxAge: 0 });
+
+  return response;
+}
 
 async function resetGuardianWorkspace() {
   const user = await prisma.user.findUnique({
@@ -38,66 +83,30 @@ export async function GET(request) {
     : "next-auth.session-token";
 
   if (action === "clear") {
-    const response = NextResponse.json({ ok: true, action: "cleared" });
-    response.cookies.set(cookieName, "", { path: "/", maxAge: 0 });
-    return response;
+    clearDevGuardianSessionCache();
+    return buildGuardianClearResponse({ action: "cleared", cookieName });
   }
 
   if (action === "reset") {
+    clearDevGuardianSessionCache();
     const result = await resetGuardianWorkspace();
-    const response = NextResponse.json({
-      ok: true,
+    return buildGuardianClearResponse({
       action: "reset",
-      deleted: result.deleted,
+      cookieName,
+      extra: { deleted: result.deleted },
     });
-    response.cookies.set(cookieName, "", { path: "/", maxAge: 0 });
-    return response;
   }
 
-  let user = await prisma.user.findUnique({
-    where: { email: GUARDIAN_EMAIL },
-    include: { readerProfile: true },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: GUARDIAN_EMAIL,
-        name: GUARDIAN_NAME,
+  if (action === "bootstrap") {
+    clearDevGuardianSessionCache();
+    return buildGuardianCookieResponse({
+      action: "bootstrap",
+      cookieName,
+      extra: {
+        runId: normalizeGuardianRunId(searchParams.get("runId")),
       },
-      include: { readerProfile: true },
     });
   }
 
-  const profile = user.readerProfile || (await ensureReaderProfileForUser(user, GUARDIAN_NAME));
-
-  const token = await encode({
-    token: {
-      sub: user.id,
-      email: user.email,
-      name: user.name,
-      readerSlug: profile?.readerSlug || null,
-      readerRole: profile?.role || "READER",
-      readerName: profile?.displayName || GUARDIAN_NAME,
-    },
-    secret: appEnv.authSecret,
-    maxAge: 30 * 24 * 60 * 60,
-  });
-
-  const response = NextResponse.json({
-    ok: true,
-    userId: user.id,
-    email: user.email,
-    name: user.name,
-  });
-
-  response.cookies.set(cookieName, token, {
-    httpOnly: true,
-    secure: Boolean(secureCookie),
-    sameSite: "lax",
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60,
-  });
-
-  return response;
+  return buildGuardianCookieResponse({ action: "login", cookieName });
 }

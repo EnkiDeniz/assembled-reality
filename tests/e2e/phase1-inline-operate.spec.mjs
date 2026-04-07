@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+test.setTimeout(300_000);
+
 test.beforeAll(() => {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is required to exercise the real inline Operate flow.");
@@ -11,11 +13,8 @@ test("guardian can run inline operate, attest, and hit seal acknowledgement", as
   context,
   baseURL,
 }) => {
-  const resetResponse = await context.request.get(`${baseURL}/api/auth/dev-guardian?action=reset`);
-  expect(resetResponse.ok()).toBeTruthy();
-
-  const loginResponse = await context.request.get(`${baseURL}/api/auth/dev-guardian`);
-  expect(loginResponse.ok()).toBeTruthy();
+  const bootstrapResponse = await context.request.get(`${baseURL}/api/auth/dev-guardian`);
+  expect(bootstrapResponse.ok()).toBeTruthy();
 
   await page.goto("/workspace", { waitUntil: "domcontentloaded" });
 
