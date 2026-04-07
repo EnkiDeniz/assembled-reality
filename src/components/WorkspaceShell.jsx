@@ -3241,9 +3241,19 @@ function DesktopIconButton({
   );
 }
 
-function DesktopSessionActions() {
+function DesktopSessionActions({ onOpenStarter }) {
   return (
     <div className="assembler-ide-shell__session" aria-label="Account and session">
+      {onOpenStarter ? (
+        <button
+          type="button"
+          className="assembler-ide-shell__session-link"
+          onClick={onOpenStarter}
+          data-testid="workspace-open-starter"
+        >
+          Starter
+        </button>
+      ) : null}
       <Link
         href="/account"
         className="assembler-ide-shell__session-link"
@@ -3427,6 +3437,7 @@ function DesktopWorkspaceSearchPanel({
 
 function DesktopWorkspaceSettingsPanel({
   activeProject,
+  onOpenStarter,
   onOpenProjectHome,
   onManageBox,
   onOpenIntake,
@@ -3444,6 +3455,12 @@ function DesktopWorkspaceSettingsPanel({
         <strong className="assembler-ide-panel__title">{boxTitle}</strong>
       </div>
       <div className="assembler-ide-panel__list">
+        {onOpenStarter ? (
+          <button type="button" className="assembler-ide-panel__row" onClick={onOpenStarter}>
+            <span className="assembler-ide-panel__row-title">Start with a source</span>
+            <span className="assembler-ide-panel__row-meta">Return to the source-first intake screen for this box.</span>
+          </button>
+        ) : null}
         <button type="button" className="assembler-ide-panel__row" onClick={onOpenProjectHome}>
           <span className="assembler-ide-panel__row-title">Open overview</span>
           <span className="assembler-ide-panel__row-meta">Box home stays secondary on desktop.</span>
@@ -5211,13 +5228,40 @@ export default function WorkspaceShell({
   const founderCompareActive =
     !isMobileLayout &&
     Boolean(showStarterSeedEntry) &&
-    Boolean(currentSeedDocument?.documentKey) &&
-    currentSeedDocument.documentKey === activeDocumentKey;
+    Boolean(currentSeedDocument?.documentKey);
   const founderJourneyActive = showStarterSourceSurface || founderCompareActive;
+  const founderArtifactDocument =
+    founderCompareActive && currentSeedDocument?.documentKey
+      ? currentSeedDocument
+      : activeDocument;
+  const founderArtifactBlocks = founderArtifactDocument?.blocks ?? EMPTY_BLOCKS;
+  const founderPlaybackBlockId =
+    founderCompareActive
+      ? playheadBlockId || focusBlockId || founderArtifactBlocks[0]?.id || null
+      : playbackBlockId;
+  const founderCurrentIndex = founderCompareActive
+    ? Math.max(
+        0,
+        founderArtifactBlocks.findIndex((block) => block.id === founderPlaybackBlockId),
+      )
+    : currentIndex;
+  const founderCurrentBlock = founderCompareActive
+    ? founderArtifactBlocks[founderCurrentIndex] || founderArtifactBlocks[0] || null
+    : currentBlock;
+  const founderNextBlock = founderCompareActive
+    ? founderArtifactBlocks[founderCurrentIndex + 1] || null
+    : nextBlock;
+  const founderProgress = founderCompareActive
+    ? founderArtifactBlocks.length
+      ? ((founderCurrentIndex + 1) / founderArtifactBlocks.length) * 100
+      : 0
+    : progress;
   const founderShellSelectedBlock =
-    blocks.find((block) => block.id === (focusBlockId || currentBlock?.id || "")) ||
-    currentBlock ||
-    blocks[0] ||
+    founderArtifactBlocks.find(
+      (block) => block.id === (focusBlockId || founderCurrentBlock?.id || ""),
+    ) ||
+    founderCurrentBlock ||
+    founderArtifactBlocks[0] ||
     null;
   const showDesktopUnifiedShell =
     !isMobileLayout &&
@@ -6339,7 +6383,20 @@ export default function WorkspaceShell({
   );
 
   function handleFounderSelectBlock(blockId) {
-    focusBlock(blockId);
+    const compareDocumentKey = String(currentSeedDocument?.documentKey || "").trim();
+    if (
+      founderCompareActive &&
+      compareDocumentKey &&
+      activeDocumentKey !== compareDocumentKey
+    ) {
+      void loadDocumentRef.current?.(compareDocumentKey, {
+        mode: WORKSPACE_MODES.assemble,
+        phase: BOX_PHASES.create,
+        focusBlockId: blockId,
+      });
+    } else {
+      focusBlock(blockId);
+    }
 
     const finding = founderFindingMap?.get?.(blockId) || null;
     if (finding?.findingId) {
@@ -6356,7 +6413,7 @@ export default function WorkspaceShell({
     const witnessBlock = witnessBlocks.find((block) => block.id === blockId) || null;
     const activeBlock = findActiveBlockForWitnessBlock(
       witnessBlock,
-      blocks,
+      founderArtifactBlocks,
       starterSeedEntryDocument?.documentKey || "",
     );
 
@@ -9014,6 +9071,23 @@ export default function WorkspaceShell({
   applyProjectPayloadRef.current = applyProjectPayload;
   upsertDocumentRef.current = upsertDocument;
   loadDocumentRef.current = loadDocument;
+
+  useEffect(() => {
+    const compareDocumentKey = String(currentSeedDocument?.documentKey || "").trim();
+    if (!founderCompareActive || !compareDocumentKey) return;
+    if (activeDocumentKey === compareDocumentKey) return;
+    if (loadingDocumentKey === compareDocumentKey) return;
+
+    void loadDocumentRef.current?.(compareDocumentKey, {
+      mode: WORKSPACE_MODES.assemble,
+      phase: BOX_PHASES.create,
+    });
+  }, [
+    activeDocumentKey,
+    currentSeedDocument?.documentKey,
+    founderCompareActive,
+    loadingDocumentKey,
+  ]);
 
   async function enterWorkspace(documentKey = activeDocumentKey, mode = workspaceMode, options = {}) {
     openMode(mode, documentKey, options);
@@ -11765,12 +11839,12 @@ export default function WorkspaceShell({
       artifactKind={founderCompareActive ? "Language" : "Source"}
       artifactTitle={
         founderCompareActive
-          ? currentSeedDocument?.title || activeDocument?.title || "Untitled seed"
+          ? founderArtifactDocument?.title || activeDocument?.title || "Untitled seed"
           : activeDocument?.title || "Untitled source"
       }
       artifactSubtitle={
         founderCompareActive
-          ? currentSeedDocument?.subtitle || activeDocument?.subtitle || ""
+          ? founderArtifactDocument?.subtitle || activeDocument?.subtitle || ""
           : activeDocument?.subtitle || ""
       }
       projectTitle={activeBoxTitle}
@@ -11784,10 +11858,10 @@ export default function WorkspaceShell({
       witnessBlocks={founderCompareActive ? starterSeedEntryDocument?.blocks || EMPTY_BLOCKS : EMPTY_BLOCKS}
       selectedWitnessBlockId={founderSelectedWitnessBlock?.id || ""}
       onSelectWitnessBlock={handleFounderSelectWitnessBlock}
-      blocks={blocks}
+      blocks={founderArtifactBlocks}
       selectedBlockId={founderShellSelectedBlock?.id || ""}
-      currentBlockId={currentBlock?.id || ""}
-      nextBlockId={nextBlock?.id || ""}
+      currentBlockId={founderCurrentBlock?.id || ""}
+      nextBlockId={founderNextBlock?.id || ""}
       onSelectBlock={handleFounderSelectBlock}
       systemTitle={founderShellReadState?.title || ""}
       systemCopy={founderShellReadState?.copy || ""}
@@ -11821,6 +11895,7 @@ export default function WorkspaceShell({
               openCurrentBoxHome(activeProjectKey);
             },
       }}
+      onOpenStarter={() => openStarterLaunchpad(activeProjectKey)}
       onOpenFullWorkspace={openFounderFullWorkspace}
       assistantOpen={aiOpen}
       onToggleAssistant={() => setAiOpen((value) => !value)}
@@ -11852,9 +11927,9 @@ export default function WorkspaceShell({
       player={
         <PlayerBar
           workspaceMode={WORKSPACE_MODES.listen}
-          currentBlock={currentBlock}
-          currentIndex={currentIndex}
-          totalBlocks={blocks.length}
+          currentBlock={founderCurrentBlock}
+          currentIndex={founderCurrentIndex}
+          totalBlocks={founderArtifactBlocks.length}
           isPlaying={isPlaying}
           loadingAudio={loadingAudio}
           playbackAvailable={playbackAvailable}
@@ -11862,14 +11937,14 @@ export default function WorkspaceShell({
           voiceCatalog={availableVoiceCatalog}
           voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
           providerLabel={providerLabel}
-          progress={progress}
+          progress={founderProgress}
           deviceVoiceSupported={deviceVoiceSupported}
           docked
           onTogglePlayback={togglePlayback}
           onSeekBack={() => seekAudio(-10)}
           onSeekForward={() => seekAudio(10)}
-          onPreviousBlock={() => jumpToIndex(currentIndex - 1)}
-          onNextBlock={() => jumpToIndex(currentIndex + 1)}
+          onPreviousBlock={() => jumpToIndex(founderCurrentIndex - 1)}
+          onNextBlock={() => jumpToIndex(founderCurrentIndex + 1)}
           onCycleRate={cycleRate}
           onVoiceChange={(choice) => {
             const changed =
@@ -12039,6 +12114,7 @@ export default function WorkspaceShell({
     ) : desktopLeftPanel === DESKTOP_LEFT_PANELS.settings ? (
       <DesktopWorkspaceSettingsPanel
         activeProject={activeProject}
+        onOpenStarter={() => openStarterLaunchpad(activeProjectKey)}
         onOpenProjectHome={() => openCurrentBoxHome(activeProjectKey)}
         onManageBox={() => openProjectManagement(activeProjectKey)}
         onOpenIntake={() => setDropAnythingOpen(true)}
@@ -12106,7 +12182,7 @@ export default function WorkspaceShell({
               onClick={() => toggleDesktopLeftPanel(DESKTOP_LEFT_PANELS.settings)}
             />
           </div>
-          <DesktopSessionActions />
+          <DesktopSessionActions onOpenStarter={() => openStarterLaunchpad(activeProjectKey)} />
         </aside>
 
         <div className="assembler-ide-shell__main">

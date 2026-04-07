@@ -31,6 +31,7 @@ export default function FounderShell({
   onSelectWitnessBlock,
   primaryAction = null,
   secondaryAction = null,
+  onOpenStarter,
   onOpenFullWorkspace,
   treeSections = [],
   assistantOpen = false,
@@ -87,6 +88,16 @@ export default function FounderShell({
 
           <div className="founder-shell__header-side">
             <div className="founder-shell__session" aria-label="Account and session">
+              {onOpenStarter ? (
+                <button
+                  type="button"
+                  className="founder-shell__quiet-action"
+                  data-testid="founder-shell-open-starter"
+                  onClick={onOpenStarter}
+                >
+                  Start with source
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="founder-shell__quiet-action"

@@ -1,4 +1,20 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+function getReaderOperateRunModel() {
+  return prisma.readerOperateRun || null;
+}
+
+function getReaderAttestedOverrideModel() {
+  return prisma.readerAttestedOverride || null;
+}
+
+function isMissingReaderOperateTableError(error) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2021"
+  );
+}
 
 function normalizeOperateRun(record = null) {
   if (!record) return null;
@@ -42,24 +58,37 @@ function normalizeAttestedOverride(record = null) {
 }
 
 export async function createReaderOperateRunForUser(userId, input = {}) {
-  const created = await prisma.readerOperateRun.create({
-    data: {
-      userId,
-      projectId: input.projectId || null,
-      documentKey: String(input.documentKey || "").trim(),
-      mode: String(input.mode || "overlay").trim() || "overlay",
-      schemaVersion: Number(input.schemaVersion) || 1,
-      engineKind: String(input.engineKind || "").trim(),
-      engineVersion: String(input.engineVersion || "").trim(),
-      modelName: input.modelName ? String(input.modelName).trim() : null,
-      promptVersion: input.promptVersion ? String(input.promptVersion).trim() : null,
-      sourceFingerprint: String(input.sourceFingerprint || "").trim(),
-      stale: Boolean(input.stale),
-      payloadJson: input.payloadJson || {},
-    },
-  });
+  const readerOperateRunModel = getReaderOperateRunModel();
+  if (!readerOperateRunModel) {
+    return null;
+  }
 
-  return normalizeOperateRun(created);
+  try {
+    const created = await readerOperateRunModel.create({
+      data: {
+        userId,
+        projectId: input.projectId || null,
+        documentKey: String(input.documentKey || "").trim(),
+        mode: String(input.mode || "overlay").trim() || "overlay",
+        schemaVersion: Number(input.schemaVersion) || 1,
+        engineKind: String(input.engineKind || "").trim(),
+        engineVersion: String(input.engineVersion || "").trim(),
+        modelName: input.modelName ? String(input.modelName).trim() : null,
+        promptVersion: input.promptVersion ? String(input.promptVersion).trim() : null,
+        sourceFingerprint: String(input.sourceFingerprint || "").trim(),
+        stale: Boolean(input.stale),
+        payloadJson: input.payloadJson || {},
+      },
+    });
+
+    return normalizeOperateRun(created);
+  } catch (error) {
+    if (isMissingReaderOperateTableError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getLatestReaderOperateRunForUser(
@@ -72,20 +101,32 @@ export async function getLatestReaderOperateRunForUser(
 ) {
   const normalizedDocumentKey = String(documentKey || "").trim();
   if (!normalizedDocumentKey) return null;
+  const readerOperateRunModel = getReaderOperateRunModel();
+  if (!readerOperateRunModel) {
+    return null;
+  }
 
-  const record = await prisma.readerOperateRun.findFirst({
-    where: {
-      userId,
-      documentKey: normalizedDocumentKey,
-      mode: String(mode || "overlay").trim() || "overlay",
-      ...(projectId ? { projectId } : {}),
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  try {
+    const record = await readerOperateRunModel.findFirst({
+      where: {
+        userId,
+        documentKey: normalizedDocumentKey,
+        mode: String(mode || "overlay").trim() || "overlay",
+        ...(projectId ? { projectId } : {}),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  return normalizeOperateRun(record);
+    return normalizeOperateRun(record);
+  } catch (error) {
+    if (isMissingReaderOperateTableError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function listReaderAttestedOverridesForUser(
@@ -97,20 +138,32 @@ export async function listReaderAttestedOverridesForUser(
 ) {
   const normalizedDocumentKey = String(documentKey || "").trim();
   if (!normalizedDocumentKey) return [];
+  const readerAttestedOverrideModel = getReaderAttestedOverrideModel();
+  if (!readerAttestedOverrideModel) {
+    return [];
+  }
 
-  const rows = await prisma.readerAttestedOverride.findMany({
-    where: {
-      userId,
-      documentKey: normalizedDocumentKey,
-      ...(projectId ? { projectId } : {}),
-    },
-    orderBy: [
-      { updatedAt: "desc" },
-      { createdAt: "desc" },
-    ],
-  });
+  try {
+    const rows = await readerAttestedOverrideModel.findMany({
+      where: {
+        userId,
+        documentKey: normalizedDocumentKey,
+        ...(projectId ? { projectId } : {}),
+      },
+      orderBy: [
+        { updatedAt: "desc" },
+        { createdAt: "desc" },
+      ],
+    });
 
-  return rows.map((row) => normalizeAttestedOverride(row)).filter(Boolean);
+    return rows.map((row) => normalizeAttestedOverride(row)).filter(Boolean);
+  } catch (error) {
+    if (isMissingReaderOperateTableError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export async function upsertReaderAttestedOverrideForUser(userId, input = {}) {
