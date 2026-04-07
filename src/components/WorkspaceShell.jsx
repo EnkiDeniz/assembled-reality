@@ -95,6 +95,7 @@ import { parseSevenAudioHeaders } from "@/lib/seven";
 import {
   buildSeedFingerprint,
   getSeedDocument,
+  isRealSourceDocument,
   listRealSourceDocuments,
 } from "@/lib/seed-model";
 import {
@@ -5225,10 +5226,17 @@ export default function WorkspaceShell({
   const showStarterSeedEntry =
     Boolean(starterSeedEntrySourceKey) &&
     boxPhase === BOX_PHASES.create;
+  const founderWitnessDocument =
+    starterSeedEntryDocument ||
+    (boxPhase === BOX_PHASES.create && isRealSourceDocument(activeDocument)
+      ? activeDocument
+      : latestRealSourceDocument || null);
   const founderCompareActive =
     !isMobileLayout &&
-    Boolean(showStarterSeedEntry) &&
-    Boolean(currentSeedDocument?.documentKey);
+    boxPhase === BOX_PHASES.create &&
+    Boolean(currentSeedDocument?.documentKey) &&
+    Boolean(founderWitnessDocument?.documentKey) &&
+    founderWitnessDocument.documentKey !== currentSeedDocument.documentKey;
   const founderJourneyActive = showStarterSourceSurface || founderCompareActive;
   const founderArtifactDocument =
     founderCompareActive && currentSeedDocument?.documentKey
@@ -6245,12 +6253,12 @@ export default function WorkspaceShell({
     if (founderCompareActive) {
       const witnessBlock = findWitnessBlockForActiveBlock(
         founderShellSelectedBlock,
-        starterSeedEntryDocument?.blocks || [],
-        starterSeedEntryDocument?.documentKey || "",
+        founderWitnessDocument?.blocks || [],
+        founderWitnessDocument?.documentKey || "",
       );
       const witnessLabel = witnessBlock
         ? `Witness line ${String((witnessBlock?.sourcePosition || 0) + 1).padStart(3, "0")}`
-        : starterSeedEntryDocument?.title || "Witness";
+        : founderWitnessDocument?.title || "Witness";
       const witnessExcerpt = String(
         stripMarkdownSyntax(witnessBlock?.plainText || witnessBlock?.text || ""),
       )
@@ -6281,12 +6289,12 @@ export default function WorkspaceShell({
     };
   }, [
     founderCompareActive,
+    founderWitnessDocument?.blocks,
+    founderWitnessDocument?.documentKey,
+    founderWitnessDocument?.title,
     founderJourneyActive,
     founderShellExcerpt,
     founderShellSelectedBlock,
-    starterSeedEntryDocument?.blocks,
-    starterSeedEntryDocument?.documentKey,
-    starterSeedEntryDocument?.title,
   ]);
   const founderSeedState = useMemo(
     () =>
@@ -6370,15 +6378,15 @@ export default function WorkspaceShell({
       founderCompareActive
         ? findWitnessBlockForActiveBlock(
             founderShellSelectedBlock,
-            starterSeedEntryDocument?.blocks || [],
-            starterSeedEntryDocument?.documentKey || "",
+            founderWitnessDocument?.blocks || [],
+            founderWitnessDocument?.documentKey || "",
           )
         : null,
     [
       founderCompareActive,
       founderShellSelectedBlock,
-      starterSeedEntryDocument?.blocks,
-      starterSeedEntryDocument?.documentKey,
+      founderWitnessDocument?.blocks,
+      founderWitnessDocument?.documentKey,
     ],
   );
 
@@ -6407,14 +6415,14 @@ export default function WorkspaceShell({
   function handleFounderSelectWitnessBlock(blockId) {
     if (!founderCompareActive) return;
 
-    const witnessBlocks = Array.isArray(starterSeedEntryDocument?.blocks)
-      ? starterSeedEntryDocument.blocks
+    const witnessBlocks = Array.isArray(founderWitnessDocument?.blocks)
+      ? founderWitnessDocument.blocks
       : EMPTY_BLOCKS;
     const witnessBlock = witnessBlocks.find((block) => block.id === blockId) || null;
     const activeBlock = findActiveBlockForWitnessBlock(
       witnessBlock,
       founderArtifactBlocks,
-      starterSeedEntryDocument?.documentKey || "",
+      founderWitnessDocument?.documentKey || "",
     );
 
     if (activeBlock?.id) {
@@ -11853,9 +11861,9 @@ export default function WorkspaceShell({
           ? "The witness stays fixed on the left. The compiled seed is now active structure on the right."
           : "See the source as captured, listen to it as-is, then take one clear next step into Lœgos."
       }
-      witnessTitle={founderCompareActive ? starterSeedEntryDocument?.title || "Source witness" : ""}
-      witnessSubtitle={founderCompareActive ? starterSeedEntryDocument?.subtitle || "" : ""}
-      witnessBlocks={founderCompareActive ? starterSeedEntryDocument?.blocks || EMPTY_BLOCKS : EMPTY_BLOCKS}
+      witnessTitle={founderCompareActive ? founderWitnessDocument?.title || "Source witness" : ""}
+      witnessSubtitle={founderCompareActive ? founderWitnessDocument?.subtitle || "" : ""}
+      witnessBlocks={founderCompareActive ? founderWitnessDocument?.blocks || EMPTY_BLOCKS : EMPTY_BLOCKS}
       selectedWitnessBlockId={founderSelectedWitnessBlock?.id || ""}
       onSelectWitnessBlock={handleFounderSelectWitnessBlock}
       blocks={founderArtifactBlocks}
@@ -11886,10 +11894,22 @@ export default function WorkspaceShell({
         onClick: founderCompareActive ? () => void runOperate() : () => void openStarterSeedFlow(),
       }}
       secondaryAction={{
-        label: founderCompareActive ? "Back to source" : "Open box",
+        label: founderCompareActive
+          ? showStarterSeedEntry
+            ? "Back to source"
+            : "Open source"
+          : "Open box",
         testId: "workspace-source-open-box",
         onClick: founderCompareActive
-          ? () => void returnToStarterSourceView()
+          ? showStarterSeedEntry
+            ? () => void returnToStarterSourceView()
+            : () => {
+                if (!founderWitnessDocument?.documentKey) return;
+                void loadDocument(founderWitnessDocument.documentKey, {
+                  mode: WORKSPACE_MODES.listen,
+                  phase: BOX_PHASES.think,
+                });
+              }
           : () => {
               clearStarterFlowState({ keepScopedProject: true });
               openCurrentBoxHome(activeProjectKey);
