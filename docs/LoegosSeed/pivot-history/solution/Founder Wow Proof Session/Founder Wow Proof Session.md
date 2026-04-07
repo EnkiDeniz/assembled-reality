@@ -22,11 +22,11 @@ If that box already exists, reuse it. Do not recycle a live working box for this
 
 Primary founder-wow document:
 
-- [problem-statement-editor-first.md](../../../docs/problem-statement-editor-first.md)
+- [problem-statement-editor-first.md](../../../../archive/root-docs/problem-statement-editor-first.md)
 
 Fallback founder-wow document:
 
-- [AR Version 2 Build Plan.md](../../../docs/AR%20Version%202%20Build%20Plan.md)
+- [AR Version 2 Build Plan.md](../../../../archive/root-docs/AR%20Version%202%20Build%20Plan.md)
 
 Use the fallback only if the primary document produces a weak first pass.
 Do not introduce a third file in this slice.
@@ -78,7 +78,7 @@ Recommended evidence of success:
 
 Repeat the same session once with:
 
-- [AR Version 2 Build Plan.md](../../../docs/AR%20Version%202%20Build%20Plan.md)
+- [AR Version 2 Build Plan.md](../../../../archive/root-docs/AR%20Version%202%20Build%20Plan.md)
 
 If both documents feel weak, record that as a product finding rather than polishing the UI to compensate.
 

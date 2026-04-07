@@ -60,8 +60,8 @@ async function main() {
     read("tests/e2e/phase1-inline-operate.spec.mjs"),
     read("src/components/ReceiptSealDialog.jsx"),
     read("src/components/WorkspaceDiagnosticsRail.jsx"),
-    read("pivot/solution/Phase 1 Proof Runbook/Phase 1 Proof Runbook.md"),
-    read("pivot/solution/Founder Wow Proof Session/Founder Wow Proof Session.md"),
+    read("docs/LoegosSeed/pivot-history/solution/Phase 1 Proof Runbook/Phase 1 Proof Runbook.md"),
+    read("docs/LoegosSeed/pivot-history/solution/Founder Wow Proof Session/Founder Wow Proof Session.md"),
   ]);
 
   assert.match(schema, /model\s+ReaderOperateRun\s+\{/);

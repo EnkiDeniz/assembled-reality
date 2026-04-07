@@ -9,7 +9,7 @@ export default defineConfig([
     "dist",
     "node_modules",
     "prisma/generated",
-    "design system/**",
+    "docs/LoegosSeed/**",
     "src/components/DesignProposalScreen.jsx",
     "src/app/design-proposal/**",
   ]),

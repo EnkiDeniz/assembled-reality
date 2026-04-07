@@ -2,7 +2,7 @@
 
 The canonical Phase 1 proof runbook lives at:
 
-- [pivot/solution/Phase 1 Proof Runbook/Phase 1 Proof Runbook.md](../pivot/solution/Phase%201%20Proof%20Runbook/Phase%201%20Proof%20Runbook.md)
+- [docs/LoegosSeed/pivot-history/solution/Phase 1 Proof Runbook/Phase 1 Proof Runbook.md](./LoegosSeed/pivot-history/solution/Phase%201%20Proof%20Runbook/Phase%201%20Proof%20Runbook.md)
 
 Use that document for:
 

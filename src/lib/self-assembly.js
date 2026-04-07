@@ -43,7 +43,7 @@ import {
   buildWordLayerViewModel,
 } from "@/lib/word-layer";
 
-const CORPUS_ROOT_SEGMENTS = ["docs", "First seed"];
+const CORPUS_ROOT_SEGMENTS = ["docs", "LoegosSeed"];
 const MARKDOWN_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
 
 const longDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -1011,7 +1011,10 @@ export const getSelfAssemblyDemo = cache(() => {
     exampleBoxTitle: LOEGOS_ORIGIN_BOX_TITLE,
     exampleBoxSubtitle: LOEGOS_ORIGIN_BOX_SUBTITLE,
     corpusRoot: path.join(process.cwd(), ...CORPUS_ROOT_SEGMENTS),
-    excludedPaths: ["full-commit-history.txt"],
+    excludedPaths: [
+      "git-history/full-commit-history-pre-cleanup.txt",
+      "git-history/full-commit-history-2026-04-07.txt",
+    ],
     sources,
     sourceGroups: buildSourceGroups(sources),
     milestones,

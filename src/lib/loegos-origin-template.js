@@ -44,7 +44,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "words-are-loegos",
     title: "words are lœgos",
-    relativePath: "docs/First seed/words are lœgos/words are lœgos.md",
+    relativePath: "docs/LoegosSeed/words are lœgos/words are lœgos.md",
     sourceRole: "origin-fragment",
     sourceClassification: "load_bearing",
     evidenceBasis: "direct-text",
@@ -54,7 +54,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "assembled-reality",
     title: "Assembled Reality",
-    relativePath: "pivot/source documents/assembled_reality_v07_final.md",
+    relativePath: "docs/LoegosSeed/pivot-history/source documents/assembled_reality_v07_final.md",
     sourceRole: "theory",
     sourceClassification: "load_bearing",
     evidenceBasis: "direct-text",
@@ -64,7 +64,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "operator-sentences",
     title: "Operator Sentences",
-    relativePath: "docs/First seed/# Operator Sentences/# Operator Sentences.md",
+    relativePath: "docs/LoegosSeed/# Operator Sentences/# Operator Sentences.md",
     sourceRole: "theory",
     sourceClassification: "load_bearing",
     evidenceBasis: "direct-text",
@@ -74,7 +74,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "ghost-operator",
     title: "The Ghost Operator",
-    relativePath: "docs/First seed/# The Ghost Operator/# The Ghost Operator.md",
+    relativePath: "docs/LoegosSeed/# The Ghost Operator/# The Ghost Operator.md",
     sourceRole: "theory",
     sourceClassification: "latent",
     evidenceBasis: "direct-text",
@@ -84,7 +84,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "law-of-the-echo",
     title: "The Law of the Echo",
-    relativePath: "docs/First seed/# The Law of the Echo/# The Law of the Echo.md",
+    relativePath: "docs/LoegosSeed/# The Law of the Echo/# The Law of the Echo.md",
     sourceRole: "theory",
     sourceClassification: "carried_indirectly",
     evidenceBasis: "direct-text",
@@ -94,7 +94,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "meaning-operator",
     title: "The Meaning Operator",
-    relativePath: "docs/First seed/# The Meaning Operator/# The Meaning Operator.md",
+    relativePath: "docs/LoegosSeed/# The Meaning Operator/# The Meaning Operator.md",
     sourceRole: "theory",
     sourceClassification: "carried_indirectly",
     evidenceBasis: "direct-text",
@@ -104,7 +104,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "monolith-does-not-move",
     title: "A monolith does not move.",
-    relativePath: "pivot/source documents/monolith_canon.md",
+    relativePath: "docs/LoegosSeed/pivot-history/source documents/monolith_canon.md",
     sourceRole: "theory",
     sourceClassification: "latent",
     evidenceBasis: "direct-text",
@@ -114,7 +114,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "echo-canon",
     title: "Echo Canon",
-    relativePath: "pivot/source documents/echo_canon_first_seed.md",
+    relativePath: "docs/LoegosSeed/pivot-history/source documents/echo_canon_first_seed.md",
     sourceRole: "theory",
     sourceClassification: "latent",
     evidenceBasis: "direct-text",
@@ -124,7 +124,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "loegos-self-assembly-spec",
     title: "Lœgos Self-Assembly Seed Spec",
-    relativePath: "docs/First seed/Loegos_Self_Assembly_Seed_Spec_v0.2.md",
+    relativePath: "docs/LoegosSeed/Loegos_Self_Assembly_Seed_Spec_v0.2.md",
     sourceRole: "product-spec",
     sourceClassification: "carried_indirectly",
     evidenceBasis: "direct-text",
@@ -134,7 +134,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   {
     id: "whats-in-the-box",
     title: "What’s In The Box",
-    relativePath: "docs/First seed/# What’s In The Box/# What’s In The Box.md",
+    relativePath: "docs/LoegosSeed/# What’s In The Box/# What’s In The Box.md",
     sourceRole: "product-spec",
     sourceClassification: "load_bearing",
     evidenceBasis: "direct-text",
@@ -145,7 +145,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
     id: "built-by-hand",
     title: "We Built Lœgos by Hand Before the Tool Existed",
     relativePath:
-      "docs/First seed/# We Built Lœgos by Hand Before the Tool Existed/# We Built Lœgos by Hand Before the Tool Existed.md",
+      "docs/LoegosSeed/# We Built Lœgos by Hand Before the Tool Existed/# We Built Lœgos by Hand Before the Tool Existed.md",
     sourceRole: "evidence-spine",
     sourceClassification: "proof_witness",
     evidenceBasis: "direct-text",
@@ -156,7 +156,7 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
     id: "loegos-origin-receipt-arc",
     title: "Lœgos — Origin, Evolution, Feedback, and Receipt",
     relativePath:
-      "docs/First seed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
+      "docs/LoegosSeed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
     sourceRole: "evidence-spine",
     sourceClassification: "proof_witness",
     evidenceBasis: "image-derived-markdown",
@@ -165,9 +165,9 @@ export const LOEGOS_ORIGIN_SOURCE_DEFS = Object.freeze([
   },
   {
     id: "loegos-git-history",
-    title: "Loegos Git history export",
+    title: "Loegos Git history summary",
     relativePath:
-      "docs/First seed/commit c71b1d6cf6c34916fbc85d08ecfd1bf05371aebf/commit c71b1d6cf6c34916fbc85d08ecfd1bf05371aebf.md",
+      "docs/LoegosSeed/git-history/git-history-summary-2026-04-07.md",
     sourceRole: "platform-history",
     sourceClassification: "proof_witness",
     evidenceBasis: "platform-export",

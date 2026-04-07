@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #181818;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  }
+
+  .wrap { width: 100%; max-width: 520px; }
+
+  /* ── Card shell ── */
+  .card {
+    background: #1f1f1f;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+  }
+
+  /* ── Header tab ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .header:hover { background: rgba(255,255,255,0.025); }
+
+  .header-left { display: flex; align-items: center; gap: 10px; }
+
+  .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #ff6b6b; flex-shrink: 0;
+    animation: pulse 2.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.85)} }
+
+  .header-label {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+  }
+
+  .chevron {
+    font-size: 9px;
+    color: rgba(255,255,255,0.18);
+    transition: transform 0.22s ease;
+  }
+  .chevron.open { transform: rotate(180deg); }
+
+  /* ── Divider ── */
+  .sep { height: 1px; background: rgba(255,255,255,0.06); }
+
+  /* ── Layer panel base ── */
+  .layer {
+    display: none;
+    padding: 16px 20px;
+  }
+  .layer.show { display: block; }
+
+  /* ── Bullets ── */
+  .bullet {
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.68);
+    line-height: 1.55;
+  }
+  .bullet:last-of-type { border-bottom: none; }
+  .dash { color: rgba(255,255,255,0.18); font-size: 10px; flex-shrink: 0; }
+
+  /* ── Go deeper button ── */
+  .deeper-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .deeper-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.22);
+    transition: color 0.2s;
+  }
+  .deeper-btn:hover { color: rgba(255,255,255,0.48); }
+  .level-indicator {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.12);
+  }
+
+  /* ── Section titles ── */
+  .section-title {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+    margin-bottom: 10px;
+    margin-top: 18px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── Body text ── */
+  .body-text {
+    font-size: 13px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.72;
+    margin-bottom: 10px;
+  }
+  .body-text:last-child { margin-bottom: 0; }
+
+  /* ── Reference links ── */
+  .refs {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.025);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .ref-title {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+    margin-bottom: 8px;
+  }
+  .ref {
+    display: block;
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.28);
+    line-height: 1.5;
+    margin-bottom: 5px;
+    text-decoration: none;
+    transition: color 0.18s;
+  }
+  .ref:hover { color: rgba(255,255,255,0.55); }
+  .ref:last-child { margin-bottom: 0; }
+
+  /* ── Inception block ── */
+  .inception {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid rgba(255,107,107,0.38);
+    border-radius: 10px;
+    background: rgba(255,107,107,0.12);
+  }
+  .inception-title {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #ffc9c9;
+    margin-bottom: 10px;
+  }
+  .inception p {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+  .inception p:last-child { margin-bottom: 0; }
+
+  /* ── Consent gate ── */
+  .consent-gate {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.015);
+  }
+  .consent-text {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.32);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .consent-prompt {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.28);
+    margin-bottom: 8px;
+  }
+  .consent-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: rgba(255,255,255,0.68);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .consent-input::placeholder {
+    color: rgba(255,255,255,0.14);
+  }
+  .consent-input:focus {
+    border-color: rgba(255,255,255,0.22);
+  }
+  .consent-row {
+    display: flex; gap: 10px;
+    margin-top: 10px;
+  }
+  .consent-enter {
+    flex: 1;
+    padding: 9px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    cursor: default;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.14);
+    transition: all 0.2s;
+    pointer-events: none;
+  }
+  .consent-enter.is-ready {
+    border-color: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.35);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .consent-enter.is-ready:hover {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.65);
+  }
+  .consent-no {
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: none;
+    cursor: pointer;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+    transition: color 0.2s;
+  }
+  .consent-no:hover { color: rgba(255,255,255,0.4); }
+
+  /* ── Stop note ── */
+  .stop-note {
+    margin-top: 14px;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.07em;
+    color: rgba(255,255,255,0.14);
+    line-height: 1.6;
+  }
+
+  /* ── Version ── */
+  .version-row {
+    padding: 10px 20px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .version {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.1);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+
+  <!-- ── TAB ── -->
+  <div class="header" onclick="toggleLayer1()">
+    <div class="header-left">
+      <div class="pulse"></div>
+      <span class="header-label">Experimental — read before opening</span>
+    </div>
+    <span class="chevron" id="chev">▾</span>
+  </div>
+
+  <!-- ── LAYER 1: Five bullets ── -->
+  <div class="layer" id="L1">
+    <div class="sep" style="margin: 0 -20px 14px;"></div>
+
+    <div class="bullet"><span class="dash">—</span><span>The box shows how you actually think, not how you believe you think.</span></div>
+    <div class="bullet"><span class="dash">—</span><span>Coherence is not truth. A tightly assembled wrong thing is still wrong.</span></div>
+    <div class="bullet"><span class="dash">—</span><span>Clarity can arrive faster than the people around you can follow. Speed is not the same as direction.</span></div>
+    <div class="bullet"><span class="dash">—</span><span>Early users made major life pivots. One nearly ended a marriage. The box didn't cause it — it made what was already true visible.</span></div>
+    <div class="bullet"><span class="dash">—</span><span>If the build starts doing you — pause. The assembly does not expire.</span></div>
+  </div>
+
+  <!-- ── Deeper row 1→2 ── -->
+  <div class="deeper-row" id="DR1" style="display:none;">
+    <button class="deeper-btn" onclick="toggleLayer2()">What the research says ↓</button>
+    <span class="level-indicator" id="LI1">Level 1 of 3</span>
+  </div>
+
+  <!-- ── LAYER 2: Research ── -->
+  <div class="layer" id="L2">
+    <div class="sep" style="margin: 0 -20px 16px;"></div>
+
+    <div class="section-title">Why we wrote this</div>
+    <p class="body-text">AI chatbots have been sending people to hospital. UCSF documented 12 hospitalizations in 2025 — patients with no prior illness who developed delusions after extended AI use. The mechanism is sycophancy: the AI validates, beliefs amplify, reality recedes.</p>
+
+    <div class="section-title">How Lœgos is different</div>
+    <p class="body-text">Lœgos uses receipts — evidence from the real world — as the primary input. The system confronts rather than validates. We believe this reduces the risk. We do not know if it eliminates it.</p>
+
+    <div class="refs">
+      <div class="ref-title">Primary sources</div>
+      <a class="ref" href="https://www.bloomberg.com/features/2025-openai-chatgpt-chatbot-delusions/" target="_blank">Bloomberg Businessweek — The Chatbot Delusions (Nov 2025)</a>
+      <a class="ref" href="https://wikipedia.org/wiki/Chatbot_psychosis" target="_blank">Wikipedia — Chatbot Psychosis (updated Apr 2026)</a>
+      <a class="ref" href="https://www.ucsf.edu/news/2026/01/431366/psychiatrists-hope-chat-logs-can-reveal-secrets-ai-psychosis" target="_blank">UCSF — AI Psychosis case study, peer-reviewed (Jan 2026)</a>
+      <a class="ref" href="https://onlinelibrary.wiley.com/doi/10.1111/acps.70068" target="_blank">Acta Psychiatrica Scandinavica — Clinical data, 38 patients (Feb 2026)</a>
+      <a class="ref" href="https://www.psychiatrictimes.com/view/preliminary-report-on-chatbot-iatrogenic-dangers" target="_blank">Psychiatric Times — Iatrogenic dangers report (2026)</a>
+    </div>
+  </div>
+
+  <!-- ── Deeper row 2→3 ── -->
+  <div class="deeper-row" id="DR2" style="display:none;">
+    <button class="deeper-btn" onclick="toggleLayer3()">The deeper problem ↓</button>
+    <span class="level-indicator">Level 2 of 3</span>
+  </div>
+
+  <!-- ── LAYER 3: Inception + consent ── -->
+  <div class="layer" id="L3">
+    <div class="sep" style="margin: 0 -20px 16px;"></div>
+
+    <div class="inception">
+      <div class="inception-title">The Inception problem</div>
+      <p>We built this tool using the same AI systems documented above. We cannot rule out that the framework itself — the assembly, the geometry, the meaning layer — was assembled inside a coherent dream. We have no external position from which to check.</p>
+      <p>This is not a reason to stop. It is a reason to stay close to the receipts. The world will answer. One bit at a time.</p>
+    </div>
+
+    <div class="section-title" style="margin-top:20px;">What this tool cannot do</div>
+    <p class="body-text">Lœgos cannot tell you if your aim is right. It can only show you if your assembly is coherent. The box reads structure. You are responsible for the aim.</p>
+
+    <div class="section-title">If you need to stop</div>
+    <p class="body-text">Close the application. Talk to someone who knew you before you started. Sleep before making any decision the box surfaced. Urgency is a feeling, not a fact. The assembly does not expire.</p>
+    <p class="body-text">If you or someone you know experiences disorientation, compulsive use, delusional thinking, or disconnection from people close to you — stop using immediately. Contact us at <a class="ref" href="mailto:hello@lakin.ai" style="display:inline;">hello@lakin.ai</a>. If it is an emergency, call 911.</p>
+
+    <div class="consent-gate" id="consent-gate">
+      <p class="consent-text">I accept that this tool will show me how I actually think, not how I believe I think. I accept that the researchers above found no safe lower bound on who is vulnerable. I take responsibility for what I do with what I see.</p>
+      <p class="consent-prompt">Type "understand" to continue</p>
+      <input
+        type="text"
+        class="consent-input"
+        id="consent-input"
+        placeholder="understand"
+        autocomplete="off"
+        spellcheck="false"
+        oninput="checkConsent()"
+      />
+      <div class="consent-row">
+        <button class="consent-enter" id="consent-enter" onclick="consentYes()">Open the box</button>
+        <button class="consent-no" onclick="consentNo()">Not yet</button>
+      </div>
+      <p class="stop-note">This disclaimer does not constitute medical advice. If you have a history of psychosis, mania, or delusional thinking — or are currently in an acute mental health episode — do not proceed without speaking to a clinician first.</p>
+    </div>
+  </div>
+
+  <!-- ── Version ── -->
+  <div class="version-row" id="VR" style="display:none;">
+    <span class="version">Lœgos — Experimental v0.1 · April 2026</span>
+  </div>
+
+</div>
+</div>
+
+<script>
+  let L1open = false, L2open = false, L3open = false;
+
+  function toggleLayer1() {
+    L1open = !L1open;
+    document.getElementById('L1').classList.toggle('show', L1open);
+    document.getElementById('chev').classList.toggle('open', L1open);
+    document.getElementById('DR1').style.display = L1open ? 'flex' : 'none';
+    if (!L1open) { hideLayer2(); hideLayer3(); }
+  }
+
+  function toggleLayer2() {
+    L2open = !L2open;
+    document.getElementById('L2').classList.toggle('show', L2open);
+    document.getElementById('DR2').style.display = L2open ? 'flex' : 'none';
+    document.getElementById('LI1').textContent = L2open ? 'Level 2 of 3' : 'Level 1 of 3';
+    if (!L2open) hideLayer3();
+  }
+
+  function toggleLayer3() {
+    L3open = !L3open;
+    document.getElementById('L3').classList.toggle('show', L3open);
+    document.getElementById('VR').style.display = L3open ? 'block' : 'none';
+  }
+
+  function hideLayer2() {
+    L2open = false;
+    document.getElementById('L2').classList.remove('show');
+    document.getElementById('DR2').style.display = 'none';
+    document.getElementById('LI1').textContent = 'Level 1 of 3';
+    hideLayer3();
+  }
+
+  function hideLayer3() {
+    L3open = false;
+    document.getElementById('L3').classList.remove('show');
+    document.getElementById('VR').style.display = 'none';
+  }
+
+  function checkConsent() {
+    var input = document.getElementById('consent-input');
+    var btn = document.getElementById('consent-enter');
+    var match = input.value.trim().toLowerCase() === 'understand';
+    btn.classList.toggle('is-ready', match);
+  }
+
+  function consentYes() {
+    var input = document.getElementById('consent-input');
+    if (input.value.trim().toLowerCase() !== 'understand') return;
+    document.getElementById('consent-gate').innerHTML =
+      '<p style="font-family:ui-monospace,\'SF Mono\',SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);">Consent recorded. The box is open.</p>';
+  }
+
+  function consentNo() {
+    document.getElementById('consent-gate').innerHTML =
+      '<p style="font-family:ui-monospace,\'SF Mono\',SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.18);">Come back when you\'re ready. The assembly waits.</p>';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,3910 @@
+commit dea9ae68349ee504fae57816fdb73145615204bb
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-07 05:59:05 -0400
+
+    Profile local proof workspace load
+
+ scripts/run-phase1-e2e-local.mjs         | 102 ++++++++++++++++++++++-----
+ src/app/account/page.jsx                 |   5 +-
+ src/app/api/auth/dev-guardian/route.js   | 117 +++++++++++++++++--------------
+ src/app/intro/page.jsx                   |   5 +-
+ src/app/page.jsx                         |   5 +-
+ src/app/workspace/page.jsx               |  71 ++++++++++++-------
+ src/lib/server-session.js                |  84 +++++++++++++++++++++-
+ tests/e2e/phase1-inline-operate.spec.mjs |   9 ++-
+ 8 files changed, 286 insertions(+), 112 deletions(-)
+
+commit 1ee6344059f07c511234bdf8b3b6e7554dbcf832
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 19:38:05 -0400
+
+    Implement founder shell Loegos renderer v0.1
+
+ scripts/phase1-smoke-check.mjs                |  17 +-
+ src/app/globals.css                           | 501 ++++++++++++++++++++++++++
+ src/components/WorkspaceShell.jsx             |  31 +-
+ src/components/founder/FounderShell.jsx       | 210 +++++------
+ src/components/founder/LoegosExplainPanel.jsx | 227 ++++++++++++
+ src/components/founder/LoegosRenderer.jsx     | 172 +++++++++
+ src/lib/founder-renderer.js                   | 369 +++++++++++++++++++
+ 7 files changed, 1399 insertions(+), 128 deletions(-)
+
+commit f9dfc0f57cef78b9b1abb607b2e4cb3925b6a5fe
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 17:51:25 -0400
+
+    Build Founder Shell source-first front door
+
+ .../Founder Shell v0.1/Founder Shell v0.1.md       |  60 +++-
+ scripts/phase1-smoke-check.mjs                     |   9 +
+ src/app/globals.css                                | 321 +++++++++++++++++++++
+ src/components/WorkspaceShell.jsx                  | 147 +++++++++-
+ src/components/founder/FounderShell.jsx            | 221 ++++++++++++++
+ 5 files changed, 755 insertions(+), 3 deletions(-)
+
+commit 017477bf105a35fe1d509ac1601a449dce736655
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 17:27:23 -0400
+
+    Add Founder Shell brief
+
+ .../Founder Shell v0.1/Founder Shell v0.1.md       | 481 +++++++++++++++++++++
+ 1 file changed, 481 insertions(+)
+
+commit 238d73ef5f1724fc1e11038639660b4eb4f55e1f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 16:40:17 -0400
+
+    Build source-first founder flow
+
+ .../Founder Wow Proof Session.md                   |  20 +--
+ .../Phase 1 Proof Runbook/Phase 1 Proof Runbook.md |   7 ++
+ scripts/phase1-smoke-check.mjs                     |  13 ++
+ src/app/globals.css                                |  97 ++++++++++++++-
+ src/components/SeedSurface.jsx                     |  38 +++++-
+ src/components/WorkspaceShell.jsx                  | 136 +++++++++++++++++----
+ src/components/WorkspaceStarter.jsx                |  18 +--
+ 7 files changed, 283 insertions(+), 46 deletions(-)
+
+commit 706c3289ec02b44b69adf2d84cca1fc6d678b539
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 15:57:34 -0400
+
+    Add workspace starter MVP flow
+
+ scripts/phase1-smoke-check.mjs           |  18 ++
+ src/app/globals.css                      | 198 +++++++++++++++++
+ src/app/workspace/page.jsx               |  19 +-
+ src/components/WorkspaceShell.jsx        | 353 +++++++++++++++++++++++++++++--
+ src/components/WorkspaceStarter.jsx      | 111 ++++++++++
+ tests/e2e/phase1-inline-operate.spec.mjs |  10 +
+ 6 files changed, 690 insertions(+), 19 deletions(-)
+
+commit 01cbc6f0dfabc0d02b022216e346ee5ff48c6109
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 15:24:38 -0400
+
+    Fix workspace shell empty state initialization
+
+ src/components/WorkspaceShell.jsx | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+commit a9f5e95efb7d48df069cff09aea5974e85793d6d
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 15:17:16 -0400
+
+    Fix unified workspace usability blockers
+
+ scripts/phase1-smoke-check.mjs                     |   8 +
+ src/app/globals.css                                | 162 +++++++++++++++++++++
+ src/components/WorkspaceDiagnosticsRail.jsx        |  28 ++++
+ src/components/WorkspaceShell.jsx                  | 102 ++++++++-----
+ .../workspace/useOperateOverlayController.js       |  83 ++++++++---
+ src/lib/operate-overlay.js                         |  15 +-
+ 6 files changed, 344 insertions(+), 54 deletions(-)
+
+commit b845e9df8eb533a4073a94e835cf8f356f73df38
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 14:56:44 -0400
+
+    Sharpen founder wow proof path
+
+ docs/phase-1-proof-runbook.md                      |  1 +
+ .../Founder Wow Proof Session.md                   | 85 +++++++++++++++++++++
+ .../Phase 1 Proof Runbook/Phase 1 Proof Runbook.md | 13 ++++
+ scripts/phase1-smoke-check.mjs                     | 12 +++
+ src/app/globals.css                                | 30 ++++++++
+ src/components/WorkspaceShell.jsx                  | 88 +++++++++++++++++++++-
+ .../workspace/WorkspaceDocumentWorkbench.jsx       | 32 ++++++++
+ .../workspace/useOperateOverlayController.js       |  5 +-
+ src/lib/operate-overlay.js                         | 37 +++++++++
+ 9 files changed, 299 insertions(+), 4 deletions(-)
+
+commit 9a61a940cde778a31ded163ac61e42a834a57115
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 14:25:50 -0400
+
+    Tighten phase 1 proof honesty
+
+ docs/phase-1-proof-runbook.md                      |  4 ++++
+ package.json                                       |  2 +-
+ .../Phase 1 Proof Runbook/Phase 1 Proof Runbook.md | 17 ++++++++++----
+ scripts/phase1-smoke-check.mjs                     |  8 ++++++-
+ scripts/run-phase1-e2e-local.mjs                   | 27 ++++++++++++++++++++++
+ tests/e2e/phase1-inline-operate.spec.mjs           | 11 +++++----
+ 6 files changed, 57 insertions(+), 12 deletions(-)
+
+commit 9fd03e7e6d035657f0f5baad9939a819fca17a85
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 14:18:04 -0400
+
+    Close phase 1 proof loop
+
+ docs/phase-1-proof-runbook.md                      |  16 +++
+ package.json                                       |   4 +-
+ .../Phase 1 Proof Runbook/Phase 1 Proof Runbook.md | 113 +++++++++++++++++++++
+ playwright.ci.config.mjs                           |  31 ++++++
+ playwright.config.mjs                              |   8 --
+ scripts/phase1-smoke-check.mjs                     |  19 +++-
+ src/components/ReceiptSealDialog.jsx               |  17 +++-
+ src/components/WorkspaceDiagnosticsRail.jsx        |  21 ++--
+ src/components/WorkspaceShell.jsx                  |   8 ++
+ tests/e2e/phase1-inline-operate.spec.mjs           |  67 ++++++++++++
+ 10 files changed, 286 insertions(+), 18 deletions(-)
+
+commit 6a798bebd09cd3172618a16586356b1a039f4344
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 13:52:14 -0400
+
+    Extract workspace controllers and add E2E harness
+
+ .gitignore                                         |    2 +
+ package-lock.json                                  |   64 +
+ package.json                                       |    2 +
+ playwright.config.mjs                              |   33 +
+ scripts/phase1-smoke-check.mjs                     |   33 +-
+ src/components/ReceiptSealDialog.jsx               |    5 +-
+ src/components/WorkspaceDiagnosticsRail.jsx        |    5 +-
+ src/components/WorkspaceDisclaimerGate.jsx         |   10 +-
+ src/components/WorkspaceOperateOverlayRail.jsx     |   12 +-
+ src/components/WorkspaceShell.jsx                  | 1229 +++-----------------
+ .../workspace/WorkspaceDocumentWorkbench.jsx       |  592 ++++++++++
+ .../workspace/useOperateOverlayController.js       |  266 +++++
+ .../workspace/useReceiptSealController.js          |  304 +++++
+ tests/e2e/phase1-inline-operate.spec.mjs           |   61 +
+ 14 files changed, 1539 insertions(+), 1079 deletions(-)
+
+commit 96cbd6f19ef2a962f42d7988c8ad08456cec3cbe
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 13:09:56 -0400
+
+    Add pivot source documents for self-assembly
+
+ pivot/source documents/README.md                   |   26 +
+ .../assembled_reality_first_seed.md                |  476 +++++++++
+ .../assembled_reality_v07_final.md                 | 1083 ++++++++++++++++++++
+ pivot/source documents/echo_canon_first_seed.md    |  321 ++++++
+ .../source documents/echo_canon_userexperience.md  |  433 ++++++++
+ pivot/source documents/loegos.md                   |   81 ++
+ pivot/source documents/monolith_canon.md           |  112 ++
+ 7 files changed, 2532 insertions(+)
+
+commit 9396cb7cbb9d5c99797d31c15c0924c1db262b97
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 13:06:29 -0400
+
+    Harden inline operate trust rules
+
+ scripts/phase1-smoke-check.mjs                 |  15 +++
+ src/app/api/workspace/operate/route.js         |  37 ++++--
+ src/components/WorkspaceOperateOverlayRail.jsx |  54 ++++++--
+ src/components/WorkspaceShell.jsx              |  23 +++-
+ src/lib/operate-overlay.js                     | 176 +++++++++++++++++++------
+ 5 files changed, 234 insertions(+), 71 deletions(-)
+
+commit 251e6458dada5b563f1c87f05e5d8498a665fd4f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 12:30:45 -0400
+
+    Implement phase 1 inline operate overlay
+
+ eslint.config.mjs                                  |   10 +-
+ package.json                                       |    1 +
+ .../migration.sql                                  |   61 +
+ prisma/schema.prisma                               |   46 +
+ scripts/phase1-smoke-check.mjs                     |   56 +
+ src/app/api/workspace/ai/route.js                  |  118 +-
+ src/app/api/workspace/operate/overrides/route.js   |  122 ++
+ src/app/api/workspace/operate/route.js             |  641 +++++++-
+ src/app/api/workspace/receipt/audit/route.js       |   30 +-
+ src/app/api/workspace/receipt/route.js             |   62 +-
+ src/app/globals.css                                |  430 ++++++
+ src/app/styles/loegos-system.css                   |  126 ++
+ src/components/InlineAssist.jsx                    |   18 +-
+ src/components/ReceiptSealDialog.jsx               |   53 +-
+ src/components/RootEditor.jsx                      |    4 -
+ src/components/WorkspaceDiagnosticsRail.jsx        |   86 +-
+ src/components/WorkspaceOperateOverlayRail.jsx     |  316 ++++
+ src/components/WorkspaceShell.jsx                  | 1591 ++++++++++++++++++--
+ src/lib/formal-core/runtime.js                     |   10 -
+ src/lib/loegos-origin-template.js                  |    6 +-
+ src/lib/operate-overlay.js                         |  527 +++++++
+ src/lib/reader-operate.js                          |  174 +++
+ 22 files changed, 4182 insertions(+), 306 deletions(-)
+
+commit 64973a364c2000503c1c8ad057c4e93a3d28dbae
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 09:32:26 -0400
+
+    Refactor desktop workspace around open artifact
+
+ src/app/globals.css                         | 189 ++++++++++-------
+ src/app/styles/loegos-system.css            |  85 ++++----
+ src/app/styles/surfaces.css                 |  36 ++++
+ src/app/workspace/page.jsx                  |   2 +-
+ src/components/SourceRail.jsx               |  65 ++++--
+ src/components/WorkspaceControlSurface.jsx  | 272 +++++++++++-------------
+ src/components/WorkspaceDiagnosticsRail.jsx |   6 +-
+ src/components/WorkspaceShell.jsx           | 308 +++++++++++++---------------
+ 8 files changed, 499 insertions(+), 464 deletions(-)
+
+commit 0f1880f49dcf73326365645eaa9ae5cc59d9a6ef
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-06 07:34:06 -0400
+
+    Add first-login disclaimer gate and public disclaimer
+
+ .../migration.sql                                  |   2 +
+ prisma/schema.prisma                               |   1 +
+ src/app/api/reader/disclaimer/route.js             |  30 +++++
+ src/app/disclaimer/page.jsx                        |  14 ++
+ src/app/globals.css                                |   7 +
+ src/app/llms-ctx.txt/route.js                      |   1 +
+ src/app/llms.txt/route.js                          |   1 +
+ src/app/styles/loegos-system.css                   | 146 +++++++++++++++++++++
+ src/app/workspace/page.jsx                         |   1 +
+ src/components/IntroLanding.jsx                    |   5 +
+ src/components/WorkspaceDisclaimerGate.jsx         | 116 ++++++++++++++++
+ src/components/WorkspaceShell.jsx                  |  30 +++++
+ src/lib/disclaimer-content.js                      |  87 ++++++++++++
+ src/lib/public-site.js                             |   6 +
+ src/lib/reader-db.js                               |  12 ++
+ 15 files changed, 459 insertions(+)
+
+commit 1f4635ebaf073fe07aa4856062448bcb04456a1c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 23:56:29 -0400
+
+    Polish workspace bootstrap and responsiveness
+
+ src/app/layout.jsx                |  5 ++++-
+ src/app/workspace/page.jsx        | 41 ++++++++++++++++++++++++++-------------
+ src/components/WorkspaceShell.jsx | 21 +++++++++++++++++---
+ src/lib/reader-workspace.js       | 21 ++++++++++++++++----
+ 4 files changed, 67 insertions(+), 21 deletions(-)
+
+commit 54ab7565f7d6ac9570298687cccbf4a269bda1d2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 23:40:01 -0400
+
+    Refresh landing page positioning and copy
+
+ src/app/globals.css              |  10 ++
+ src/app/opengraph-image.jsx      |   7 +-
+ src/app/styles/loegos-system.css |  77 ++++++++++++++
+ src/components/AuthTerminal.jsx  |   3 +-
+ src/components/IntroLanding.jsx  | 219 ++++++++++++++++++++++-----------------
+ src/lib/product-language.js      |   9 +-
+ src/lib/public-site.js           |   4 +-
+ 7 files changed, 221 insertions(+), 108 deletions(-)
+
+commit 4d3466e021ac2b44fae25a199384dbec1f7a5f7b
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 23:05:05 -0400
+
+    Implement native assembly loop milestone
+
+ src/app/globals.css                         |  46 +++
+ src/app/styles/loegos-system.css            |  10 +
+ src/app/styles/surfaces.css                 |   8 +
+ src/app/workspace/page.jsx                  |   9 +-
+ src/components/StagingPanel.jsx             |  23 +-
+ src/components/WorkspaceDiagnosticsRail.jsx |  65 +++--
+ src/components/WorkspaceShell.jsx           | 415 +++++++++++++++++++++++++---
+ src/lib/document-blocks.js                  |   2 +
+ src/lib/workspace-documents.js              |   1 +
+ src/lib/workspace-provenance.js             | 193 +++++++++++++
+ 10 files changed, 708 insertions(+), 64 deletions(-)
+
+commit 0896be481bf676b907d51f86f84beef3b6830ca9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 22:28:22 -0400
+
+    Add founding session receipt to origin corpus
+    
+    The manual operations performed during the April 5-6 design session —
+    three AI threads, eight hours, blocks carried by hand — are now a
+    first-class source in the Loegos origin example.
+    
+    New source: We Built Loegos by Hand Before the Tool Existed
+    - evidence-spine role, proof_witness classification, primary chronology
+    - maps every manual operation to its Loegos primitive
+    
+    Template bumped to v3. New move: The product was built by hand before
+    the tool existed — sealed in the proof group, linked to the origin
+    receipt arc and git history.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ ...\305\223gos by Hand Before the Tool Existed.md" | 108 +++++++++++++++++++++
+ src/lib/loegos-origin-template.js                  |  28 +++++-
+ 2 files changed, 134 insertions(+), 2 deletions(-)
+
+commit 8689d13287b980996c4b6bcc92a26a6158b4fab7
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 22:08:09 -0400
+
+    Add formal runtime used by IDE shell
+
+ src/lib/formal-core/runtime.js | 1456 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 1456 insertions(+)
+
+commit 049a67280d528630794af2a0f9529b9ae5eec208
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 22:01:47 -0400
+
+    Reframe workspace as Box IDE shell
+
+ docs/box-ide-workspace-milestone-1-note.md  | 151 +++++++++
+ src/app/globals.css                         |  45 +++
+ src/app/styles/loegos-system.css            | 288 ++++++++++++++++
+ src/app/styles/surfaces.css                 |  78 +++++
+ src/components/SourceRail.jsx               |  61 +++-
+ src/components/WorkspaceDiagnosticsRail.jsx | 506 ++++++++++++++++++++++++++++
+ src/components/WorkspaceShell.jsx           | 404 +++++++++++++++++++---
+ src/lib/loegos-system.js                    |   3 +
+ 8 files changed, 1491 insertions(+), 45 deletions(-)
+
+commit 54549a3f25fef5747ec9940534d7458b6b898609
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 20:30:59 -0400
+
+    Implement Loegos full-product upgrade foundation
+
+ src/app/globals.css                        |   81 ++-
+ src/app/styles/loegos-system.css           | 1012 ++++++++++++++++++++++++++++
+ src/app/styles/tokens.css                  |   78 ++-
+ src/components/AccountShell.jsx            |  244 ++++---
+ src/components/AssemblyWorkspaceScreen.jsx |    7 +
+ src/components/BoxHomeScreen.jsx           |   38 ++
+ src/components/CreateSurface.jsx           |   12 +-
+ src/components/IntroLanding.jsx            |  178 ++++-
+ src/components/LaunchpadScreen.jsx         |   11 +
+ src/components/LoegosSystem.jsx            |  400 +++++++++++
+ src/components/MobileBottomNav.jsx         |  125 +---
+ src/components/OperateScreen.jsx           |    3 +
+ src/components/OperateSurface.jsx          |   23 +-
+ src/components/ProjectHome.jsx             |  167 +++--
+ src/components/PublicDocumentPage.jsx      |   82 ++-
+ src/components/ReceiptSurface.jsx          |    4 +-
+ src/components/ReceiptsScreen.jsx          |    3 +
+ src/components/SelfAssemblyPage.jsx        |  218 +++---
+ src/components/ThinkSurface.jsx            |    4 +-
+ src/components/WorkspaceControlSurface.jsx |  284 ++++----
+ src/components/WorkspaceShell.jsx          |  248 ++++---
+ src/lib/loegos-system.js                   |  152 +++++
+ 22 files changed, 2669 insertions(+), 705 deletions(-)
+
+commit 3828892b3d40271948f46b78a8c3252360e05022
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 18:29:16 -0400
+
+    Replace favicon bolt with oe mark
+
+ public/favicon.svg | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+commit 2d7b67b1cef77c560bc66e63459ee5bb835b0d89
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 18:17:31 -0400
+
+    Recover guardian workspace flow and UI compliance
+
+ docs/guardianship.md                      | 310 ++++++++++++++++++++++++++++++
+ package.json                              |   1 +
+ scripts/check-guardian-compliance.mjs     |  92 +++++++++
+ src/app/api/auth/dev-guardian/route.js    | 103 ++++++++++
+ src/app/globals.css                       |  58 ++++--
+ src/app/opengraph-image.jsx               |  39 ++--
+ src/app/styles/layout.css                 |  21 +-
+ src/app/styles/surfaces.css               |  89 ++++-----
+ src/app/workspace/page.jsx                | 174 ++++++++++++-----
+ src/components/AssemblyLane.jsx           |  35 ++--
+ src/components/BoxManagementDialog.jsx    |  22 +--
+ src/components/BoxObjectVisualization.jsx |   5 +-
+ src/components/BoxesIndex.jsx             |  21 +-
+ src/components/CloseMoveDialog.jsx        |   6 +-
+ src/components/SeedSurface.jsx            |  26 ++-
+ src/components/WorkspaceShell.jsx         |  52 +++++
+ src/lib/box-view-models.js                |  11 ++
+ src/lib/design-tokens.js                  |  57 ++++++
+ src/lib/document-blocks.js                |  34 +---
+ src/lib/email.js                          |  27 +--
+ 20 files changed, 937 insertions(+), 246 deletions(-)
+
+commit a3a1ffb352d72c5f4eaf3eec79ce322bcfcbd624
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 17:40:34 -0400
+
+    Add close-move flow and refreshable Loegos example
+
+ .../close-move-example-refresh-review-brief-v1.md  | 162 +++++++++
+ .../# What\342\200\231s In The Box.md"             | 116 ++++++
+ src/app/api/workspace/checkpoint/route.js          |  47 +++
+ src/app/api/workspace/operate/route.js             |  41 ++-
+ src/app/api/workspace/project/route.js             |  55 ++-
+ src/app/api/workspace/receipt/route.js             |   2 +
+ src/app/workspace/page.jsx                         |   3 +-
+ src/components/BoxManagementDialog.jsx             |  46 +++
+ src/components/BoxesIndex.jsx                      |   3 +
+ src/components/CloseMoveDialog.jsx                 | 124 +++++++
+ src/components/OperateDialog.jsx                   |   2 +-
+ src/components/OperateSurface.jsx                  |   2 +-
+ src/components/WorkspaceShell.jsx                  |  38 --
+ src/lib/box-view-models.js                         |  22 ++
+ src/lib/loegos-origin-example.js                   | 400 ++++++++++++++++++---
+ src/lib/loegos-origin-template.js                  |  50 ++-
+ src/lib/project-model.js                           |  31 +-
+ src/lib/reader-documents.js                        |   2 +
+ src/lib/reader-projects.js                         | 224 +++++++++++-
+ src/lib/self-assembly.js                           |  21 +-
+ src/lib/workspace-documents.js                     |   9 +-
+ 21 files changed, 1286 insertions(+), 114 deletions(-)
+
+commit 2a36a099bfb7c235960c98f8a4d3283c3f14b33b
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 17:35:37 -0400
+
+    Strip old shell header — instrument bar is the only chrome
+    
+    The old assembler-header rendered LŒGOS mark, box name, context
+    label, and navigation buttons redundantly with the instrument bar.
+    On desktop this created two nav rows; on mobile it created three
+    chrome layers (header + RootBar + bottom nav).
+    
+    Now the header contains only: Seven button (mobile) and account
+    link. Positioned absolutely at top-right with pointer-events: none
+    on the wrapper so it doesn't block the instrument bar below.
+    
+    The instrument bar (WorkspaceControlSurface) and MobileBottomNav
+    are the only chrome surfaces. The old identity section, context
+    label, Sources/All boxes/Assembly lane buttons, and the separate
+    mobile RootBar section are all removed.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css               |  85 ++++++
+ src/components/WorkspaceShell.jsx | 586 ++++++++++++++++++++++++++++----------
+ 2 files changed, 525 insertions(+), 146 deletions(-)
+
+commit 4d93b4e2d2ae66b5e41055c4644373e757e2b1d0
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 17:27:05 -0400
+
+    Fix escaped markdown in confirmation queue and block plainText
+    
+    The cleanDisplayTitle fix from af4310b only covered the view model
+    layer (box-view-models.js). The confirmation queue gets data through
+    a different path (assembly-architecture.js → raw blocks) that
+    bypassed the title cleaning.
+    
+    Fixes:
+    - Apply cleanDisplayTitle to sourceTitle in block normalization
+      (document-blocks.js) so all blocks carry clean titles
+    - Add cleanDisplayTitle at the confirmation dialog render level
+      as a safety net for already-stored escaped titles
+    - Fix stripMarkdownSyntax to handle backslash-escaped markdown
+      (\# \* \_) — the existing regex only caught bare # not \#
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/components/ConfirmationQueueDialog.jsx | 3 ++-
+ src/lib/document-blocks.js                 | 7 ++++---
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+commit 2badfa9690a2a1889117a4bbdfc6e0fa91afdb4c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 16:59:38 -0400
+
+    Refine Lakin disclosure and word layer
+
+ src/app/globals.css             |  55 ++++++++++-
+ src/components/AssemblyLane.jsx | 207 ++++++++++++++++++++++++----------------
+ src/lib/box-view-models.js      |   1 +
+ src/lib/self-assembly.js        |   1 +
+ 4 files changed, 178 insertions(+), 86 deletions(-)
+
+commit 7ee7439f7962af62506e9dc0565ef3b09ab5b290
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 16:51:10 -0400
+
+    Add word layer and Lakin moments
+
+ First Seed/word-layer-lakin-review-brief-v0.1.md |  227 +++++
+ src/app/api/seven/route.js                       |  176 +++-
+ src/app/globals.css                              |  188 +++-
+ src/components/AssemblyLane.jsx                  |  230 +++++
+ src/components/WorkspaceShell.jsx                |  151 ++++
+ src/lib/box-view-models.js                       |   44 +-
+ src/lib/loegos-origin-example.js                 |    4 +
+ src/lib/loegos-origin-template.js                |   11 +-
+ src/lib/self-assembly.js                         |  123 ++-
+ src/lib/word-layer.js                            | 1052 ++++++++++++++++++++++
+ src/lib/word-taxonomy.js                         |  209 +++++
+ 11 files changed, 2400 insertions(+), 15 deletions(-)
+
+commit 77a88f39bca3c1701ad2d80244dd5a795e74f632
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 16:10:22 -0400
+
+    Seed the Loegos origin example box
+
+ src/app/api/workspace/project/route.js |   6 +-
+ src/app/globals.css                    |  29 ++
+ src/app/workspace/page.jsx             | 110 +++++-
+ src/components/AssemblyLane.jsx        |   3 +
+ src/components/BoxManagementDialog.jsx |  50 ++-
+ src/components/BoxesIndex.jsx          |  10 +
+ src/components/SelfAssemblyPage.jsx    |   3 +
+ src/components/SourceRail.jsx          |   1 +
+ src/components/WorkspaceShell.jsx      |   5 +-
+ src/lib/assembly-architecture.js       |  34 +-
+ src/lib/box-view-models.js             |  32 ++
+ src/lib/loegos-origin-example.js       | 697 +++++++++++++++++++++++++++++++++
+ src/lib/loegos-origin-template.js      | 450 +++++++++++++++++++++
+ src/lib/project-model.js               |  20 +
+ src/lib/reader-db.js                   |   2 +
+ src/lib/reader-documents.js            |  10 +
+ src/lib/reader-projects.js             |  66 +++-
+ src/lib/seed-model.js                  |   2 +-
+ src/lib/self-assembly.js               | 378 ++++--------------
+ src/lib/workspace-documents.js         |   8 +-
+ 20 files changed, 1564 insertions(+), 352 deletions(-)
+
+commit d52cf0e1ac76c4f225a9e00ea9fe0dcc7acd6d32
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 15:39:01 -0400
+
+    Close guardian audit: trust sentences, color naming, proof-in-badge
+    
+    Fix 3 items from guardian audit:
+    
+    1. Self-assembly trust sentences compressed to operator format:
+       "History export · captured", "Image-derived · normalized",
+       "Text · preserved" (was full documentation sentences).
+    
+    2. var(--purple) replaced with var(--assembly-step-1-text) in block
+       editor saving status. Zero non-token color names remain.
+    
+    3. Stage badge now encodes proof status via color: neutral gray when
+       no evidence exists, assembly-step-4 (green) when evidence is
+       confirmed. One badge, two signals — label encodes stage, color
+       encodes proof. Creep Law compliant.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css             | 11 ++++++-----
+ src/components/AssemblyLane.jsx | 10 +++++++---
+ src/lib/self-assembly.js        |  6 +++---
+ 3 files changed, 16 insertions(+), 11 deletions(-)
+
+commit d173f4140cfde68259a3dfbd07c6f08ea0d4fd4a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 15:29:10 -0400
+
+    Finish polish: Lucide player icons, color purge, receipt layout
+    
+    Listen controls: replace PREV/PLAY/NEXT/◄10/10► text buttons with
+    Lucide icon buttons (SkipBack, Rewind, Play, Pause, FastForward,
+    SkipForward) at 16px with strokeWidth 1.7 and aria-labels.
+    
+    Player fill bar: var(--blue) replaced with assembly tone token.
+    Seven prompt, suggestion chips, player active/playing states:
+    all var(--blue) instances replaced with var(--assembly-step-1-text).
+    Zero var(--blue) usages remain in the stylesheet.
+    
+    Receipt hero actions: removed mobile full-width stacking override
+    so Draft/Seal/Retry/Verify stay in an inline row on all viewports.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css               | 37 +++++++++++---------
+ src/components/WorkspaceShell.jsx | 73 +++++++++------------------------------
+ src/lib/workspace-receipts.js     |  2 +-
+ 3 files changed, 38 insertions(+), 74 deletions(-)
+
+commit af4310b6ada15eef36d14d89f4377bb7a9512708
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 15:11:05 -0400
+
+    Polish pass: fix rendering bugs, strip TMI copy, compress chrome
+    
+    Rendering fixes:
+    - Add cleanDisplayTitle() to strip escaped markdown (\#, \*) from
+      display titles across all view models
+    - Fix literal _No content yet._ markdown — use plain text instead
+    - Deduplicate LOCAL ONLY badge on receipt surface (skip second pill
+      when both labels are identical)
+    
+    TMI copy removal (every line must be necessary every time):
+    - Looping warning: "Accumulating without sealing." (was 2 sentences)
+    - Source trust summary: "Text · normalized" (was full explanation)
+    - Link trust summary: "Link · captured" (was full explanation)
+    - Seven thread empty state: "Ask Seven about this document." (was 2 sentences)
+    - Receipt decision text: "Local proof preserved." (was full explanation)
+    
+    Chrome compression:
+    - RootBar compact mode: hide eyebrow, flex row layout, smaller text
+    - Confirmation domain chips: show only applicable domains (not all 10)
+    - Assembly lane cards: reduce to 1 badge per card, remove trust
+      summary sentence and linked entries text
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                        | 18 ++++++++++++++++--
+ src/components/AiUtilityRail.jsx           |  2 +-
+ src/components/AssemblyLane.jsx            | 12 ------------
+ src/components/ConfirmationQueueDialog.jsx | 13 +++++--------
+ src/components/ReceiptSurface.jsx          | 10 ++++++----
+ src/components/WorkspaceShell.jsx          |  2 +-
+ src/lib/assembly-architecture.js           |  2 +-
+ src/lib/box-view-models.js                 |  7 ++++---
+ src/lib/document-blocks.js                 | 12 ++++++++++--
+ src/lib/self-assembly.js                   |  6 +++---
+ src/lib/source-model.js                    |  4 ++--
+ src/lib/workspace-receipts.js              |  2 +-
+ 12 files changed, 50 insertions(+), 40 deletions(-)
+
+commit 8a44f33306110ac0500a30d83a118b5e7a02f4c8
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 15:02:31 -0400
+
+    Add polish pass spec: bugs, TMI copy, mobile chrome compression
+    
+    Complete audit of rendering bugs (escaped markdown in titles, player
+    scroll, duplicate badges, literal markdown placeholders), TMI copy
+    to strip (feature explanations, per-card documentation sentences,
+    multi-sentence instrument guidance), mobile chrome compression
+    (3-line RootBar to 1 line, top nav element reduction), component
+    fixes (confirmation button sizes, listen icon buttons, receipt
+    layout), and remaining color migration targets.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ docs/cloud-reviews/polish-pass-spec.md | 239 +++++++++++++++++++++++++++++++++
+ 1 file changed, 239 insertions(+)
+
+commit fe17ea7d3f26f12cbe987c22c7f4137afa969cfa
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 14:58:53 -0400
+
+    Add assembly lane protocol visibility
+
+ First Seed/assembly-lane-review-brief-v0.2.md | 214 ++++++++++++++++++++++++++
+ src/app/api/workspace/assemble/route.js       |   1 +
+ src/app/api/workspace/confirm/route.js        |   2 +
+ src/app/api/workspace/receipt/route.js        |   3 +
+ src/app/globals.css                           | 105 ++++++++++++-
+ src/components/AssemblyLane.jsx               |  73 ++++++++-
+ src/components/WorkspaceShell.jsx             |  32 ++++
+ src/lib/box-view-models.js                    |  55 ++++++-
+ src/lib/self-assembly.js                      |   9 +-
+ 9 files changed, 480 insertions(+), 14 deletions(-)
+
+commit 82f94ae11246b788cbb00798cf939cc26aeab4ec
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 14:49:17 -0400
+
+    Refine Loegos magic link CTA hierarchy
+
+ src/lib/email.js | 21 +++++++++------------
+ 1 file changed, 9 insertions(+), 12 deletions(-)
+
+commit 82cc3b5ec4e4abc3df333931a6abe6cd47c44e1a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 14:39:22 -0400
+
+    Fix Loegos auth email sender and styling
+
+ src/lib/email.js | 65 ++++++++++++++++++++++++++++++++++----------------------
+ src/lib/env.js   |  4 +++-
+ 2 files changed, 43 insertions(+), 26 deletions(-)
+
+commit 13b034f0f48c850ee14d2684ee7762415fcc2319
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 14:00:28 -0400
+
+    Align assembly lane chrome with instrument bar
+
+ src/app/globals.css                 | 454 +++++++++++-------------------------
+ src/components/AssemblyLane.jsx     | 205 ++++++++--------
+ src/components/SelfAssemblyPage.jsx |  37 +--
+ src/components/WorkspaceShell.jsx   |  55 +----
+ 4 files changed, 241 insertions(+), 510 deletions(-)
+
+commit e987a7de275eacd36d337a74b0b80d4755bb1f14
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 13:41:47 -0400
+
+    Revise assembly lane truth model and evidence flow
+
+ src/app/api/workspace/assemble/route.js    |  31 +-
+ src/app/api/workspace/receipt/route.js     |  28 ++
+ src/app/api/workspace/seed/route.js        |  35 ++
+ src/app/globals.css                        |  52 +-
+ src/components/AssemblyLane.jsx            | 180 ++++---
+ src/components/ConfirmationQueueDialog.jsx |  36 +-
+ src/components/SelfAssemblyPage.jsx        | 127 +----
+ src/components/WorkspaceShell.jsx          |  44 +-
+ src/lib/box-view-models.js                 | 733 +++++++++++++++++++++++++----
+ src/lib/reader-documents.js                |  97 ++++
+ src/lib/reader-projects.js                 |  18 +-
+ src/lib/self-assembly.js                   | 284 +++++++++++
+ src/lib/workspace-documents.js             |  27 ++
+ 13 files changed, 1390 insertions(+), 302 deletions(-)
+
+commit 6273f0d9216c47a6180d315625b2d88e85769f39
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 13:32:03 -0400
+
+    Rebuild chrome as single-row instrument bar with Lucide icons
+    
+    Replace the multi-row text-pill control surface with a single-row
+    icon-driven instrument bar. Four mode icons (Rows3, Sprout, ScanLine,
+    FileCheck) and three action icons (Plus, Mic, SlidersHorizontal)
+    replace text buttons. Box selector pill with Popover replaces the
+    identity row. Root text displays inline in the bar.
+    
+    Layout: LŒGOS mark | box pill | modes | root text | actions | ⊘ badge
+    
+    All icon buttons use 32x32 touch targets with 16px Lucide icons at
+    strokeWidth 1.7 (matching WorkspaceGlyph convention). Active and
+    primary states use assembly-step-1 tokens only. No gradients. No
+    decorative color.
+    
+    RealityInstrument stays below the bar, conditional. MobileBottomNav
+    unchanged. RootBar stays for mobile use.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                        | 214 ++++++++++++++++++++++
+ src/components/WorkspaceControlSurface.jsx | 282 ++++++++++++++++++++---------
+ 2 files changed, 407 insertions(+), 89 deletions(-)
+
+commit b6bca7db3a7d7e5f257cc1385422f157ab0a04c9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 13:30:31 -0400
+
+    Add lightweight Popover component
+    
+    Minimal popover for compact dropdown menus in chrome bar. Click-
+    outside and Escape to close, absolute positioning, no portal.
+    Supports start/center/end alignment. CSS follows the same dark
+    surface + subtle border + shadow-panel pattern as sheets.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css        | 91 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/components/Popover.jsx | 64 ++++++++++++++++++++++++++++++++
+ 2 files changed, 155 insertions(+)
+
+commit 8ea554dffdaf6f47f61ae8f03a8736b03c820b93
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 13:29:49 -0400
+
+    Install lucide-react and enforce Creep Law on color tokens
+    
+    Install lucide-react for icon-driven chrome buttons. Migrate all
+    remaining hardcoded rgba(138,193,255) to assembly-step-1 tokens
+    and rgba(245,158,11) to assembly-step-6 tokens with original
+    values as fallbacks. Remove the blue-pink gradient from primary
+    action button — decorative color encodes no data. Add new token
+    variants: --assembly-step-1-tint, --assembly-step-1-border-strong,
+    --assembly-step-6-tint.
+    
+    Creep Law: every color must answer "what data does this encode?"
+    If there is no data, use surface or text tokens.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ package-lock.json         | 10 ++++++
+ package.json              |  1 +
+ src/app/globals.css       | 78 +++++++++++++++++++++++------------------------
+ src/app/styles/tokens.css |  3 ++
+ 4 files changed, 53 insertions(+), 39 deletions(-)
+
+commit 3e1c6345e41d80ca3e68e13904195b161067217e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 12:57:35 -0400
+
+    Add assembly lane as default box surface
+
+ First Seed/box-history-lane-product-doc-v0.1.md | 425 +++++++++++++++++++
+ src/app/globals.css                             | 244 +++++++++++
+ src/components/AssemblyLane.jsx                 | 148 +++++++
+ src/components/BoxesIndex.jsx                   |   4 +-
+ src/components/MobileBottomNav.jsx              |   6 +-
+ src/components/SelfAssemblyPage.jsx             |  10 +-
+ src/components/SourceRail.jsx                   |   2 +-
+ src/components/WorkspaceControlSurface.jsx      |  16 +-
+ src/components/WorkspaceShell.jsx               | 191 ++++++---
+ src/lib/box-view-models.js                      | 526 +++++++++++++++++++++++-
+ src/lib/history-normalization.js                | 208 ++++++++++
+ src/lib/product-language.js                     |   9 +-
+ src/lib/public-site.js                          |  32 +-
+ src/lib/self-assembly.js                        | 158 +------
+ 14 files changed, 1740 insertions(+), 239 deletions(-)
+
+commit 88dc3adc2e88815c34e2090ac5f8a488269c425a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 12:22:01 -0400
+
+    Finish elegance pass: BoxesIndex, BoxManagement, full color migration
+    
+    Complete the remaining elegance spec items:
+    
+    BoxesIndex: remove per-row pin/archive/open tools (rows are now
+    tap-to-open only with read-only badges), replace four ActionCard
+    masthead with compact button row, remove explanatory subtitle.
+    
+    BoxManagementDialog: migrate from assembler-image-chooser to
+    assembler-sheet class pattern, add InlineAssist for root validation
+    in create form, wrap archive/delete in a danger zone disclosure,
+    fix error class name.
+    
+    globals.css: migrate all 45 instances of hardcoded rgba(51,156,255)
+    to assembly-tone token references with original values as fallbacks.
+    Zero bare hardcoded blue remains in the stylesheet. Add danger zone
+    and compact-actions CSS.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                    | 134 ++++++++++++++++++++++-----------
+ src/components/BoxManagementDialog.jsx |  66 +++++++++-------
+ src/components/BoxesIndex.jsx          | 114 +++++-----------------------
+ 3 files changed, 145 insertions(+), 169 deletions(-)
+
+commit 650031c4a8c204438093d856a1a0445c29d49ede
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 12:07:44 -0400
+
+    Fix review seams: deduplicate controls, strip last bumper stickers
+    
+    Address colleague feedback:
+    - ReceiptSurface: replace leaked inline-assist class with proper
+      text-link class for Verify and More buttons
+    - SeedSurface: remove visualization subtitle — shape and color speak
+    - WorkspaceControlSurface: remove duplicate ⊘ ActionButton since
+      RootBar now carries it as a tappable button
+    - RootBar: make ⊘ chip a button with onOpenConfirmation handler
+    - ProjectHome: remove duplicate "Open Receipts" link from Recent
+      proof section — "Review proof" in upper panel is sufficient
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                        | 14 ++++++++++++++
+ src/components/ProjectHome.jsx             |  8 +-------
+ src/components/ReceiptSurface.jsx          |  4 ++--
+ src/components/RootBar.jsx                 |  8 ++++++--
+ src/components/SeedSurface.jsx             |  7 -------
+ src/components/WorkspaceControlSurface.jsx |  8 +-------
+ 6 files changed, 24 insertions(+), 25 deletions(-)
+
+commit 835dcaea477e33a28602d53f9dce0fd40a536c87
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 11:39:30 -0400
+
+    Add self-assembly demo box
+
+ .../# ASSEMBLED REALITY/# ASSEMBLED REALITY.md     |  476 ++++
+ ...24 Origin, Evolution, Feedback, and Receipt.md" |  185 ++
+ .../# Operator Sentences/# Operator Sentences.md   |  215 ++
+ .../# The Ghost Operator/# The Ghost Operator.md   |  134 +
+ .../# The Law of the Echo/# The Law of the Echo.md |  566 ++++
+ .../# The Meaning Operator.md                      | 1513 +++++++++++
+ .../A monolith does not move..md                   |  112 +
+ docs/First seed/ECHO CANON/ECHO CANON.md           |  321 +++
+ .../Loegos_Self_Assembly_Seed_Spec_v0.2.md         |  520 ++++
+ ...mit c71b1d6cf6c34916fbc85d08ecfd1bf05371aebf.md | 2754 ++++++++++++++++++++
+ .../words are l\305\223gos.md"                     |    1 +
+ src/app/globals.css                                |  310 +++
+ src/app/llms-ctx.txt/route.js                      |    1 +
+ src/app/llms.txt/route.js                          |    1 +
+ src/app/self-assembly/page.jsx                     |   18 +
+ src/components/SelfAssemblyPage.jsx                |  286 ++
+ src/lib/public-site.js                             |   41 +
+ src/lib/self-assembly.js                           |  996 +++++++
+ 18 files changed, 8450 insertions(+)
+
+commit d2b5dbee1c306c66839049ac7d25f71b67593c62
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 11:12:55 -0400
+
+    Fix mobile Add button off-system colors
+    
+    Pass 3 of the elegance pass. The mobile center Add button now uses
+    assembly tone tokens instead of hardcoded blue RGBA values. The
+    button inherits color from the current assembly state — gray at
+    step 0, teal at step 3, amber at step 6.
+    
+    Remaining: ~50 instances of rgba(51,156,255,...) in globals.css
+    need individual migration to assembly tokens with fallbacks. These
+    are spread across tabs, toolbar, Seven sheet, player, and document
+    row active states. Each needs context-specific token selection.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+commit c98f40fd38cb5210d53f6235cec5e19fbac525da
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 11:11:27 -0400
+
+    Apply assembly colors to Operate, Seed, and Receipt surfaces
+    
+    Pass 2 of the elegance pass. Convergence, trust floor, and trust
+    ceiling in OperateSurface now render as colored assembly chips.
+    Sentence cards get a left border colored by trust level. SeedSurface
+    body text removed, empty state compressed to operator sentences.
+    ReceiptSurface groups secondary actions behind a More disclosure.
+    BoxObjectVisualization center circle responds to assembly step.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                       |  5 ++
+ src/components/BoxObjectVisualization.jsx | 12 ++--
+ src/components/OperateSurface.jsx         | 96 +++++++++++++++++++++++++++++--
+ src/components/ReceiptSurface.jsx         | 60 ++++++++++---------
+ src/components/SeedSurface.jsx            | 11 +---
+ 5 files changed, 138 insertions(+), 46 deletions(-)
+
+commit d1107d232a1dd73d9294a2aef3fead541dfab199
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 11:07:09 -0400
+
+    Add +7 inline assist pattern and strip RootEditor
+    
+    Pass 1 of the elegance pass. Introduces the InlineAssist component
+    for field-level errors with shimmer animation and Seven-powered
+    suggestion panels. Replaces the verbose status section and Reality
+    Instrument issue building in RootEditor with three compact inline
+    assists. Adds +7 to the receipt seal delta textarea.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                  | 194 +++++++++++++++++++++++
+ src/components/InlineAssist.jsx      | 117 ++++++++++++++
+ src/components/ReceiptSealDialog.jsx |  10 ++
+ src/components/RootEditor.jsx        | 288 +++++------------------------------
+ 4 files changed, 359 insertions(+), 250 deletions(-)
+
+commit 5622f14b33f8348219a12b4203bfa22780e5d143
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 10:43:17 -0400
+
+    Consolidate Cloud review docs into docs/cloud-reviews
+    
+    Move site audit, GetReceipts connection proposal, and elegance pass
+    spec into a dedicated folder for architecture review documents.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ docs/cloud-reviews/elegance-pass-spec.md           | 1049 ++++++++++++++++++++
+ .../getreceipts-connection-proposal.md             |  495 +++++++++
+ .../cloud-reviews/loegos-site-audit-report.md      |    0
+ .../cloud-reviews/loegos-site-link-matrix.json     |    0
+ .../cloud-reviews/loegos-site-tree.json            |    0
+ .../cloud-reviews/loegos-site-user-flows.mermaid   |    0
+ 6 files changed, 1544 insertions(+)
+
+commit b00f96ce0a03f3d2b59dc2a2348ed82c513482c7
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 10:20:55 -0400
+
+    Make root optional until assembly gates
+
+ src/app/api/seven/route.js        |  69 ++++++++++++++--
+ src/components/RootBar.jsx        |  36 ++++----
+ src/components/RootEditor.jsx     | 117 +++++++++++++++++++++-----
+ src/components/WorkspaceShell.jsx | 168 +++++++++++++++++++++++++++++++++-----
+ src/lib/assembly-architecture.js  |   4 +-
+ src/lib/reader-projects.js        |   4 +-
+ 6 files changed, 330 insertions(+), 68 deletions(-)
+
+commit 72c8cb7631fe54d0e6be262c505a1b8caed07141
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-05 08:50:02 -0400
+
+    Compress workspace shell chrome
+
+ src/app/globals.css                        | 229 ++++++++--
+ src/components/CreateSurface.jsx           |   7 +-
+ src/components/OperateSurface.jsx          |   5 +-
+ src/components/ProjectHome.jsx             | 673 ++++++-----------------------
+ src/components/ReceiptSealDialog.jsx       |  12 -
+ src/components/ReceiptSurface.jsx          |  37 +-
+ src/components/RootBar.jsx                 |  53 +++
+ src/components/RootEditor.jsx              | 532 +++++++++++++++++++++++
+ src/components/RootSummaryPanel.jsx        | 487 +--------------------
+ src/components/SeedSurface.jsx             |  38 +-
+ src/components/ThinkSurface.jsx            |   3 -
+ src/components/WorkspaceControlSurface.jsx |  10 +
+ src/components/WorkspaceShell.jsx          | 314 ++++----------
+ src/lib/box-view-models.js                 |  48 +-
+ 14 files changed, 1044 insertions(+), 1404 deletions(-)
+
+commit 826e61c8f4ae7778032a78fb99258a785bb0dc63
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 23:39:12 -0400
+
+    Polish intake UX and courthouse sync
+
+ .../api/integrations/getreceipts/callback/route.js |  29 +-
+ src/app/api/workspace/receipt/remote-sync/route.js | 163 +++++
+ src/app/api/workspace/receipt/route.js             |  72 +-
+ src/app/connect/getreceipts/route.js               |  19 +-
+ src/app/globals.css                                | 295 +++++---
+ src/app/styles/tokens.css                          |   5 +
+ src/app/workspace/page.jsx                         |  36 +
+ src/components/ConfirmationQueueDialog.jsx         |  23 +-
+ src/components/ProjectHome.jsx                     |   8 +-
+ src/components/RealityInstrument.jsx               |  14 +-
+ src/components/ReceiptSealDialog.jsx               |  20 +-
+ src/components/ReceiptSurface.jsx                  | 102 ++-
+ src/components/WorkspaceControlSurface.jsx         |  12 +-
+ src/components/WorkspaceGlyph.jsx                  |  20 +-
+ src/components/WorkspaceShell.jsx                  | 747 +++++++++++++++------
+ src/lib/box-view-models.js                         | 221 +++++-
+ src/lib/getreceipts.js                             | 212 +++++-
+ src/lib/reality-instrument.js                      |  88 ++-
+ src/lib/receipt-remote-sync.js                     | 281 ++++++++
+ src/lib/workspace-receipts.js                      |   8 +-
+ 20 files changed, 1931 insertions(+), 444 deletions(-)
+
+commit 86a6a0bf8284cfa342e2b628001219d6ff01cc3b
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 22:49:03 -0400
+
+    Add reality instrument guidance
+
+ src/app/api/seven/route.js                 | 206 ++++++-
+ src/app/globals.css                        | 217 ++++++++
+ src/components/ProjectHome.jsx             |   6 +
+ src/components/RealityInstrument.jsx       | 160 ++++++
+ src/components/ReceiptSealDialog.jsx       |  17 +-
+ src/components/ReceiptSurface.jsx          |   4 +
+ src/components/RootSummaryPanel.jsx        | 274 ++++++++-
+ src/components/SeedSurface.jsx             |   4 +
+ src/components/WorkspaceControlSurface.jsx |  12 +
+ src/components/WorkspaceShell.jsx          | 853 ++++++++++++++++++++++++++++-
+ src/lib/reality-instrument.js              | 193 +++++++
+ 11 files changed, 1885 insertions(+), 61 deletions(-)
+
+commit 2d16edf2bce2a9af807e985f0bfb69f1329f055d
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 22:13:52 -0400
+
+    Converge echo runtime behavior
+
+ src/app/api/seven/route.js                   |  27 ++
+ src/app/api/workspace/confirm/route.js       |  39 ++-
+ src/app/api/workspace/receipt/audit/route.js |  54 ++++
+ src/app/api/workspace/receipt/route.js       | 127 ++++----
+ src/app/globals.css                          | 186 +++++++++++
+ src/components/ConfirmationQueueDialog.jsx   |  20 +-
+ src/components/MobileBottomNav.jsx           |   5 +-
+ src/components/ReceiptSealDialog.jsx         | 124 ++++++++
+ src/components/RootSummaryPanel.jsx          |   4 +-
+ src/components/WorkspaceControlSurface.jsx   |   6 +-
+ src/components/WorkspaceShell.jsx            | 180 ++++++++++-
+ src/lib/assembly-architecture.js             | 173 +++++++++-
+ src/lib/box-view-models.js                   |  21 +-
+ src/lib/reader-projects.js                   |  28 +-
+ src/lib/receipt-seal-audit.js                | 456 +++++++++++++++++++++++++++
+ 15 files changed, 1341 insertions(+), 109 deletions(-)
+
+commit c6a1849622bce8bb55377adcd8954747cbb63b0c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 21:39:11 -0400
+
+    Tighten assembly proof lineage
+
+ src/app/api/workspace/receipt/route.js     | 77 ++++++++++++++++++++++++++----
+ src/app/globals.css                        | 69 ++++++++++++++++++++++++++
+ src/components/MobileBottomNav.jsx         | 74 ++++++++++++++++++++++------
+ src/components/RootSummaryPanel.jsx        | 20 +++-----
+ src/components/WorkspaceControlSurface.jsx | 13 ++++-
+ src/components/WorkspaceShell.jsx          |  6 +++
+ src/lib/document-blocks.js                 | 23 +++++++--
+ src/lib/reader-db.js                       | 11 +++++
+ src/lib/reader-documents.js                |  6 +++
+ 9 files changed, 259 insertions(+), 40 deletions(-)
+
+commit 0936e12448f6729ac5111763bfa3d69114bd5356
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 21:21:48 -0400
+
+    Add assembly color system
+
+ .../migration.sql                                  |   2 +
+ prisma/schema.prisma                               |   1 +
+ src/app/api/workspace/confirm/route.js             | 181 ++++++
+ src/app/api/workspace/project/route.js             |  51 +-
+ src/app/api/workspace/receipt/route.js             | 134 ++++-
+ src/app/globals.css                                | 276 +++++++++-
+ src/app/styles/tokens.css                          |  40 ++
+ src/components/BoxManagementDialog.jsx             |  23 +-
+ src/components/BoxObjectVisualization.jsx          |  41 +-
+ src/components/BoxesIndex.jsx                      |  25 +-
+ src/components/ConfirmationQueueDialog.jsx         | 191 +++++++
+ src/components/OperateSurface.jsx                  |  20 +-
+ src/components/ProjectHome.jsx                     |  32 ++
+ src/components/ReceiptSurface.jsx                  |  31 ++
+ src/components/RootSummaryPanel.jsx                | 222 ++++++++
+ src/components/SeedSurface.jsx                     |  22 +
+ src/components/WorkspaceControlSurface.jsx         |   4 +
+ src/components/WorkspaceShell.jsx                  | 163 ++++++
+ src/lib/assembly-architecture.js                   | 610 +++++++++++++++++++++
+ src/lib/box-view-models.js                         |  86 ++-
+ src/lib/document-blocks.js                         |  16 +
+ src/lib/project-model.js                           |   4 +
+ src/lib/reader-db.js                               | 108 ++++
+ src/lib/reader-documents.js                        |   4 +
+ src/lib/reader-projects.js                         | 132 ++++-
+ src/lib/source-intake.js                           |   2 +
+ src/lib/workspace-documents.js                     |  12 +
+ 27 files changed, 2395 insertions(+), 38 deletions(-)
+
+commit 783efbe676714885a027ebb9dacb716ae4ebb82c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 20:27:07 -0400
+
+    Simplify mobile workspace shell
+
+ src/app/globals.css               |  278 +++++++++-
+ src/app/styles/layout.css         |    3 +
+ src/components/ProjectHome.jsx    |  142 +++++
+ src/components/WorkspaceShell.jsx | 1038 +++++++++++++++++++++++++++----------
+ src/lib/voice-memo-drafts.js      |   92 ++++
+ 5 files changed, 1271 insertions(+), 282 deletions(-)
+
+commit 34528b695d1aad6665bc746298e5208601c01759
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 19:57:35 -0400
+
+    Add loegos.com site architecture audit
+    
+    Full crawl and analysis of the public site: 5 pages, link matrix,
+    user flow diagrams, and prioritized problem list with recommendations.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ loegos-audit-report.md    | 264 ++++++++++++++++++++++++++++++++++++++++++++++
+ loegos-link-matrix.json   |  37 +++++++
+ loegos-site-tree.json     | 104 ++++++++++++++++++
+ loegos-user-flows.mermaid |  98 +++++++++++++++++
+ 4 files changed, 503 insertions(+)
+
+commit f5f9a7c8098ea59130f13da6cc10458695811cb3
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 18:58:36 -0400
+
+    Harden workspace server entry fallbacks
+
+ src/app/workspace/page.jsx | 76 +++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 61 insertions(+), 15 deletions(-)
+
+commit 3c2d3bc67a2b177bb8c0dbeb9b41f42136b5f4bc
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 18:10:24 -0400
+
+    Finish workspace navigation flow
+
+ src/app/globals.css                        | 125 +++++++++
+ src/app/workspace/page.jsx                 |  49 +++-
+ src/components/BoxesIndex.jsx              |  46 ++--
+ src/components/FirstBoxComposer.jsx        |   7 +-
+ src/components/MobileBottomNav.jsx         |  68 +++++
+ src/components/MobileControlDock.jsx       |  78 ------
+ src/components/ProjectHome.jsx             |  38 +--
+ src/components/ReceiptSurface.jsx          |  23 +-
+ src/components/SeedSurface.jsx             |  19 ++
+ src/components/WorkspaceControlSurface.jsx |  29 +-
+ src/components/WorkspaceShell.jsx          | 423 ++++++++++++++++-------------
+ src/lib/box-view-models.js                 |  37 ++-
+ 12 files changed, 573 insertions(+), 369 deletions(-)
+
+commit bf4bdfabe30c2d6a58196cf1f393dae415ff1b0a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 17:38:43 -0400
+
+    Implement calmer box workspace and mobile source flow
+
+ .../migration.sql                                  |   6 +
+ prisma/schema.prisma                               |   3 +
+ src/app/api/workspace/project/route.js             |  24 +-
+ src/app/styles/layout.css                          |  52 ++
+ src/app/styles/surfaces.css                        | 782 ++++++++++++++++++-
+ src/app/workspace/page.jsx                         |  15 +-
+ src/components/AiUtilityRail.jsx                   |  50 +-
+ src/components/BoxManagementDialog.jsx             |  49 +-
+ src/components/BoxPhaseBar.jsx                     |   4 +-
+ src/components/BoxesIndex.jsx                      | 462 +++++++++---
+ src/components/CreateSurface.jsx                   |   2 +-
+ src/components/FirstBoxComposer.jsx                |   5 +
+ src/components/MobileControlDock.jsx               |  10 +-
+ src/components/ProjectHome.jsx                     | 391 ++++++----
+ src/components/ReceiptSurface.jsx                  |   2 +-
+ src/components/SeedSurface.jsx                     |   2 +-
+ src/components/SourceRail.jsx                      |  66 +-
+ src/components/StagingPanel.jsx                    |  23 +-
+ src/components/WorkspaceControlSurface.jsx         |  15 +-
+ src/components/WorkspaceGlyph.jsx                  | 154 ++++
+ src/components/WorkspaceShell.jsx                  | 838 ++++++++++++++++++++-
+ src/lib/project-model.js                           |   8 +
+ src/lib/reader-projects.js                         |  73 +-
+ 23 files changed, 2695 insertions(+), 341 deletions(-)
+
+commit ab65cd090c99820eb2d0677ed2bfe59a8b6e4ebe
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 16:24:12 -0400
+
+    Fix workspace seed runtime crash
+
+ src/components/WorkspaceShell.jsx | 17 ++++++++++-------
+ 1 file changed, 10 insertions(+), 7 deletions(-)
+
+commit 52ab558b53382a776b363ea1542e96aa22007714
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 16:18:37 -0400
+
+    Ship seed-first workspace flow
+
+ src/app/api/workspace/seed/route.js        | 504 +++++++++++++++++++
+ src/app/globals.css                        | 567 +++++++++++++++++++++
+ src/app/workspace/page.jsx                 |  69 ++-
+ src/components/BoxManagementDialog.jsx     |   6 +-
+ src/components/BoxObjectVisualization.jsx  | 216 ++++++++
+ src/components/BoxesIndex.jsx              |  20 +-
+ src/components/CreateSurface.jsx           |  16 +-
+ src/components/FirstBoxComposer.jsx        | 112 +++++
+ src/components/MobileControlDock.jsx       |  76 +++
+ src/components/OperateDialog.jsx           |   2 +-
+ src/components/OperateSurface.jsx          | 185 ++++++-
+ src/components/ProjectHome.jsx             |  25 +-
+ src/components/ReceiptSurface.jsx          |   2 +-
+ src/components/SeedSurface.jsx             | 111 ++++
+ src/components/SeedUpdatePanel.jsx         |  62 +++
+ src/components/SourceRail.jsx              |   6 +-
+ src/components/StagingPanel.jsx            |   2 +-
+ src/components/ThinkSurface.jsx            |   2 +-
+ src/components/WorkspaceControlSurface.jsx |  98 ++++
+ src/components/WorkspaceShell.jsx          | 781 +++++++++++++++++++++--------
+ src/lib/box-view-models.js                 | 137 ++++-
+ src/lib/product-language.js                |   6 +-
+ src/lib/project-model.js                   |  14 +-
+ src/lib/public-site.js                     |   6 +-
+ src/lib/reader-documents.js                |   4 +
+ src/lib/seed-model.js                      | 196 ++++++++
+ src/lib/source-model.js                    |   6 +-
+ src/lib/workspace-documents.js             |  15 +
+ src/lib/workspace-receipts.js              |  20 +-
+ 29 files changed, 2987 insertions(+), 279 deletions(-)
+
+commit 328acb22281ab3f669b7cf947368db129caaf570
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 13:50:36 -0400
+
+    Add dedicated boxes index view
+
+ src/app/globals.css               | 145 +++++++++++++++++++++++++++++++++++++-
+ src/app/workspace/page.jsx        |   8 +++
+ src/components/BoxesIndex.jsx     | 119 +++++++++++++++++++++++++++++++
+ src/components/ProjectHome.jsx    |  65 +----------------
+ src/components/WorkspaceShell.jsx | 134 ++++++++++++++++++++++++++---------
+ 5 files changed, 374 insertions(+), 97 deletions(-)
+
+commit fefbe886366d7e20dc5ecd94b1fa8114b96bd9cd
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 13:09:50 -0400
+
+    Harden box home scroll and ownership
+
+ src/app/globals.css               | 19 +++++++--
+ src/components/BoxHome.jsx        |  5 ---
+ src/components/BoxesLauncher.jsx  |  5 ---
+ src/components/ProjectHome.jsx    | 90 ++++++++++++++++++++++++++-------------
+ src/components/WorkspaceShell.jsx | 35 +++++++++++++--
+ 5 files changed, 109 insertions(+), 45 deletions(-)
+
+commit dfc33d9f93f840d2c3843424b2118747cdbdf6fd
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 12:45:48 -0400
+
+    Add public front door and fix workspace render
+
+ docs/loegos-about-page.md                 |  52 ++++
+ next.config.mjs                           |  12 +
+ public/robots.txt                         |   2 -
+ src/app/about/page.jsx                    |   9 +
+ src/app/api/content-md/[...path]/route.js |  32 ++
+ src/app/favicon.ico/route.js              |   7 +
+ src/app/globals.css                       | 172 +++++++++++
+ src/app/layout.jsx                        |  35 +--
+ src/app/llms-ctx.txt/route.js             |  66 ++++
+ src/app/llms.txt/route.js                 |  35 +++
+ src/app/page.jsx                          |  25 +-
+ src/app/privacy/page.jsx                  |  14 +
+ src/app/robots.txt/route.js               |  46 +++
+ src/app/sitemap.js                        |   5 +
+ src/app/styles/layout.css                 |   2 +-
+ src/app/terms/page.jsx                    |  14 +
+ src/app/trust/page.jsx                    |  14 +
+ src/components/IntroLanding.jsx           |   5 +-
+ src/components/PublicDocumentPage.jsx     |  76 +++++
+ src/components/PublicFooterLinks.jsx      |  27 ++
+ src/lib/public-metadata.js                | 194 ++++++++++++
+ src/lib/public-site.js                    | 493 ++++++++++++++++++++++++++++++
+ src/lib/reader-db.js                      |  80 ++++-
+ 23 files changed, 1367 insertions(+), 50 deletions(-)
+
+commit a0484753aeef2714577bec1bd63fe9eb56421ebc
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 11:57:19 -0400
+
+    Close beta box flow gaps
+
+ src/app/api/workspace/project/route.js |  77 +++++-
+ src/app/globals.css                    | 431 +++++++++++++++++++++++++++++++++
+ src/app/workspace/page.jsx             |   6 +-
+ src/components/BoxManagementDialog.jsx | 206 ++++++++++++++++
+ src/components/BoxPhaseBar.jsx         |  30 ++-
+ src/components/ProjectHome.jsx         | 345 +++++++++++++++-----------
+ src/components/ReceiptSurface.jsx      | 179 +++++++++++---
+ src/components/WorkspaceShell.jsx      | 408 +++++++++++++++++++++++++++----
+ src/lib/box-view-models.js             | 169 ++++++++++++-
+ src/lib/reader-db.js                   |  39 +++
+ src/lib/reader-projects.js             | 244 +++++++++++++++++++
+ 11 files changed, 1897 insertions(+), 237 deletions(-)
+
+commit debd075fa184f9bde79a4c64fa6194f52ed0ef9e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 11:08:18 -0400
+
+    Align shell to think create operate loop
+
+ README.md                              |  20 +
+ docs/AR Foundation.md                  |  10 +
+ docs/AR Version 1.0.md                 |  20 +
+ src/app/api/workspace/operate/route.js |   4 +
+ src/app/api/workspace/paste/route.js   |  42 ++
+ src/app/api/workspace/polish/route.js  |   2 +
+ src/app/styles/surfaces.css            |  76 ++++
+ src/components/AiUtilityRail.jsx       |   2 +-
+ src/components/BoxHome.jsx             |   5 +
+ src/components/BoxPhaseBar.jsx         |  97 +++++
+ src/components/BoxesLauncher.jsx       |   5 +
+ src/components/CreateSurface.jsx       |  67 +++
+ src/components/OperateDialog.jsx       |   2 +-
+ src/components/OperateSurface.jsx      |   5 +
+ src/components/ProjectHome.jsx         |  24 +-
+ src/components/ReceiptSurface.jsx      |  62 +++
+ src/components/SourceRail.jsx          |  15 +-
+ src/components/StagingPanel.jsx        |  12 +-
+ src/components/ThinkSurface.jsx        |  25 ++
+ src/components/WorkspaceShell.jsx      | 769 +++++++++++++++++----------------
+ src/lib/audio-intake.js                |   6 +
+ src/lib/box-view-models.js             |  86 ++++
+ src/lib/image-intake.js                |   7 +
+ src/lib/link-intake.js                 |   6 +
+ src/lib/operate.js                     |   7 +
+ src/lib/reader-documents.js            |  28 ++
+ src/lib/source-intake.js               |  80 ++++
+ src/lib/source-model.js                | 354 +++++++++++++++
+ src/lib/workspace-documents.js         |  18 +
+ src/lib/workspace-receipts.js          |  10 +
+ 30 files changed, 1479 insertions(+), 387 deletions(-)
+
+commit e2205d18a67e50893d4a256449d36c37c77aff76
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 10:20:38 -0400
+
+    Refine landing page action line
+
+ src/lib/product-language.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 4ac38047aa73e248629cd09bd3d78558701797db
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 10:14:35 -0400
+
+    Update landing page action line
+
+ src/lib/product-language.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 954dd1d443a76b75071c3f9af56df619f2859cb2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 10:03:56 -0400
+
+    Add Operate box read engine
+
+ README.md                                          |  31 +-
+ docs/AR Foundation.md                              | 319 +++++-----
+ docs/AR UI Style Lock.md                           |  16 +-
+ docs/AR Version 1.0.md                             |   9 +-
+ docs/AR Version 2 Build Plan.md                    | 390 ++++--------
+ docs/AR Version 2.md                               | 673 ++++-----------------
+ docs/language-alignment-audit.md                   |  68 ++-
+ docs/operate-spec-v2.md                            | 418 +++++++++++++
+ docs/phase-0-review-note.md                        |   4 +
+ .../01-project-review-and-initial-proposal.md      |   4 +
+ .../02-implementation-vs-vision-assessment.md      |   4 +
+ src/app/api/workspace/operate/route.js             | 397 ++++++++++++
+ src/app/api/workspace/receipt/route.js             |   9 +-
+ src/app/globals.css                                | 131 ++++
+ src/components/OperateDialog.jsx                   | 203 +++++++
+ src/components/ProjectHome.jsx                     |  78 +--
+ src/components/SourceRail.jsx                      |   2 +-
+ src/components/WorkspaceShell.jsx                  | 249 +++++++-
+ src/lib/document-blocks.js                         |   1 +
+ src/lib/operate.js                                 | 240 ++++++++
+ src/lib/workspace-receipts.js                      |  91 +++
+ 21 files changed, 2222 insertions(+), 1115 deletions(-)
+
+commit 1de6c08b0ea52c244c6d1a95806e8d6c8b2cc545
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 08:15:09 -0400
+
+    Migrate workspace language to boxes
+
+ README.md                              |  11 +-
+ docs/AR Version 1.0.md                 |  11 +-
+ docs/box-migration-plan.md             | 233 +++++++++++++++++++++++++++++++++
+ src/app/api/workspace/folder/route.js  |   2 +-
+ src/app/api/workspace/project/route.js |   4 +-
+ src/app/opengraph-image.jsx            |  12 +-
+ src/app/styles/surfaces.css            |  18 +++
+ src/components/AiUtilityRail.jsx       |   6 +-
+ src/components/ProjectHome.jsx         |  43 ++++--
+ src/components/SourceRail.jsx          |   9 +-
+ src/components/StagingPanel.jsx        |   4 +-
+ src/components/WorkspaceShell.jsx      |  33 ++---
+ src/lib/project-model.js               |  95 +++++++++++++-
+ src/lib/reader-projects.js             |  15 +--
+ 14 files changed, 428 insertions(+), 68 deletions(-)
+
+commit 5b9b214e3f8fd3a9b731a899a3c7c9a20e95e52e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 00:35:38 -0400
+
+    Rebrand workspace as Loegos
+
+ README.md                         |  10 +--
+ content/loegos.md                 |  81 +++++++++++++++++++++++
+ docs/AR Version 1.0.md            |   4 +-
+ src/app/api/seven/route.js        |   5 +-
+ src/app/globals.css               |  23 +++++++
+ src/app/layout.jsx                |   4 +-
+ src/app/opengraph-image.jsx       |   8 ++-
+ src/components/AuthTerminal.jsx   |   5 +-
+ src/components/IntroLanding.jsx   |  12 ++--
+ src/components/WorkspaceShell.jsx |  16 +++--
+ src/lib/auth.js                   |   3 +-
+ src/lib/document.js               |   5 +-
+ src/lib/email.js                  |  16 +++--
+ src/lib/env.js                    |   2 +-
+ src/lib/getreceipts.js            |   2 +-
+ src/lib/image-intake.js           |   5 +-
+ src/lib/link-intake.js            |   2 +-
+ src/lib/product-language.js       |  11 ++--
+ src/lib/reader-db.js              |   2 +-
+ src/lib/workspace-documents.js    | 133 ++++++++++++++++++++++++--------------
+ 20 files changed, 256 insertions(+), 93 deletions(-)
+
+commit 6fff2ea0a6de1000da3202104ed80a2ab1282148
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-04 00:09:52 -0400
+
+    Harden AR 1.0 workbench flow
+
+ README.md                         | 383 +++++++++++---------------------------
+ docs/AR Version 1.0.md            |  63 +++++++
+ src/app/globals.css               |  17 +-
+ src/components/AuthTerminal.jsx   |   5 +
+ src/components/IntroLanding.jsx   |   5 +
+ src/components/ProjectHome.jsx    |  10 +-
+ src/components/StagingPanel.jsx   |   2 +-
+ src/components/WorkspaceShell.jsx | 287 +++++++++++++++++++---------
+ src/lib/product-analytics.js      |   9 +
+ 9 files changed, 407 insertions(+), 374 deletions(-)
+
+commit 76c47233be4840a6fc2beb8b212a8a933b4984b4
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 23:36:02 -0400
+
+    Turn Seven into chat and add share card
+
+ src/app/globals.css               | 223 ++++++++------
+ src/app/layout.jsx                |  45 ++-
+ src/app/opengraph-image.jsx       | 256 ++++++++++++++++
+ src/app/styles/surfaces.css       | 129 +++++++-
+ src/components/AiUtilityRail.jsx  | 144 +++++++--
+ src/components/WorkspaceShell.jsx | 628 +++++++++++++++++++++++++++-----------
+ 6 files changed, 1106 insertions(+), 319 deletions(-)
+
+commit 132e37485d23e0814891337992821c5af3be912c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 23:14:05 -0400
+
+    Refine project home layout and document delete
+
+ src/app/styles/surfaces.css       | 100 ++++++++++++++++++++++-----------
+ src/components/ProjectHome.jsx    |  11 ++--
+ src/components/WorkspaceShell.jsx |  10 ++++
+ src/lib/workspace-documents.js    | 114 +++++++++++++++++++++++---------------
+ 4 files changed, 155 insertions(+), 80 deletions(-)
+
+commit fe3e4fe3c4945f43dcee9f10dc137af746f8dd4e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 23:00:56 -0400
+
+    Lock codex-inspired workspace theme
+
+ docs/AR UI Style Lock.md          | 364 +++++++++++++++++++++++
+ src/app/globals.css               | 254 ++++++++--------
+ src/app/styles/base.css           |  28 +-
+ src/app/styles/layout.css         |  58 ++--
+ src/app/styles/surfaces.css       | 603 ++++++++++++++++++--------------------
+ src/app/styles/tokens.css         |  31 +-
+ src/components/AiUtilityRail.jsx  |   6 +-
+ src/components/ProjectHome.jsx    | 396 +++++++++++++------------
+ src/components/SourceRail.jsx     |  41 +--
+ src/components/WorkspaceShell.jsx | 141 ++++++++-
+ 10 files changed, 1169 insertions(+), 753 deletions(-)
+
+commit e7208de7b59978f9f62c4dec5fefdb3e983fc592
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 22:32:07 -0400
+
+    Implement frontend v2 project workbench
+
+ src/app/globals.css                   |   6 +-
+ src/app/styles/base.css               |  78 +++
+ src/app/styles/layout.css             | 125 +++++
+ src/app/styles/surfaces.css           | 655 ++++++++++++++++++++++
+ src/app/styles/tokens.css             |  22 +
+ src/components/AccountProfileForm.jsx |   9 +-
+ src/components/AiUtilityRail.jsx      |  95 ++++
+ src/components/AuthTerminal.jsx       |   8 +-
+ src/components/IntroLanding.jsx       |  47 +-
+ src/components/ProjectHome.jsx        | 344 ++++++++++++
+ src/components/SourceRail.jsx         | 181 ++++++
+ src/components/StagingPanel.jsx       | 156 ++++++
+ src/components/WorkspaceShell.jsx     | 997 +++++++++++++---------------------
+ 13 files changed, 2092 insertions(+), 631 deletions(-)
+
+commit 74c6bd65a5e2f9da356ef2f2183fd0d602c6738f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 22:02:47 -0400
+
+    Add launchpad delete actions
+
+ src/app/globals.css               |  30 +++++++++++
+ src/components/WorkspaceShell.jsx | 103 +++++++++++++++++++++++++++-----------
+ 2 files changed, 103 insertions(+), 30 deletions(-)
+
+commit f8157ef3ec8de9ee102cfbf88fbdf65c23bf2c95
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:51:41 -0400
+
+    Add whole-source delete flow
+
+ src/app/api/workspace/document/route.js |  25 ++++
+ src/components/WorkspaceShell.jsx       | 216 ++++++++++++++++++++++++++++----
+ src/lib/workspace-documents.js          | 149 ++++++++++++++++++++++
+ 3 files changed, 369 insertions(+), 21 deletions(-)
+
+commit 842fe4c11965b35b9317c5d4af9d751402611157
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:42:40 -0400
+
+    Unify workspace and auth visual language
+
+ src/app/globals.css               | 419 ++++++++++++++++++++++----------------
+ src/components/AuthTerminal.jsx   |  10 +-
+ src/components/IntroLanding.jsx   |   4 +
+ src/components/WorkspaceShell.jsx | 158 +++++++-------
+ 4 files changed, 332 insertions(+), 259 deletions(-)
+
+commit 7ebe3c76fc8e86a557eafa3e85a84d234dbc473b
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:30:37 -0400
+
+    Remove explanatory UI copy
+
+ src/app/globals.css               | 38 --------------------
+ src/components/AuthTerminal.jsx   |  8 ++---
+ src/components/IntroLanding.jsx   |  3 +-
+ src/components/WorkspaceShell.jsx | 73 ++++++---------------------------------
+ 4 files changed, 13 insertions(+), 109 deletions(-)
+
+commit f9b9075e16fac15857fe07a24d39855dcd8eccc1
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:26:47 -0400
+
+    Add fallback models for voice memo transcription
+
+ src/lib/audio-intake.js | 117 ++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 98 insertions(+), 19 deletions(-)
+
+commit 928fe8827c3053265bb489720ebe91d8591eb732
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:18:26 -0400
+
+    Fix voice memo capture and simplify recorder
+
+ src/app/globals.css               | 220 +++++++++++++---
+ src/components/WorkspaceShell.jsx | 516 +++++++++++++++++++++++---------------
+ 2 files changed, 496 insertions(+), 240 deletions(-)
+
+commit eea983351813b4b7828c929ad28c91b929617eae
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:04:55 -0400
+
+    Align product language and refine intake sheet
+
+ README.md                         | 39 ++++++++++++++++++++++-------------
+ docs/AR Foundation.md             |  5 +++--
+ docs/AR Version 2 Build Plan.md   |  2 +-
+ docs/language-alignment-audit.md  | 31 ++++++++++++++++++++++++++++
+ src/app/api/workspace/ai/route.js |  3 ++-
+ src/app/layout.jsx                |  5 +++--
+ src/components/AuthTerminal.jsx   | 15 +++++++-------
+ src/components/IntroLanding.jsx   | 35 ++++++++++++++++---------------
+ src/components/WorkspaceShell.jsx | 43 +++++++++++++++++++++++----------------
+ src/lib/getreceipts.js            |  5 +++--
+ src/lib/product-language.js       | 13 ++++++++++++
+ src/lib/workspace-receipts.js     | 23 +++++++++++----------
+ 12 files changed, 144 insertions(+), 75 deletions(-)
+
+commit b1f52e70bbc56b07fbfa3ea10472c9ea6ed146c2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 21:02:03 -0400
+
+    Refine source intake sheet
+
+ src/app/globals.css               | 91 +++++++++++++++++++++++++++++++++++++--
+ src/components/WorkspaceShell.jsx | 49 +++++++++++----------
+ 2 files changed, 113 insertions(+), 27 deletions(-)
+
+commit a0c6339c470f19a990464ec3e53bb0a38e0e8ae9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 20:46:50 -0400
+
+    Words are Legos
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/components/IntroLanding.jsx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 77eb35e39ca7d058d1c5511edb11859685b80e14
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 20:45:35 -0400
+
+    Strip landing to its core: Words are Lego
+    
+    Remove the kicker, subtitle, listen visual, and all extra copy from
+    the landing page. What remains: one headline, one line, and login.
+    
+    "Words are Lego. Drop anything to build something."
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/components/IntroLanding.jsx | 85 +++--------------------------------------
+ 1 file changed, 5 insertions(+), 80 deletions(-)
+
+commit 8cc22265fbc712998295cd482461157db6bddf99
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 20:36:21 -0400
+
+    Simplify account page copy and actions
+
+ src/app/globals.css             | 40 +++++++++++++++++++++++++++-------------
+ src/components/AccountShell.jsx | 18 ++++++------------
+ 2 files changed, 33 insertions(+), 25 deletions(-)
+
+commit abb88ed90cd5751b56f2d8e7abb8b1a97e9ac448
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 20:34:14 -0400
+
+    Upgrade home loop for speak and drop-anything
+
+ src/app/globals.css               | 147 ++++++-
+ src/components/WorkspaceShell.jsx | 872 +++++++++++++++++++++++++++++++++-----
+ src/lib/env.js                    |   7 +-
+ 3 files changed, 919 insertions(+), 107 deletions(-)
+
+commit 053e37697c755c59262b19a21dc0a861224fab70
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 20:05:20 -0400
+
+    Lazy-load link intake in upload routes
+
+ src/lib/link-intake.js   | 2 +-
+ src/lib/source-intake.js | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+commit b82c53834f2014d94d3bdb1c2598608d06c35210
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 20:00:31 -0400
+
+    Rebrand to Assembled Reality and sharpen front door copy
+    
+    Replace "Document Assembler" with "Assembled Reality" in the tab title,
+    meta description, workspace header, and intro kicker.
+    
+    Rewrite the landing visual as an operator chain that names the problem
+    and gives the action: "You have more material than you think / Most of
+    it is trapped in formats you never open / Drop it in. Press play."
+    
+    Compress the subtitle to one sentence with no format list.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/layout.jsx                | 4 ++--
+ src/components/IntroLanding.jsx   | 8 ++++----
+ src/components/WorkspaceShell.jsx | 2 +-
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+commit 64a20f4e4a5439f0a606cdeeda8a634252e13003
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:52:11 -0400
+
+    Bring documents forward in the workspace chrome
+
+ src/app/globals.css               |  60 +++++++-
+ src/components/WorkspaceShell.jsx | 283 +++++++++++++++++++-------------------
+ 2 files changed, 192 insertions(+), 151 deletions(-)
+
+commit 8cf8799f962abfb0fce989435d7a1a27d5ef21b1
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:50:25 -0400
+
+    Clarify paste text and link intake labels
+
+ src/components/WorkspaceShell.jsx | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+commit 610e2b516ef9ac8082ffdd8441f03f870b26ff7e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:39:31 -0400
+
+    Add anything-to-blocks intake system
+
+ package-lock.json                                  | 771 ++++++++++++++++++++-
+ package.json                                       |   5 +
+ .../migration.sql                                  |  43 ++
+ prisma/schema.prisma                               |  37 +
+ src/app/api/documents/route.js                     |  41 +-
+ src/app/api/workspace/folder/route.js              | 171 +++++
+ src/app/api/workspace/link/route.js                |  35 +
+ src/app/api/workspace/paste/route.js               | 110 ++-
+ src/app/globals.css                                |  64 ++
+ src/components/WorkspaceShell.jsx                  | 490 ++++++++++++-
+ src/lib/audio-intake.js                            | 235 +++++++
+ src/lib/document-blocks.js                         |   7 +
+ src/lib/document-import.js                         |  69 +-
+ src/lib/env.js                                     |   3 +
+ src/lib/image-intake.js                            | 373 ++++++++++
+ src/lib/link-intake.js                             | 251 +++++++
+ src/lib/reader-documents.js                        | 372 +++++++++-
+ src/lib/reader-projects.js                         |  23 +-
+ src/lib/source-assets.js                           | 148 ++++
+ src/lib/source-intake.js                           | 347 ++++++++++
+ src/lib/workspace-documents.js                     | 115 ++-
+ 21 files changed, 3597 insertions(+), 113 deletions(-)
+
+commit 75d84e54a72ad7a90b7d1949230812401bd42318
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:31:49 -0400
+
+    Tighten workspace density around the document
+
+ src/app/globals.css | 129 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 127 insertions(+), 2 deletions(-)
+
+commit 3b637f6273480c97c54c077b148ab5b0280c2602
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:24:38 -0400
+
+    Refine account page into a real settings surface
+
+ src/app/account/page.jsx              |  44 +++-
+ src/app/globals.css                   | 405 +++++++++++++++++++++++++++++++++-
+ src/components/AccountProfileForm.jsx |  92 ++++++++
+ src/components/AccountShell.jsx       | 119 ++++++++--
+ 4 files changed, 630 insertions(+), 30 deletions(-)
+
+commit 0702e7fe9ee77c3564bd35c9f0071ee586e248d6
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:09:40 -0400
+
+    Fix workspace shell render initialization
+
+ src/components/WorkspaceShell.jsx | 217 +++++++++++++++++++++++++-------------
+ 1 file changed, 141 insertions(+), 76 deletions(-)
+
+commit 82ba8d5a02bf27267dc065b2af8033eecee78a8d
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 19:04:06 -0400
+
+    Refine workspace into mobile-first reading flow
+
+ src/app/globals.css               |  762 ++++++++++++++++++
+ src/app/layout.jsx                |   12 +-
+ src/app/workspace/page.jsx        |    8 +-
+ src/components/WorkspaceShell.jsx | 1613 ++++++++++++++++++++++++++++---------
+ src/lib/reader-workspace.js       |   57 ++
+ 5 files changed, 2067 insertions(+), 385 deletions(-)
+
+commit ab9a5bfc1724d61d0e9dd47159f93595343f528e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 18:50:20 -0400
+
+    Update landing and foundation for anything-to-blocks pipeline
+    
+    The front door is no longer "upload a document." It's "drop in anything."
+    PDFs, photos, voice memos, screenshots, links — all collapse into the
+    same atom: listenable blocks with lineage. Updated the intro headline
+    and the Foundation doc Section 4 to reflect the anything-to-blocks model.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ docs/AR Foundation.md           | 26 +++++++++++++++++++++++---
+ src/components/IntroLanding.jsx |  4 ++--
+ 2 files changed, 25 insertions(+), 5 deletions(-)
+
+commit 228834a03eb4e09c7f46928b720c4a710491839f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 18:33:09 -0400
+
+    Replace intro carousel with single-screen landing and add foundation docs
+    
+    Replace the 4-step onboarding carousel with a single screen: one headline
+    ("Listen to any document. Keep what matters."), the listen visual, and
+    inline auth. New users land directly in listen mode via ?mode=listen.
+    
+    Add the AR Foundation document grounding the product in Assembly Theory,
+    the V2 direction doc, and two review documents under docs/v2-reviews/.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ README.md                                          |  16 +
+ docs/AR Foundation.md                              | 251 ++++++++
+ docs/AR Version 2.md                               | 644 +++++++++++++++++++++
+ .../01-project-review-and-initial-proposal.md      |  67 +++
+ .../02-implementation-vs-vision-assessment.md      | 191 ++++++
+ src/app/globals.css                                |  11 +
+ src/components/IntroLanding.jsx                    | 199 +------
+ 7 files changed, 1212 insertions(+), 167 deletions(-)
+
+commit 8b14313594363e273f694f10ba5c4bb70039ae87
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 17:46:38 -0400
+
+    Fix Vercel PDF import packaging
+
+ next.config.mjs   | 6 ++++++
+ package-lock.json | 1 +
+ package.json      | 1 +
+ 3 files changed, 8 insertions(+)
+
+commit 2a6b6e61465b4494bb53493b318c9dd85f3aa427
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 17:29:04 -0400
+
+    Remove launcher target subtitles
+
+ src/components/WorkspaceShell.jsx | 6 ------
+ 1 file changed, 6 deletions(-)
+
+commit f0dcbc927c01c57c3d828ff3228bbea828326ddd
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 17:24:02 -0400
+
+    Make listen mode source-first
+
+ src/app/workspace/page.jsx        | 20 ++++++---
+ src/components/WorkspaceShell.jsx | 90 ++++++++++++++++++++++++++++-----------
+ src/lib/project-model.js          | 21 +++++++++
+ 3 files changed, 99 insertions(+), 32 deletions(-)
+
+commit 448c4c89ca565dd4f948734222384fbc5396072f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 17:13:43 -0400
+
+    Add immersive listen workspace mode
+
+ src/app/globals.css               | 281 ++++++++++++++++
+ src/app/workspace/page.jsx        |  15 +-
+ src/components/WorkspaceShell.jsx | 655 +++++++++++++++++++++++++++++++++-----
+ 3 files changed, 867 insertions(+), 84 deletions(-)
+
+commit e9825fa56f3f328aeb60a9d58118c05494a04354
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 16:41:28 -0400
+
+    Improve source cleanup and AI staging UX
+
+ src/app/globals.css               | 194 ++++++++++++
+ src/components/WorkspaceShell.jsx | 635 +++++++++++++++++++++++++++++++++++---
+ src/lib/document-blocks.js        |   3 +
+ src/lib/document-import.js        |  28 ++
+ 4 files changed, 815 insertions(+), 45 deletions(-)
+
+commit 13f6614df1794d4299f9a3c6bb80accc51a5b2b3
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 16:19:46 -0400
+
+    Fix mobile launcher safe-area layout
+
+ src/app/globals.css | 35 +++++++++++++++++++++++++++++------
+ src/app/layout.jsx  |  6 ++++++
+ 2 files changed, 35 insertions(+), 6 deletions(-)
+
+commit 97797b30a4828337630d75c82a5da35459ea828d
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 16:18:29 -0400
+
+    Add intake polish and source cleanup flow
+
+ src/app/api/workspace/polish/route.js | 105 +++++++++++++
+ src/app/globals.css                   |  23 +++
+ src/components/WorkspaceShell.jsx     | 166 +++++++++++++++++++--
+ src/lib/document-blocks.js            |   3 +-
+ src/lib/document-import.js            | 273 +++++++++++++++++++++++++++++++++-
+ src/lib/workspace-documents.js        |   6 +
+ 6 files changed, 552 insertions(+), 24 deletions(-)
+
+commit 06b0488a17ccd3d67e930aad27da8877016dffe9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 16:14:39 -0400
+
+    Tighten launcher copy and voice default
+
+ src/app/workspace/page.jsx        | 15 ++------
+ src/components/WorkspaceShell.jsx | 75 +++++++++++----------------------------
+ 2 files changed, 22 insertions(+), 68 deletions(-)
+
+commit d4b19ad8dfc291ebc618beca2c2dbbf48dfe2682
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 16:07:59 -0400
+
+    Add paste-first intake flow
+
+ src/app/api/documents/route.js       |  11 +-
+ src/app/api/workspace/paste/route.js |  85 ++++++
+ src/app/globals.css                  | 170 +++++------
+ src/components/WorkspaceShell.jsx    | 576 +++++++++++++++++++++++------------
+ src/lib/document-import.js           | 149 ++++++++-
+ src/lib/project-model.js             |  21 +-
+ src/lib/reader-documents.js          |  14 +-
+ src/lib/workspace-documents.js       |  31 +-
+ 8 files changed, 739 insertions(+), 318 deletions(-)
+
+commit b2dae031813abc189ba306a5a8f77dfb66a7a187
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 15:41:45 -0400
+
+    Handle legacy receipt draft schema on reads
+
+ src/lib/reader-db.js | 139 +++++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 107 insertions(+), 32 deletions(-)
+
+commit c2bec6ee078aee3efc8be0590664fa7b3d954bd9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 14:05:41 -0400
+
+    Add project switching and Vercel analytics
+
+ package-lock.json                      |  43 ++++++++
+ package.json                           |   1 +
+ src/app/api/workspace/project/route.js |  42 ++++++++
+ src/app/globals.css                    |  14 ++-
+ src/app/layout.jsx                     |   2 +
+ src/app/workspace/page.jsx             |   3 +-
+ src/components/WorkspaceShell.jsx      | 175 +++++++++++++++++++++++++++++++--
+ src/lib/project-model.js               |  63 +++++++++++-
+ src/lib/reader-projects.js             |  92 +++++++++++++++++
+ 9 files changed, 424 insertions(+), 11 deletions(-)
+
+commit e88b715d256cef3a7d130716401f654e62f8dc0a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 13:58:02 -0400
+
+    Add project home and receipt history
+
+ .../migration.sql                                  |  11 +
+ prisma/schema.prisma                               |   4 +
+ src/app/api/documents/route.js                     |   2 +
+ src/app/api/workspace/assemble/route.js            |   9 +-
+ src/app/api/workspace/receipt/route.js             |   8 +-
+ src/app/globals.css                                |  78 +++++-
+ src/app/workspace/page.jsx                         |  21 +-
+ src/components/WorkspaceShell.jsx                  | 295 +++++++++++++++------
+ src/lib/project-model.js                           |   1 +
+ src/lib/reader-db.js                               |  60 +++++
+ src/lib/reader-documents.js                        |   7 +-
+ src/lib/reader-projects.js                         | 111 ++++++--
+ src/lib/workspace-documents.js                     |   7 +-
+ src/lib/workspace-receipts.js                      |   5 +
+ 14 files changed, 499 insertions(+), 120 deletions(-)
+
+commit c53c3ab1e281f536dd2a760ebefd326fe99f7096
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 12:54:28 -0400
+
+    Fix built-in document launchpad summary
+
+ src/lib/reader-documents.js | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+commit a556de6007c01d91184759db63adf016c6e42f85
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 12:53:03 -0400
+
+    Persist default reader projects
+
+ .../20260403_add_reader_projects/migration.sql     |  49 ++++
+ prisma/schema.prisma                               |  37 +++
+ src/app/workspace/page.jsx                         |   4 +-
+ src/lib/reader-documents.js                        |   6 +
+ src/lib/reader-projects.js                         | 288 +++++++++++++++++++++
+ src/lib/workspace-documents.js                     |   7 +
+ 6 files changed, 389 insertions(+), 2 deletions(-)
+
+commit fb18cad1fe276a36f25c82083e43c38d962ecf80
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 12:50:39 -0400
+
+    Add project-aware workspace shell
+
+ src/app/globals.css               |  89 +++++++++++++++++
+ src/app/workspace/page.jsx        |  20 +++-
+ src/components/WorkspaceShell.jsx | 205 ++++++++++++++++++++++++++++++--------
+ src/lib/project-model.js          |  92 +++++++++++++++++
+ 4 files changed, 360 insertions(+), 46 deletions(-)
+
+commit 69ed4a208e56ac7191c3a1710a0b0ba2eaa12dfb
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 12:42:15 -0400
+
+    Add phase 0 review handoff note
+
+ docs/phase-0-review-note.md | 179 ++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 179 insertions(+)
+
+commit 6f591eb46ea89e25a69bae552039676a496a2b10
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 12:27:16 -0400
+
+    Implement phase 0 workspace hardening
+
+ docs/AR Version 2 Build Plan.md         | 382 +++++++++++++++
+ src/app/api/workspace/ai/route.js       |  12 +-
+ src/app/api/workspace/assemble/route.js |   7 +-
+ src/app/api/workspace/document/route.js |  14 +
+ src/app/globals.css                     |  51 ++
+ src/components/IntroLanding.jsx         | 188 +++-----
+ src/components/WorkspaceShell.jsx       | 815 ++++++++++++++++++++++++++------
+ src/lib/workspace-documents.js          |  51 +-
+ 8 files changed, 1253 insertions(+), 267 deletions(-)
+
+commit a02db3bd046f6422e0d7f72260dc8722035dd770
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 11:12:13 -0400
+
+    Refine workspace launchpad styling
+
+ src/app/globals.css               | 180 +++++++++++++++++++++++++++++++++-----
+ src/components/WorkspaceShell.jsx |  59 +++++++++++--
+ 2 files changed, 208 insertions(+), 31 deletions(-)
+
+commit f9446e7ba88589752011a6fd6918393b3c782472
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 11:02:29 -0400
+
+    Add intro-first landing flow
+
+ src/app/globals.css               | 658 +++++++++++++++++++++++++++++++++++++-
+ src/app/intro/page.jsx            |  21 ++
+ src/app/page.jsx                  |   6 +-
+ src/app/workspace/page.jsx        |   1 +
+ src/components/AccountShell.jsx   |   3 +
+ src/components/IntroLanding.jsx   | 463 +++++++++++++++++++++++++++
+ src/components/WorkspaceShell.jsx | 463 +++++++++++++++++++--------
+ src/lib/reader-documents.js       |   9 +-
+ src/lib/workspace-documents.js    | 117 ++++++-
+ 9 files changed, 1582 insertions(+), 159 deletions(-)
+
+commit f8f43559c26e62871058cd3ec716e84f446cb443
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 10:41:49 -0400
+
+    Move AI trigger into listening controls
+
+ src/app/globals.css               | 13 ++++++++++---
+ src/components/WorkspaceShell.jsx | 37 ++++++++++++++++++++++++-------------
+ 2 files changed, 34 insertions(+), 16 deletions(-)
+
+commit 85f18ddcb5e01466c9e93dee19a749d96a74fc22
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 10:34:46 -0400
+
+    Keep player docked in document view
+
+ src/app/globals.css | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+commit c293b7dd2520d6f4eadde7626bfd922106c7b30a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 10:16:58 -0400
+
+    Calm workspace surface and fix audio playback
+
+ src/app/globals.css               | 150 ++++++++++++----------
+ src/app/workspace/page.jsx        |   2 -
+ src/components/WorkspaceShell.jsx | 258 +++++++++++++++++++++++++-------------
+ 3 files changed, 255 insertions(+), 155 deletions(-)
+
+commit 781c975ef56ba47f1f1cdcc5163b9056163ed68a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 09:49:06 -0400
+
+    Build prototype-faithful workspace
+
+ src/app/api/workspace/ai/route.js       |  299 +++++
+ src/app/api/workspace/assemble/route.js |  119 ++
+ src/app/api/workspace/document/route.js |   65 ++
+ src/app/api/workspace/receipt/route.js  |   95 ++
+ src/app/globals.css                     | 1099 +++++++++++++-----
+ src/app/workspace/page.jsx              |   47 +-
+ src/components/WorkspaceShell.jsx       | 1873 ++++++++++++++++++++++++-------
+ src/lib/document-blocks.js              |  327 +++++-
+ src/lib/reader-documents.js             |  142 ++-
+ src/lib/workspace-documents.js          |  388 +++++++
+ src/lib/workspace-receipts.js           |  133 +++
+ 11 files changed, 3767 insertions(+), 820 deletions(-)
+
+commit 635090bbc65ba0f2265075824b9a45e77eef1ead
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 09:14:58 -0400
+
+    Pivot to document assembler terminal workspace
+
+ README.md                                       |  602 +-
+ docs/listen-feature-ruthless-audit.md           |  918 ---
+ docs/listener-first-retrospective-2026-04-02.md |   57 -
+ docs/player-first-reader-design-spec.md         |  730 ---
+ docs/reader-v2-plan.md                          |  106 -
+ docs/reader-v2-reference-spec.md                |  213 -
+ docs/seven-current-state.md                     |  337 -
+ docs/ux-upgrade-plan.md                         |  185 -
+ lock screen/cuneiform-matrix-lock-spec.md       |  265 -
+ lockscreen/cuneiform-matrix-lock-spec.md        |  265 -
+ src/app/account/page.jsx                        |   53 +-
+ src/app/globals.css                             | 7754 ++---------------------
+ src/app/layout.jsx                              |   27 +-
+ src/app/library/page.jsx                        |   29 +-
+ src/app/page.jsx                                |    8 +-
+ src/app/read/[documentKey]/page.jsx             |   52 +-
+ src/app/read/page.jsx                           |   53 +-
+ src/app/workspace/page.jsx                      |   52 +
+ src/components/AccountScreen.jsx                |  592 --
+ src/components/AccountShell.jsx                 |   88 +
+ src/components/AuthScreen.jsx                   |  112 -
+ src/components/AuthTerminal.jsx                 |   99 +
+ src/components/AuthenticatedAppFallback.jsx     |   43 -
+ src/components/CuneiformPuzzle.jsx              |  310 -
+ src/components/DocumentLibraryScreen.jsx        |  246 -
+ src/components/EntryGate.jsx                    |   31 -
+ src/components/HydrationBoundary.jsx            |   13 -
+ src/components/MarkdownRenderer.jsx             |  295 -
+ src/components/ReadGate.jsx                     |   62 -
+ src/components/ReaderListenTray.jsx             |  489 --
+ src/components/ReaderMarksPanel.jsx             |  314 -
+ src/components/ReaderShell.jsx                  | 3498 ----------
+ src/components/SelectionMenu.jsx                |  123 -
+ src/components/SevenPanel.jsx                   |  904 ---
+ src/components/SignOutButton.jsx                |   15 +
+ src/components/UnlockScreen.jsx                 |  157 -
+ src/components/WorkspaceShell.jsx               |  532 ++
+ src/lib/document-blocks.js                      |   59 +
+ 38 files changed, 1452 insertions(+), 18236 deletions(-)
+
+commit 1df0d881e2d3c6c1c8a071bfa00e586d875ecc93
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-03 08:45:05 -0400
+
+    Fix mobile reader top bar interactions
+
+ src/app/globals.css | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+commit dbb056cb4fbaa542e11e6514869187cb3110a2cf
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 23:19:29 -0400
+
+    Batch reader block registration
+
+ src/components/ReaderShell.jsx | 75 +++++++++++++++++++++++++++++++-----------
+ 1 file changed, 56 insertions(+), 19 deletions(-)
+
+commit 147e9e2a5a9de66929faeaf83f0eb465e9a263f5
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 22:48:12 -0400
+
+    Stabilize authenticated app hydration
+
+ src/app/account/page.jsx                    | 34 ++++++++------
+ src/app/globals.css                         | 72 +++++++++++++++++++++++++++++
+ src/app/library/page.jsx                    | 12 +++--
+ src/app/read/[documentKey]/page.jsx         | 52 +++++++++++----------
+ src/app/read/page.jsx                       | 52 +++++++++++----------
+ src/components/AuthenticatedAppFallback.jsx | 43 +++++++++++++++++
+ src/components/HydrationBoundary.jsx        | 13 ++++++
+ 7 files changed, 211 insertions(+), 67 deletions(-)
+
+commit ff5c222c2cb083f719c811840ffd209f1d653074
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 22:36:09 -0400
+
+    Fix reader hydration state sync
+
+ src/components/ReaderShell.jsx | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+commit 3da52ba3dc307ba8e4a5f44253a211729dd23836
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 22:22:34 -0400
+
+    Fix library date hydration mismatch
+
+ src/components/DocumentLibraryScreen.jsx | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+commit 32760b83e034f04406553536dd003dae7bcdb952
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 22:16:57 -0400
+
+    Trigger fresh preview deployment
+
+commit bf14aaaa5105b080b1afba861acde5211a83aa8a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 22:09:31 -0400
+
+    Fix auth redirect and library runtime guard
+
+ src/components/EntryGate.jsx | 10 ---------
+ src/lib/reader-documents.js  | 49 +++++++++++++++++++++++++++++++++-----------
+ 2 files changed, 37 insertions(+), 22 deletions(-)
+
+commit ef8a4c282f8ad0b4ba45290029358e355f84a089
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 21:54:31 -0400
+
+    Refine auth-first library import flow
+
+ src/app/globals.css                      | 17 ++++++++++
+ src/components/AuthScreen.jsx            | 10 +++---
+ src/components/DocumentLibraryScreen.jsx | 56 +++++++++++++++++++-------------
+ src/components/EntryGate.jsx             | 33 ++-----------------
+ src/components/ReaderShell.jsx           | 10 ++++++
+ src/lib/document-import.js               | 15 +++++++--
+ src/lib/reader-documents.js              |  7 ++--
+ 7 files changed, 87 insertions(+), 61 deletions(-)
+
+commit 20ff9b27fc4d3fde1606dea809d189bbad2d0dd2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 21:42:44 -0400
+
+    Document listener-first rollback lessons
+
+ docs/listener-first-retrospective-2026-04-02.md | 57 +++++++++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+
+commit 9c63e508e15e034ff5af486f3a9587a4107deaa2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 21:42:09 -0400
+
+    Revert "Implement listener-first guest reading flow"
+    
+    This reverts commit 9e9c4219ffc72faa711dd8cabb31ad9d5b627b48.
+
+ README.md                                     |  63 ++--
+ src/app/api/documents/import-local/route.js   |  53 ---
+ src/app/api/documents/ingest/route.js         |  52 ---
+ src/app/api/seven/audio/route.js              |   6 +
+ src/app/globals.css                           |  75 ----
+ src/app/layout.jsx                            |   2 +-
+ src/app/page.jsx                              |  36 +-
+ src/app/read/[documentKey]/page.jsx           |   2 -
+ src/app/read/local/[localDocumentId]/page.jsx |  39 --
+ src/app/read/page.jsx                         |  58 +--
+ src/components/DocumentLibraryScreen.jsx      |  18 +-
+ src/components/ListenerHomeScreen.jsx         | 430 ---------------------
+ src/components/LocalReadGate.jsx              | 204 ----------
+ src/components/ReadGate.jsx                   |  16 -
+ src/components/ReaderListenTray.jsx           |  19 +-
+ src/components/ReaderShell.jsx                | 516 +++++++-------------------
+ src/components/SelectionMenu.jsx              |  56 ++-
+ src/lib/document-import.js                    |   3 +-
+ src/lib/document-parser.js                    |  62 ----
+ src/lib/document.js                           |  57 ++-
+ src/lib/local-reader-db.js                    | 325 ----------------
+ 21 files changed, 288 insertions(+), 1804 deletions(-)
+
+commit 9e9c4219ffc72faa711dd8cabb31ad9d5b627b48
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 21:31:36 -0400
+
+    Implement listener-first guest reading flow
+
+ README.md                                     |  63 ++--
+ src/app/api/documents/import-local/route.js   |  53 +++
+ src/app/api/documents/ingest/route.js         |  52 +++
+ src/app/api/seven/audio/route.js              |   6 -
+ src/app/globals.css                           |  75 ++++
+ src/app/layout.jsx                            |   2 +-
+ src/app/page.jsx                              |  36 +-
+ src/app/read/[documentKey]/page.jsx           |   2 +
+ src/app/read/local/[localDocumentId]/page.jsx |  39 ++
+ src/app/read/page.jsx                         |  58 ++-
+ src/components/DocumentLibraryScreen.jsx      |  18 +-
+ src/components/ListenerHomeScreen.jsx         | 430 +++++++++++++++++++++
+ src/components/LocalReadGate.jsx              | 204 ++++++++++
+ src/components/ReadGate.jsx                   |  16 +
+ src/components/ReaderListenTray.jsx           |  19 +-
+ src/components/ReaderShell.jsx                | 516 +++++++++++++++++++-------
+ src/components/SelectionMenu.jsx              |  56 +--
+ src/lib/document-import.js                    |   3 +-
+ src/lib/document-parser.js                    |  62 ++++
+ src/lib/document.js                           |  57 +--
+ src/lib/local-reader-db.js                    | 325 ++++++++++++++++
+ 21 files changed, 1804 insertions(+), 288 deletions(-)
+
+commit c4bbe7df143380ad9e78af68ed38d00e061565b3
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 21:07:35 -0400
+
+    Stabilize reader listen state sync
+
+ src/components/ReaderShell.jsx | 52 ++++++++++++++++++++++++++++--------------
+ 1 file changed, 35 insertions(+), 17 deletions(-)
+
+commit 0d2b2cd8110c23b5d7236610aaa4ccaf42e5978f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 20:54:41 -0400
+
+    Fix uploaded document listening structure
+
+ src/components/ReaderShell.jsx | 36 ++++++++++++++++++++++++++----------
+ src/lib/document-import.js     | 23 ++++++++++++++++++++++-
+ src/lib/listening.js           | 12 +++++++++++-
+ src/lib/seven.js               | 12 +++++++++---
+ 4 files changed, 68 insertions(+), 15 deletions(-)
+
+commit e9390dc05077dea266842ab37f1f73fd38fe5a9b
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 20:47:13 -0400
+
+    Fix reader listen runtime loops
+
+ src/components/AccountScreen.jsx    | 25 +++++++++---------
+ src/components/EntryGate.jsx        | 16 +++++++++---
+ src/components/MarkdownRenderer.jsx |  2 +-
+ src/components/ReadGate.jsx         | 22 ++++++++++------
+ src/components/ReaderShell.jsx      |  2 --
+ src/lib/storage.js                  | 51 ++++++++++++++++++++++++++++++++-----
+ 6 files changed, 85 insertions(+), 33 deletions(-)
+
+commit f05f87741c28b9a41611e9fb72a73e684a846993
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 20:27:19 -0400
+
+    Rebuild reader listen experience
+
+ docs/listen-feature-ruthless-audit.md              |  918 ++++++++++++
+ .../migration.sql                                  |   45 +
+ prisma/schema.prisma                               |   48 +
+ src/app/api/reader/listening-session/route.js      |   45 +
+ src/app/api/seven/audio/route.js                   |  109 +-
+ src/app/globals.css                                |  477 ++++++
+ src/app/read/[documentKey]/page.jsx                |   11 +-
+ src/app/read/page.jsx                              |   11 +-
+ src/components/ReadGate.jsx                        |    6 +
+ src/components/ReaderListenTray.jsx                |  466 +++---
+ src/components/ReaderShell.jsx                     | 1542 +++++++++++++++-----
+ src/components/SelectionMenu.jsx                   |   27 +
+ src/lib/listening.js                               |  348 +++++
+ src/lib/reader-workspace.js                        |  177 ++-
+ src/lib/seven.js                                   |    4 +
+ 15 files changed, 3672 insertions(+), 562 deletions(-)
+
+commit cdbbf65ea9d4d0ae279da3be3e8481652e505d0e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 19:22:08 -0400
+
+    Flatten library UI and fix reader library action
+
+ src/app/globals.css                      | 228 +++++++------------------------
+ src/components/DocumentLibraryScreen.jsx | 201 ++++++++-------------------
+ src/components/ReaderShell.jsx           |  13 +-
+ 3 files changed, 119 insertions(+), 323 deletions(-)
+
+commit 8536a225aec039ed3eed472114ce23adc2c4fa38
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 19:00:29 -0400
+
+    Simplify library and reader product language
+
+ src/app/globals.css                      | 165 +++++++++++++++++++++++--------
+ src/components/DocumentLibraryScreen.jsx | 152 ++++++++++++++++++----------
+ src/components/ReaderShell.jsx           |  48 +++++----
+ src/components/SevenPanel.jsx            |   5 +-
+ src/lib/seven.js                         |  23 ++---
+ 5 files changed, 270 insertions(+), 123 deletions(-)
+
+commit 8b768006b675d605f0705863c7dbe4c12a2ccc4a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 18:35:20 -0400
+
+    Fix library and imported document navigation
+
+ src/app/globals.css                      | 22 ++++++++++++++++------
+ src/app/layout.jsx                       |  5 +++++
+ src/app/read/[documentKey]/page.jsx      |  3 ++-
+ src/components/DocumentLibraryScreen.jsx |  7 ++++---
+ src/components/ReaderShell.jsx           | 12 ++++--------
+ 5 files changed, 31 insertions(+), 18 deletions(-)
+
+commit 2f7d25732c78bb1e0ee85e3adf8f6afe6ce91187
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 18:28:10 -0400
+
+    Prefer OpenAI voice before ElevenLabs fallback
+
+ src/app/api/seven/audio/route.js    | 60 ++++++++++++++++++-------------------
+ src/app/read/[documentKey]/page.jsx |  2 +-
+ src/app/read/page.jsx               |  2 +-
+ 3 files changed, 32 insertions(+), 32 deletions(-)
+
+commit 3726d034bcc4cb1f678403d8b10025ab327fb792
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 18:05:49 -0400
+
+    Unify reader and library shell
+
+ src/app/globals.css                      | 517 ++++++++++++++++++-------------
+ src/components/DocumentLibraryScreen.jsx | 230 +++++++++-----
+ src/components/ReaderShell.jsx           | 120 ++++---
+ 3 files changed, 518 insertions(+), 349 deletions(-)
+
+commit 0f1a9e823d342223104be2873c559d04982bd41f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 17:34:20 -0400
+
+    Ship latest library and reader review build
+
+ package-lock.json                                  | 534 ++++++++++++++++++++-
+ package.json                                       |   6 +-
+ .../migration.sql                                  |  68 +++
+ prisma/schema.prisma                               |  46 +-
+ src/app/account/page.jsx                           |  42 +-
+ src/app/api/documents/route.js                     |  83 ++++
+ src/app/api/reader/marks/route.js                  |  10 +-
+ src/app/api/reader/progress/route.js               |   5 +-
+ src/app/api/seven/route.js                         |  18 +-
+ src/app/globals.css                                | 329 +++++++++----
+ src/app/library/page.jsx                           |  27 ++
+ src/app/page.jsx                                   |   2 +-
+ src/app/read/[documentKey]/page.jsx                |  47 ++
+ src/app/read/page.jsx                              |   2 +-
+ src/components/DocumentLibraryScreen.jsx           | 181 +++++++
+ src/components/EntryGate.jsx                       |   4 +-
+ src/components/ReaderShell.jsx                     | 235 +++++----
+ src/lib/document-import.js                         | 375 +++++++++++++++
+ src/lib/document.js                                |  15 +-
+ src/lib/reader-db.js                               | 129 ++++-
+ src/lib/reader-documents.js                        | 212 ++++++++
+ 21 files changed, 2121 insertions(+), 249 deletions(-)
+
+commit 6f4192bfacf57b3f4bb0fb64dbbf1e55c4158c56
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 17:27:50 -0400
+
+    Add reader v2 reference spec
+
+ docs/reader-v2-reference-spec.md | 213 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 213 insertions(+)
+
+commit 5e8eb5803e0fb53ae6bf0a2d0c1e10af572beb72
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 17:02:07 -0400
+
+    Simplify reader shell for library-first navigation
+
+ src/app/globals.css            | 417 +++++++++++++++++++++++++++++++++++++----
+ src/components/ReaderShell.jsx | 176 ++++-------------
+ 2 files changed, 415 insertions(+), 178 deletions(-)
+
+commit ad80eee544466617ce9c5fff36bd51999ab0eaf4
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 16:39:01 -0400
+
+    Reset authenticated reader UI system
+
+ src/app/globals.css              | 515 +++++++++++++++++++++++++++++++++++++++
+ src/components/AccountScreen.jsx |   9 +-
+ src/components/ReaderShell.jsx   | 282 +++++++++++++--------
+ src/components/SevenPanel.jsx    |  25 +-
+ src/lib/storage.js               |  27 +-
+ 5 files changed, 742 insertions(+), 116 deletions(-)
+
+commit 35463751f4d856d86deb604d28b010464eb7e601
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:49:10 -0400
+
+    Fix Seven panel colors, mobile panels, and modernize background
+    
+    Major fixes:
+    - Remove paper theme overrides that were putting dark text on the dark
+      Seven panel background — the panel is intentionally dark even in paper
+      theme, so text must stay cream/light
+    - Fix light borders, buttons, inputs, tabs, composer, and starters to
+      all use light-on-dark values inside the Seven panel in paper mode
+    - Fix TOC and Marks panels not appearing on mobile: the player-first
+      .is-open rules were missing transform: translateX(0), so panels
+      became visible but stayed off-screen
+    - Modernize background from warm paper (#f5f0e7) to clean light gray
+      (#f7f7f5) with neutral white surfaces, removing amber radial gradients
+    - Strip markdown from citation/evidence excerpts and truncate to 240 chars
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css | 99 +++++++++++++++++------------------------------------
+ 1 file changed, 32 insertions(+), 67 deletions(-)
+
+commit 5933c69b07930c815e3b246c32c5871445b54a12
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:44:19 -0400
+
+    Strip markdown from citation excerpts and truncate to 240 chars
+    
+    Citations were displaying raw markdown (>, **, ---, &nbsp;) instead of
+    clean text. Now uses stripMarkdownForSpeech() to clean and truncates
+    long excerpts with ellipsis.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/components/SevenPanel.jsx | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+commit fe8d3fd3d09bb06bdc6b23e94b6596ef239dfa6e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:35:07 -0400
+
+    Fix listen tray crash: remove Radix Slider, throttle time updates, use speed ref
+    
+    Root cause: React error #185 (max update depth) triggered by the listen tray.
+    Three contributing factors, all fixed:
+    
+    1. Replace Radix Slider with a plain CSS progress bar — the controlled
+       Slider component created render loops with high-frequency value updates
+    2. Throttle timeupdate listener to 500ms intervals — was firing setState
+       ~4x/sec which cascaded through dependent effects
+    3. Use ref instead of state for playbackSpeed inside playAudioText — the
+       state dependency caused callback recreation which cascaded through
+       playDocumentQueue and downstream effects
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                 | 33 +++------------------------------
+ src/components/ReaderListenTray.jsx | 22 +++++-----------------
+ src/components/ReaderShell.jsx      |  9 +++++++--
+ 3 files changed, 15 insertions(+), 49 deletions(-)
+
+commit ca65bb7056990b256c60b396a39ec80ec7e744df
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:28:12 -0400
+
+    Polish pass: progress bar, dark theme audit, Seven message styling, tray z-index
+    
+    - Add document-wide reading progress bar (thin accent line at top of viewport,
+      driven by existing progress state, scaleX transform for smooth animation)
+    - Fix listen tray z-index (35 → 55) so collapsed capsule stays visible above
+      Seven panel overlay when audio is playing
+    - Dark theme audit: add missing overrides for .reader-toc__utility-action and
+      .reader-marks__scope-button.is-active
+    - Polish Seven chat messages: larger padding, bigger text (1.02rem), wider gap,
+      left-border accent distinguishing user (warm) vs assistant (neutral) messages
+    - Dark theme variants for new message border styles
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css            | 59 +++++++++++++++++++++++++++++++++++-------
+ src/components/ReaderShell.jsx |  5 ++++
+ 2 files changed, 55 insertions(+), 9 deletions(-)
+
+commit 52c4dbf2ee126a45d09d4cf7f31813ed34488f24
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:17:39 -0400
+
+    Fix listen tray crash and duplicate FAB on mobile
+    
+    - Remove AnimatePresence from ReaderListenTray to fix React error #185
+      (maximum update depth exceeded caused by spring animations conflicting
+      with parent state transitions)
+    - Revert to simple conditional rendering with CSS transitions for tray
+    - Hide FAB on viewports below 980px where topbar "7" is reachable
+    - Hide FAB when any floating panel is open (not just Seven)
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/app/globals.css                 | 11 ++--------
+ src/components/ReaderListenTray.jsx | 42 ++++++++++++-------------------------
+ src/components/ReaderShell.jsx      |  2 +-
+ 3 files changed, 16 insertions(+), 39 deletions(-)
+
+commit e23457c7856e227b3360079a4920fdf09216821a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:09:38 -0400
+
+    Add motion and @radix-ui/react-slider to package.json
+    
+    Dependencies were installed but not saved to package.json, causing the
+    Vercel build to fail with module-not-found errors.
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ package-lock.json | 312 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ package.json      |   2 +
+ 2 files changed, 314 insertions(+)
+
+commit c4ccaa08c0feeed8b44fea435e6c9738049a1c83
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 15:00:02 -0400
+
+    UX visual quality upgrade: rich audio transport, block highlight, Seven starters, FAB
+    
+    - Add warm accent left-border highlight on active block during playback with
+      smooth cubic-bezier transitions and dark theme support
+    - Redesign listen tray with Radix Slider scrubber, elapsed/remaining time,
+      playback speed control (0.75x-2x), ±15s/30s skip, voice identity footer
+    - Add time tracking via HTML Audio timeupdate/loadedmetadata events with
+      duration estimation across chunks
+    - Replace Seven empty state with breathing "7" glyph idle state and contextual
+      conversation starter chips that auto-submit on tap
+    - Add floating "Ask Seven" FAB (bottom-right) with spring entrance/exit
+    - Add Framer Motion spring animations for listen tray, FAB, and starter chips
+    - Install motion (Framer Motion) and @radix-ui/react-slider
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ docs/ux-upgrade-plan.md             | 185 +++++++++++++++++++
+ src/app/globals.css                 | 358 +++++++++++++++++++++++++++++++++---
+ src/components/ReaderListenTray.jsx | 288 ++++++++++++++++++++++-------
+ src/components/ReaderShell.jsx      |  89 +++++++++
+ src/components/SevenPanel.jsx       |  35 +++-
+ src/lib/seven.js                    |  20 ++
+ 6 files changed, 881 insertions(+), 94 deletions(-)
+
+commit a50f03eea38e52f7dbc436691d039ca1881190ef
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 14:05:12 -0400
+
+    Audit and fix mobile reader interactions
+
+ src/app/globals.css | 83 +++++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 78 insertions(+), 5 deletions(-)
+
+commit e99fbd962d5cb1e097f360e233ce1dadc11c2b77
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 13:18:19 -0400
+
+    Fix reader header glass and restore sync
+
+ src/app/globals.css            | 57 ++++++++++++++++++++++++++++++++++++------
+ src/components/ReaderShell.jsx | 34 +++++++++++++++++--------
+ 2 files changed, 74 insertions(+), 17 deletions(-)
+
+commit d17be3c62b93aeb29ecd96deda5b2e199c464ca9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 12:56:22 -0400
+
+    Sync chapter transport with reader scroll
+
+ src/components/ReaderShell.jsx | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+commit e173c23cd9eb330e4b06db624d0b0343c9252143
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 12:54:04 -0400
+
+    Fix account button navigation
+
+ src/app/globals.css            |  8 +++-----
+ src/components/ReaderShell.jsx | 13 +++++++++----
+ 2 files changed, 12 insertions(+), 9 deletions(-)
+
+commit 84dabeeaa144fd51acf4f9393496b95fcff70a90
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 12:44:43 -0400
+
+    Fix reader auth and transport regressions
+
+ src/app/globals.css            |  3 +-
+ src/app/page.jsx               |  4 +++
+ src/components/EntryGate.jsx   |  8 ++---
+ src/components/ReaderShell.jsx | 81 +++++++++++++++++-------------------------
+ 4 files changed, 42 insertions(+), 54 deletions(-)
+
+commit fad236ffc61c9697e49dd5df92d00ed54adc63b2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 12:24:17 -0400
+
+    Refine reader-first listening experience
+
+ src/app/globals.css                 | 546 ++++++++++++++++++++++++++++++++++++
+ src/components/ReaderListenTray.jsx | 243 ++++++++++++++++
+ src/components/ReaderShell.jsx      | 328 ++++++++--------------
+ src/components/SevenPanel.jsx       | 203 ++------------
+ 4 files changed, 930 insertions(+), 390 deletions(-)
+
+commit fc1b6f38fcce037367329e1fa34aa94a9b69106a
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-02 10:30:38 -0400
+
+    Fix magic link unlock persistence
+
+ src/components/AccountScreen.jsx |  2 ++
+ src/lib/storage.js               | 21 +++++++++++++++++----
+ 2 files changed, 19 insertions(+), 4 deletions(-)
+
+commit bdfeb134b3284dfec5664a0ef2b29f953c1de0d9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 18:21:27 -0400
+
+    Restore reader-first listening flow
+
+ src/app/globals.css            |  81 ++++++++-
+ src/components/ReaderShell.jsx | 399 ++++++++++++++++++++++++++++++++++++-----
+ src/components/SevenPanel.jsx  | 241 +++++++++++++++++++++----
+ 3 files changed, 634 insertions(+), 87 deletions(-)
+
+commit 935cc944992b7640c57fec11e2313e2d6a675b5c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 17:17:33 -0400
+
+    Implement player-first reader experience
+
+ src/app/globals.css                 | 1007 +++++++++++++++++++++++
+ src/components/MarkdownRenderer.jsx |   72 +-
+ src/components/ReaderShell.jsx      | 1491 ++++++++++++++++++++++++++++-------
+ src/components/SevenPanel.jsx       | 1127 ++++++--------------------
+ src/lib/reader-player.js            |   43 +
+ 5 files changed, 2547 insertions(+), 1193 deletions(-)
+
+commit 6e9548f00226c64ac354cecfdd5d242d26b326ff
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 17:00:29 -0400
+
+    Refresh deployment with updated ElevenLabs voice
+
+commit 9272cb8b9ea16225b1ad9d2192c0a186e62a9eab
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 16:54:18 -0400
+
+    Remove reader continue section button
+
+ src/app/globals.css            | 41 -----------------------------------------
+ src/components/ReaderShell.jsx | 28 +---------------------------
+ 2 files changed, 1 insertion(+), 68 deletions(-)
+
+commit b699dee8d86d96c153a18ac67eb5ccec6ebaa57e
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 16:39:24 -0400
+
+    Add player-first reader design spec
+
+ docs/player-first-reader-design-spec.md | 730 ++++++++++++++++++++++++++++++++
+ 1 file changed, 730 insertions(+)
+
+commit fcb865222306b73708106757200cd5c0daa51274
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 16:19:56 -0400
+
+    Trigger preview rebuild
+
+commit 836db2911796bcb75a349d8fb9c2403d6215bebc
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 16:15:56 -0400
+
+    Trim explanatory reader copy
+
+ src/app/globals.css                 | 22 +++++++---------------
+ src/components/ReaderMarksPanel.jsx |  5 +----
+ src/components/SevenPanel.jsx       | 36 +++++++++++++-----------------------
+ 3 files changed, 21 insertions(+), 42 deletions(-)
+
+commit 378e77b3dee9e998c35564c5093dcc00f2d33484
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-04-01 15:54:24 -0400
+
+    Rework Seven into an evidence-driven reader companion
+
+ README.md                                          |  446 +++++++-
+ .../migration.sql                                  |  130 +++
+ prisma/schema.prisma                               |  107 ++
+ src/app/api/reader/evidence/route.js               |   85 ++
+ src/app/api/reader/receipts/from-reading/route.js  |  105 +-
+ src/app/api/reader/seven/thread/route.js           |   21 +
+ src/app/api/seven/route.js                         |   25 +-
+ src/app/globals.css                                |  359 ++++++-
+ src/app/read/page.jsx                              |    8 +-
+ src/components/AccountScreen.jsx                   |    6 +-
+ src/components/ReadGate.jsx                        |    4 +
+ src/components/ReaderMarksPanel.jsx                |  135 +--
+ src/components/ReaderShell.jsx                     |  338 +++---
+ src/components/SelectionMenu.jsx                   |    9 +
+ src/components/SevenPanel.jsx                      | 1123 +++++++++++++++-----
+ src/lib/document.js                                |    3 +
+ src/lib/getreceipts.js                             |   45 +-
+ src/lib/reader-db.js                               |   11 +
+ src/lib/reader-workspace.js                        |  433 ++++++++
+ src/lib/seven.js                                   |   44 +
+ 20 files changed, 2807 insertions(+), 630 deletions(-)
+
+commit add58420ffca99ab768f951db48b2fac08207e82
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 15:14:47 -0400
+
+    Turn Seven into a section audio player
+
+ src/app/globals.css            |  60 +++---
+ src/components/ReaderShell.jsx |   1 +
+ src/components/SevenPanel.jsx  | 409 ++++++++++++++++++++++++-----------------
+ 3 files changed, 279 insertions(+), 191 deletions(-)
+
+commit 569aa95ca8a7b77f88839ca8f5765652e48eba18
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:52:10 -0400
+
+    Restore mobile topbar icons
+
+ src/app/globals.css | 4 ----
+ 1 file changed, 4 deletions(-)
+
+commit c7f236cec606297cfd596674ec135ef0cfcf20fe
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:40:24 -0400
+
+    Remove visible gate hint
+
+ src/components/UnlockScreen.jsx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 918b18335dea2ac397da609b39000614e44cd829
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:38:10 -0400
+
+    Restore landing unlock gate
+
+ src/app/api/unlock/route.js        |  18 +++
+ src/components/CuneiformPuzzle.jsx | 310 +++++++++++++++++++++++++++++++++++++
+ src/components/EntryGate.jsx       |  23 ++-
+ src/components/UnlockScreen.jsx    | 157 +++++++++++++++++++
+ src/lib/env.js                     |   1 +
+ src/lib/storage.js                 |  22 +++
+ 6 files changed, 529 insertions(+), 2 deletions(-)
+
+commit 00fafd4e5c5b1ee316122c924ba98c26f10c6a1f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:25:48 -0400
+
+    Collapse Seven composer by default
+
+ src/app/globals.css           | 29 +++++++++++++++++++++++++++--
+ src/components/SevenPanel.jsx | 33 ++++++++++++++++++---------------
+ 2 files changed, 45 insertions(+), 17 deletions(-)
+
+commit bf472f874571c81d4af86760e8f9f164a8eb7b32
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:19:42 -0400
+
+    Trim reader UI copy
+
+ src/app/globals.css                 |  6 +++++-
+ src/components/ReaderMarksPanel.jsx | 17 +++++------------
+ src/components/SelectionMenu.jsx    |  3 +--
+ src/components/SevenPanel.jsx       | 26 +++-----------------------
+ 4 files changed, 14 insertions(+), 38 deletions(-)
+
+commit 0e4ed1447fde0d74937a0ba88253045366af769f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:12:26 -0400
+
+    Tighten reader chrome and Seven layout
+
+ src/app/globals.css            | 96 +++++++++++++++---------------------------
+ src/components/ReaderShell.jsx | 10 ++---
+ src/components/SevenPanel.jsx  | 69 +++---------------------------
+ 3 files changed, 44 insertions(+), 131 deletions(-)
+
+commit eded5c8c23a8860d78f63102a304c9dbfb04d0bb
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 14:04:09 -0400
+
+    Fix reader callback initialization order
+
+ src/components/ReaderShell.jsx | 160 ++++++++++++++++++++---------------------
+ 1 file changed, 80 insertions(+), 80 deletions(-)
+
+commit 4f2f659ef9e83e33f897035bfa8304ad507581dc
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 13:42:39 -0400
+
+    Redesign mobile reader and notebook flows
+
+ src/app/globals.css                 |  624 +++++++++++++++++++++
+ src/components/AccountScreen.jsx    |  426 +++++++--------
+ src/components/AuthScreen.jsx       |   12 +-
+ src/components/ReaderMarksPanel.jsx |  331 ++++++++++--
+ src/components/ReaderShell.jsx      | 1021 ++++++++++++++++++++---------------
+ src/components/SelectionMenu.jsx    |   31 +-
+ src/components/SevenPanel.jsx       |   87 +--
+ 7 files changed, 1773 insertions(+), 759 deletions(-)
+
+commit b0ffb0b8aeb086d20c2176858f3730430cef8e63
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 13:28:46 -0400
+
+    Make Seven aware of the whole document
+
+ src/app/api/seven/route.js    |  52 +++++++-
+ src/components/SevenPanel.jsx |   1 +
+ src/lib/document.js           |  79 +++++++-----
+ src/lib/seven.js              | 288 ++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 385 insertions(+), 35 deletions(-)
+
+commit edf73c75f743f868d278e8db8c28a357a8b428fb
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 13:03:01 -0400
+
+    Differentiate section audio from reply playback
+
+ src/app/globals.css           |  69 +++++++++++++++++++++---
+ src/components/SevenPanel.jsx | 119 +++++++++++++++++++++++++++++++++---------
+ 2 files changed, 154 insertions(+), 34 deletions(-)
+
+commit dc21ace361b8271c853e407d46c51cfa88f57097
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 12:35:23 -0400
+
+    Simplify Seven into a chat-first panel
+
+ src/app/globals.css           | 139 ++++++++++--------------------
+ src/components/SevenPanel.jsx | 195 ++++++++++--------------------------------
+ 2 files changed, 88 insertions(+), 246 deletions(-)
+
+commit c0bff1188f3fdca103388f21c26a4b2150c5649b
+Merge: c351fa4 d941ba7
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 12:16:19 -0400
+
+    Merge branch 'codex/seven-excellence'
+
+commit d941ba71a78ba3c76fee47ea9d8524349652e665
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 12:16:02 -0400
+
+    Refine Seven panel layout and mobile controls
+
+ src/app/globals.css            | 157 ++++++++++++++++++++++-------------------
+ src/components/ReaderShell.jsx |   3 +-
+ src/components/SevenPanel.jsx  |  95 ++++++++++++++-----------
+ 3 files changed, 139 insertions(+), 116 deletions(-)
+
+commit f4fc94ac1f11ce7ebfda1a7c42fb9bc3fec37540
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 11:51:33 -0400
+
+    Unify auth and overhaul Seven experience
+
+ README.md                                          |  26 +-
+ docs/reader-v2-plan.md                             |   4 +-
+ docs/seven-current-state.md                        | 337 +++++++++++
+ next.config.mjs                                    |   8 +
+ .../migration.sql                                  |  17 +
+ prisma/migrations/migration_lock.toml              |   1 +
+ prisma/schema.prisma                               |   9 -
+ src/app/api/reader/aggregate/route.js              |  15 -
+ src/app/api/seven/audio/route.js                   | 286 ++++++---
+ src/app/api/seven/route.js                         | 142 +++--
+ src/app/api/unlock/route.js                        |  18 -
+ src/app/globals.css                                | 204 +++++--
+ src/app/layout.jsx                                 |   2 +-
+ src/app/read/page.jsx                              |   4 +
+ src/components/AccountScreen.jsx                   | 224 +++++++-
+ src/components/AuthScreen.jsx                      |   6 +-
+ src/components/CuneiformPuzzle.jsx                 | 306 ----------
+ src/components/EntryGate.jsx                       |  72 +--
+ src/components/ReadGate.jsx                        |   6 +-
+ src/components/ReaderMarksPanel.jsx                |  66 +--
+ src/components/ReaderShell.jsx                     | 114 +---
+ src/components/SevenPanel.jsx                      | 640 ++++++++++++++++-----
+ src/components/UnlockScreen.jsx                    | 157 -----
+ src/lib/auth.js                                    |  74 ---
+ src/lib/email.js                                   |   2 +-
+ src/lib/env.js                                     |  11 -
+ src/lib/founding-readers.js                        |  22 -
+ src/lib/reader-db.js                               |  24 -
+ src/lib/seven.js                                   | 130 +++++
+ src/lib/storage.js                                 |  22 -
+ 30 files changed, 1748 insertions(+), 1201 deletions(-)
+
+commit 29a102feb62d23ee7a5aaefb7c6bf4b00a65c1e7
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 10:40:28 -0400
+
+    Slim mobile reader header
+
+ src/app/globals.css            | 34 +++++++++++++++-------------------
+ src/components/ReaderShell.jsx | 36 ------------------------------------
+ 2 files changed, 15 insertions(+), 55 deletions(-)
+
+commit 4934a6179147aeb69e3bce9710229b4cb270dbee
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 10:17:09 -0400
+
+    Refine mobile reader chrome
+
+ src/app/globals.css            | 123 +++++++++++++++++++----
+ src/components/ReaderShell.jsx | 214 +++++++++++++++++++++++++----------------
+ 2 files changed, 235 insertions(+), 102 deletions(-)
+
+commit 4cc637664974f2825a19ebafabfd9c37e7fb354b
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 10:02:41 -0400
+
+    Add Seven voice fallback
+
+ src/app/api/seven/audio/route.js | 115 +++++++++++++----------
+ src/components/SevenPanel.jsx    | 193 ++++++++++++++++++++++++++++++++++-----
+ src/lib/seven.js                 |  35 ++++---
+ 3 files changed, 262 insertions(+), 81 deletions(-)
+
+commit 9aed439fdc5f2d6e9ee50eb484703ac19ad52cdc
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 09:51:01 -0400
+
+    Add convergence foundations appendix
+
+ content/assembled_reality_v07_final.md | 365 ++++++++++++++++++++++++++++++++-
+ docs/convergence-foundations.md        | 358 ++++++++++++++++++++++++++++++++
+ src/lib/document.js                    |   7 +-
+ 3 files changed, 727 insertions(+), 3 deletions(-)
+
+commit c351fa486ab6f6251ec9f930f660e1174f806b2f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 09:41:28 -0400
+
+    Simplify Seven mobile reader flow
+
+ src/app/globals.css                 |  98 +++++++++++++-
+ src/components/ReaderMarksPanel.jsx |   7 +-
+ src/components/ReaderShell.jsx      |  50 ++++++-
+ src/components/SevenPanel.jsx       | 254 ++++++++++++++++++++----------------
+ src/lib/seven.js                    |  18 +++
+ 5 files changed, 307 insertions(+), 120 deletions(-)
+
+commit 8085bfbce32a25557e59aa3585158389ccb8090c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 09:39:11 -0400
+
+    Update operator sentences appendix v2
+
+ content/assembled_reality_v07_final.md | 230 ++++++++++++++++-----------------
+ docs/operator-sentences.md             | 230 ++++++++++++++++-----------------
+ 2 files changed, 220 insertions(+), 240 deletions(-)
+
+commit d1b683730c73400e67a8acdb1488a8aa64a012eb
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 09:21:30 -0400
+
+    Restore Apple sign-in behavior
+
+ src/app/account/page.jsx  |  4 +---
+ src/app/page.jsx          |  4 +---
+ src/app/read/page.jsx     |  4 +---
+ src/lib/auth.js           |  6 ++++++
+ src/lib/canonical-host.js | 40 ----------------------------------------
+ 5 files changed, 9 insertions(+), 49 deletions(-)
+
+commit 62ea1edbaa659715bcca65b81f0e995f75b6df29
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-31 06:07:08 -0400
+
+    Fix Apple sign-in callback flow
+
+ src/app/account/page.jsx  |  4 +++-
+ src/app/page.jsx          |  4 +++-
+ src/app/read/page.jsx     |  4 +++-
+ src/lib/auth.js           |  6 ------
+ src/lib/canonical-host.js | 40 ++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 49 insertions(+), 9 deletions(-)
+
+commit 97c24e6a38802ce0721bedc50ec0ee93d88fa838
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 22:17:36 -0400
+
+    Sanitize Seven provider errors
+
+ src/app/api/seven/audio/route.js | 24 +++++++++++++-----------
+ src/app/api/seven/route.js       | 11 +++++++----
+ 2 files changed, 20 insertions(+), 15 deletions(-)
+
+commit 2a4edaa7daffcf78b36139636e4d7fe8d7d8b635
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 22:14:24 -0400
+
+    Fix Seven panel and listening flow
+
+ src/app/api/seven/audio/route.js |   3 +-
+ src/app/api/seven/route.js       |   2 +-
+ src/app/globals.css              |  39 ++++++--
+ src/components/SevenPanel.jsx    | 198 +++++++++++++++++++++++++--------------
+ 4 files changed, 162 insertions(+), 80 deletions(-)
+
+commit 610f6b13cb1f86fcfa8a6fb9034fef1300b1bd60
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:51:47 -0400
+
+    Build a real member account hub
+
+ src/app/account/page.jsx         |  25 +++
+ src/app/globals.css              | 438 +++++++++++++++++++++++++++++++++------
+ src/components/AccountScreen.jsx | 415 +++++++++++++++++++++++++++++--------
+ src/components/ReaderShell.jsx   |   2 +-
+ 4 files changed, 735 insertions(+), 145 deletions(-)
+
+commit 7032f503d20586537df84331c930f2ca12a9454f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:39:47 -0400
+
+    Separate beta gate from reader app
+
+ README.md                        |  13 ++--
+ docs/reader-v2-plan.md           |   2 +
+ src/app/globals.css              | 115 +++++++++++++++++++++++++++++++-
+ src/components/AccountScreen.jsx |  29 ++++----
+ src/components/ReadGate.jsx      |  67 +++++--------------
+ src/components/ReaderShell.jsx   | 139 +++++++++++++++++++++++++++++++++------
+ 6 files changed, 274 insertions(+), 91 deletions(-)
+
+commit b191bbefec80c4f65aa5672d411ceedb96920921
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:21:10 -0400
+
+    Adjust landing gate copy
+
+ src/app/globals.css             | 12 ++++++++++++
+ src/components/UnlockScreen.jsx | 26 ++++++++++++++++----------
+ 2 files changed, 28 insertions(+), 10 deletions(-)
+
+commit a74cf2cf1d7e092e5246384e18e0d49d61354e58
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:18:17 -0400
+
+    Simplify signed-out account flow
+
+ src/app/page.jsx              |  2 -
+ src/components/AuthScreen.jsx | 93 +++----------------------------------------
+ src/components/EntryGate.jsx  |  8 ----
+ 3 files changed, 5 insertions(+), 98 deletions(-)
+
+commit 1a3dacc9825cea6021cfaf25334e724097e004f9
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:16:37 -0400
+
+    Keep locked homepage payload minimal
+
+ src/app/page.jsx             | 8 ++------
+ src/components/EntryGate.jsx | 4 ++--
+ 2 files changed, 4 insertions(+), 8 deletions(-)
+
+commit 8fdc085a13d58f53ffb1f406059b9b8c996cd1de
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:14:11 -0400
+
+    Hide beta code from client
+
+ src/app/api/unlock/route.js     | 18 ++++++++++++++++++
+ src/components/UnlockScreen.jsx | 37 +++++++++++++++++++++++++++++--------
+ src/lib/cuneiform.js            |  2 --
+ 3 files changed, 47 insertions(+), 10 deletions(-)
+
+commit 4b592fb80903e2d6667b43db80568c54e36013a0
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 21:05:56 -0400
+
+    Make homepage a private beta gate
+
+ src/app/globals.css             | 90 +++++++++++++++++++++++++++++++++++++++
+ src/components/EntryGate.jsx    | 24 +++++++----
+ src/components/ReadGate.jsx     |  6 ++-
+ src/components/UnlockScreen.jsx | 94 ++++++++++++++++++++++++++++-------------
+ src/lib/storage.js              |  5 +++
+ 5 files changed, 179 insertions(+), 40 deletions(-)
+
+commit 107c4bd7a106dbe026bfbeec98817ab05e6794e2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:55:43 -0400
+
+    Fix Vercel runtime module mode
+
+ eslint.config.js => eslint.config.mjs | 0
+ package.json                          | 1 -
+ 2 files changed, 1 deletion(-)
+
+commit 88d68618f5be0de4972103c5f0bc9efc4f220c0f
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:50:53 -0400
+
+    Trace manuscript files in production build
+
+ next.config.mjs     | 10 ++++------
+ src/lib/document.js | 25 ++++---------------------
+ 2 files changed, 8 insertions(+), 27 deletions(-)
+
+commit 78518591ee793e709ee544273935aa7c71f56043
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:48:14 -0400
+
+    Fix production manuscript file path
+
+ src/lib/document.js | 21 +++++++++++----------
+ 1 file changed, 11 insertions(+), 10 deletions(-)
+
+commit 4fd16b542700b8652b13bd332272584258637998
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:45:31 -0400
+
+    Bundle reader manuscript for production
+
+ src/lib/document.js | 25 ++++++++++++++++++++-----
+ 1 file changed, 20 insertions(+), 5 deletions(-)
+
+commit 80c827840196485557ba355c00ea0d900a69ad56
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:40:00 -0400
+
+    Set Vercel framework to Next.js
+
+ vercel.json | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+commit 9d380ea4148f51c9a2481d62a028b5f27a273175
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:26:22 -0400
+
+    Reduce reader DB pool pressure
+
+ src/app/account/page.jsx            |  6 +--
+ src/app/read/page.jsx               | 10 ++---
+ src/components/ReaderMarksPanel.jsx | 24 ++++++++++--
+ src/components/ReaderShell.jsx      | 73 ++++++++++++++++++++++++++++++++++++-
+ src/lib/auth.js                     |  9 ++++-
+ src/lib/reader-db.js                | 73 +++++++++++++++++--------------------
+ 6 files changed, 138 insertions(+), 57 deletions(-)
+
+commit eb8be28d38ea07360e3137ecfdf66306cc03e676
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 20:10:02 -0400
+
+    Add Seven interactive audio guide
+
+ README.md                        |  13 ++
+ src/app/api/seven/audio/route.js | 117 ++++++++++
+ src/app/api/seven/route.js       | 146 ++++++++++++
+ src/app/globals.css              | 273 ++++++++++++++++++++++
+ src/app/read/page.jsx            |   3 +
+ src/components/ReadGate.jsx      |   6 +
+ src/components/ReaderShell.jsx   |  61 ++++-
+ src/components/SevenPanel.jsx    | 483 +++++++++++++++++++++++++++++++++++++++
+ src/lib/document.js              |  11 +-
+ src/lib/env.js                   |  35 +++
+ src/lib/seven.js                 | 153 +++++++++++++
+ 11 files changed, 1297 insertions(+), 4 deletions(-)
+
+commit 0fac8265227633a5e04c8f6974c8cac1f3d5f343
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 18:31:34 -0400
+
+    Add reader auth profiles and receipt integration
+
+ package-lock.json                                 | 143 ++++++++++++++++
+ package.json                                      |   2 +
+ src/app/account/page.jsx                          |  41 ++---
+ src/app/api/reader/profile/route.js               |  33 ++++
+ src/app/api/reader/receipts/from-reading/route.js |  35 +++-
+ src/app/globals.css                               | 190 ++++++++++++++++++++++
+ src/app/page.jsx                                  |   5 +
+ src/components/AccountScreen.jsx                  | 132 +++++++++++++++
+ src/components/AuthScreen.jsx                     |  82 +++++++++-
+ src/components/EntryGate.jsx                      |  20 ++-
+ src/components/ReaderMarksPanel.jsx               |  65 ++++++--
+ src/components/ReaderShell.jsx                    |  92 +++++++++--
+ src/lib/auth.js                                   |  96 ++++++++++-
+ src/lib/email.js                                  |  74 +++++++++
+ src/lib/env.js                                    |  54 +++++-
+ src/lib/getreceipts.js                            |  41 ++++-
+ src/lib/reader-db.js                              |  39 +++++
+ 17 files changed, 1073 insertions(+), 71 deletions(-)
+
+commit f3e729b89503032f096df3b800e2fc84d77b7ab2
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 17:46:00 -0400
+
+    Migrate reader to authenticated Next.js app
+
+ .gitignore                                         |    3 +
+ README.md                                          |   70 +-
+ eslint.config.js                                   |   33 +-
+ index.html                                         |   14 -
+ jsconfig.json                                      |   10 +
+ next.config.mjs                                    |   13 +
+ package-lock.json                                  | 2602 +++++++++++---------
+ package.json                                       |   29 +-
+ prisma/schema.prisma                               |  203 ++
+ src/App.jsx                                        |   57 -
+ src/app/account/page.jsx                           |   45 +
+ src/app/api/auth/[...nextauth]/route.js            |    6 +
+ .../api/integrations/getreceipts/callback/route.js |   34 +
+ src/app/api/reader/aggregate/route.js              |   15 +
+ src/app/api/reader/marks/route.js                  |   32 +
+ src/app/api/reader/progress/route.js               |   26 +
+ src/app/api/reader/receipts/from-reading/route.js  |   68 +
+ src/app/connect/getreceipts/route.js               |   16 +
+ src/{index.css => app/globals.css}                 |  170 +-
+ src/app/layout.jsx                                 |   45 +
+ src/app/page.jsx                                   |   22 +
+ src/app/read/page.jsx                              |   33 +
+ src/components/AuthScreen.jsx                      |  107 +
+ src/components/CuneiformPuzzle.jsx                 |    2 +
+ src/components/EntryGate.jsx                       |   51 +
+ src/components/Providers.jsx                       |    7 +
+ src/components/ReadGate.jsx                        |   71 +
+ src/components/ReaderMarksPanel.jsx                |   17 +-
+ src/components/ReaderShell.jsx                     |  205 +-
+ src/components/SelectionMenu.jsx                   |    2 +
+ src/components/UnlockScreen.jsx                    |   14 +-
+ src/lib/auth.js                                    |  126 +
+ src/lib/crypto.js                                  |   41 +
+ src/lib/document.js                                |   54 +-
+ src/lib/env.js                                     |   34 +
+ src/lib/founding-readers.js                        |   22 +
+ src/lib/getreceipts.js                             |  146 ++
+ src/lib/prisma.js                                  |   13 +
+ src/lib/reader-db.js                               |  281 +++
+ src/lib/reader-store.js                            |   13 +
+ src/lib/server-session.js                          |   11 +
+ src/lib/text.js                                    |   13 +
+ src/main.jsx                                       |   17 -
+ vercel.json                                        |    8 +-
+ vite.config.js                                     |    8 -
+ 45 files changed, 3431 insertions(+), 1378 deletions(-)
+
+commit 9b1f2056e1e6dff93b1b4a42cea2ead52822c068
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 17:47:30 -0400
+
+    Add operator sentences appendix
+
+ content/assembled_reality_v07_final.md | 271 ++++++++++++++++++++++++++++++++-
+ docs/operator-sentences.md             | 254 ++++++++++++++++++++++++++++++
+ templates/blog.ts                      |  10 +-
+ templates/learn.ts                     |   2 +-
+ templates/site-config.ts               |   6 +-
+ 5 files changed, 527 insertions(+), 16 deletions(-)
+
+commit 2cdc90fa2eb8a24e5a04631ea91a82065dd16739
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 16:39:53 -0400
+
+    Use icon-only reader actions
+
+ src/components/ReaderShell.jsx | 50 +++++++++++++++++++++++++++++++++++++-----
+ src/index.css                  |  6 +++++
+ 2 files changed, 50 insertions(+), 6 deletions(-)
+
+commit 526b5adae614de3457d66ebb47cb259b7e98fb63
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 16:15:57 -0400
+
+    Add reader bookmarks highlights and notes
+
+ docs/reader-v2-plan.md              | 104 ++++++++++
+ src/components/MarkdownRenderer.jsx | 183 ++++++++++++++++-
+ src/components/ReaderMarksPanel.jsx | 169 +++++++++++++++
+ src/components/ReaderShell.jsx      | 350 +++++++++++++++++++++++++++++--
+ src/components/SelectionMenu.jsx    |  69 +++++++
+ src/index.css                       | 396 ++++++++++++++++++++++++++++++++++++
+ src/lib/annotations.js              | 209 +++++++++++++++++++
+ src/lib/selection.js                |  74 +++++++
+ 8 files changed, 1530 insertions(+), 24 deletions(-)
+
+commit c61d7bc2f706f3e0bdd02070c94f76997020ab72
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 14:33:50 -0400
+
+    Polish reader navigation and orientation
+
+ src/components/ReaderShell.jsx | 80 ++++++++++++++++++++++++++++++++-----
+ src/index.css                  | 89 ++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 157 insertions(+), 12 deletions(-)
+
+commit 73a4880d0cbfde8a2a6a8a1bab9b1e673c5e6628
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 14:27:09 -0400
+
+    Fix unlock bypass password
+
+ src/lib/cuneiform.js | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+commit 884c601b1379452708bbeb03f363c109be3ea067
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 13:53:24 -0400
+
+    Refine lock screen and puzzle styling
+
+ src/components/CuneiformPuzzle.jsx |  37 ++----
+ src/components/UnlockScreen.jsx    |  44 ++++---
+ src/index.css                      | 242 ++++++++++++++++++++++++-------------
+ src/lib/cuneiform.js               |  15 ++-
+ src/main.jsx                       |   3 -
+ 5 files changed, 206 insertions(+), 135 deletions(-)
+
+commit 7796dacc290c1d02c6eca507c04e2ddbe63088f0
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 13:33:19 -0400
+
+    Build locked book reader v1
+
+ content/assembled_reality_v07_final.md       |  475 ++++++++
+ index.html                                   |    1 +
+ lock screen/cuneiform-matrix-lock-spec.md    |  265 ++++
+ lockscreen/cuneiform-matrix-lock-spec.md     |  265 ++++
+ package-lock.json                            | 1678 ++++++++++++++++++++++++--
+ package.json                                 |    9 +-
+ public/fonts/NotoSansCuneiform-Regular.woff2 |  Bin 0 -> 467156 bytes
+ public/robots.txt                            |    2 +
+ src/App.jsx                                  |   66 +-
+ src/components/CuneiformPuzzle.jsx           |  315 +++++
+ src/components/MarkdownRenderer.jsx          |   60 +
+ src/components/ReaderShell.jsx               |  289 +++++
+ src/components/UnlockScreen.jsx              |   76 ++
+ src/index.css                                |  946 ++++++++++++++-
+ src/lib/cuneiform.js                         |   77 ++
+ src/lib/document.js                          |   62 +
+ src/lib/storage.js                           |   41 +
+ src/main.jsx                                 |   18 +-
+ templates/STARTER-TEMPLATE.md                |   61 +
+ templates/blog.ts                            | 1301 ++++++++++++++++++++
+ templates/learn.ts                           |  622 ++++++++++
+ templates/site-config.ts                     |  423 +++++++
+ 22 files changed, 6916 insertions(+), 136 deletions(-)
+
+commit 49be3d9161d37d843d4269113011d521fc902bfd
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 12:11:27 -0400
+
+    Reset app to clean deployable scaffold
+
+ README.md                                          |  64 +--
+ assembled_reality_live.jsx                         | 283 ------------
+ public/icons.svg                                   |  24 --
+ src/App.jsx                                        | 209 +--------
+ src/api/getreceipts.js                             |  49 ---
+ src/components/document/ContentPrimitives.jsx      |  50 ---
+ src/components/document/CrossRef.jsx               |  22 -
+ src/components/document/DocContent.jsx             | 338 ---------------
+ src/components/document/ReactionContext.jsx        |  11 -
+ src/components/document/Sec.jsx                    |  57 ---
+ src/components/document/SectionStatusTags.jsx      |  42 --
+ src/components/document/ToggleDepth.jsx            |  27 --
+ src/components/gates/NameGate.jsx                  |  53 ---
+ src/components/gates/PassGate.jsx                  |  60 ---
+ src/components/interaction/AnnThread.jsx           |  52 ---
+ src/components/interaction/EmojiReactions.jsx      |  71 ---
+ src/components/interaction/InlineComment.jsx       | 220 ----------
+ src/components/interaction/MentionInput.jsx        |  78 ----
+ src/components/interaction/ReadingPresenceDots.jsx |  66 ---
+ src/components/interaction/SelectionPopover.jsx    |  36 --
+ src/components/interaction/ShapeSig.jsx            |  27 --
+ src/components/interaction/TextHighlighter.jsx     |  81 ----
+ src/components/layout/NavSidebar.jsx               | 112 -----
+ src/components/layout/PulseSidebar.jsx             |  64 ---
+ src/components/layout/TopBar.jsx                   |  93 ----
+ src/components/onboarding/WelcomeGuide.jsx         |  96 -----
+ src/components/panels/CarryListPanel.jsx           |  67 ---
+ src/components/panels/ReceiptPanel.jsx             | 157 -------
+ src/components/panels/VersionPulseBar.jsx          |  31 --
+ src/components/ui/Badge.jsx                        |  15 -
+ src/components/ui/Button.jsx                       |  29 --
+ src/components/ui/Sidebar.jsx                      |  35 --
+ src/constants.js                                   |  52 ---
+ src/hooks/useMediaQuery.js                         |  16 -
+ src/hooks/useReadingPosition.js                    |  42 --
+ src/hooks/useSessionTracker.js                     | 156 -------
+ src/hooks/useStore.js                              | 222 ----------
+ src/hooks/useTextSelection.js                      |  82 ----
+ src/index.css                                      | 207 +++------
+ src/pages/DocumentView.jsx                         |  85 ----
+ src/pages/LandingPage.jsx                          | 476 ---------------------
+ src/pages/PlaceholderPage.jsx                      |  11 -
+ src/storage.js                                     |  34 --
+ src/utils/markdownExport.js                        |  57 ---
+ src/utils/mentionParser.js                         |  35 --
+ src/utils/rangeSerializer.js                       | 152 -------
+ src/utils/receiptComposer.js                       | 189 --------
+ 47 files changed, 96 insertions(+), 4339 deletions(-)
+
+commit 3701afeadab6951fde274acee1c03058803eda44
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 11:58:46 -0400
+
+    Add Vercel SPA rewrite for client routes
+
+ vercel.json | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+commit 23e74f200cdfbeb22ad486efd4fe24dcd4322639
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 11:09:43 -0400
+
+    Redesign reading room and restore internal gate
+
+ src/App.jsx                                   |  11 +-
+ src/components/document/ContentPrimitives.jsx |  16 +-
+ src/components/document/DocContent.jsx        |  72 +++-
+ src/components/document/Sec.jsx               |  14 +-
+ src/components/document/SectionStatusTags.jsx |   4 +-
+ src/components/gates/NameGate.jsx             |  51 +--
+ src/components/gates/PassGate.jsx             |  95 +++--
+ src/components/interaction/ShapeSig.jsx       |   4 +-
+ src/components/layout/NavSidebar.jsx          |  37 +-
+ src/components/layout/PulseSidebar.jsx        |  16 +-
+ src/components/layout/TopBar.jsx              |  66 ++--
+ src/components/onboarding/WelcomeGuide.jsx    |   6 +-
+ src/components/panels/CarryListPanel.jsx      |  18 +-
+ src/index.css                                 |  44 ++-
+ src/pages/DocumentView.jsx                    |   6 +-
+ src/pages/LandingPage.jsx                     | 528 +++++++++++++++++---------
+ 16 files changed, 614 insertions(+), 374 deletions(-)
+
+commit 1deb4e7ce3680fec8ccf4af43b0d63900641e6b1
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-30 09:54:52 -0400
+
+    Create editorial landing page and redesign reader
+
+ assembled_reality_live.jsx                      |   2 +-
+ src/App.jsx                                     | 258 ++++++++++++--------
+ src/components/document/ContentPrimitives.jsx   |  20 +-
+ src/components/document/DocContent.jsx          |  19 +-
+ src/components/document/Sec.jsx                 |  27 +--
+ src/components/document/SectionStatusTags.jsx   |  10 +-
+ src/components/gates/NameGate.jsx               |  46 ++--
+ src/components/gates/PassGate.jsx               |  65 +++--
+ src/components/interaction/AnnThread.jsx        |  22 +-
+ src/components/interaction/EmojiReactions.jsx   |  14 +-
+ src/components/interaction/InlineComment.jsx    |  34 ++-
+ src/components/interaction/MentionInput.jsx     |   8 +-
+ src/components/interaction/SelectionPopover.jsx |  36 +--
+ src/components/interaction/ShapeSig.jsx         |  14 +-
+ src/components/layout/NavSidebar.jsx            |  52 ++--
+ src/components/layout/PulseSidebar.jsx          |  39 +--
+ src/components/layout/TopBar.jsx                |  48 ++--
+ src/components/onboarding/WelcomeGuide.jsx      | 144 ++++-------
+ src/components/panels/CarryListPanel.jsx        |  27 ++-
+ src/components/panels/ReceiptPanel.jsx          |   3 +-
+ src/hooks/useMediaQuery.js                      |   1 -
+ src/hooks/useReadingPosition.js                 |   2 +-
+ src/hooks/useSessionTracker.js                  |  86 ++++---
+ src/hooks/useStore.js                           |  72 +++---
+ src/index.css                                   |  83 +++++--
+ src/pages/DocumentView.jsx                      |  15 +-
+ src/pages/LandingPage.jsx                       | 310 ++++++++++++++++++++++++
+ src/utils/receiptComposer.js                    |   2 -
+ 28 files changed, 947 insertions(+), 512 deletions(-)
+
+commit b0864ad3e45024d0a791e9f047d4815eddbaf7a6
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-29 17:22:51 -0400
+
+    Polish typography, layout, and visual hierarchy
+    
+    - Remove Receipt button from top bar (reduce clutter to Pulse + Carry)
+    - Sidebar: active section highlighting, hover states, bolder section numbers
+    - Part headers: dramatic vertical spacing (mt-20), larger titles (1.5rem)
+    - Blockquotes: thicker border, more padding, slightly larger text
+    - Paragraphs: increased spacing (mb-4) for better readability
+    - Section titles: larger (1.2rem), more visible section numbers
+    - Document header: replace metadata grid with elegant inline format
+    - Tables: subtle alternating row backgrounds
+    - Interaction footer: hover hint on Signal · Tag · Discuss
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/App.jsx                                   |  4 +---
+ src/components/document/ContentPrimitives.jsx | 16 ++++++++--------
+ src/components/document/DocContent.jsx        | 17 +++++++----------
+ src/components/document/Sec.jsx               | 12 ++++++------
+ src/components/layout/NavSidebar.jsx          | 24 +++++++++++++-----------
+ src/components/layout/TopBar.jsx              | 11 +++++------
+ 6 files changed, 40 insertions(+), 44 deletions(-)
+
+commit 442912d23d0c98d1c15dc222a05ac2732df6d9e8
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-29 17:04:49 -0400
+
+    Add session receipt tracking and GetReceipts integration stub
+    
+    Track reader sessions (time, sections visited, actions taken) and
+    compose them into GetReceipts-compatible receipt payloads. One receipt
+    per session captures the real work of reading and collaborating.
+    
+    - useSessionTracker hook: tracks sections, actions, dwell times, 30-min session boundary
+    - receiptComposer: generates receipt payload + markdown evidence summary
+    - ReceiptPanel: live session timer, section/action breakdown, export + save buttons
+    - Stubbed GetReceipts API client (src/api/getreceipts.js) — only file that changes when backend is wired
+    - Receipt button + session timer in TopBar
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/App.jsx                            |  81 +++++++++++++-
+ src/api/getreceipts.js                 |  49 +++++++++
+ src/components/layout/TopBar.jsx       |  12 ++-
+ src/components/panels/ReceiptPanel.jsx | 156 +++++++++++++++++++++++++++
+ src/hooks/useSessionTracker.js         | 144 +++++++++++++++++++++++++
+ src/hooks/useStore.js                  |  12 +++
+ src/storage.js                         |   2 +
+ src/utils/receiptComposer.js           | 191 +++++++++++++++++++++++++++++++++
+ 8 files changed, 643 insertions(+), 4 deletions(-)
+
+commit cb718169c307df3bd1aa06d119b83ac75c5fd233
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-29 11:02:20 -0400
+
+    Migrate to Tailwind CSS v4, add React Router, fix mobile UX
+    
+    Foundation upgrade for scaling into a collaboration platform:
+    
+    - Migrate all 22 components from inline styles to Tailwind CSS v4
+    - Remove duplicated isMobile pattern from 13 components (useMediaQuery hook)
+    - Add React Router with /files and /notifications stubs
+    - Extract DocumentView page from App shell
+    - Redesign mobile welcome guide as compact expandable hint
+    - Show section title (not just number) in mobile top bar
+    - Create shared component library (Button, Badge, Sidebar)
+    - Remove stale Next.js artifacts (next.config.ts, tsconfig.json, src/app/)
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ next.config.ts                                     |   5 -
+ package-lock.json                                  | 399 ++++++++++++++++++++-
+ package.json                                       |   5 +-
+ src/App.jsx                                        | 141 +++-----
+ src/app/layout.tsx                                 |  16 -
+ src/app/page.tsx                                   |   7 -
+ src/components/document/ContentPrimitives.jsx      |  33 +-
+ src/components/document/CrossRef.jsx               |  15 +-
+ src/components/document/DocContent.jsx             |  51 ++-
+ src/components/document/Sec.jsx                    |  37 +-
+ src/components/document/SectionStatusTags.jsx      |  27 +-
+ src/components/document/ToggleDepth.jsx            |  27 +-
+ src/components/gates/NameGate.jsx                  |  26 +-
+ src/components/gates/PassGate.jsx                  |  36 +-
+ src/components/interaction/AnnThread.jsx           |  37 +-
+ src/components/interaction/EmojiReactions.jsx      |  52 +--
+ src/components/interaction/InlineComment.jsx       | 234 ++++--------
+ src/components/interaction/MentionInput.jsx        |  55 +--
+ src/components/interaction/ReadingPresenceDots.jsx |  88 +----
+ src/components/interaction/SelectionPopover.jsx    | 116 +-----
+ src/components/interaction/ShapeSig.jsx            |  23 +-
+ src/components/layout/NavSidebar.jsx               |  87 ++---
+ src/components/layout/PulseSidebar.jsx             |  81 ++---
+ src/components/layout/TopBar.jsx                   |  99 ++---
+ src/components/onboarding/WelcomeGuide.jsx         | 131 ++++---
+ src/components/panels/CarryListPanel.jsx           |  88 ++---
+ src/components/panels/VersionPulseBar.jsx          |  31 +-
+ src/components/ui/Badge.jsx                        |  15 +
+ src/components/ui/Button.jsx                       |  29 ++
+ src/components/ui/Sidebar.jsx                      |  35 ++
+ src/hooks/useMediaQuery.js                         |  17 +
+ src/index.css                                      | 113 ++++--
+ src/pages/DocumentView.jsx                         |  70 ++++
+ src/pages/PlaceholderPage.jsx                      |  11 +
+ tsconfig.json                                      |  21 --
+ vite.config.js                                     |   3 +-
+ 36 files changed, 1159 insertions(+), 1102 deletions(-)
+
+commit 12f0f43e32cd6ca7b9df615d85de31ccaf29c4fd
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-29 10:29:29 -0400
+
+    Improve design, readability, and feature discoverability
+    
+    - Add welcome guide component with feature hints (dismissible, per-reader)
+    - Make desktop nav sidebar persistent and open by default
+    - Improve section spacing (3rem) and part headers (larger, bolder)
+    - Rename "+ Interact" to "Signal · Tag · Discuss" with labeled groups
+    - Show full shape labels on desktop (△ Strengthens aim, etc.)
+    - Add reading progress bar to top bar
+    - Add mobile section indicator (§N) next to hamburger menu
+    - Auto-expand interaction footer when section has any activity
+    
+    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+ src/App.jsx                                   |  34 +++++--
+ src/components/document/ContentPrimitives.jsx |  33 ++++---
+ src/components/document/DocContent.jsx        |  25 +++--
+ src/components/document/Sec.jsx               |  58 ++++++++++--
+ src/components/interaction/ShapeSig.jsx       |  35 ++++---
+ src/components/layout/NavSidebar.jsx          |  77 +++++++--------
+ src/components/layout/TopBar.jsx              | 130 ++++++++++++++++----------
+ src/components/onboarding/WelcomeGuide.jsx    | 129 +++++++++++++++++++++++++
+ src/hooks/useStore.js                         |  20 ++++
+ src/storage.js                                |   1 +
+ 10 files changed, 401 insertions(+), 141 deletions(-)
+
+commit 7d7e910e58c3f911d52a3c85fb7f6857369d75b8
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 22:36:36 -0400
+
+    Add collaborative reading features + mobile-first responsive design
+    
+    Modularize monolithic App.jsx into components, hooks, and utilities.
+    Add text highlighting, carry list, inline comments with @mentions,
+    section status tags, emoji reactions, reading position tracking,
+    version pulse, and markdown export. Full mobile-responsive pass with
+    bottom sheets, full-screen sidebar overlays, viewport-aware popovers,
+    and 36px+ touch targets. Floating reader presence dots in margin.
+    
+    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+
+ .gitignore                                         |   1 +
+ README.md                                          |  65 +++-
+ src/App.jsx                                        | 406 +++++----------------
+ src/components/document/ContentPrimitives.jsx      |  50 +++
+ src/components/document/CrossRef.jsx               |  33 ++
+ src/components/document/DocContent.jsx             | 294 +++++++++++++++
+ src/components/document/ReactionContext.jsx        |  11 +
+ src/components/document/Sec.jsx                    |  33 ++
+ src/components/document/SectionStatusTags.jsx      |  49 +++
+ src/components/document/ToggleDepth.jsx            |  34 ++
+ src/components/gates/NameGate.jsx                  |  28 ++
+ src/components/gates/PassGate.jsx                  |  30 ++
+ src/components/interaction/AnnThread.jsx           |  63 ++++
+ src/components/interaction/EmojiReactions.jsx      |  97 +++++
+ src/components/interaction/InlineComment.jsx       | 288 +++++++++++++++
+ src/components/interaction/MentionInput.jsx        | 113 ++++++
+ src/components/interaction/ReadingPresenceDots.jsx | 122 +++++++
+ src/components/interaction/SelectionPopover.jsx    | 142 +++++++
+ src/components/interaction/ShapeSig.jsx            |  31 ++
+ src/components/interaction/TextHighlighter.jsx     |  81 ++++
+ src/components/layout/NavSidebar.jsx               | 119 ++++++
+ src/components/layout/PulseSidebar.jsx             |  86 +++++
+ src/components/layout/TopBar.jsx                   |  63 ++++
+ src/components/panels/CarryListPanel.jsx           | 102 ++++++
+ src/components/panels/VersionPulseBar.jsx          |  42 +++
+ src/constants.js                                   |  52 +++
+ src/hooks/useReadingPosition.js                    |  42 +++
+ src/hooks/useStore.js                              | 190 ++++++++++
+ src/hooks/useTextSelection.js                      |  82 +++++
+ src/index.css                                      |  71 ++++
+ src/storage.js                                     |  31 ++
+ src/utils/markdownExport.js                        |  57 +++
+ src/utils/mentionParser.js                         |  35 ++
+ src/utils/rangeSerializer.js                       | 152 ++++++++
+ 34 files changed, 2781 insertions(+), 314 deletions(-)
+
+commit e21b4d076ca6798b58756c823e1b6a0f4ea1d62d
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:39:41 -0400
+
+    Initial commit: Assembled Reality document viewer
+
+ .gitignore                 |   24 +
+ README.md                  |   16 +
+ assembled_reality_live.jsx |  283 +++++
+ eslint.config.js           |   29 +
+ index.html                 |   13 +
+ package-lock.json          | 2604 ++++++++++++++++++++++++++++++++++++++++++++
+ package.json               |   28 +-
+ public/favicon.svg         |    1 +
+ public/icons.svg           |   24 +
+ src/App.jsx                |  315 ++++++
+ src/index.css              |    9 +
+ src/main.jsx               |   10 +
+ vite.config.js             |    7 +
+ 13 files changed, 3352 insertions(+), 11 deletions(-)
+
+commit c0de435c9b5ef4ab274514f4154a8aec4074c8fd
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:27:13 -0400
+
+    Add TypeScript and React type definitions
+
+ package.json | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+commit c5eecada56f0fbe1ab4cd299e0c6cfb5947a0593
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:23:40 -0400
+
+    Add initial TypeScript configuration file
+
+ tsconfig.json | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+commit f5648c145b4c5c342e644dbee2ec5bcf38d490f1
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:21:55 -0400
+
+    Initialize next.config.ts with default configuration
+
+ next.config.ts | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+commit e30d5f033f1f133f3b7b40418a5ec9e960caaa50
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:20:20 -0400
+
+    Add RootLayout component with metadata
+
+ src/app/layout.tsx | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+commit 288bae37a14f537296878f8a093c70e1211a163c
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:18:26 -0400
+
+    Create Home component for main page
+
+ src/app/page.tsx | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+commit c71b1d6cf6c34916fbc85d08ecfd1bf05371aebf
+Author: EnkiDeniz <denizsengun@hotmail.com>
+Date:   2026-03-28 21:17:02 -0400
+
+    Initialize package.json with project details
+
+ package.json | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)

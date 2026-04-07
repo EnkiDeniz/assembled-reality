@@ -5,24 +5,29 @@
 
 Loegos `1.0` is an invite-only beta for solo operators. It is a desktop-first web workbench for turning source material into a working assembly with visible proof.
 
-This `README.md` is the current product source of truth.
+This `README.md` is the repo entry point.
+
+For the live canon:
+
+- product/runtime docs start at `docs/README.md`
+- language/renderer docs start at `language/README.md`
+- historical seed and evolution material lives in `docs/LoegosSeed/`
 
 ## Active Docs
 
 - `README.md`
-- `docs/AR Version 1.0.md`
-- `docs/loegos-product-spec.md`
+- `language/README.md`
+- `docs/README.md`
 - `docs/current-state-audit.md`
-- `docs/box-migration-plan.md`
+- `docs/loegos-product-spec.md`
 - `docs/operate-spec-v2.md`
 - `docs/think-create-operate-spec.md`
 - `docs/source-model-spec.md`
 - `docs/source-normalization-table.md`
 - `docs/provenance-trust-policy.md`
-- `docs/information-architecture.md`
 - `docs/user-flows.md`
 - `docs/seven-operate-receipt-contract.md`
-- `docs/component-architecture-plan.md`
+- `docs/phase-1-proof-runbook.md`
 
 ## Release Posture
 
@@ -185,23 +190,11 @@ The visual system is locked to the current graphite/blue desktop workbench langu
 
 The goal is calm, trustworthy utility, not feature theater.
 
-## Reference Docs
+## Repo Posture
 
-These are useful inputs, but this README wins when they disagree:
+Current engineering work should begin from the live canon, not the historical proposal trail.
 
-- `docs/current-state-audit.md`
-- `docs/box-migration-plan.md`
-- `docs/loegos-product-spec.md`
-- `docs/think-create-operate-spec.md`
-- `docs/source-model-spec.md`
-- `docs/source-normalization-table.md`
-- `docs/provenance-trust-policy.md`
-- `docs/information-architecture.md`
-- `docs/user-flows.md`
-- `docs/seven-operate-receipt-contract.md`
-- `docs/component-architecture-plan.md`
-- `docs/AR Version 2.md`
-- `docs/AR Version 2 Build Plan.md`
-- `prototype/document-assembler-concept.md`
-- `prototype/document-assembler-addon-spec.md`
-- `prototype/document-assembler-cursor-inspiration.md`
+- `language/` is the canonical language/rendering surface.
+- `docs/` holds current product/runtime docs plus an archive.
+- `docs/LoegosSeed/` preserves the seed corpus and evolution artifacts that led to the box.
+- `docs/archive/` preserves superseded docs without keeping them in the main path.
