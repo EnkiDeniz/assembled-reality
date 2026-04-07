@@ -23,6 +23,9 @@ export default function LoegosExplainPanel({
   contextCopy = "",
   contextExcerptLabel = "",
   contextExcerpt = "",
+  witnessBlock = null,
+  witnessTitle = "",
+  activeTitle = "",
   mobileOpen = false,
   onCloseMobile,
   overridePending = false,
@@ -41,8 +44,11 @@ export default function LoegosExplainPanel({
         contextCopy,
         contextExcerptLabel,
         contextExcerpt,
+        witnessBlock,
+        witnessTitle,
+        activeTitle,
       }),
-    [block, contextCopy, contextExcerpt, contextExcerptLabel, contextTitle, finding],
+    [activeTitle, block, contextCopy, contextExcerpt, contextExcerptLabel, contextTitle, finding, witnessBlock, witnessTitle],
   );
 
   return (
@@ -117,6 +123,12 @@ export default function LoegosExplainPanel({
             <ExplainSection label="Shape rationale">
               <p className="founder-shell__panel-copy">{view.shapeRationale}</p>
             </ExplainSection>
+
+            {view.compareSummary ? (
+              <ExplainSection label="Commitment boundary">
+                <p className="founder-shell__panel-copy">{view.compareSummary}</p>
+              </ExplainSection>
+            ) : null}
 
             <ExplainSection label="Trust chain">
               <div className="loegos-explain__list">
@@ -217,6 +229,15 @@ export default function LoegosExplainPanel({
                   <span className="founder-shell__excerpt-label">{view.contextExcerptLabel}</span>
                 ) : null}
                 <p className="founder-shell__excerpt-copy">{view.contextExcerpt}</p>
+              </div>
+            ) : null}
+
+            {view.witnessExcerpt ? (
+              <div className="founder-shell__excerpt">
+                {view.witnessExcerptLabel ? (
+                  <span className="founder-shell__excerpt-label">{view.witnessExcerptLabel}</span>
+                ) : null}
+                <p className="founder-shell__excerpt-copy">{view.witnessExcerpt}</p>
               </div>
             ) : null}
           </div>

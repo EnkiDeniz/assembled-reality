@@ -10,20 +10,19 @@ function renderBlockContent(block = null, blockView = null, learnerMode = false)
   const text = String(block?.text || "").replace(/^#{1,6}\s+/, "");
   const shapePrefix = learnerMode ? (
     <span className="loegos-block__shape-label">{blockView?.shapeFallbackLabel || "Aim·"}</span>
-  ) : (
-    <ShapeGlyph shapeKey={blockView?.shapeKey || "aim"} size={18} className="loegos-block__shape-glyph" />
-  );
+  ) : null;
 
   if (block?.kind === "heading") {
     return (
       <h2 className="loegos-block__heading">
-        {shapePrefix}
+        {shapePrefix ? shapePrefix : null}
         <span>{text}</span>
       </h2>
     );
   }
 
   if (block?.kind === "list") {
+    const showInlinePrefix = Boolean(shapePrefix);
     return (
       <div className="loegos-block__list">
         {String(block?.text || "")
@@ -31,8 +30,17 @@ function renderBlockContent(block = null, blockView = null, learnerMode = false)
           .map((line) => line.replace(/^[-+*]\s+/, "").trim())
           .filter(Boolean)
           .map((line, index) => (
-            <div key={`${block?.id || "block"}-line-${index}`} className="loegos-block__list-line">
-              {index === 0 ? shapePrefix : <span className="loegos-block__shape-spacer" aria-hidden="true" />}
+            <div
+              key={`${block?.id || "block"}-line-${index}`}
+              className={`loegos-block__list-line ${showInlinePrefix ? "" : "is-plain"}`}
+            >
+              {showInlinePrefix ? (
+                index === 0 ? (
+                  shapePrefix
+                ) : (
+                  <span className="loegos-block__shape-spacer" aria-hidden="true" />
+                )
+              ) : null}
               <span>{line}</span>
             </div>
           ))}
@@ -42,94 +50,160 @@ function renderBlockContent(block = null, blockView = null, learnerMode = false)
 
   return (
     <p className="loegos-block__text">
-      {shapePrefix}
+      {shapePrefix ? shapePrefix : null}
       <span>{text}</span>
     </p>
   );
 }
 
 function LoegosBlock({
+  artifactKind = "Source",
   block = null,
   findingMap = null,
   selected = false,
   playing = false,
   next = false,
   learnerMode = false,
+  staged = false,
+  onStageBlock,
+  onUnstageBlock,
   onSelect,
 }) {
   const finding = findingMap?.get?.(block?.id) || null;
   const blockView = useMemo(
-    () => buildLoegosBlockView(block, finding),
-    [block, finding],
+    () => buildLoegosBlockView(block, finding, { artifactKind, isStaged: staged }),
+    [artifactKind, block, finding, staged],
   );
 
   if (!block) return null;
 
   return (
-    <button
-      type="button"
+    <article
       className={`loegos-block loegos-block--${blockView.signalKey} ${selected ? "is-selected" : ""} ${
         playing ? "is-playing" : ""
       } ${next ? "is-next" : ""}`}
-      onClick={() => onSelect?.(block?.id)}
       data-testid="founder-block"
-      aria-pressed={selected}
-      aria-label={`${blockView.shapeLabel}. ${blockView.signalLabel}. Line ${String(
-        (block?.sourcePosition || 0) + 1,
-      )}.`}
-      title={`${blockView.shapeLabel} · ${blockView.signalLabel}`}
     >
-      <span className="loegos-block__line">
-        {String((block?.sourcePosition || 0) + 1).padStart(3, "0")}
-      </span>
-      <div className="loegos-block__body">
-        <span className="loegos-block__status-label">{blockView.signalLabel}</span>
-        <div className="loegos-block__content">
-          {renderBlockContent(block, blockView, learnerMode)}
-          {blockView.annotation ? (
-            <p className={`loegos-block__annotation loegos-block__annotation--${blockView.annotationTone}`}>
-              <span className="loegos-block__annotation-icon" aria-hidden="true">
-                {blockView.annotationTone === "clear" ? "✓" : blockView.annotationTone === "warning" ? "⚠" : "•"}
-              </span>
-              <span>{blockView.annotation}</span>
-            </p>
+      <button
+        type="button"
+        className="loegos-block__hitbox"
+        onClick={() => onSelect?.(block?.id)}
+        aria-pressed={selected}
+        aria-label={`${blockView.shapeLabel}. ${blockView.signalLabel}. ${blockView.stageLabel}. Line ${String(
+          (block?.sourcePosition || 0) + 1,
+        )}.`}
+        title={`${blockView.shapeLabel} · ${blockView.signalLabel}`}
+      >
+        <span className="loegos-block__line">
+          {String((block?.sourcePosition || 0) + 1).padStart(3, "0")}
+        </span>
+        <span className="loegos-block__type" aria-hidden="true">
+          <ShapeGlyph
+            shapeKey={blockView?.shapeKey || "aim"}
+            size={16}
+            className="loegos-block__shape-glyph"
+          />
+          {learnerMode ? (
+            <span className="loegos-block__type-label">{blockView?.shapeFallbackLabel || "Aim·"}</span>
           ) : null}
+        </span>
+        <span className={`loegos-block__stage loegos-block__stage--${blockView.stageKey}`}>
+          {blockView.stageLabel}
+        </span>
+        <span
+          className={`loegos-block__exception loegos-block__exception--${blockView.exceptionKey}`}
+          aria-label={blockView.exceptionLabel}
+        >
+          {blockView.exceptionMarker || " "}
+        </span>
+
+        <div className="loegos-block__body">
+          <div className="loegos-block__content">
+            {renderBlockContent(block, blockView, learnerMode)}
+            {blockView.annotation ? (
+              <p className={`loegos-block__annotation loegos-block__annotation--${blockView.annotationTone}`}>
+                <span>{blockView.annotation}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+
+      {onStageBlock || onUnstageBlock ? (
+        <div className="loegos-block__actions">
+          {staged ? (
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onUnstageBlock?.(block?.id);
+              }}
+            >
+              Unstage
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onStageBlock?.(block);
+              }}
+            >
+              Stage
+            </button>
+          )}
+        </div>
+      ) : null}
+    </article>
   );
 }
 
+function buildTitle(blocks = [], artifactKind = "Source") {
+  const count = Array.isArray(blocks) ? blocks.length : 0;
+  if (!count) return `${artifactKind} file`;
+  return `${artifactKind} file · ${count} ${count === 1 ? "line" : "lines"}`;
+}
+
 export default function LoegosRenderer({
+  artifactKind = "Source",
   blocks = [],
   findingMap = null,
   selectedBlockId = "",
   currentBlockId = "",
   nextBlockId = "",
   learnerMode = false,
+  stagedBlockIds = [],
   onToggleLearnerMode,
+  onStageBlock,
+  onUnstageBlock,
   onSelectBlock,
-  seedState = [],
 }) {
   const hasBlocks = Array.isArray(blocks) && blocks.length > 0;
+  const stagedSet = useMemo(
+    () => new Set((Array.isArray(stagedBlockIds) ? stagedBlockIds : []).map((value) => String(value || "").trim())),
+    [stagedBlockIds],
+  );
 
   return (
     <div className="loegos-renderer" data-testid="loegos-renderer">
       <div className="loegos-renderer__toolbar">
         <div className="loegos-renderer__toolbar-copy">
-          <span className="loegos-renderer__eyebrow">Lœgos Rendering</span>
-          <p className="loegos-renderer__lede">
-            The text is the analysis. Shape and signal stay on the line itself.
-          </p>
+          <span className="loegos-renderer__eyebrow">Workbench</span>
+          <strong className="loegos-renderer__title">{buildTitle(blocks, artifactKind)}</strong>
         </div>
-        <button
-          type="button"
-          className="founder-shell__quiet-action loegos-renderer__toggle"
-          onClick={onToggleLearnerMode}
-          data-testid="loegos-learner-toggle"
-        >
-          {learnerMode ? "Show glyphs" : "Learner mode"}
-        </button>
+        <div className="loegos-renderer__toolbar-actions">
+          <span className="loegos-renderer__hint">Inspect by selecting a line.</span>
+          <button
+            type="button"
+            className="founder-shell__quiet-action loegos-renderer__toggle"
+            onClick={onToggleLearnerMode}
+            data-testid="loegos-learner-toggle"
+          >
+            {learnerMode ? "Show glyphs" : "Learner mode"}
+          </button>
+        </div>
       </div>
 
       {hasBlocks ? (
@@ -137,12 +211,16 @@ export default function LoegosRenderer({
           {blocks.map((block) => (
             <LoegosBlock
               key={block.id}
+              artifactKind={artifactKind}
               block={block}
               findingMap={findingMap}
               selected={block.id === selectedBlockId}
               playing={block.id === currentBlockId}
               next={block.id === nextBlockId}
               learnerMode={learnerMode}
+              staged={stagedSet.has(String(block.id || "").trim())}
+              onStageBlock={onStageBlock}
+              onUnstageBlock={onUnstageBlock}
               onSelect={onSelectBlock}
             />
           ))}
@@ -156,17 +234,6 @@ export default function LoegosRenderer({
           </p>
         </div>
       )}
-
-      {seedState.length ? (
-        <footer className="loegos-renderer__seed-state" data-testid="founder-seed-state">
-          {seedState.map((entry) => (
-            <article key={entry.key} className="loegos-renderer__seed-card">
-              <span className="loegos-renderer__seed-label">{entry.label}</span>
-              <p className="loegos-renderer__seed-copy">{entry.value}</p>
-            </article>
-          ))}
-        </footer>
-      ) : null}
     </div>
   );
 }

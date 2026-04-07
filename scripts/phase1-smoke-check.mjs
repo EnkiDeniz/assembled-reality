@@ -126,9 +126,10 @@ async function main() {
   assert.match(founderShell, /Ask Seven/);
   assert.match(founderShell, /founder-shell-open-full-workspace/);
   assert.match(founderShell, /founder-shell-assistant-toggle/);
-  assert.match(loegosRenderer, /Lœgos Rendering/);
+  assert.match(founderShell, /FounderWorkbenchTree/);
+  assert.match(loegosRenderer, /Workbench/);
   assert.match(loegosRenderer, /loegos-learner-toggle/);
-  assert.match(loegosRenderer, /founder-seed-state/);
+  assert.match(loegosRenderer, /loegos-block__stage/);
   assert.match(loegosExplainPanel, /Lœgos read/);
   assert.match(loegosExplainPanel, /workspace-attest-block-input/);
   assert.match(loegosExplainPanel, /workspace-attest-block-submit/);

@@ -25,6 +25,15 @@ const SHAPE_FALLBACK_LABELS = Object.freeze({
   seal: "Seal·",
 });
 
+const STAGE_LABELS = Object.freeze({
+  witness: "WIT",
+  staged: "STG",
+  draft: "DRF",
+  confirmed: "CNF",
+  discarded: "DSC",
+  sealed: "SEA",
+});
+
 function normalizeSignalKey(value = "") {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "green" || normalized === "amber" || normalized === "red") return normalized;
@@ -47,10 +56,46 @@ function normalizeTextLine(value = "") {
     .trim();
 }
 
+function normalizeStageKey(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "witness") return "witness";
+  if (normalized === "staged") return "staged";
+  if (normalized === "confirmed") return "confirmed";
+  if (normalized === "discarded") return "discarded";
+  if (normalized === "sealed") return "sealed";
+  return "draft";
+}
+
 function truncateText(value = "", maxLength = 180) {
   const normalized = String(value || "").replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function normalizeBlockOrigin(block = null) {
+  if (!block || typeof block !== "object") {
+    return {
+      sourceDocumentKey: "",
+      sourcePosition: -1,
+      importedFromBlockId: "",
+    };
+  }
+
+  const provenance = block?.provenance && typeof block.provenance === "object" ? block.provenance : null;
+  const sourcePosition = Number.isFinite(Number(block?.sourcePosition))
+    ? Number(block.sourcePosition)
+    : -1;
+
+  return {
+    sourceDocumentKey: String(
+      provenance?.importedFromDocumentKey ||
+        block?.sourceDocumentKey ||
+        block?.documentKey ||
+        "",
+    ).trim(),
+    sourcePosition,
+    importedFromBlockId: String(provenance?.importedFromBlockId || "").trim(),
+  };
 }
 
 function defaultShapeRationale(shapeKey = "aim") {
@@ -82,6 +127,54 @@ function defaultSignalAnnotation(signalKey = "neutral") {
   return "Operate has not read this block yet, so signal stays neutral.";
 }
 
+function inferStageKey(block = null, { artifactKind = "", isStaged = false } = {}) {
+  if (isStaged) return "staged";
+
+  const confirmationStatus = String(block?.confirmationStatus || "").trim().toLowerCase();
+  if (confirmationStatus === "confirmed") return "confirmed";
+  if (confirmationStatus === "discarded") return "discarded";
+
+  const artifact = String(artifactKind || "").trim().toLowerCase();
+  if (artifact === "source" || artifact === "witness") return "witness";
+
+  const blockStatus = String(block?.status || "").trim().toLowerCase();
+  if (blockStatus === "sealed") return "sealed";
+
+  return "draft";
+}
+
+function getExceptionState(signalKey = "neutral", finding = null) {
+  if (signalKey === "override" || finding?.overrideApplied) {
+    return {
+      key: "attested",
+      marker: "ATT",
+      label: "Attested override",
+    };
+  }
+
+  if (signalKey === "red") {
+    return {
+      key: "unsupported",
+      marker: "!",
+      label: "Unsupported",
+    };
+  }
+
+  if (signalKey === "amber") {
+    return {
+      key: "partial",
+      marker: "~",
+      label: "Partial support",
+    };
+  }
+
+  return {
+    key: "none",
+    marker: "",
+    label: "No exception",
+  };
+}
+
 function defaultSignalRationale(signalKey = "neutral", contextCopy = "") {
   if (signalKey === "green") {
     return "Local evidence survived the read strongly enough for this line to render as grounded.";
@@ -96,6 +189,21 @@ function defaultSignalRationale(signalKey = "neutral", contextCopy = "") {
     return "A human attested this line directly. The receipt keeps the override explicit instead of presenting it as evidence.";
   }
   return contextCopy || "This block has shape, but no declared Operate read yet, so the signal remains uninformed.";
+}
+
+function buildCommitmentBoundarySummary(block = null, witnessBlock = null) {
+  const activeText = normalizeTextLine(block?.plainText || block?.text || "");
+  const witnessText = normalizeTextLine(witnessBlock?.plainText || witnessBlock?.text || "");
+
+  if (!activeText || !witnessText) {
+    return "Witness stays immutable here while the compiled line becomes the active structure you can now inspect and carry forward.";
+  }
+
+  if (activeText === witnessText) {
+    return "The wording stayed close to the witness, but the line has crossed into active structure: it is now the object the box can inspect and work on.";
+  }
+
+  return "The compiled line has been reshaped from the witness so the statement can carry type, stage, and support more explicitly than the original prose.";
 }
 
 function buildSignalChangeHint(signalKey = "neutral", { hasEvidence = false, hasOverride = false } = {}) {
@@ -169,6 +277,10 @@ export function getShapeFallbackLabel(shapeKey = "aim") {
   return SHAPE_FALLBACK_LABELS[normalizeShapeKey(shapeKey)] || SHAPE_FALLBACK_LABELS.aim;
 }
 
+export function getStageLabel(stageKey = "draft") {
+  return STAGE_LABELS[normalizeStageKey(stageKey)] || STAGE_LABELS.draft;
+}
+
 export function getActiveBlockOverride(overrides = []) {
   return sortOverridesForDisplay(overrides).find(
     (override) =>
@@ -178,7 +290,80 @@ export function getActiveBlockOverride(overrides = []) {
   ) || null;
 }
 
-export function buildLoegosBlockView(block = null, finding = null) {
+export function findWitnessBlockForActiveBlock(
+  activeBlock = null,
+  witnessBlocks = [],
+  witnessDocumentKey = "",
+) {
+  if (!activeBlock) return null;
+
+  const origin = normalizeBlockOrigin(activeBlock);
+  const normalizedWitnessDocumentKey = String(witnessDocumentKey || "").trim();
+  const blocks = Array.isArray(witnessBlocks) ? witnessBlocks : [];
+
+  if (origin.importedFromBlockId) {
+    const byId = blocks.find((block) => String(block?.id || "").trim() === origin.importedFromBlockId);
+    if (byId) return byId;
+  }
+
+  return blocks.find((block) => {
+    const blockId = String(block?.id || "").trim();
+    const blockDocumentKey = String(block?.documentKey || block?.sourceDocumentKey || "").trim();
+    const blockPosition = Number.isFinite(Number(block?.sourcePosition))
+      ? Number(block.sourcePosition)
+      : -1;
+
+    if (origin.importedFromBlockId && blockId === origin.importedFromBlockId) return true;
+    if (
+      normalizedWitnessDocumentKey &&
+      origin.sourceDocumentKey &&
+      origin.sourceDocumentKey === normalizedWitnessDocumentKey &&
+      blockDocumentKey === normalizedWitnessDocumentKey &&
+      origin.sourcePosition === blockPosition
+    ) {
+      return true;
+    }
+
+    return origin.sourcePosition >= 0 && origin.sourcePosition === blockPosition;
+  }) || null;
+}
+
+export function findActiveBlockForWitnessBlock(
+  witnessBlock = null,
+  activeBlocks = [],
+  witnessDocumentKey = "",
+) {
+  if (!witnessBlock) return null;
+
+  const blocks = Array.isArray(activeBlocks) ? activeBlocks : [];
+  const witnessId = String(witnessBlock?.id || "").trim();
+  const witnessPosition = Number.isFinite(Number(witnessBlock?.sourcePosition))
+    ? Number(witnessBlock.sourcePosition)
+    : -1;
+  const normalizedWitnessDocumentKey = String(
+    witnessDocumentKey ||
+      witnessBlock?.documentKey ||
+      witnessBlock?.sourceDocumentKey ||
+      "",
+  ).trim();
+
+  return blocks.find((block) => {
+    const origin = normalizeBlockOrigin(block);
+    if (origin.importedFromBlockId && origin.importedFromBlockId === witnessId) return true;
+    if (
+      normalizedWitnessDocumentKey &&
+      origin.sourceDocumentKey &&
+      origin.sourceDocumentKey === normalizedWitnessDocumentKey &&
+      witnessPosition >= 0 &&
+      origin.sourcePosition === witnessPosition
+    ) {
+      return true;
+    }
+    return false;
+  }) || null;
+}
+
+export function buildLoegosBlockView(block = null, finding = null, options = {}) {
   const normalizedBlock = block && typeof block === "object" ? block : null;
   const findingSignal = normalizeSignalKey(finding?.displaySignal || finding?.signal);
   const annotation = buildFormalSentenceAnnotations(
@@ -196,6 +381,8 @@ export function buildLoegosBlockView(block = null, finding = null) {
     finding?.uncertainty ||
     diagnostics[0]?.message ||
     defaultSignalAnnotation(findingSignal);
+  const stageKey = inferStageKey(normalizedBlock, options);
+  const exception = getExceptionState(findingSignal, finding);
 
   return {
     block: normalizedBlock,
@@ -206,6 +393,11 @@ export function buildLoegosBlockView(block = null, finding = null) {
     shapeRationale: diagnostics[0]?.message || defaultShapeRationale(shapeKey),
     signalKey: findingSignal,
     signalLabel: getSignalLabel(findingSignal),
+    stageKey,
+    stageLabel: getStageLabel(stageKey),
+    exceptionKey: exception.key,
+    exceptionMarker: exception.marker,
+    exceptionLabel: exception.label,
     trustLevel: String(finding?.trustLevel || "").trim(),
     annotation: truncateText(annotationSource, 148),
     annotationTone:
@@ -224,14 +416,22 @@ export function buildExplainPanelView({
   contextTitle = "",
   contextExcerpt = "",
   contextExcerptLabel = "",
+  witnessBlock = null,
+  witnessTitle = "",
+  activeTitle = "",
 } = {}) {
   if (!block) {
     return {
       empty: true,
       title: contextTitle || "Select a block to inspect its read.",
       copy: contextCopy || "The selected block drives the explainability panel.",
-      contextExcerpt,
-      contextExcerptLabel,
+    contextExcerpt,
+    contextExcerptLabel,
+    witnessExcerpt: "",
+    witnessExcerptLabel: "",
+    compareSummary: "",
+    activeTitle,
+    witnessTitle,
     };
   }
 
@@ -283,6 +483,17 @@ export function buildExplainPanelView({
       hasEvidence: evidence.length > 0,
       hasOverride: Boolean(activeBlockOverride),
     }),
+    witnessExcerpt: truncateText(
+      witnessBlock?.plainText || witnessBlock?.text || "",
+      220,
+    ),
+    witnessExcerptLabel:
+      witnessBlock && Number.isFinite(Number(witnessBlock?.sourcePosition))
+        ? `${witnessTitle || "Witness"} · line ${String(Number(witnessBlock.sourcePosition) + 1).padStart(3, "0")}`
+        : witnessTitle || "",
+    compareSummary: buildCommitmentBoundarySummary(block, witnessBlock),
+    activeTitle,
+    witnessTitle,
     contextTitle,
     contextExcerpt,
     contextExcerptLabel,

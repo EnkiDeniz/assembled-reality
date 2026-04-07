@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import SignOutButton from "@/components/SignOutButton";
 import LoegosExplainPanel from "@/components/founder/LoegosExplainPanel";
+import FounderWorkbenchTree from "@/components/founder/FounderWorkbenchTree";
 import LoegosRenderer from "@/components/founder/LoegosRenderer";
+import FounderWitnessPane from "@/components/founder/FounderWitnessPane";
 
 export default function FounderShell({
   testId = "founder-shell",
@@ -22,15 +24,24 @@ export default function FounderShell({
   systemCopy = "",
   systemExcerptLabel = "",
   systemExcerpt = "",
+  witnessTitle = "",
+  witnessSubtitle = "",
+  witnessBlocks = [],
+  selectedWitnessBlockId = "",
+  onSelectWitnessBlock,
   primaryAction = null,
   secondaryAction = null,
   onOpenFullWorkspace,
+  treeSections = [],
   assistantOpen = false,
   onToggleAssistant,
   assistant = null,
   player = null,
   findingMap = null,
   seedState = [],
+  stagedBlockIds = [],
+  onStageBlock,
+  onUnstageBlock,
   overridePending = false,
   onCreateOverride,
   onDeleteOverride,
@@ -38,12 +49,23 @@ export default function FounderShell({
   const [learnerMode, setLearnerMode] = useState(false);
   const [mobileExplainOpen, setMobileExplainOpen] = useState(false);
   const hasBlocks = Array.isArray(blocks) && blocks.length > 0;
+  const hasWitnessBlocks = Array.isArray(witnessBlocks) && witnessBlocks.length > 0;
   const selectedBlock = useMemo(
     () =>
       (Array.isArray(blocks) ? blocks : []).find((block) => block.id === selectedBlockId) ||
       blocks[0] ||
       null,
     [blocks, selectedBlockId],
+  );
+  const selectedWitnessBlock = useMemo(
+    () => {
+      if (!selectedWitnessBlockId) return null;
+      return (
+        (Array.isArray(witnessBlocks) ? witnessBlocks : []).find((block) => block.id === selectedWitnessBlockId) ||
+        null
+      );
+    },
+    [selectedWitnessBlockId, witnessBlocks],
   );
   const selectedFinding = selectedBlock ? findingMap?.get?.(selectedBlock.id) || null : null;
 
@@ -52,50 +74,18 @@ export default function FounderShell({
       <div className="founder-shell__frame" data-testid="founder-shell">
         <header className="founder-shell__header">
           <div className="founder-shell__copy">
-            <span className="founder-shell__eyebrow">{artifactKind}</span>
-            <h1 className="founder-shell__title">{artifactTitle || "Untitled artifact"}</h1>
-            {intro ? <p className="founder-shell__intro">{intro}</p> : null}
+            <div className="founder-shell__title-row">
+              <span className="founder-shell__eyebrow">{artifactKind}</span>
+              <h1 className="founder-shell__title">{artifactTitle || "Untitled artifact"}</h1>
+            </div>
             <div className="founder-shell__meta">
               {projectTitle ? <span>{projectTitle}</span> : null}
               {artifactSubtitle ? <span>{artifactSubtitle}</span> : null}
             </div>
+            {intro ? <p className="founder-shell__intro">{intro}</p> : null}
           </div>
 
           <div className="founder-shell__header-side">
-            <div className="founder-shell__next-step" data-testid="founder-shell-next-step">
-              <span className="founder-shell__panel-eyebrow">Next step</span>
-              <strong className="founder-shell__panel-title">
-                {primaryAction?.title || "Keep one honest next move visible."}
-              </strong>
-              {primaryAction?.detail ? (
-                <p className="founder-shell__panel-copy founder-shell__next-copy">
-                  {primaryAction.detail}
-                </p>
-              ) : null}
-              <div className="founder-shell__panel-actions">
-                {primaryAction?.onClick ? (
-                  <button
-                    type="button"
-                    className="terminal-button is-primary"
-                    data-testid={primaryAction.testId || undefined}
-                    onClick={primaryAction.onClick}
-                  >
-                    {primaryAction.label || "Continue"}
-                  </button>
-                ) : null}
-                {secondaryAction?.onClick ? (
-                  <button
-                    type="button"
-                    className="terminal-button"
-                    data-testid={secondaryAction.testId || undefined}
-                    onClick={secondaryAction.onClick}
-                  >
-                    {secondaryAction.label}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
             <div className="founder-shell__session" aria-label="Account and session">
               <button
                 type="button"
@@ -120,24 +110,52 @@ export default function FounderShell({
         </header>
 
         <div className="founder-shell__body">
-          <main className="founder-shell__artifact" data-testid="founder-shell-artifact">
-            <div className="founder-shell__artifact-scroll">
-              <LoegosRenderer
-                blocks={hasBlocks ? blocks : []}
-                findingMap={findingMap}
-                selectedBlockId={selectedBlock?.id || ""}
-                currentBlockId={currentBlockId}
-                nextBlockId={nextBlockId}
-                learnerMode={learnerMode}
-                onToggleLearnerMode={() => setLearnerMode((value) => !value)}
+          <FounderWorkbenchTree
+            projectTitle={projectTitle}
+            artifactKind={artifactKind}
+            artifactTitle={artifactTitle}
+            sections={treeSections}
+            primaryAction={primaryAction}
+            secondaryAction={secondaryAction}
+          />
+
+          <div className={`founder-shell__workspace ${hasWitnessBlocks ? "is-compare" : ""}`}>
+            {hasWitnessBlocks ? (
+              <FounderWitnessPane
+                title={witnessTitle}
+                subtitle={witnessSubtitle}
+                blocks={witnessBlocks}
+                selectedBlockId={selectedWitnessBlock?.id || ""}
                 onSelectBlock={(blockId) => {
-                  onSelectBlock?.(blockId);
+                  onSelectWitnessBlock?.(blockId);
                   setMobileExplainOpen(true);
                 }}
-                seedState={seedState}
               />
-            </div>
-          </main>
+            ) : null}
+
+            <main className="founder-shell__artifact" data-testid="founder-shell-artifact">
+              <div className="founder-shell__artifact-scroll">
+                <LoegosRenderer
+                  artifactKind={artifactKind}
+                  blocks={hasBlocks ? blocks : []}
+                  findingMap={findingMap}
+                  selectedBlockId={selectedBlock?.id || ""}
+                  currentBlockId={currentBlockId}
+                  nextBlockId={nextBlockId}
+                  learnerMode={learnerMode}
+                  onToggleLearnerMode={() => setLearnerMode((value) => !value)}
+                  stagedBlockIds={stagedBlockIds}
+                  onStageBlock={onStageBlock}
+                  onUnstageBlock={onUnstageBlock}
+                  onSelectBlock={(blockId) => {
+                    onSelectBlock?.(blockId);
+                    setMobileExplainOpen(true);
+                  }}
+                  seedState={seedState}
+                />
+              </div>
+            </main>
+          </div>
 
           <LoegosExplainPanel
             block={selectedBlock}
@@ -146,6 +164,9 @@ export default function FounderShell({
             contextCopy={systemCopy}
             contextExcerptLabel={systemExcerptLabel}
             contextExcerpt={systemExcerpt}
+            witnessBlock={selectedWitnessBlock}
+            witnessTitle={witnessTitle}
+            activeTitle={artifactTitle}
             mobileOpen={mobileExplainOpen}
             onCloseMobile={() => setMobileExplainOpen(false)}
             overridePending={overridePending}
