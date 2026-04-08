@@ -39,10 +39,19 @@ export default function FounderShell({
   assistant = null,
   player = null,
   findingMap = null,
-  seedState = [],
   stagedBlockIds = [],
+  editable = false,
+  blockActionPendingId = "",
+  blockSaveStates = {},
   onStageBlock,
   onUnstageBlock,
+  onRewriteBlock,
+  onKeepDraftBlock,
+  onAcceptBlockInference,
+  onRecastBlockTag,
+  onOpenSourceWitness,
+  onSplitBlock,
+  onMergeBlock,
   overridePending = false,
   onCreateOverride,
   onDeleteOverride,
@@ -156,13 +165,22 @@ export default function FounderShell({
                   learnerMode={learnerMode}
                   onToggleLearnerMode={() => setLearnerMode((value) => !value)}
                   stagedBlockIds={stagedBlockIds}
+                  editable={editable}
+                  blockActionPendingId={blockActionPendingId}
+                  blockSaveStates={blockSaveStates}
                   onStageBlock={onStageBlock}
                   onUnstageBlock={onUnstageBlock}
+                  onRewriteBlock={onRewriteBlock}
+                  onKeepDraftBlock={onKeepDraftBlock}
+                  onAcceptBlockInference={onAcceptBlockInference}
+                  onRecastBlockTag={onRecastBlockTag}
+                  onOpenSourceWitness={onOpenSourceWitness}
+                  onSplitBlock={onSplitBlock}
+                  onMergeBlock={onMergeBlock}
                   onSelectBlock={(blockId) => {
                     onSelectBlock?.(blockId);
                     setMobileExplainOpen(true);
                   }}
-                  seedState={seedState}
                 />
               </div>
             </main>

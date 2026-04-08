@@ -8916,9 +8916,49 @@ button.assembler-ide-statusbar__segment {
   line-height: 1.55;
 }
 
+.loegos-block__checks {
+  display: grid;
+  gap: 6px;
+}
+
+.loegos-block__check {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  line-height: 1.6;
+}
+
+.loegos-block__check strong {
+  color: rgba(236, 240, 240, 0.9);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.loegos-block__check span {
+  color: rgba(184, 190, 189, 0.78);
+}
+
+.loegos-block__check--warning {
+  border-color: rgba(239, 181, 78, 0.22);
+  background: rgba(239, 181, 78, 0.06);
+}
+
+.loegos-block__check--danger {
+  border-color: rgba(236, 94, 84, 0.24);
+  background: rgba(236, 94, 84, 0.07);
+}
+
 .loegos-block__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 10px 14px 10px 0;
   opacity: 0;
   pointer-events: none;
@@ -8933,8 +8973,60 @@ button.assembler-ide-statusbar__segment {
 }
 
 .loegos-block__actions .assembler-tiny-button {
-  min-width: 72px;
+  min-width: 60px;
   justify-content: center;
+}
+
+.loegos-block__editor-wrap,
+.loegos-block__recast {
+  display: grid;
+  gap: 10px;
+  margin: 0 14px 12px 56px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.loegos-block__editor {
+  width: 100%;
+  min-height: 108px;
+  resize: vertical;
+  border: 0;
+  background: transparent;
+  color: rgba(236, 240, 240, 0.92);
+  font-family: var(--font-copy);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.loegos-block__editor:focus {
+  outline: none;
+}
+
+.loegos-block__editor-actions,
+.loegos-block__recast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.loegos-block__editor-status {
+  color: rgba(184, 190, 189, 0.72);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.loegos-block__editor-status.is-saved {
+  color: #66d278;
+}
+
+.loegos-block__editor-status.is-conflict,
+.loegos-block__editor-status.is-error {
+  color: #ec5e54;
 }
 
 .loegos-explain {
@@ -8951,6 +9043,41 @@ button.assembler-ide-statusbar__segment {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 18%),
     rgba(12, 14, 15, 0.98);
+}
+
+.loegos-explain__checks {
+  display: grid;
+  gap: 10px;
+}
+
+.loegos-explain__check {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.loegos-explain__check strong {
+  color: rgba(236, 240, 240, 0.92);
+}
+
+.loegos-explain__check p {
+  margin: 0;
+  color: rgba(184, 190, 189, 0.78);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.loegos-explain__check--warning {
+  border-color: rgba(239, 181, 78, 0.22);
+  background: rgba(239, 181, 78, 0.06);
+}
+
+.loegos-explain__check--danger {
+  border-color: rgba(236, 94, 84, 0.24);
+  background: rgba(236, 94, 84, 0.07);
 }
 
 .assembler-first-box {

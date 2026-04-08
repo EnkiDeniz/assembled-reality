@@ -1,8 +1,45 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ShapeGlyph } from "@/components/LoegosSystem";
+import {
+  ASSEMBLY_PRIMARY_TAGS,
+} from "@/lib/assembly-architecture";
 import { buildLoegosBlockView } from "@/lib/founder-renderer";
+
+const RECAST_OPTIONS = [
+  { label: "Aim", value: ASSEMBLY_PRIMARY_TAGS.aim },
+  { label: "Reality", value: ASSEMBLY_PRIMARY_TAGS.evidence },
+  { label: "Weld", value: ASSEMBLY_PRIMARY_TAGS.story },
+];
+
+function buildCompressionDraft(block = null) {
+  return String(block?.plainText || block?.text || "")
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildSplitPreviewCount(block = null) {
+  const text = String(block?.plainText || block?.text || "")
+    .replace(/\n+/g, " ")
+    .trim();
+
+  if (!text) return 0;
+
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean).length;
+}
+
+function getSaveStateLabel(saveState = "") {
+  if (saveState === "saving") return "Saving…";
+  if (saveState === "saved") return "Saved";
+  if (saveState === "conflict") return "Reload latest before saving again";
+  if (saveState === "error") return "Not saved";
+  return "";
+}
 
 function renderBlockContent(block = null, blockView = null, learnerMode = false) {
   if (!block) return null;
@@ -65,15 +102,35 @@ function LoegosBlock({
   next = false,
   learnerMode = false,
   staged = false,
+  editable = false,
+  actionPending = false,
+  saveState = "",
+  canMerge = false,
   onStageBlock,
   onUnstageBlock,
+  onRewriteBlock,
+  onKeepDraftBlock,
+  onAcceptBlockInference,
+  onRecastBlockTag,
+  onOpenSourceWitness,
+  onSplitBlock,
+  onMergeBlock,
   onSelect,
 }) {
+  const [editing, setEditing] = useState(false);
+  const [recastOpen, setRecastOpen] = useState(false);
+  const [draftText, setDraftText] = useState(block?.text || "");
   const finding = findingMap?.get?.(block?.id) || null;
   const blockView = useMemo(
     () => buildLoegosBlockView(block, finding, { artifactKind, isStaged: staged }),
     [artifactKind, block, finding, staged],
   );
+  const splitPreviewCount = useMemo(() => buildSplitPreviewCount(block), [block]);
+  const canSplit = splitPreviewCount > 1;
+  const controlsDisabled = actionPending || saveState === "saving";
+  const canMutate = Boolean(editable && block?.isEditable);
+  const saveStateLabel = getSaveStateLabel(saveState);
+  const currentPrimaryTag = String(block?.primaryTag || "").trim().toLowerCase();
 
   if (!block) return null;
 
@@ -81,7 +138,7 @@ function LoegosBlock({
     <article
       className={`loegos-block loegos-block--${blockView.signalKey} ${selected ? "is-selected" : ""} ${
         playing ? "is-playing" : ""
-      } ${next ? "is-next" : ""}`}
+      } ${next ? "is-next" : ""} ${editing ? "is-editing" : ""}`}
       data-testid="founder-block"
     >
       <button
@@ -125,36 +182,190 @@ function LoegosBlock({
                 <span>{blockView.annotation}</span>
               </p>
             ) : null}
+            {blockView.compilerChecks?.length ? (
+              <div className="loegos-block__checks">
+                {blockView.compilerChecks.map((check) => (
+                  <div
+                    key={check.key}
+                    className={`loegos-block__check loegos-block__check--${check.tone || "neutral"}`}
+                  >
+                    <strong>{check.label}</strong>
+                    <span>{check.detail}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </button>
 
-      {onStageBlock || onUnstageBlock ? (
-        <div className="loegos-block__actions">
-          {staged ? (
+      {editing ? (
+        <div className="loegos-block__editor-wrap">
+          <textarea
+            className="loegos-block__editor"
+            value={draftText}
+            rows={4}
+            onChange={(event) => setDraftText(event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                event.preventDefault();
+                onRewriteBlock?.(block, draftText);
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setEditing(false);
+                setDraftText(block?.text || "");
+              }
+            }}
+          />
+          <div className="loegos-block__editor-actions">
             <button
               type="button"
               className="assembler-tiny-button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onUnstageBlock?.(block?.id);
-              }}
+              onClick={() => onRewriteBlock?.(block, draftText)}
+              disabled={controlsDisabled || !String(draftText || "").trim()}
             >
-              Unstage
+              Save
             </button>
-          ) : (
             <button
               type="button"
               className="assembler-tiny-button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onStageBlock?.(block);
+              onClick={() => {
+                setEditing(false);
+                setDraftText(block?.text || "");
               }}
+              disabled={controlsDisabled}
             >
-              Stage
+              Cancel
             </button>
-          )}
+            {saveStateLabel ? (
+              <span className={`loegos-block__editor-status is-${saveState || "idle"}`}>
+                {saveStateLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
+      ) : null}
+
+      {canMutate || onStageBlock || onUnstageBlock || onOpenSourceWitness ? (
+        <>
+          <div className="loegos-block__actions">
+            {canMutate ? (
+              <>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => {
+                    setDraftText(block?.text || "");
+                    setEditing(true);
+                  }}
+                  disabled={controlsDisabled}
+                >
+                  Rewrite
+                </button>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => {
+                    setDraftText(buildCompressionDraft(block));
+                    setEditing(true);
+                  }}
+                  disabled={controlsDisabled}
+                >
+                  Compress
+                </button>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => onSplitBlock?.(block)}
+                  disabled={controlsDisabled || !canSplit}
+                >
+                  Split
+                </button>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => onMergeBlock?.(block)}
+                  disabled={controlsDisabled || !canMerge}
+                >
+                  Merge
+                </button>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => onKeepDraftBlock?.(block)}
+                  disabled={controlsDisabled}
+                >
+                  Draft
+                </button>
+                <button
+                  type="button"
+                  className="assembler-tiny-button"
+                  onClick={() => onAcceptBlockInference?.(block, { shapeKey: blockView.shapeKey })}
+                  disabled={controlsDisabled}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  className={`assembler-tiny-button ${recastOpen ? "is-active" : ""}`}
+                  onClick={() => setRecastOpen((value) => !value)}
+                  disabled={controlsDisabled}
+                >
+                  Recast
+                </button>
+              </>
+            ) : null}
+
+            {staged ? (
+              <button
+                type="button"
+                className="assembler-tiny-button"
+                onClick={() => onUnstageBlock?.(block?.id)}
+                disabled={controlsDisabled}
+              >
+                Unstage
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="assembler-tiny-button"
+                onClick={() => onStageBlock?.(block)}
+                disabled={controlsDisabled}
+              >
+                Stage
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="assembler-tiny-button"
+              onClick={() => onOpenSourceWitness?.(block)}
+              disabled={controlsDisabled}
+            >
+              Witness
+            </button>
+          </div>
+
+          {canMutate && recastOpen ? (
+            <div className="loegos-block__recast">
+              {RECAST_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`assembler-tiny-button ${currentPrimaryTag === option.value ? "is-active" : ""}`}
+                  onClick={() => {
+                    setRecastOpen(false);
+                    onRecastBlockTag?.(block, option.value);
+                  }}
+                  disabled={controlsDisabled}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : null}
     </article>
   );
@@ -175,9 +386,19 @@ export default function LoegosRenderer({
   nextBlockId = "",
   learnerMode = false,
   stagedBlockIds = [],
+  editable = false,
+  blockActionPendingId = "",
+  blockSaveStates = {},
   onToggleLearnerMode,
   onStageBlock,
   onUnstageBlock,
+  onRewriteBlock,
+  onKeepDraftBlock,
+  onAcceptBlockInference,
+  onRecastBlockTag,
+  onOpenSourceWitness,
+  onSplitBlock,
+  onMergeBlock,
   onSelectBlock,
 }) {
   const hasBlocks = Array.isArray(blocks) && blocks.length > 0;
@@ -208,9 +429,9 @@ export default function LoegosRenderer({
 
       {hasBlocks ? (
         <div className="loegos-renderer__blocks">
-          {blocks.map((block) => (
+          {blocks.map((block, index) => (
             <LoegosBlock
-              key={block.id}
+              key={`${block.id}:${block.updatedAt || block.text || ""}`}
               artifactKind={artifactKind}
               block={block}
               findingMap={findingMap}
@@ -219,8 +440,19 @@ export default function LoegosRenderer({
               next={block.id === nextBlockId}
               learnerMode={learnerMode}
               staged={stagedSet.has(String(block.id || "").trim())}
+              editable={editable}
+              actionPending={blockActionPendingId === block.id}
+              saveState={blockSaveStates[block.id] || ""}
+              canMerge={index < blocks.length - 1}
               onStageBlock={onStageBlock}
               onUnstageBlock={onUnstageBlock}
+              onRewriteBlock={onRewriteBlock}
+              onKeepDraftBlock={onKeepDraftBlock}
+              onAcceptBlockInference={onAcceptBlockInference}
+              onRecastBlockTag={onRecastBlockTag}
+              onOpenSourceWitness={onOpenSourceWitness}
+              onSplitBlock={onSplitBlock}
+              onMergeBlock={onMergeBlock}
               onSelect={onSelectBlock}
             />
           ))}

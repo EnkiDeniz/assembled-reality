@@ -124,6 +124,22 @@ export default function LoegosExplainPanel({
               <p className="founder-shell__panel-copy">{view.shapeRationale}</p>
             </ExplainSection>
 
+            {view.compilerChecks?.length ? (
+              <ExplainSection label="Compiler truth">
+                <div className="loegos-explain__checks">
+                  {view.compilerChecks.map((check) => (
+                    <article
+                      key={check.key}
+                      className={`loegos-explain__check loegos-explain__check--${check.tone || "neutral"}`}
+                    >
+                      <strong>{check.label}</strong>
+                      <p>{check.detail}</p>
+                    </article>
+                  ))}
+                </div>
+              </ExplainSection>
+            ) : null}
+
             {view.compareSummary ? (
               <ExplainSection label="Commitment boundary">
                 <p className="founder-shell__panel-copy">{view.compareSummary}</p>

@@ -10599,6 +10599,142 @@ export default function WorkspaceShell({
     };
   }
 
+  function getWorkspaceDocument(documentKey = "") {
+    const normalizedDocumentKey = String(documentKey || "").trim();
+    if (!normalizedDocumentKey) return null;
+
+    if (activeDocument?.documentKey === normalizedDocumentKey) return activeDocument;
+    if (currentSeedDocument?.documentKey === normalizedDocumentKey) return currentSeedDocument;
+
+    return (
+      getDocumentByKey(normalizedDocumentKey, documentCache, hydratedProjectDocuments) ||
+      getDocumentByKey(normalizedDocumentKey, documentCache, projectDocuments) ||
+      null
+    );
+  }
+
+  function resolveEditableDocument(targetDocument = null, fallbackBlock = null) {
+    const explicitDocumentKey = String(targetDocument?.documentKey || "").trim();
+    if (explicitDocumentKey) {
+      return getWorkspaceDocument(explicitDocumentKey) || targetDocument;
+    }
+
+    const blockDocumentKey = String(fallbackBlock?.documentKey || "").trim();
+    if (blockDocumentKey) {
+      return getWorkspaceDocument(blockDocumentKey);
+    }
+
+    return activeDocument;
+  }
+
+  function normalizeEditableDocumentBlocks(document, nextBlocks) {
+    return normalizeWorkspaceBlocks(
+      (Array.isArray(nextBlocks) ? nextBlocks : [])
+        .filter((block) => String(block?.text || "").trim())
+        .map((block, index) => ({
+          ...block,
+          sourcePosition: index,
+        })),
+      {
+        documentKey: document.documentKey,
+        defaultSourceDocumentKey: document.documentKey,
+        defaultIsEditable: true,
+      },
+    );
+  }
+
+  async function persistEditableDocumentBlocks(
+    document,
+    nextBlocks,
+    {
+      pendingAction = "",
+      successMessage = "Saved changes.",
+      errorMessage = "Could not save these changes.",
+      logAction = "EDITED",
+      logDetail = "",
+      nextFocusId = null,
+      touchedBlockId = "",
+      saveStateKey = "",
+    } = {},
+  ) {
+    if (!document?.isEditable) return null;
+
+    const normalizedBlocks = normalizeEditableDocumentBlocks(document, nextBlocks);
+    if (!normalizedBlocks.length) {
+      setFeedback("This would remove every line.", "error");
+      return null;
+    }
+
+    const nextDocument = buildNextDocumentFromBlocks(document, normalizedBlocks);
+    const actionKey = String(touchedBlockId || saveStateKey || pendingAction || "").trim();
+
+    if (document.documentKey === activeDocument?.documentKey && currentBlock?.id) {
+      stopPlayback();
+    }
+
+    if (actionKey) {
+      setBlockActionPendingId(actionKey);
+    }
+    if (saveStateKey) {
+      setBlockSaveStates((previous) => ({
+        ...previous,
+        [saveStateKey]: "saving",
+      }));
+    }
+    setDocumentState(document.documentKey, {
+      status: "saving",
+      message: "Saving changes…",
+    });
+    upsertDocument(nextDocument);
+    appendLog(logAction, logDetail || `${document.title} updated`, {
+      documentKey: document.documentKey,
+      blockIds: touchedBlockId ? [touchedBlockId] : [],
+    });
+
+    try {
+      const savedDocument = await saveDocument(nextDocument);
+      const resolvedFocusId =
+        normalizedBlocks.find((block) => block.id === focusBlockId)?.id ||
+        nextFocusId ||
+        normalizedBlocks[0]?.id ||
+        null;
+      setFocusBlockId(resolvedFocusId);
+      setPlayheadBlockId(resolvedFocusId);
+      setDocumentState(document.documentKey, {
+        status: "saved",
+        message: "All changes saved",
+      });
+      if (saveStateKey) {
+        setBlockSaveStates((previous) => ({
+          ...previous,
+          [saveStateKey]: "saved",
+        }));
+      }
+      setFeedback(successMessage, "success");
+      return savedDocument;
+    } catch (error) {
+      if (saveStateKey) {
+        setBlockSaveStates((previous) => ({
+          ...previous,
+          [saveStateKey]: error?.code === "stale_document" ? "conflict" : "error",
+        }));
+      }
+      if (error?.code === "stale_document") {
+        setDocumentState(document.documentKey, {
+          status: "conflict",
+          message: "Newer version saved elsewhere",
+          serverDocument: error.currentDocument || null,
+        });
+      }
+      setFeedback(error instanceof Error ? error.message : errorMessage, "error");
+      return null;
+    } finally {
+      if (actionKey) {
+        setBlockActionPendingId((current) => (current === actionKey ? "" : current));
+      }
+    }
+  }
+
   function carryBlock(block, { carriedBy = "human", transferKind = "" } = {}) {
     return buildWorkspaceTransferredBlock(block, {
       documents: projectDocumentsByKey,
@@ -10608,7 +10744,7 @@ export default function WorkspaceShell({
     });
   }
 
-  function addBlockToClipboard(block) {
+  function addBlockToClipboard(block, sourceDocument = activeDocument) {
     const carriedBlock = carryBlock(block);
     const alreadySelected = clipboard.some((item) => item.id === block.id);
     if (alreadySelected) {
@@ -10617,8 +10753,8 @@ export default function WorkspaceShell({
     }
 
     setClipboard((previous) => mergeClipboard(previous, [carriedBlock]));
-    appendLog("SELECTED", `${activeDocument.title} — block ${block.sourcePosition + 1} → staging`, {
-      documentKey: activeDocument.documentKey,
+    appendLog("SELECTED", `${sourceDocument?.title || activeDocument?.title || "Document"} — block ${block.sourcePosition + 1} → staging`, {
+      documentKey: sourceDocument?.documentKey || activeDocument?.documentKey || "",
       blockIds: [block.id],
     });
   }
@@ -10864,6 +11000,251 @@ export default function WorkspaceShell({
       });
       setFeedback(error instanceof Error ? error.message : "Could not save the edit.", "error");
     }
+  }
+
+  async function founderResetBlockToDraft(targetDocument, block) {
+    const document = resolveEditableDocument(targetDocument, block);
+    if (!document?.isEditable || !block?.id) return;
+
+    const nextBlocks = document.blocks.map((entry) =>
+      entry.id === block.id
+        ? {
+            ...entry,
+            primaryTag: ASSEMBLY_PRIMARY_TAGS.unconfirmed,
+            secondaryTag: "",
+            domain: "",
+            confirmationStatus: ASSEMBLY_CONFIRMATION_STATUSES.unconfirmed,
+            resolvedAt: null,
+            discardedAt: null,
+            updatedAt: new Date().toISOString(),
+          }
+        : entry,
+    );
+
+    await persistEditableDocumentBlocks(document, nextBlocks, {
+      pendingAction: "founder-draft",
+      touchedBlockId: block.id,
+      successMessage: `Line ${block.sourcePosition + 1} is back in draft state.`,
+      errorMessage: "Could not keep this line as draft.",
+      logAction: "DRAFT",
+      logDetail: `${document.title} — line ${block.sourcePosition + 1} kept as draft`,
+      nextFocusId: block.id,
+    });
+  }
+
+  async function founderConfirmBlockWorkingTag(
+    targetDocument,
+    block,
+    primaryTag = ASSEMBLY_PRIMARY_TAGS.story,
+  ) {
+    const document = resolveEditableDocument(targetDocument, block);
+    if (!document?.documentKey || !block?.id || !activeProjectKey || confirmationPending) return;
+
+    const resolvedPrimaryTag = String(primaryTag || ASSEMBLY_PRIMARY_TAGS.story).trim().toLowerCase();
+    const resolvedDomain =
+      resolvedPrimaryTag === ASSEMBLY_PRIMARY_TAGS.story
+        ? block?.suggestedDomain || block?.domain || "vision"
+        : resolvedPrimaryTag === ASSEMBLY_PRIMARY_TAGS.evidence
+          ? block?.suggestedDomain || block?.domain || "completion"
+          : block?.suggestedDomain || block?.domain || "vision";
+
+    setBlockActionPendingId(block.id);
+    setConfirmationPending(true);
+
+    try {
+      const response = await fetch("/api/workspace/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey: activeProjectKey,
+          documentKey: document.documentKey,
+          blockId: block.id,
+          action: "confirm",
+          primaryTag: resolvedPrimaryTag,
+          domain: resolvedDomain,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.document) {
+        throw new Error(payload?.error || "Could not confirm this line.");
+      }
+
+      upsertDocument(payload.document, { replaceLogs: true });
+      setFocusBlockId(block.id);
+      setPlayheadBlockId(block.id);
+      setFeedback(`Line ${block.sourcePosition + 1} now carries ${resolvedPrimaryTag}.`, "success");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Could not confirm this line.", "error");
+    } finally {
+      setConfirmationPending(false);
+      setBlockActionPendingId((current) => (current === block.id ? "" : current));
+    }
+  }
+
+  async function founderAcceptBlockInference(targetDocument, block, sentence) {
+    const shapeKey = sentence?.shapeKey || "";
+    if (!shapeKey) {
+      setFeedback("The compiler could not infer a stable type for this line yet.", "error");
+      return;
+    }
+
+    await founderConfirmBlockWorkingTag(
+      targetDocument,
+      block,
+      mapFormalShapeToConfirmationTag(shapeKey),
+    );
+  }
+
+  async function founderRewriteBlock(targetDocument, block, nextText) {
+    const document = resolveEditableDocument(targetDocument, block);
+    if (!document?.isEditable || !block?.id) return;
+
+    const normalizedText = String(nextText || "").trim();
+    if (!normalizedText) return;
+
+    const originalBlock = document.blocks.find((entry) => entry.id === block.id);
+    if (!originalBlock) return;
+    if (normalizedText === String(originalBlock.text || "").trim()) {
+      setBlockSaveStates((previous) => ({
+        ...previous,
+        [block.id]: "saved",
+      }));
+      setDocumentState(document.documentKey, {
+        status: "saved",
+        message: "All changes saved",
+      });
+      return;
+    }
+
+    const nextBlocks = document.blocks.map((entry) =>
+      entry.id === block.id
+        ? {
+            ...entry,
+            text: normalizedText,
+            plainText: stripMarkdownSyntax(normalizedText),
+            kind: normalizeWorkspaceBlockKind(entry.kind, normalizedText),
+            operation: "edited",
+            updatedAt: new Date().toISOString(),
+          }
+        : entry,
+    );
+
+    await persistEditableDocumentBlocks(document, nextBlocks, {
+      pendingAction: "founder-rewrite",
+      touchedBlockId: block.id,
+      saveStateKey: block.id,
+      successMessage: `Saved line ${block.sourcePosition + 1}.`,
+      errorMessage: "Could not save this rewrite.",
+      logAction: "EDITED",
+      logDetail: `${document.title} — line ${block.sourcePosition + 1} rewritten`,
+      nextFocusId: block.id,
+    });
+  }
+
+  async function founderSplitBlock(targetDocument, block) {
+    const document = resolveEditableDocument(targetDocument, block);
+    if (!document?.isEditable || !block?.id) return;
+
+    const originalBlock = document.blocks.find((entry) => entry.id === block.id);
+    if (!originalBlock) return;
+
+    const segments = String(originalBlock.text || "")
+      .split(/\n+/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    const splitSegments =
+      segments.length > 1
+        ? segments
+        : String(originalBlock.text || "")
+            .split(/(?<=[.!?])\s+/)
+            .map((segment) => segment.trim())
+            .filter(Boolean);
+
+    if (splitSegments.length < 2) {
+      setFeedback("This line does not split cleanly yet.", "error");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const nextBlocks = document.blocks.flatMap((entry) => {
+      if (entry.id !== block.id) return [entry];
+
+      return splitSegments.map((segment, index) => {
+        const nextId =
+          index === 0
+            ? entry.id
+            : `founder-split-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+        return {
+          ...entry,
+          id: nextId,
+          text: segment,
+          plainText: stripMarkdownSyntax(segment),
+          kind: normalizeWorkspaceBlockKind(entry.kind, segment),
+          operation: "edited",
+          updatedAt: timestamp,
+        };
+      });
+    });
+
+    await persistEditableDocumentBlocks(document, nextBlocks, {
+      pendingAction: "founder-split",
+      touchedBlockId: block.id,
+      successMessage: `Split line ${block.sourcePosition + 1} into ${splitSegments.length} lines.`,
+      errorMessage: "Could not split this line.",
+      logAction: "EDITED",
+      logDetail: `${document.title} — line ${block.sourcePosition + 1} split`,
+      nextFocusId: block.id,
+    });
+  }
+
+  async function founderMergeBlock(targetDocument, block) {
+    const document = resolveEditableDocument(targetDocument, block);
+    if (!document?.isEditable || !block?.id) return;
+
+    const blockIndex = document.blocks.findIndex((entry) => entry.id === block.id);
+    if (blockIndex < 0 || blockIndex >= document.blocks.length - 1) {
+      setFeedback("There is no following line to merge into this one.", "error");
+      return;
+    }
+
+    const currentEntry = document.blocks[blockIndex];
+    const nextEntry = document.blocks[blockIndex + 1];
+    const joiner =
+      currentEntry.kind === "list" || nextEntry.kind === "list" ? "\n" : " ";
+    const mergedText = [currentEntry.text, nextEntry.text]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(joiner)
+      .trim();
+    const timestamp = new Date().toISOString();
+
+    const nextBlocks = document.blocks
+      .filter((_, index) => index !== blockIndex + 1)
+      .map((entry, index) =>
+        index === blockIndex
+          ? {
+              ...entry,
+              text: mergedText,
+              plainText: stripMarkdownSyntax(mergedText),
+              kind: normalizeWorkspaceBlockKind(entry.kind, mergedText),
+              operation: "edited",
+              updatedAt: timestamp,
+            }
+          : entry,
+      );
+
+    await persistEditableDocumentBlocks(document, nextBlocks, {
+      pendingAction: "founder-merge",
+      touchedBlockId: block.id,
+      successMessage: `Merged line ${block.sourcePosition + 1} with the next line.`,
+      errorMessage: "Could not merge this line.",
+      logAction: "EDITED",
+      logDetail: `${document.title} — line ${block.sourcePosition + 1} merged with line ${nextEntry.sourcePosition + 1}`,
+      nextFocusId: block.id,
+    });
   }
 
   function focusBlock(blockId) {
@@ -11879,8 +12260,26 @@ export default function WorkspaceShell({
       seedState={founderSeedState}
       treeSections={founderTreeSections}
       stagedBlockIds={founderStagedBlockIds}
-      onStageBlock={addBlockToClipboard}
+      editable={Boolean(founderCompareActive && founderArtifactDocument?.isEditable)}
+      blockActionPendingId={blockActionPendingId}
+      blockSaveStates={blockSaveStates}
+      onStageBlock={(block) => addBlockToClipboard(block, founderArtifactDocument)}
       onUnstageBlock={removeBlockFromClipboard}
+      onRewriteBlock={(targetBlock, nextText) =>
+        void founderRewriteBlock(founderArtifactDocument, targetBlock, nextText)
+      }
+      onKeepDraftBlock={(targetBlock) =>
+        void founderResetBlockToDraft(founderArtifactDocument, targetBlock)
+      }
+      onAcceptBlockInference={(targetBlock, sentence) =>
+        void founderAcceptBlockInference(founderArtifactDocument, targetBlock, sentence)
+      }
+      onRecastBlockTag={(targetBlock, primaryTag) =>
+        void founderConfirmBlockWorkingTag(founderArtifactDocument, targetBlock, primaryTag)
+      }
+      onOpenSourceWitness={(targetBlock) => void openBlockSourceWitness(targetBlock)}
+      onSplitBlock={(targetBlock) => void founderSplitBlock(founderArtifactDocument, targetBlock)}
+      onMergeBlock={(targetBlock) => void founderMergeBlock(founderArtifactDocument, targetBlock)}
       overridePending={operateOverridePending}
       onCreateOverride={createAttestedOverride}
       onDeleteOverride={(overrideId) => void deleteAttestedOverride(overrideId)}

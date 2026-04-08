@@ -34,6 +34,12 @@ const STAGE_LABELS = Object.freeze({
   sealed: "SEA",
 });
 
+const PRIMARY_TAG_TO_SHAPE = Object.freeze({
+  aim: "aim",
+  evidence: "reality",
+  story: "weld",
+});
+
 function normalizeSignalKey(value = "") {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "green" || normalized === "amber" || normalized === "red") return normalized;
@@ -189,6 +195,94 @@ function defaultSignalRationale(signalKey = "neutral", contextCopy = "") {
     return "A human attested this line directly. The receipt keeps the override explicit instead of presenting it as evidence.";
   }
   return contextCopy || "This block has shape, but no declared Operate read yet, so the signal remains uninformed.";
+}
+
+function buildCompilerChecks({
+  block = null,
+  diagnostics = [],
+  shapeKey = "aim",
+  signalKey = "neutral",
+  evidence = [],
+} = {}) {
+  const checks = [];
+  const codes = new Set((Array.isArray(diagnostics) ? diagnostics : []).map((item) => item?.code).filter(Boolean));
+  const primaryTag = String(block?.primaryTag || "").trim().toLowerCase();
+  const taggedShapeKey = PRIMARY_TAG_TO_SHAPE[primaryTag] || "";
+
+  if (codes.has("ungrounded")) {
+    checks.push({
+      key: "missing-reality",
+      label: "Missing reality",
+      tone: "warning",
+      detail: "The line names direction, but not enough grounded reality.",
+    });
+  }
+
+  if (
+    shapeKey === "weld" &&
+    (codes.has("directionless") || codes.has("ungrounded") || signalKey === "amber" || signalKey === "red")
+  ) {
+    checks.push({
+      key: "weak-weld",
+      label: "Weak weld",
+      tone: signalKey === "red" ? "danger" : "warning",
+      detail: "The weld does not yet bind aim and reality strongly enough.",
+    });
+  }
+
+  if (
+    shapeKey === "seal" &&
+    signalKey !== "override" &&
+    !evidence.length
+  ) {
+    checks.push({
+      key: "move-without-test",
+      label: "Move without test",
+      tone: "warning",
+      detail: "This closure reads ahead of what the current box has actually tested.",
+    });
+  }
+
+  if (signalKey === "red") {
+    checks.push({
+      key: "unsupported-support",
+      label: "Unsupported support",
+      tone: "danger",
+      detail: "The line claims support the current box cannot carry.",
+    });
+  }
+
+  if (shapeKey === "seal" && (signalKey === "amber" || signalKey === "red" || codes.has("ungrounded"))) {
+    checks.push({
+      key: "overclaimed-closure",
+      label: "Overclaimed closure",
+      tone: signalKey === "red" ? "danger" : "warning",
+      detail: "The line closes too strongly for the support now present.",
+    });
+  }
+
+  if (codes.has("sentence-length") || codes.has("position-overflow")) {
+    checks.push({
+      key: "compressible-line",
+      label: "Compressible line",
+      tone: "neutral",
+      detail: "The line is carrying more than the preferred compact Lœgos frame.",
+    });
+  }
+
+  if (
+    (taggedShapeKey && taggedShapeKey !== shapeKey) ||
+    Boolean(block?.formalMeta?.recastHistory?.length)
+  ) {
+    checks.push({
+      key: "stage-confusion",
+      label: "Stage confusion",
+      tone: "neutral",
+      detail: "The typed read and the current cast still pull in different directions.",
+    });
+  }
+
+  return checks;
 }
 
 function buildCommitmentBoundarySummary(block = null, witnessBlock = null) {
@@ -383,6 +477,14 @@ export function buildLoegosBlockView(block = null, finding = null, options = {})
     defaultSignalAnnotation(findingSignal);
   const stageKey = inferStageKey(normalizedBlock, options);
   const exception = getExceptionState(findingSignal, finding);
+  const evidence = Array.isArray(finding?.evidence) ? finding.evidence.filter(Boolean) : [];
+  const compilerChecks = buildCompilerChecks({
+    block: normalizedBlock,
+    diagnostics,
+    shapeKey,
+    signalKey: findingSignal,
+    evidence,
+  });
 
   return {
     block: normalizedBlock,
@@ -399,6 +501,8 @@ export function buildLoegosBlockView(block = null, finding = null, options = {})
     exceptionMarker: exception.marker,
     exceptionLabel: exception.label,
     trustLevel: String(finding?.trustLevel || "").trim(),
+    compilerChecks,
+    evidence,
     annotation: truncateText(annotationSource, 148),
     annotationTone:
       findingSignal === "green"
@@ -436,7 +540,7 @@ export function buildExplainPanelView({
   }
 
   const blockView = buildLoegosBlockView(block, finding);
-  const evidence = Array.isArray(finding?.evidence) ? finding.evidence.filter(Boolean) : [];
+  const evidence = Array.isArray(blockView?.evidence) ? blockView.evidence : [];
   const overrides = Array.isArray(finding?.overrides) ? sortOverridesForDisplay(finding.overrides) : [];
   const activeBlockOverride = getActiveBlockOverride(overrides);
   const signalKey = blockView.signalKey;
@@ -465,6 +569,7 @@ export function buildExplainPanelView({
     ...blockView,
     empty: false,
     evidence,
+    compilerChecks: Array.isArray(blockView.compilerChecks) ? blockView.compilerChecks : [],
     overrides,
     activeBlockOverride,
     signalRationale: truncateText(
