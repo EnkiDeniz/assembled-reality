@@ -3861,6 +3861,34 @@ button.assembler-ide-statusbar__segment {
   opacity: 0.45;
 }
 
+.assembler-player__sources {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.assembler-player__source {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.assembler-player__source.is-active {
+  background: rgba(138, 193, 255, 0.14);
+  color: var(--white);
+}
+
 .assembler-header__account svg,
 .assembler-home__action-icon svg,
 .assembler-home__resume-icon svg,
@@ -8569,6 +8597,21 @@ button.assembler-ide-statusbar__segment {
   background: rgba(255, 255, 255, 0.015);
 }
 
+.founder-tree__item-button {
+  width: 100%;
+  border-color: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.founder-tree__item-button:hover,
+.founder-tree__item-button:focus-visible {
+  border-color: rgba(138, 193, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(138, 193, 255, 0.05), transparent 72%),
+    rgba(255, 255, 255, 0.025);
+}
+
 .founder-tree__item.is-active {
   border-color: rgba(138, 193, 255, 0.16);
   background:
@@ -8860,6 +8903,11 @@ button.assembler-ide-statusbar__segment {
   color: #efb54e;
 }
 
+.loegos-block__exception--stale {
+  color: #8a8d96;
+}
+
+.loegos-block__exception--contradicted,
 .loegos-block__exception--unsupported {
   color: #ec5e54;
 }

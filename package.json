@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "lint": "eslint .",
+    "test:founder": "node --test tests/founder-workbench-m4.test.mjs",
     "test:smoke": "node scripts/phase1-smoke-check.mjs",
     "test:e2e": "npm run test:e2e:local",
     "test:e2e:local": "node scripts/run-phase1-e2e-local.mjs",

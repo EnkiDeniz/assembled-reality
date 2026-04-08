@@ -149,7 +149,10 @@ function inferStageKey(block = null, { artifactKind = "", isStaged = false } = {
   return "draft";
 }
 
-function getExceptionState(signalKey = "neutral", finding = null) {
+function getExceptionState(signalKey = "neutral", finding = null, evidence = []) {
+  const overrides = Array.isArray(finding?.overrides) ? finding.overrides : [];
+  const hasStaleOverride = overrides.some((override) => override?.status === "stale");
+
   if (signalKey === "override" || finding?.overrideApplied) {
     return {
       key: "attested",
@@ -158,11 +161,19 @@ function getExceptionState(signalKey = "neutral", finding = null) {
     };
   }
 
+  if (hasStaleOverride) {
+    return {
+      key: "stale",
+      marker: "STL",
+      label: "Stale override",
+    };
+  }
+
   if (signalKey === "red") {
     return {
-      key: "unsupported",
-      marker: "!",
-      label: "Unsupported",
+      key: Array.isArray(evidence) && evidence.length ? "contradicted" : "unsupported",
+      marker: Array.isArray(evidence) && evidence.length ? "X" : "!",
+      label: Array.isArray(evidence) && evidence.length ? "Contradicted" : "Unsupported",
     };
   }
 
@@ -476,8 +487,8 @@ export function buildLoegosBlockView(block = null, finding = null, options = {})
     diagnostics[0]?.message ||
     defaultSignalAnnotation(findingSignal);
   const stageKey = inferStageKey(normalizedBlock, options);
-  const exception = getExceptionState(findingSignal, finding);
   const evidence = Array.isArray(finding?.evidence) ? finding.evidence.filter(Boolean) : [];
+  const exception = getExceptionState(findingSignal, finding, evidence);
   const compilerChecks = buildCompilerChecks({
     block: normalizedBlock,
     diagnostics,
@@ -563,6 +574,12 @@ export function buildExplainPanelView({
     );
   } else if (signalKey !== "neutral") {
     trustChain.push("No local witness excerpt survived into this read.");
+  }
+  const staleOverrides = overrides.filter((override) => override?.status === "stale");
+  if (staleOverrides.length) {
+    trustChain.push(
+      `${staleOverrides.length} attested override${staleOverrides.length === 1 ? "" : "s"} no longer match the current text.`,
+    );
   }
 
   return {

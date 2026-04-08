@@ -130,6 +130,11 @@ async function main() {
   assert.match(loegosRenderer, /Workbench/);
   assert.match(loegosRenderer, /loegos-learner-toggle/);
   assert.match(loegosRenderer, /loegos-block__stage/);
+  assert.match(founderRendererUtils, /Stale override/);
+  assert.match(founderRendererUtils, /Contradicted/);
+  assert.match(workspaceShell, /founderPlaybackSurface/);
+  assert.match(workspaceShell, /handleFounderPlaybackSourceSelect/);
+  assert.match(workspaceShell, /workspace-founder-seal-latest/);
   assert.match(loegosExplainPanel, /Lœgos read/);
   assert.match(loegosExplainPanel, /workspace-attest-block-input/);
   assert.match(loegosExplainPanel, /workspace-attest-block-submit/);

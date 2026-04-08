@@ -16,21 +16,44 @@ function TreeSection({ section = null }) {
 
       {items.length ? (
         <div className="founder-tree__items">
-          {items.map((item) => (
-            <div
-              key={item.key}
-              className={`founder-tree__item ${item.active ? "is-active" : ""}`}
-              aria-current={item.active ? "true" : undefined}
-            >
-              <div className="founder-tree__item-copy">
-                <strong className="founder-tree__item-title">{item.title}</strong>
-                {item.detail ? (
-                  <span className="founder-tree__item-detail">{item.detail}</span>
-                ) : null}
+          {items.map((item) => {
+            const isButton = typeof item?.onClick === "function";
+            const content = (
+              <>
+                <div className="founder-tree__item-copy">
+                  <strong className="founder-tree__item-title">{item.title}</strong>
+                  {item.detail ? (
+                    <span className="founder-tree__item-detail">{item.detail}</span>
+                  ) : null}
+                </div>
+                {item.badge ? <span className="founder-tree__item-badge">{item.badge}</span> : null}
+              </>
+            );
+
+            if (isButton) {
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`founder-tree__item founder-tree__item-button ${item.active ? "is-active" : ""}`}
+                  aria-current={item.active ? "true" : undefined}
+                  onClick={item.onClick}
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <div
+                key={item.key}
+                className={`founder-tree__item ${item.active ? "is-active" : ""}`}
+                aria-current={item.active ? "true" : undefined}
+              >
+                {content}
               </div>
-              {item.badge ? <span className="founder-tree__item-badge">{item.badge}</span> : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="founder-tree__empty">{section.emptyLabel || "Nothing here yet."}</p>

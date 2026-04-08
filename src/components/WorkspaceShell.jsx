@@ -4285,9 +4285,12 @@ function PlayerBar({
   voiceChoice,
   providerLabel,
   progress,
+  sourceOptions = [],
+  selectedSourceKey = "",
   deviceVoiceSupported,
   collapsed = false,
   docked = false,
+  onSelectSource,
   onTogglePlayback,
   onToggleCollapsed,
   onSeekBack,
@@ -4384,6 +4387,23 @@ function PlayerBar({
       </div>
 
       <div className="assembler-player__meta">
+        {Array.isArray(sourceOptions) && sourceOptions.length > 1 ? (
+          <div className="assembler-player__sources" role="group" aria-label="Playback source">
+            {sourceOptions.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={`assembler-player__source ${
+                  selectedSourceKey === option.key ? "is-active" : ""
+                }`}
+                onClick={() => onSelectSource?.(option.key)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <button type="button" className="assembler-player__button" onClick={onCycleRate}>
           {rate.toFixed(2).replace(/\.00$/, "")}x
         </button>
@@ -4678,6 +4698,9 @@ export default function WorkspaceShell({
   const [starterIntakeActive, setStarterIntakeActive] = useState(false);
   const [starterSourceDocumentKey, setStarterSourceDocumentKey] = useState("");
   const [starterSeedEntrySourceKey, setStarterSeedEntrySourceKey] = useState("");
+  const [founderSelectedWitnessDocumentKey, setFounderSelectedWitnessDocumentKey] = useState("");
+  const [founderPlaybackSurface, setFounderPlaybackSurface] = useState("language");
+  const [founderPlaybackBlockId, setFounderPlaybackBlockId] = useState(null);
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
@@ -5226,14 +5249,22 @@ export default function WorkspaceShell({
   const showStarterSeedEntry =
     Boolean(starterSeedEntrySourceKey) &&
     boxPhase === BOX_PHASES.create;
+  const founderPreferredWitnessDocument = founderSelectedWitnessDocumentKey
+    ? projectDocumentsByKey.get(String(founderSelectedWitnessDocumentKey || "").trim()) ||
+      documentCache[String(founderSelectedWitnessDocumentKey || "").trim()] ||
+      null
+    : null;
   const founderWitnessDocument =
+    (isRealSourceDocument(founderPreferredWitnessDocument) ? founderPreferredWitnessDocument : null) ||
     starterSeedEntryDocument ||
     (boxPhase === BOX_PHASES.create && isRealSourceDocument(activeDocument)
       ? activeDocument
       : latestRealSourceDocument || null);
   const founderCompareActive =
     !isMobileLayout &&
-    boxPhase === BOX_PHASES.create &&
+    (boxPhase === BOX_PHASES.create ||
+      boxPhase === BOX_PHASES.operate ||
+      boxPhase === BOX_PHASES.receipts) &&
     Boolean(currentSeedDocument?.documentKey) &&
     Boolean(founderWitnessDocument?.documentKey) &&
     founderWitnessDocument.documentKey !== currentSeedDocument.documentKey;
@@ -5243,32 +5274,10 @@ export default function WorkspaceShell({
       ? currentSeedDocument
       : activeDocument;
   const founderArtifactBlocks = founderArtifactDocument?.blocks ?? EMPTY_BLOCKS;
-  const founderPlaybackBlockId =
-    founderCompareActive
-      ? playheadBlockId || focusBlockId || founderArtifactBlocks[0]?.id || null
-      : playbackBlockId;
-  const founderCurrentIndex = founderCompareActive
-    ? Math.max(
-        0,
-        founderArtifactBlocks.findIndex((block) => block.id === founderPlaybackBlockId),
-      )
-    : currentIndex;
-  const founderCurrentBlock = founderCompareActive
-    ? founderArtifactBlocks[founderCurrentIndex] || founderArtifactBlocks[0] || null
-    : currentBlock;
-  const founderNextBlock = founderCompareActive
-    ? founderArtifactBlocks[founderCurrentIndex + 1] || null
-    : nextBlock;
-  const founderProgress = founderCompareActive
-    ? founderArtifactBlocks.length
-      ? ((founderCurrentIndex + 1) / founderArtifactBlocks.length) * 100
-      : 0
-    : progress;
   const founderShellSelectedBlock =
     founderArtifactBlocks.find(
-      (block) => block.id === (focusBlockId || founderCurrentBlock?.id || ""),
+      (block) => block.id === String(focusBlockId || "").trim(),
     ) ||
-    founderCurrentBlock ||
     founderArtifactBlocks[0] ||
     null;
   const showDesktopUnifiedShell =
@@ -6266,9 +6275,18 @@ export default function WorkspaceShell({
         .trim();
 
       return {
-        title: "Witness on the left. Active structure on the right.",
+        title:
+          boxPhase === BOX_PHASES.operate
+            ? "Operate stays on the active structure."
+            : boxPhase === BOX_PHASES.receipts
+              ? "Receipts close the move without replacing the language."
+              : "Witness on the left. Active structure on the right.",
         copy:
-          "The source remains immutable here. The compiled seed is now the working object the box can inspect, compare, and carry forward.",
+          boxPhase === BOX_PHASES.operate
+            ? "Operate now reads the compiled seed as the working object. Keep the witness fixed, inspect the live structure, and attest only when the human means to override the machine read."
+            : boxPhase === BOX_PHASES.receipts
+              ? "The active structure remains central while receipt drafts and seals close the move. Receipts are proof objects attached to this box, not replacements for the language."
+              : "The source remains immutable here. The compiled seed is now the working object the box can inspect, compare, and carry forward.",
         excerptLabel: witnessLabel,
         excerpt: witnessExcerpt || "",
       };
@@ -6295,6 +6313,7 @@ export default function WorkspaceShell({
     founderJourneyActive,
     founderShellExcerpt,
     founderShellSelectedBlock,
+    boxPhase,
   ]);
   const founderSeedState = useMemo(
     () =>
@@ -6306,8 +6325,15 @@ export default function WorkspaceShell({
       }),
     [controlSurfaceViewModel?.stateSummary, currentSeedDocument, operateResult, projectDraftsState],
   );
-  const founderTreeSections = useMemo(() => {
+  const founderTreeSections = (() => {
     const documents = Array.isArray(hydratedProjectDocuments) ? hydratedProjectDocuments : [];
+    const languageDocuments = founderCompareActive
+      ? documents.filter(
+          (document) =>
+            String(document?.documentKey || "").trim() ===
+            String(currentSeedDocument?.documentKey || "").trim(),
+        )
+      : documents.filter((document) => document?.isAssembly);
     const witnesses = documents
       .filter((document) => !document?.isAssembly)
       .slice(0, 6)
@@ -6315,11 +6341,29 @@ export default function WorkspaceShell({
         key: `witness:${document.documentKey}`,
         title: document.title || document.documentKey || "Untitled source",
         detail: document.subtitle || document.originalFilename || "Source witness",
-        badge: document.documentKey === activeDocument?.documentKey ? "open" : "",
-        active: document.documentKey === activeDocument?.documentKey,
+        badge:
+          document.documentKey === founderWitnessDocument?.documentKey
+            ? founderCompareActive
+              ? "current"
+              : "open"
+            : "",
+        active: document.documentKey === founderWitnessDocument?.documentKey,
+        onClick: () => {
+          if (founderCompareActive) {
+            setFounderSelectedWitnessDocumentKey(document.documentKey);
+            setFounderPlaybackSurface("witness");
+            setFounderPlaybackBlockId(null);
+            return;
+          }
+
+          setStarterSourceDocumentKey(document.documentKey);
+          void loadDocument(document.documentKey, {
+            mode: WORKSPACE_MODES.listen,
+            phase: BOX_PHASES.think,
+          });
+        },
       }));
-    const language = documents
-      .filter((document) => document?.isAssembly)
+    const language = languageDocuments
       .slice(0, 6)
       .map((document) => ({
         key: `language:${document.documentKey}`,
@@ -6330,16 +6374,41 @@ export default function WorkspaceShell({
             : document.subtitle || "Seed draft",
         badge: document.documentKey === currentSeedDocument?.documentKey ? "current" : "",
         active: document.documentKey === currentSeedDocument?.documentKey,
+        onClick: () => {
+          setFounderPlaybackSurface("language");
+          setFounderPlaybackBlockId(null);
+          void loadDocument(document.documentKey, {
+            mode: WORKSPACE_MODES.assemble,
+            phase:
+              boxPhase === BOX_PHASES.receipts
+                ? BOX_PHASES.receipts
+                : boxPhase === BOX_PHASES.operate
+                  ? BOX_PHASES.operate
+                  : BOX_PHASES.create,
+          });
+        },
       }));
     const receipts = (Array.isArray(projectDraftsState) ? projectDraftsState : [])
       .slice(0, 6)
-      .map((draft) => ({
-        key: `receipt:${draft.id}`,
-        title: draft.title || "Untitled receipt",
-        detail: draft.courthouseStatusLine || draft.statusLabel || draft.mode || "Receipt draft",
-        badge: String(draft.status || "").trim().toUpperCase() === "SEALED" ? "sealed" : "draft",
-        active: false,
-      }));
+      .map((draft) => {
+        const isSealed = String(draft.status || "").trim().toUpperCase() === "SEALED";
+        return {
+          key: `receipt:${draft.id}`,
+          title: draft.title || "Untitled receipt",
+          detail: draft.courthouseStatusLine || draft.statusLabel || draft.mode || "Receipt draft",
+          badge: isSealed ? "sealed" : "draft",
+          active: false,
+          onClick: () => {
+            setFounderPlaybackSurface("language");
+            if (isSealed) {
+              openReceiptsSurface();
+              return;
+            }
+            setBoxPhase(BOX_PHASES.receipts);
+            openReceiptSealDialog(draft);
+          },
+        };
+      });
 
     return [
       {
@@ -6364,7 +6433,7 @@ export default function WorkspaceShell({
         items: receipts,
       },
     ];
-  }, [activeDocument?.documentKey, currentSeedDocument?.documentKey, hydratedProjectDocuments, projectDraftsState]);
+  })();
   const founderStagedBlockIds = useMemo(
     () => clipboard.map((item) => item.id),
     [clipboard],
@@ -6389,8 +6458,81 @@ export default function WorkspaceShell({
       founderWitnessDocument?.documentKey,
     ],
   );
+  const founderPlaybackDocument =
+    founderCompareActive && founderPlaybackSurface === "witness"
+      ? founderWitnessDocument
+      : founderArtifactDocument;
+  const founderPlaybackBlocks = Array.isArray(founderPlaybackDocument?.blocks)
+    ? founderPlaybackDocument.blocks
+    : founderArtifactBlocks;
+  const founderDefaultPlaybackBlockId = founderCompareActive
+    ? founderPlaybackSurface === "witness"
+      ? founderSelectedWitnessBlock?.id || founderPlaybackBlocks[0]?.id || null
+      : founderShellSelectedBlock?.id || founderPlaybackBlocks[0]?.id || null
+    : playbackBlockId;
+  const founderResolvedPlaybackBlockId = founderCompareActive
+    ? founderPlaybackBlockId || founderDefaultPlaybackBlockId
+    : playbackBlockId;
+  const founderPlayerCurrentIndex = Math.max(
+    0,
+    founderPlaybackBlocks.findIndex((block) => block.id === founderResolvedPlaybackBlockId),
+  );
+  const founderPlayerCurrentBlock =
+    founderPlaybackBlocks[founderPlayerCurrentIndex] || founderPlaybackBlocks[0] || null;
+  const founderPlayerNextBlock = founderPlaybackBlocks[founderPlayerCurrentIndex + 1] || null;
+  const founderCurrentBlock = founderCompareActive
+    ? founderPlaybackSurface === "witness"
+      ? findActiveBlockForWitnessBlock(
+          founderPlayerCurrentBlock,
+          founderArtifactBlocks,
+          founderWitnessDocument?.documentKey || "",
+        ) || founderShellSelectedBlock || founderArtifactBlocks[0] || null
+      : founderPlayerCurrentBlock || founderArtifactBlocks[0] || null
+    : currentBlock;
+  const founderNextBlock = founderCompareActive
+    ? founderPlaybackSurface === "witness"
+      ? findActiveBlockForWitnessBlock(
+          founderPlayerNextBlock,
+          founderArtifactBlocks,
+          founderWitnessDocument?.documentKey || "",
+        ) || null
+      : founderPlayerNextBlock || null
+    : nextBlock;
+  const founderProgress = founderCompareActive
+    ? founderPlaybackBlocks.length
+      ? ((founderPlayerCurrentIndex + 1) / founderPlaybackBlocks.length) * 100
+      : 0
+    : progress;
+
+  useEffect(() => {
+    if (!founderSelectedWitnessDocumentKey) return;
+
+    const selectedWitness =
+      projectDocumentsByKey.get(String(founderSelectedWitnessDocumentKey || "").trim()) ||
+      documentCache[String(founderSelectedWitnessDocumentKey || "").trim()] ||
+      null;
+
+    if (!isRealSourceDocument(selectedWitness)) {
+      setFounderSelectedWitnessDocumentKey("");
+    }
+  }, [documentCache, founderSelectedWitnessDocumentKey, projectDocumentsByKey]);
+
+  useEffect(() => {
+    if (founderCompareActive) return;
+
+    if (founderPlaybackSurface !== "language") {
+      setFounderPlaybackSurface("language");
+    }
+    if (founderPlaybackBlockId) {
+      setFounderPlaybackBlockId(null);
+    }
+  }, [founderCompareActive, founderPlaybackBlockId, founderPlaybackSurface]);
 
   function handleFounderSelectBlock(blockId) {
+    if (founderPlaybackSurface === "language") {
+      setFounderPlaybackBlockId(blockId);
+    }
+
     const compareDocumentKey = String(currentSeedDocument?.documentKey || "").trim();
     if (
       founderCompareActive &&
@@ -6399,7 +6541,7 @@ export default function WorkspaceShell({
     ) {
       void loadDocumentRef.current?.(compareDocumentKey, {
         mode: WORKSPACE_MODES.assemble,
-        phase: BOX_PHASES.create,
+        phase: boxPhase,
         focusBlockId: blockId,
       });
     } else {
@@ -6414,6 +6556,9 @@ export default function WorkspaceShell({
 
   function handleFounderSelectWitnessBlock(blockId) {
     if (!founderCompareActive) return;
+    if (founderPlaybackSurface === "witness") {
+      setFounderPlaybackBlockId(blockId);
+    }
 
     const witnessBlocks = Array.isArray(founderWitnessDocument?.blocks)
       ? founderWitnessDocument.blocks
@@ -6428,6 +6573,38 @@ export default function WorkspaceShell({
     if (activeBlock?.id) {
       handleFounderSelectBlock(activeBlock.id);
     }
+  }
+
+  function handleFounderPlaybackSelectBlock(blockId) {
+    if (!founderCompareActive) return;
+
+    setFounderPlaybackBlockId(blockId);
+    if (founderPlaybackSurface === "witness") {
+      handleFounderSelectWitnessBlock(blockId);
+      return;
+    }
+    handleFounderSelectBlock(blockId);
+  }
+
+  function handleFounderPlaybackSourceSelect(nextSourceKey = "language") {
+    if (!founderCompareActive) return;
+
+    const nextSurface = nextSourceKey === "witness" ? "witness" : "language";
+    if (nextSurface === founderPlaybackSurface) return;
+
+    if (
+      isPlaying ||
+      playbackStateRef.current.active ||
+      playbackStateRef.current.paused ||
+      audioRef.current ||
+      speechUtteranceRef.current
+    ) {
+      stopPlayback();
+      setFeedback("Playback stopped so the workbench can switch sources.");
+    }
+
+    setFounderPlaybackSurface(nextSurface);
+    setFounderPlaybackBlockId(null);
   }
 
   activeDocumentRef.current = activeDocument;
@@ -7633,6 +7810,9 @@ export default function WorkspaceShell({
 
     setStarterIntakeActive(false);
     setStarterSourceDocumentKey(normalizedDocumentKey);
+    setFounderSelectedWitnessDocumentKey(normalizedDocumentKey);
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
     setStarterSeedEntrySourceKey("");
     setLaunchpadOpen(false);
     setDropAnythingOpen(false);
@@ -7651,6 +7831,9 @@ export default function WorkspaceShell({
   async function openStarterSeedFlow() {
     const sourceDocumentKey = String(starterSourceDocumentKey || activeDocumentKey || "").trim();
     setStarterSeedEntrySourceKey(sourceDocumentKey);
+    setFounderSelectedWitnessDocumentKey(sourceDocumentKey);
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
     clearStarterFlowState({ keepScopedProject: true, keepSeedEntry: true });
     await handleSelectBoxPhase(BOX_PHASES.create, { skipRootGate: false });
   }
@@ -7660,6 +7843,9 @@ export default function WorkspaceShell({
     if (!sourceDocumentKey) return;
 
     setStarterSourceDocumentKey(sourceDocumentKey);
+    setFounderSelectedWitnessDocumentKey(sourceDocumentKey);
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
     setStarterSeedEntrySourceKey("");
     await loadDocument(sourceDocumentKey, {
       mode: WORKSPACE_MODES.listen,
@@ -7669,6 +7855,8 @@ export default function WorkspaceShell({
 
   function openFounderFullWorkspace() {
     setAiOpen(false);
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
     clearStarterFlowState({ keepScopedProject: true });
   }
 
@@ -9088,10 +9276,11 @@ export default function WorkspaceShell({
 
     void loadDocumentRef.current?.(compareDocumentKey, {
       mode: WORKSPACE_MODES.assemble,
-      phase: BOX_PHASES.create,
+      phase: boxPhase,
     });
   }, [
     activeDocumentKey,
+    boxPhase,
     currentSeedDocument?.documentKey,
     founderCompareActive,
     loadingDocumentKey,
@@ -11309,9 +11498,36 @@ export default function WorkspaceShell({
     };
   }
 
-  async function playCloudSequenceFromIndex(index) {
-    const documentAtStart = activeDocumentRef.current;
-    const sequence = blocksRef.current;
+  function resolvePlaybackContext(context = null) {
+    const normalizedContext = context && typeof context === "object" ? context : null;
+    const document = normalizedContext?.document || activeDocument;
+    const sequence = Array.isArray(normalizedContext?.blocks) ? normalizedContext.blocks : blocks;
+    const focusedBlockId = String(
+      normalizedContext?.focusedBlockId || focusBlockId || sequence[0]?.id || "",
+    ).trim();
+
+    return {
+      document,
+      blocks: sequence,
+      focusedBlockId,
+      persistListening:
+        normalizedContext?.persistListening === undefined
+          ? workspaceMode === WORKSPACE_MODES.listen
+          : Boolean(normalizedContext.persistListening),
+      setActiveBlock:
+        typeof normalizedContext?.setActiveBlock === "function"
+          ? normalizedContext.setActiveBlock
+          : (blockId) => {
+              setFocusBlockId(blockId);
+              setPlayheadBlockId(blockId);
+            },
+    };
+  }
+
+  async function playCloudSequenceFromIndex(index, context = null) {
+    const playbackContext = resolvePlaybackContext(context);
+    const documentAtStart = playbackContext.document || activeDocumentRef.current;
+    const sequence = playbackContext.blocks;
     const block = sequence[index];
 
     if (!playbackStateRef.current.active || !block) {
@@ -11319,8 +11535,7 @@ export default function WorkspaceShell({
       return;
     }
 
-    setPlayheadBlockId(block.id);
-    setFocusBlockId(block.id);
+    playbackContext.setActiveBlock(block.id);
     setLoadingAudio(true);
 
     try {
@@ -11360,17 +11575,19 @@ export default function WorkspaceShell({
         }
 
         const nextIndex = index + 1;
-        if (nextIndex >= blocksRef.current.length) {
-          void persistListeningSession("idle", {
-            documentKey: documentAtStart.documentKey,
-            block,
-          });
+        if (nextIndex >= sequence.length) {
+          if (playbackContext.persistListening) {
+            void persistListeningSession("idle", {
+              documentKey: documentAtStart.documentKey,
+              block,
+            });
+          }
           stopPlayback();
           setFeedback(`Finished ${documentAtStart.title}.`, "success");
           return;
         }
 
-        playSequenceFromIndex(nextIndex);
+        void playSequenceFromIndex(nextIndex, playbackContext);
       });
       audio.addEventListener("pause", () => {
         setIsPlaying(false);
@@ -11412,9 +11629,10 @@ export default function WorkspaceShell({
     }
   }
 
-  async function playDeviceSequenceFromIndex(index) {
-    const documentAtStart = activeDocumentRef.current;
-    const sequence = blocksRef.current;
+  async function playDeviceSequenceFromIndex(index, context = null) {
+    const playbackContext = resolvePlaybackContext(context);
+    const documentAtStart = playbackContext.document || activeDocumentRef.current;
+    const sequence = playbackContext.blocks;
     const block = sequence[index];
 
     if (!playbackStateRef.current.active || !block) {
@@ -11426,8 +11644,7 @@ export default function WorkspaceShell({
       throw new Error("Device voice is unavailable in this browser.");
     }
 
-    setPlayheadBlockId(block.id);
-    setFocusBlockId(block.id);
+    playbackContext.setActiveBlock(block.id);
     setLoadingAudio(true);
 
     try {
@@ -11519,17 +11736,19 @@ export default function WorkspaceShell({
         }
 
         const nextIndex = index + 1;
-        if (nextIndex >= blocksRef.current.length) {
-          void persistListeningSession("idle", {
-            documentKey: documentAtStart.documentKey,
-            block,
-          });
+        if (nextIndex >= sequence.length) {
+          if (playbackContext.persistListening) {
+            void persistListeningSession("idle", {
+              documentKey: documentAtStart.documentKey,
+              block,
+            });
+          }
           stopPlayback();
           setFeedback(`Finished ${documentAtStart.title}.`, "success");
           return;
         }
 
-        void playDeviceSequenceFromIndex(nextIndex);
+        void playDeviceSequenceFromIndex(nextIndex, playbackContext);
       };
 
       window.speechSynthesis.speak(utterance);
@@ -11544,17 +11763,21 @@ export default function WorkspaceShell({
     }
   }
 
-  async function playSequenceFromIndex(index) {
+  async function playSequenceFromIndex(index, context = null) {
     if (voiceChoiceRef.current?.provider === VOICE_PROVIDERS.device) {
-      await playDeviceSequenceFromIndex(index);
+      await playDeviceSequenceFromIndex(index, context);
       return;
     }
 
-    await playCloudSequenceFromIndex(index);
+    await playCloudSequenceFromIndex(index, context);
   }
 
-  async function togglePlayback() {
-    if (!blocks.length || !playbackAvailable) {
+  async function togglePlayback(context = null) {
+    const playbackContext = resolvePlaybackContext(context);
+    const sequence = playbackContext.blocks;
+    const documentAtStart = playbackContext.document || activeDocument;
+
+    if (!sequence.length || !playbackAvailable) {
       setFeedback("Playback is unavailable right now. Your place is preserved. Try another voice or browser.", "error");
       return;
     }
@@ -11568,7 +11791,7 @@ export default function WorkspaceShell({
     if (
       audioRef.current &&
       audioRef.current.paused &&
-      playbackStateRef.current.documentKey === activeDocument.documentKey
+      playbackStateRef.current.documentKey === documentAtStart.documentKey
     ) {
       playbackStateRef.current = {
         ...playbackStateRef.current,
@@ -11584,7 +11807,7 @@ export default function WorkspaceShell({
     if (
       speechUtteranceRef.current &&
       playbackStateRef.current.kind === VOICE_PROVIDERS.device &&
-      playbackStateRef.current.documentKey === activeDocument.documentKey &&
+      playbackStateRef.current.documentKey === documentAtStart.documentKey &&
       playbackStateRef.current.paused
     ) {
       playbackStateRef.current = {
@@ -11601,7 +11824,7 @@ export default function WorkspaceShell({
     if (
       speechUtteranceRef.current &&
       playbackStateRef.current.kind === VOICE_PROVIDERS.device &&
-      playbackStateRef.current.documentKey === activeDocument.documentKey &&
+      playbackStateRef.current.documentKey === documentAtStart.documentKey &&
       playbackStateRef.current.active
     ) {
       pausePlayback();
@@ -11613,14 +11836,16 @@ export default function WorkspaceShell({
       active: true,
       kind: voiceChoiceRef.current?.provider || null,
       paused: false,
-      documentKey: activeDocument.documentKey,
+      documentKey: documentAtStart.documentKey,
     };
 
     const startIndex = Math.max(
       0,
-      blocks.findIndex((block) => block.id === (focusBlockId || blocks[0]?.id)),
+      sequence.findIndex(
+        (block) => block.id === (playbackContext.focusedBlockId || sequence[0]?.id),
+      ),
     );
-    await playSequenceFromIndex(startIndex === -1 ? 0 : startIndex);
+    await playSequenceFromIndex(startIndex === -1 ? 0 : startIndex, playbackContext);
   }
 
   function seekAudio(deltaSeconds) {
@@ -11642,13 +11867,14 @@ export default function WorkspaceShell({
     setFeedback(`Jumped ${deltaSeconds > 0 ? "forward" : "back"} ${Math.abs(deltaSeconds)} seconds.`);
   }
 
-  async function jumpToIndex(index) {
-    const clampedIndex = Math.max(0, Math.min(blocks.length - 1, index));
-    const block = blocks[clampedIndex];
+  async function jumpToIndex(index, context = null) {
+    const playbackContext = resolvePlaybackContext(context);
+    const sequence = playbackContext.blocks;
+    const clampedIndex = Math.max(0, Math.min(sequence.length - 1, index));
+    const block = sequence[clampedIndex];
     if (!block) return;
 
-    setFocusBlockId(block.id);
-    setPlayheadBlockId(block.id);
+    playbackContext.setActiveBlock(block.id);
 
     if (
       isPlaying ||
@@ -11662,15 +11888,15 @@ export default function WorkspaceShell({
         active: true,
         kind: voiceChoiceRef.current?.provider || null,
         paused: false,
-        documentKey: activeDocument.documentKey,
+        documentKey: playbackContext.document?.documentKey || activeDocument.documentKey,
       };
-      await playSequenceFromIndex(clampedIndex);
+      await playSequenceFromIndex(clampedIndex, playbackContext);
       return;
     }
 
-    if (workspaceMode === WORKSPACE_MODES.listen) {
+    if (playbackContext.persistListening) {
       void persistListeningSession("paused", {
-        documentKey: activeDocument.documentKey,
+        documentKey: playbackContext.document?.documentKey || activeDocument.documentKey,
         block,
       });
     }
@@ -12222,6 +12448,119 @@ export default function WorkspaceShell({
     !starterSurfaceActive &&
     !showStarterSourceSurface &&
     !(launchpadOpen && launchpadView === LAUNCHPAD_VIEWS.boxes);
+  const founderLatestOpenDraft = [...(Array.isArray(projectDraftsState) ? projectDraftsState : [])]
+    .filter((draft) => String(draft?.status || "").trim().toUpperCase() !== "SEALED")
+    .sort(
+      (left, right) =>
+        Date.parse(String(right?.updatedAt || right?.createdAt || "")) -
+        Date.parse(String(left?.updatedAt || left?.createdAt || "")),
+    )[0] || null;
+  const founderPrimaryAction = founderCompareActive
+    ? isReceiptsPhase
+      ? founderLatestOpenDraft?.id
+        ? {
+            label: "Next: Seal latest",
+            title: "Seal the latest receipt.",
+            detail:
+              "The language stays central. Seal the latest receipt only when the proof boundary is honest enough to carry outward.",
+            testId: "workspace-founder-seal-latest",
+            onClick: () => openReceiptSealDialog(founderLatestOpenDraft),
+          }
+        : {
+            label: "Next: Draft receipt",
+            title: "Draft the first receipt.",
+            detail:
+              "No receipt draft exists yet for this move. Draft one from the current seed and Operate state before sealing.",
+            testId: "workspace-founder-draft-receipt",
+            onClick: () =>
+              void createReceiptDraft(
+                operateResult
+                  ? {
+                      mode: "operate",
+                      operateResult,
+                    }
+                  : {
+                      mode: "workspace",
+                    },
+              ),
+          }
+      : isOperatePhase
+        ? {
+            label: operateResult ? "Next: Draft receipt" : "Run Operate again",
+            title: operateResult ? "Draft the first receipt." : "Complete the constrained read.",
+            detail: operateResult
+              ? "Operate has read the active structure. The next move is to draft the receipt that closes what changed."
+              : "Operate has not yet returned a current read for this seed. Run the constrained read before moving to receipts.",
+            testId: "workspace-founder-next-draft-receipt",
+            onClick: operateResult
+              ? () =>
+                  void createReceiptDraft({
+                    mode: "operate",
+                    operateResult,
+                  })
+              : () => void runOperate(),
+          }
+        : {
+            label: "Next: Run Operate",
+            title: "Run the first constrained read.",
+            detail:
+              "The crossing is complete. The next move is to let Operate read this active structure against what the box can honestly support.",
+            testId: "workspace-seed-next-run-operate",
+            onClick: () => void runOperate(),
+          }
+    : {
+        label: "Next: Shape seed",
+        title: "Shape the first seed.",
+        detail:
+          "Keep the source raw here. The next move turns it into the first working seed you can operate on.",
+        testId: "workspace-source-next-shape-seed",
+        onClick: () => void openStarterSeedFlow(),
+      };
+  const founderSecondaryAction = founderCompareActive
+    ? isReceiptsPhase
+      ? {
+          label: "Back to Operate",
+          testId: "workspace-founder-back-operate",
+          onClick: () => {
+            if (!currentSeedDocument?.documentKey) return;
+            void enterWorkspace(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
+              phase: BOX_PHASES.operate,
+            });
+          },
+        }
+      : isOperatePhase
+        ? {
+            label: "Open receipts",
+            testId: "workspace-founder-open-receipts",
+            onClick: () => openReceiptsSurface(),
+          }
+        : {
+            label: showStarterSeedEntry ? "Back to source" : "Open source",
+            testId: "workspace-source-open-box",
+            onClick: showStarterSeedEntry
+              ? () => void returnToStarterSourceView()
+              : () => {
+                  if (!founderWitnessDocument?.documentKey) return;
+                  void loadDocument(founderWitnessDocument.documentKey, {
+                    mode: WORKSPACE_MODES.listen,
+                    phase: BOX_PHASES.think,
+                  });
+                },
+          }
+    : {
+        label: "Open box",
+        testId: "workspace-source-open-box",
+        onClick: () => {
+          clearStarterFlowState({ keepScopedProject: true });
+          openCurrentBoxHome(activeProjectKey);
+        },
+      };
+  const founderPlayerSourceOptions = founderCompareActive
+    ? [
+        { key: "language", label: "Language" },
+        { key: "witness", label: "Witness" },
+      ]
+    : [];
   const founderSourceShell = founderJourneyActive ? (
     <FounderShell
       testId="workspace-source-view"
@@ -12239,7 +12578,11 @@ export default function WorkspaceShell({
       projectTitle={activeBoxTitle}
       intro={
         founderCompareActive
-          ? "The witness stays fixed on the left. The compiled seed is now active structure on the right."
+          ? isOperatePhase
+            ? "Operate reads the active structure while the witness stays fixed beside it."
+            : isReceiptsPhase
+              ? "The language stays central while receipt drafts and seals close the move."
+              : "The witness stays fixed on the left. The compiled seed is now active structure on the right."
           : "See the source as captured, listen to it as-is, then take one clear next step into Lœgos."
       }
       witnessTitle={founderCompareActive ? founderWitnessDocument?.title || "Source witness" : ""}
@@ -12283,37 +12626,8 @@ export default function WorkspaceShell({
       overridePending={operateOverridePending}
       onCreateOverride={createAttestedOverride}
       onDeleteOverride={(overrideId) => void deleteAttestedOverride(overrideId)}
-      primaryAction={{
-        label: founderCompareActive ? "Next: Run Operate" : "Next: Shape seed",
-        title: founderCompareActive ? "Run the first constrained read." : "Shape the first seed.",
-        detail: founderCompareActive
-          ? "The crossing is complete. The next move is to let Operate read this active structure against what the box can honestly support."
-          : "Keep the source raw here. The next move turns it into the first working seed you can operate on.",
-        testId: founderCompareActive ? "workspace-seed-next-run-operate" : "workspace-source-next-shape-seed",
-        onClick: founderCompareActive ? () => void runOperate() : () => void openStarterSeedFlow(),
-      }}
-      secondaryAction={{
-        label: founderCompareActive
-          ? showStarterSeedEntry
-            ? "Back to source"
-            : "Open source"
-          : "Open box",
-        testId: "workspace-source-open-box",
-        onClick: founderCompareActive
-          ? showStarterSeedEntry
-            ? () => void returnToStarterSourceView()
-            : () => {
-                if (!founderWitnessDocument?.documentKey) return;
-                void loadDocument(founderWitnessDocument.documentKey, {
-                  mode: WORKSPACE_MODES.listen,
-                  phase: BOX_PHASES.think,
-                });
-              }
-          : () => {
-              clearStarterFlowState({ keepScopedProject: true });
-              openCurrentBoxHome(activeProjectKey);
-            },
-      }}
+      primaryAction={founderPrimaryAction}
+      secondaryAction={founderSecondaryAction}
       onOpenStarter={() => openStarterLaunchpad(activeProjectKey)}
       onOpenFullWorkspace={openFounderFullWorkspace}
       assistantOpen={aiOpen}
@@ -12346,9 +12660,9 @@ export default function WorkspaceShell({
       player={
         <PlayerBar
           workspaceMode={WORKSPACE_MODES.listen}
-          currentBlock={founderCurrentBlock}
-          currentIndex={founderCurrentIndex}
-          totalBlocks={founderArtifactBlocks.length}
+          currentBlock={founderPlayerCurrentBlock}
+          currentIndex={founderPlayerCurrentIndex}
+          totalBlocks={founderPlaybackBlocks.length}
           isPlaying={isPlaying}
           loadingAudio={loadingAudio}
           playbackAvailable={playbackAvailable}
@@ -12357,13 +12671,44 @@ export default function WorkspaceShell({
           voiceChoice={resolvedVoiceChoice || availableVoiceCatalog[0] || null}
           providerLabel={providerLabel}
           progress={founderProgress}
+          sourceOptions={founderPlayerSourceOptions}
+          selectedSourceKey={founderPlaybackSurface}
           deviceVoiceSupported={deviceVoiceSupported}
           docked
-          onTogglePlayback={togglePlayback}
+          onSelectSource={handleFounderPlaybackSourceSelect}
+          onTogglePlayback={() =>
+            void togglePlayback(
+              founderCompareActive
+                ? {
+                    document: founderPlaybackDocument,
+                    blocks: founderPlaybackBlocks,
+                    focusedBlockId: founderResolvedPlaybackBlockId,
+                    setActiveBlock: handleFounderPlaybackSelectBlock,
+                    persistListening: true,
+                  }
+                : null,
+            )
+          }
           onSeekBack={() => seekAudio(-10)}
           onSeekForward={() => seekAudio(10)}
-          onPreviousBlock={() => jumpToIndex(founderCurrentIndex - 1)}
-          onNextBlock={() => jumpToIndex(founderCurrentIndex + 1)}
+          onPreviousBlock={() =>
+            void jumpToIndex(founderPlayerCurrentIndex - 1, {
+              document: founderPlaybackDocument,
+              blocks: founderPlaybackBlocks,
+              focusedBlockId: founderResolvedPlaybackBlockId,
+              setActiveBlock: handleFounderPlaybackSelectBlock,
+              persistListening: true,
+            })
+          }
+          onNextBlock={() =>
+            void jumpToIndex(founderPlayerCurrentIndex + 1, {
+              document: founderPlaybackDocument,
+              blocks: founderPlaybackBlocks,
+              focusedBlockId: founderResolvedPlaybackBlockId,
+              setActiveBlock: handleFounderPlaybackSelectBlock,
+              persistListening: true,
+            })
+          }
           onCycleRate={cycleRate}
           onVoiceChange={(choice) => {
             const changed =
