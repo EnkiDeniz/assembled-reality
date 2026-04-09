@@ -202,7 +202,25 @@ function deriveCandidateConfidence(reads, nearMissScore) {
   return Math.min(0.95, Math.max(0.2, c));
 }
 
-function chooseResult(ir, gate, library, features, reads) {
+function buildCandidateGuidance({ assemblyClass, nearMissShapeId }) {
+  if (assemblyClass === "path_dependent" && nearMissShapeId === "primitive_bottleneck") {
+    return {
+      mainGap:
+        "Current evidence is symptom-level (slow flow/backlog) but does not yet prove an order-constrained transition lane.",
+      nextLawfulMove:
+        "Map the actual handoff sequence. Confirm order matters by testing whether reversing steps changes the outcome.",
+      receiptCondition: {
+        receiptType: "stage_transition_proof",
+        validWhen: "ordered_sequence_confirmed && before_after_metric_shift",
+      },
+      possibleDisconfirmation:
+        "If reversing or parallelizing the suspected sequence does not change queue depth/cycle time, this is likely not a bottleneck.",
+    };
+  }
+  return {};
+}
+
+function chooseResult(ir, gate, library, features, reads, assemblyClass) {
   const fidelity = Boolean(features.enableV01Fidelity);
   library = library || { primitives: [], assemblies: [] };
 
@@ -256,6 +274,9 @@ function chooseResult(ir, gate, library, features, reads) {
     };
   }
 
+  const nearMissShapeId = best && best.id != null ? best.id : null;
+  const guidance = buildCandidateGuidance({ assemblyClass, nearMissShapeId });
+
   return {
     resultType: granularity === "assembly" ? "candidate_assembly" : "candidate_primitive",
     shapeIds: [],
@@ -269,6 +290,7 @@ function chooseResult(ir, gate, library, features, reads) {
               : null,
         }
       : {}),
+    ...guidance,
   };
 }
 
@@ -367,7 +389,7 @@ export function analyzeCanonicalIR(ir, { library, features = {} } = {}) {
   const reads = runFiveReads(ir);
   const gate = runGates(ir, reads);
   const maturationGate = runMaturationGate(ir, assemblyClass);
-  const chosen = chooseResult({ ...ir, granularity }, gate, library, features, reads);
+  const chosen = chooseResult({ ...ir, granularity }, gate, library, features, reads, assemblyClass);
   const ambiguities = [];
   if (reads.pressGeometry.status !== "pass") ambiguities.push("geometry_ambiguous");
   if (!gate.passed) ambiguities.push("gate_failure");
@@ -401,6 +423,12 @@ export function analyzeCanonicalIR(ir, { library, features = {} } = {}) {
     },
     ...(chosen.matchBasis !== undefined ? { matchBasis: chosen.matchBasis } : {}),
     ...(chosen.nearMiss !== undefined ? { nearMiss: chosen.nearMiss } : {}),
+    ...(chosen.mainGap ? { mainGap: chosen.mainGap } : {}),
+    ...(chosen.nextLawfulMove ? { nextLawfulMove: chosen.nextLawfulMove } : {}),
+    ...(chosen.receiptCondition ? { receiptCondition: chosen.receiptCondition } : {}),
+    ...(chosen.possibleDisconfirmation
+      ? { possibleDisconfirmation: chosen.possibleDisconfirmation }
+      : {}),
     ...(kernel ? { kernel } : {}),
     ...(crossDomain ? { crossDomain } : {}),
     ...(isMythDerived ? { isMythDerived: true } : {}),

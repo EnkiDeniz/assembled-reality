@@ -46,6 +46,46 @@ test("analyze fidelity: matchBasis and nearMiss when enableV01Fidelity", () => {
   assert.ok(r.value.nearMiss && r.value.nearMiss.shapeId === "primitive_bottleneck");
 });
 
+test("candidate near-match emits specific symptom guidance for path-dependent bottleneck", () => {
+  const ir = normalizeToCanonicalIR({
+    runType: "single",
+    inputMode: "human",
+    mode: "standard",
+    intentLayer: "behavior",
+    assumptionStatus: "explicit",
+    observables: ["queue growth", "late completions"],
+    timescale: { horizon: "short", window: "2 weeks" },
+    constraints: ["ordered transition"],
+    resourceBudget: { time: "2 weeks", money: "low", attention: "high", other: [] },
+    operationalFailure: "handoff friction remains unresolved",
+    invariant:
+      "The process slows at a transition point, but sequence causality is still unclear and unverified.",
+    granularity: "primitive",
+    assemblyClass: "path_dependent",
+    joinPattern: "stage_a->stage_b->stage_c",
+    falsifier: "reverse transition sequence and compare cycle time",
+    transferPrediction: "if order is causal, reversing sequence changes delay profile",
+  });
+  const library = {
+    primitives: [
+      { shapeId: "primitive_bottleneck", name: "B", invariantText: "One constrained step limits whole flow." },
+    ],
+    assemblies: [],
+  };
+  const r = analyzeCanonicalIR(ir, { library, features: { enableV01Fidelity: true } });
+  assert.equal(r.ok, true);
+  assert.equal(r.value.resultType, "candidate_primitive");
+  assert.equal(r.value.nearMiss?.shapeId, "primitive_bottleneck");
+  assert.equal(
+    r.value.nextLawfulMove,
+    "Map the actual handoff sequence. Confirm order matters by testing whether reversing steps changes the outcome.",
+  );
+  assert.deepEqual(r.value.receiptCondition, {
+    receiptType: "stage_transition_proof",
+    validWhen: "ordered_sequence_confirmed && before_after_metric_shift",
+  });
+});
+
 test("expectedAlignment aggregates against seeded primitive", () => {
   const episodes = [
     {

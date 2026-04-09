@@ -1,0 +1,226 @@
+.shape-workbench-page {
+  min-height: 100vh;
+  padding: 24px 20px 40px;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
+.shape-workbench-shell {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.shape-workbench-header {
+  display: grid;
+  gap: 6px;
+}
+
+.shape-workbench-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.45rem, 2.1vw, 1.8rem);
+  line-height: 1.15;
+}
+
+.shape-workbench-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.shape-workbench-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-panel);
+  padding: 16px 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.shape-workbench-panel h2,
+.shape-workbench-panel h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.shape-workbench-muted {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.shape-workbench-meta {
+  margin: 0;
+  color: var(--text-meta);
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.shape-workbench-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.shape-workbench-grid.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shape-workbench-label {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.shape-workbench-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shape-workbench-kv {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.shape-workbench-kv strong {
+  color: var(--text-primary);
+}
+
+.shape-workbench-error {
+  margin: 0;
+  color: var(--danger-text);
+}
+
+.shape-workbench-warning {
+  margin: 0;
+  color: var(--assembly-step-6-text);
+}
+
+.shape-workbench-success {
+  margin: 0;
+  color: var(--assembly-step-4-text);
+}
+
+.shape-workbench-card {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  padding: 12px;
+}
+
+.shape-workbench-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.shape-workbench-table-wrap {
+  overflow-x: auto;
+}
+
+.shape-workbench-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.shape-workbench-table thead tr {
+  color: var(--text-meta);
+}
+
+.shape-workbench-table th {
+  text-align: left;
+  padding: 6px 8px;
+  font-weight: 500;
+}
+
+.shape-workbench-table td {
+  padding: 8px;
+  color: var(--text-secondary);
+}
+
+.shape-workbench-table tbody tr {
+  border-top: 1px solid var(--line);
+}
+
+.shape-workbench-table tbody tr.is-clickable {
+  cursor: pointer;
+}
+
+.shape-workbench-table tbody tr.is-selected {
+  background: rgba(94, 167, 255, 0.08);
+}
+
+.shape-workbench-flag-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.shape-workbench-flag-box.is-alert {
+  border-color: var(--assembly-step-6-border);
+  background: var(--assembly-step-6-soft);
+  color: var(--assembly-step-6-text);
+}
+
+.shape-workbench-flag-box.is-clear {
+  border-color: var(--assembly-step-4-border);
+  background: var(--assembly-step-4-soft);
+  color: var(--assembly-step-4-text);
+}
+
+.shape-workbench-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shape-workbench-chip.is-confirmed {
+  border-color: var(--assembly-step-4-border);
+  background: var(--assembly-step-4-soft);
+  color: var(--assembly-step-4-text);
+}
+
+.shape-workbench-chip.is-hypothesis {
+  border-color: var(--assembly-step-6-border);
+  background: var(--assembly-step-6-soft);
+  color: var(--assembly-step-6-text);
+}
+
+.shape-workbench-chip.is-blocked {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.shape-workbench-chip.is-neutral {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-meta);
+}
+
+@media (max-width: 900px) {
+  .shape-workbench-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+}

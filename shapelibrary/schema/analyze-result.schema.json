@@ -46,6 +46,17 @@
         "confidence": { "type": "number" },
         "confidenceSource": { "type": "string", "enum": ["convergence", "heuristic", "single_run"] },
         "candidateId": { "type": ["string", "null"] },
+        "mainGap": { "type": "string" },
+        "nextLawfulMove": { "type": "string" },
+        "receiptCondition": {
+          "type": "object",
+          "required": ["receiptType", "validWhen"],
+          "properties": {
+            "receiptType": { "type": "string" },
+            "validWhen": { "type": "string" }
+          }
+        },
+        "possibleDisconfirmation": { "type": "string" },
         "intentLayerCheck": { "type": "object" },
         "matchBasis": { "type": ["string", "null"] },
         "nearMiss": {
