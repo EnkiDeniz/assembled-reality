@@ -93,6 +93,19 @@ export function migrate(db) {
       createdAt TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS ShapePrimitiveSpecVersion (
+      versionId TEXT PRIMARY KEY,
+      shapeId TEXT NOT NULL,
+      version INTEGER NOT NULL,
+      snapshotJson TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      updatedBy TEXT NOT NULL,
+      changeReason TEXT,
+      fieldsChangedJson TEXT NOT NULL,
+      priorValuesJson TEXT NOT NULL,
+      UNIQUE(shapeId, version)
+    );
+
     CREATE TABLE IF NOT EXISTS ShapeAssembly (
       shapeId TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -155,5 +168,24 @@ export function migrate(db) {
     ensureColumn(db, "ShapeCandidate", "assemblyClass", "TEXT");
     ensureColumn(db, "ShapeCandidate", "maturationJson", "TEXT");
     db.pragma("user_version = 2");
+    ver = 2;
+  }
+
+  if (ver < 3) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ShapePrimitiveSpecVersion (
+        versionId TEXT PRIMARY KEY,
+        shapeId TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        snapshotJson TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        updatedBy TEXT NOT NULL,
+        changeReason TEXT,
+        fieldsChangedJson TEXT NOT NULL,
+        priorValuesJson TEXT NOT NULL,
+        UNIQUE(shapeId, version)
+      );
+    `);
+    db.pragma("user_version = 3");
   }
 }

@@ -7,7 +7,9 @@ import { applyMythDecompression, hasNonMythReceipt } from "../shape-core/myth.js
 import { receiptsSatisfyAssemblyClass } from "../shape-core/assembly-path.js";
 import { openDatabase, migrate } from "../shape-store/db.js";
 import {
+  ensurePrimitiveVersioned,
   getCandidateById,
+  getPrimitiveById,
   insertCandidateFromRun,
   insertMintedPrimitive,
   insertReceipt,
@@ -19,6 +21,7 @@ import {
   saveEpisode,
   seedLibraryIfEmpty,
   suggestPrimitiveLink,
+  patchPrimitiveSpec,
   updateCandidateLibraryFields,
   updateCandidateStatus,
 } from "../shape-store/repository.js";
@@ -47,6 +50,7 @@ app.use(express.json({ limit: "2mb" }));
 const db = openDatabase();
 migrate(db);
 seedLibraryIfEmpty(db);
+ensurePrimitiveVersioned(db);
 
 const featureFlags = loadFeatureFlagsFromEnv();
 
@@ -185,6 +189,42 @@ app.get("/v1/library", (req, res) => {
   const minConfidence = req.query.minConfidence ? Number(req.query.minConfidence) : undefined;
   const value = listLibrary(db, { type, status, minConfidence });
   res.json({ ok: true, value });
+});
+
+app.patch("/v1/library/primitives/:shapeId", (req, res) => {
+  const shapeId = String(req.params.shapeId || "").trim();
+  if (!shapeId) {
+    return writeError(res, 400, ERROR_CODES.INVALID_INPUT, "shapeId is required");
+  }
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  const patch = {};
+  const allowed = [
+    "invariant",
+    "joinPattern",
+    "repairLogic",
+    "failureSignature",
+    "disconfirmationCondition",
+  ];
+  for (const key of allowed) {
+    if (key in body) patch[key] = body[key];
+  }
+  if (!Object.keys(patch).length) {
+    return writeError(
+      res,
+      400,
+      ERROR_CODES.INVALID_INPUT,
+      "No supported fields provided for primitive patch",
+      [{ allowedFields: allowed }],
+    );
+  }
+  const updatedBy = String(body.updatedBy || "agent").trim() || "agent";
+  const changeReason = String(body.changeReason || "manual_patch").trim() || "manual_patch";
+  const existing = getPrimitiveById(db, shapeId);
+  if (!existing) {
+    return writeError(res, 404, ERROR_CODES.INVALID_INPUT, "Primitive not found");
+  }
+  const updated = patchPrimitiveSpec(db, { shapeId, patch, updatedBy, changeReason });
+  return res.json({ ok: true, value: updated });
 });
 
 app.post("/v1/evaluate", (req, res) => {

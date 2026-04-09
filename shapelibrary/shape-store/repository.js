@@ -297,3 +297,179 @@ export function saveEpisode(db, episode) {
     createdAt: new Date().toISOString(),
   });
 }
+
+function normalizeJoinPattern(value) {
+  if (Array.isArray(value)) return value.map((x) => String(x || "").trim()).filter(Boolean);
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split("->")
+      .map((x) => String(x || "").trim())
+      .filter(Boolean);
+  }
+  return value;
+}
+
+export function getPrimitiveById(db, shapeId) {
+  const row = db
+    .prepare(
+      `SELECT shapeId, name, invariantText, status, metadataJson, createdAt
+       FROM ShapePrimitive WHERE shapeId = ?`,
+    )
+    .get(shapeId);
+  if (!row) return null;
+  const latest = db
+    .prepare(
+      `SELECT version, updatedAt, updatedBy, changeReason, fieldsChangedJson
+       FROM ShapePrimitiveSpecVersion
+       WHERE shapeId = ?
+       ORDER BY version DESC
+       LIMIT 1`,
+    )
+    .get(shapeId);
+  return {
+    ...row,
+    metadata: JSON.parse(row.metadataJson || "{}"),
+    specVersion: latest?.version || 0,
+    specUpdatedAt: latest?.updatedAt || null,
+    specUpdatedBy: latest?.updatedBy || null,
+    specChangeReason: latest?.changeReason || null,
+    fieldsChanged: latest?.fieldsChangedJson ? JSON.parse(latest.fieldsChangedJson) : [],
+  };
+}
+
+export function ensurePrimitiveVersioned(
+  db,
+  { updatedBy = "system_migration", changeReason = "bootstrap_versioning_v1" } = {},
+) {
+  const rows = db
+    .prepare("SELECT shapeId, name, invariantText, status, metadataJson, createdAt FROM ShapePrimitive")
+    .all();
+  const countStmt = db.prepare(
+    "SELECT COUNT(*) AS count FROM ShapePrimitiveSpecVersion WHERE shapeId = ?",
+  );
+  const insertStmt = db.prepare(`
+    INSERT INTO ShapePrimitiveSpecVersion
+      (versionId, shapeId, version, snapshotJson, updatedAt, updatedBy, changeReason, fieldsChangedJson, priorValuesJson)
+    VALUES
+      (@versionId, @shapeId, @version, @snapshotJson, @updatedAt, @updatedBy, @changeReason, @fieldsChangedJson, @priorValuesJson)
+  `);
+  const now = new Date().toISOString();
+  let inserted = 0;
+  for (const row of rows) {
+    const existing = countStmt.get(row.shapeId)?.count || 0;
+    if (existing > 0) continue;
+    const metadata = JSON.parse(row.metadataJson || "{}");
+    if (metadata.joinPattern !== undefined) {
+      metadata.joinPattern = normalizeJoinPattern(metadata.joinPattern);
+    }
+    const snapshot = {
+      shapeId: row.shapeId,
+      name: row.name,
+      invariant: row.invariantText,
+      status: row.status,
+      metadata,
+      createdAt: row.createdAt,
+    };
+    insertStmt.run({
+      versionId: randomUUID(),
+      shapeId: row.shapeId,
+      version: 1,
+      snapshotJson: toJson(snapshot),
+      updatedAt: now,
+      updatedBy,
+      changeReason,
+      fieldsChangedJson: toJson(["invariant", "joinPattern", "repairLogic", "failureSignature", "disconfirmationCondition"]),
+      priorValuesJson: toJson({}),
+    });
+    if (metadata.joinPattern !== undefined) {
+      db.prepare("UPDATE ShapePrimitive SET metadataJson = ? WHERE shapeId = ?").run(
+        toJson(metadata),
+        row.shapeId,
+      );
+    }
+    inserted += 1;
+  }
+  return { inserted };
+}
+
+export function patchPrimitiveSpec(
+  db,
+  { shapeId, patch, updatedBy = "agent", changeReason = "manual_patch" },
+) {
+  const current = db
+    .prepare("SELECT shapeId, name, invariantText, status, metadataJson, createdAt FROM ShapePrimitive WHERE shapeId = ?")
+    .get(shapeId);
+  if (!current) return null;
+
+  const meta = JSON.parse(current.metadataJson || "{}");
+  const allowed = [
+    "invariant",
+    "joinPattern",
+    "repairLogic",
+    "failureSignature",
+    "disconfirmationCondition",
+  ];
+  const fieldsChanged = [];
+  const priorValues = {};
+  let nextInvariant = current.invariantText;
+
+  for (const key of allowed) {
+    if (!(key in patch)) continue;
+    fieldsChanged.push(key);
+    if (key === "invariant") {
+      priorValues[key] = current.invariantText;
+      nextInvariant = String(patch[key] || "").trim();
+    } else if (key === "joinPattern") {
+      priorValues[key] = meta.joinPattern ?? null;
+      meta.joinPattern = normalizeJoinPattern(patch[key]);
+    } else {
+      priorValues[key] = meta[key] ?? null;
+      meta[key] = patch[key];
+    }
+  }
+
+  if (!fieldsChanged.length) {
+    return getPrimitiveById(db, shapeId);
+  }
+
+  const nextVersion =
+    (db
+      .prepare("SELECT COALESCE(MAX(version), 0) AS version FROM ShapePrimitiveSpecVersion WHERE shapeId = ?")
+      .get(shapeId)?.version || 0) + 1;
+  const now = new Date().toISOString();
+  const snapshot = {
+    shapeId,
+    name: current.name,
+    invariant: nextInvariant,
+    status: current.status,
+    metadata: meta,
+    createdAt: current.createdAt,
+  };
+
+  const tx = db.transaction(() => {
+    db.prepare("UPDATE ShapePrimitive SET invariantText = ?, metadataJson = ? WHERE shapeId = ?").run(
+      nextInvariant,
+      toJson(meta),
+      shapeId,
+    );
+    db.prepare(`
+      INSERT INTO ShapePrimitiveSpecVersion
+        (versionId, shapeId, version, snapshotJson, updatedAt, updatedBy, changeReason, fieldsChangedJson, priorValuesJson)
+      VALUES
+        (@versionId, @shapeId, @version, @snapshotJson, @updatedAt, @updatedBy, @changeReason, @fieldsChangedJson, @priorValuesJson)
+    `).run({
+      versionId: randomUUID(),
+      shapeId,
+      version: nextVersion,
+      snapshotJson: toJson(snapshot),
+      updatedAt: now,
+      updatedBy,
+      changeReason,
+      fieldsChangedJson: toJson(fieldsChanged),
+      priorValuesJson: toJson(priorValues),
+    });
+  });
+  tx();
+
+  return getPrimitiveById(db, shapeId);
+}
