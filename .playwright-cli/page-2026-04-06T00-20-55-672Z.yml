@@ -1,0 +1,124 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Lœgos account
+          - generic [ref=e8]: Navigate by shape. Act by verb.
+        - generic [ref=e9]:
+          - generic [ref=e10]: Control surface
+          - heading "Account" [level=1] [ref=e11]
+          - paragraph [ref=e12]: Identity, listening defaults, proof connection, and receipt drafts live here. The box work itself stays in the workspace.
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]:
+            - img [ref=e17]
+            - generic [ref=e19]: Aim
+          - generic [ref=e20]:
+            - generic [ref=e21]: declare
+            - generic [ref=e22]: Direction, declaration, next move.
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - img [ref=e26]
+            - generic [ref=e28]: Reality
+          - generic [ref=e29]:
+            - generic [ref=e30]: capture
+            - generic [ref=e31]: Capture, listen, inspect what is here.
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - generic [ref=e35]: œ
+            - generic [ref=e36]: Weld
+          - generic [ref=e37]:
+            - generic [ref=e38]: stage
+            - generic [ref=e39]: Stage, rewrite, operate the object.
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - img [ref=e43]
+            - generic [ref=e51]: Seal
+          - generic [ref=e52]:
+            - generic [ref=e53]: review
+            - generic [ref=e54]: Review, seal, share the proof.
+      - generic [ref=e55]:
+        - article [ref=e56]:
+          - generic [ref=e57]: Documents
+          - strong [ref=e58]: "14"
+          - generic [ref=e59]: Visible inside your current boxes.
+        - article [ref=e60]:
+          - generic [ref=e61]: Receipt drafts
+          - strong [ref=e62]: "1"
+          - generic [ref=e63]: Local and remote proof drafts.
+        - article [ref=e64]:
+          - generic [ref=e65]: Listening
+          - strong [ref=e66]: 1x
+          - generic [ref=e67]: Seven
+        - article [ref=e68]:
+          - generic [ref=e69]: Connection
+          - strong [ref=e70]: disconnected
+          - generic [ref=e71]: GetReceipts sync posture.
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - heading "Identity" [level=2] [ref=e76]
+              - generic [ref=e77]:
+                - link "Workspace" [ref=e78] [cursor=pointer]:
+                  - /url: /workspace
+                - link "Intro" [ref=e79] [cursor=pointer]:
+                  - /url: /intro
+            - paragraph [ref=e80]: Reader identity stays compact so the box, not the profile, remains the center of gravity.
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: Display name
+                - textbox "Display name" [ref=e84]: Guardian
+              - generic [ref=e85]:
+                - generic [ref=e86]:
+                  - term [ref=e87]: Handle
+                  - definition [ref=e88]: guardian
+                - generic [ref=e89]:
+                  - term [ref=e90]: Email
+                  - definition [ref=e91]: guardian@loegos.local
+              - generic [ref=e92]:
+                - generic [ref=e93]: Used for receipts and ownership labels.
+                - button "Save name" [ref=e94] [cursor=pointer]
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - heading "Listening defaults" [level=2] [ref=e97]
+              - generic [ref=e98]: Reality
+            - generic [ref=e99]:
+              - generic [ref=e100]:
+                - term [ref=e101]: Preferred voice
+                - definition [ref=e102]: Seven
+              - generic [ref=e103]:
+                - term [ref=e104]: Listening speed
+                - definition [ref=e105]: 1x
+            - paragraph [ref=e106]: Updated from your latest listening session. Mobile capture and desktop review share the same voice defaults.
+        - generic [ref=e107]:
+          - article [ref=e108]:
+            - generic [ref=e109]:
+              - generic [ref=e110]:
+                - img [ref=e112]
+                - generic [ref=e120]: Proof connection
+              - generic [ref=e121]:
+                - generic [ref=e122]: disconnected
+                - generic "Settlement vessel 2 of 7" [ref=e123]:
+                  - img [ref=e124]
+            - heading "GetReceipts" [level=3] [ref=e131]
+            - paragraph [ref=e132]: Connect when you want drafts to flow out.
+            - paragraph [ref=e133]: Seal is proof. Seven is resolution. This surface only handles proof transport.
+            - generic [ref=e134]:
+              - generic [ref=e135]: Portable proof
+              - link "Connect GetReceipts" [ref=e137] [cursor=pointer]:
+                - /url: /connect/getreceipts
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - heading "Receipt drafts" [level=2] [ref=e140]
+              - button "Sign Out" [ref=e141] [cursor=pointer]
+            - article [ref=e143]:
+              - generic [ref=e144]:
+                - generic [ref=e145]: sealed
+                - generic [ref=e146]: confident
+              - paragraph [ref=e147]: Share prototype for feedback
+              - paragraph [ref=e148]: The prototype was shared with a real stakeholder, the share was witnessed in WhatsApp, and the contact became portable proof.
+      - paragraph [ref=e150]: Account remains a compact control surface, not a second workspace.
+  - button "Open Next.js Dev Tools" [ref=e156] [cursor=pointer]:
+    - img [ref=e157]

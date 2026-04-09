@@ -1,0 +1,21 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: Lœgos
+        - heading "Meaning is an assembled object." [level=1] [ref=e7]
+        - paragraph [ref=e8]: Close the gap between what you think and what you do.
+      - generic [ref=e9]:
+        - link "Open Lœgos" [ref=e12] [cursor=pointer]:
+          - /url: /workspace?mode=listen
+        - navigation "Public pages" [ref=e13]:
+          - link "About" [ref=e14] [cursor=pointer]:
+            - /url: /about
+          - link "Privacy" [ref=e15] [cursor=pointer]:
+            - /url: /privacy
+          - link "Terms" [ref=e16] [cursor=pointer]:
+            - /url: /terms
+          - link "Trust" [ref=e17] [cursor=pointer]:
+            - /url: /trust
+  - button "Open Next.js Dev Tools" [ref=e23] [cursor=pointer]:
+    - img [ref=e24]

@@ -69,17 +69,34 @@ export default function FounderWorkbenchTree({
   sections = [],
   primaryAction = null,
   secondaryAction = null,
+  rootActive = false,
+  onSelectRoot,
 }) {
+  const rootContent = (
+    <>
+      <span className="founder-tree__root-label">Box</span>
+      <strong className="founder-tree__root-title">{projectTitle || "Current box"}</strong>
+      <p className="founder-tree__root-copy">
+        {artifactKind ? `${artifactKind} · ` : ""}
+        {artifactTitle || "No active artifact"}
+      </p>
+    </>
+  );
+
   return (
     <aside className="founder-tree" data-testid="founder-workbench-tree" aria-label="Workbench files">
-      <div className="founder-tree__root">
-        <span className="founder-tree__root-label">Box</span>
-        <strong className="founder-tree__root-title">{projectTitle || "Current box"}</strong>
-        <p className="founder-tree__root-copy">
-          {artifactKind ? `${artifactKind} · ` : ""}
-          {artifactTitle || "No active artifact"}
-        </p>
-      </div>
+      {typeof onSelectRoot === "function" ? (
+        <button
+          type="button"
+          className={`founder-tree__root founder-tree__root-button ${rootActive ? "is-active" : ""}`}
+          aria-current={rootActive ? "true" : undefined}
+          onClick={onSelectRoot}
+        >
+          {rootContent}
+        </button>
+      ) : (
+        <div className={`founder-tree__root ${rootActive ? "is-active" : ""}`}>{rootContent}</div>
+      )}
 
       <div className="founder-tree__sections">
         {(Array.isArray(sections) ? sections : []).map((section) => (

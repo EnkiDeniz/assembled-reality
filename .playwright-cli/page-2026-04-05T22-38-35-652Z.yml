@@ -1,0 +1,966 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - link "Account" [ref=e5] [cursor=pointer]:
+        - /url: /account
+        - img [ref=e6]
+      - generic [ref=e619]:
+        - generic [ref=e620]:
+          - generic [ref=e621]:
+            - button "All boxes" [ref=e622] [cursor=pointer]: Lœgos
+            - 'button "Current box: How Lœgos Assembled Itself" [ref=e625] [cursor=pointer]':
+              - generic [ref=e627]: How Lœgos Assembled Itself
+              - img [ref=e628]
+            - generic [ref=e631]:
+              - button "Assembly lane" [ref=e632] [cursor=pointer]:
+                - img [ref=e633]
+              - button "Seed" [ref=e635] [cursor=pointer]:
+                - img [ref=e636]
+              - button "Operate" [active] [ref=e639] [cursor=pointer]:
+                - img [ref=e640]
+              - button "Receipts" [ref=e645] [cursor=pointer]:
+                - img [ref=e646]
+            - 'button "Root: Show how Lœgos assembled itself" [ref=e650] [cursor=pointer]': Show how Lœgos assembled itself
+            - generic [ref=e652]:
+              - button "Add source" [ref=e653] [cursor=pointer]:
+                - img [ref=e654]
+              - button "Speak" [ref=e655] [cursor=pointer]:
+                - img [ref=e656]
+              - button "Box settings" [ref=e659] [cursor=pointer]:
+                - img [ref=e660]
+            - button "46 blocks waiting for confirmation" [ref=e661] [cursor=pointer]: ⊘ 46
+          - generic [ref=e662]:
+            - generic [ref=e663]:
+              - generic [ref=e664]:
+                - generic [ref=e665]: Reality
+                - generic [ref=e666]: Released · Committing
+              - strong [ref=e667]: Listen · What’s In The Box
+              - paragraph [ref=e668]: Operate is unavailable right now.
+            - button "Interpret with Seven" [ref=e1915] [cursor=pointer]
+        - generic [ref=e671]:
+          - region "Assembly lane summary" [ref=e672]:
+            - generic [ref=e673]:
+              - generic [ref=e674]: Assembly lane
+              - generic [ref=e675]:
+                - strong [ref=e676]: How Lœgos Assembled Itself
+                - generic [ref=e677]:
+                  - generic [ref=e678]: Released · Committing
+                  - generic [ref=e679]: 12 sources
+                  - generic [ref=e680]: 49 entries
+              - paragraph [ref=e681]: Editable example. Seeded from the real Lœgos origin corpus. Delete anytime.
+              - generic "Assembly protocol position" [ref=e682]:
+                - generic [ref=e683]: Collecting
+                - generic [ref=e684]: Shaping
+                - generic [ref=e685]: Proving
+          - generic [ref=e687]:
+            - generic [ref=e688]:
+              - generic [ref=e689]:
+                - generic [ref=e690]: Origin
+                - strong [ref=e691]: 30 entries
+              - list [ref=e692]:
+                - listitem [ref=e693]:
+                  - article [ref=e694]:
+                    - generic [ref=e695]:
+                      - generic [ref=e696]:
+                        - img [ref=e698]
+                        - generic [ref=e700]:
+                          - generic [ref=e701]:
+                            - generic [ref=e702]: Root
+                            - generic [ref=e703]: Mar 28, 2026
+                          - heading "Show how Lœgos assembled itself" [level=3] [ref=e704]
+                      - button "Open root" [ref=e706] [cursor=pointer]:
+                        - img [ref=e707]
+                    - paragraph [ref=e710]: Use the actual origin corpus to reconstruct how naming, theory, pivots, and proof became the product.
+                    - generic [ref=e712]: Staged
+                - listitem [ref=e713]:
+                  - article [ref=e714]:
+                    - generic [ref=e715]:
+                      - generic [ref=e716]:
+                        - img [ref=e718]
+                        - generic [ref=e721]:
+                          - generic [ref=e722]:
+                            - generic [ref=e723]: Source
+                            - generic [ref=e724]: Mar 28, 2026
+                          - heading "words are lœgos" [level=3] [ref=e725]
+                      - button "Open source" [ref=e727] [cursor=pointer]:
+                        - img [ref=e728]
+                    - paragraph [ref=e731]: 1 block · Text source · uploaded
+                    - generic [ref=e733]: Selected
+                - listitem [ref=e734]:
+                  - article [ref=e735]:
+                    - generic [ref=e736]:
+                      - generic [ref=e737]:
+                        - img [ref=e739]
+                        - generic [ref=e741]:
+                          - generic [ref=e742]:
+                            - generic [ref=e743]: Assembly move
+                            - generic [ref=e744]: Mar 28, 2026
+                          - heading "Source added · words are lœgos" [level=3] [ref=e745]
+                      - button "Open source" [ref=e747] [cursor=pointer]:
+                        - img [ref=e748]
+                    - paragraph [ref=e751]: Added words are lœgos to the box.
+                    - generic [ref=e753]: Selected
+                - listitem [ref=e754]:
+                  - article [ref=e755]:
+                    - generic [ref=e756]:
+                      - generic [ref=e757]:
+                        - img [ref=e759]
+                        - generic [ref=e761]:
+                          - generic [ref=e762]:
+                            - generic [ref=e763]: Assembly move
+                            - generic [ref=e764]: Mar 28, 2026
+                          - heading "Naming arrives" [level=3] [ref=e765]
+                      - button "Open source" [ref=e767] [cursor=pointer]:
+                        - img [ref=e768]
+                    - paragraph [ref=e771]: The ligature lands before the product. The word gives the future box a shape to cohere around.
+                    - generic [ref=e773]: Selected
+                - listitem [ref=e774]:
+                  - article [ref=e775]:
+                    - generic [ref=e776]:
+                      - generic [ref=e777]:
+                        - img [ref=e779]
+                        - generic [ref=e782]:
+                          - generic [ref=e783]:
+                            - generic [ref=e784]: Source
+                            - generic [ref=e785]: Mar 28, 2026
+                          - heading "Assembled Reality" [level=3] [ref=e786]
+                      - button "Open source" [ref=e788] [cursor=pointer]:
+                        - img [ref=e789]
+                    - paragraph [ref=e792]: 187 blocks · Text source · uploaded
+                    - generic [ref=e794]: Selected
+                - listitem [ref=e795]:
+                  - article [ref=e796]:
+                    - generic [ref=e797]:
+                      - generic [ref=e798]:
+                        - img [ref=e800]
+                        - generic [ref=e802]:
+                          - generic [ref=e803]:
+                            - generic [ref=e804]: Assembly move
+                            - generic [ref=e805]: Mar 28, 2026
+                          - heading "Source added · Assembled Reality" [level=3] [ref=e806]
+                      - button "Open source" [ref=e808] [cursor=pointer]:
+                        - img [ref=e809]
+                    - paragraph [ref=e812]: Added Assembled Reality to the box.
+                    - generic [ref=e814]: Selected
+                - listitem [ref=e815]:
+                  - article [ref=e816]:
+                    - generic [ref=e817]:
+                      - generic [ref=e818]:
+                        - img [ref=e820]
+                        - generic [ref=e822]:
+                          - generic [ref=e823]:
+                            - generic [ref=e824]: Assembly move
+                            - generic [ref=e825]: Mar 28, 2026
+                          - heading "Assembled Reality becomes the first source" [level=3] [ref=e826]
+                      - button "Open source" [ref=e828] [cursor=pointer]:
+                        - img [ref=e829]
+                    - paragraph [ref=e832]: The project starts as a document viewer for the theory note that created the need for the tool.
+                    - generic [ref=e834]: Staged
+                - listitem [ref=e835]:
+                  - article [ref=e836]:
+                    - generic [ref=e837]:
+                      - generic [ref=e838]:
+                        - img [ref=e840]
+                        - generic [ref=e843]:
+                          - generic [ref=e844]:
+                            - generic [ref=e845]: Source
+                            - generic [ref=e846]: Mar 30, 2026
+                          - heading "Operator Sentences" [level=3] [ref=e847]
+                      - button "Open source" [ref=e849] [cursor=pointer]:
+                        - img [ref=e850]
+                    - paragraph [ref=e853]: 95 blocks · Text source · uploaded
+                    - generic [ref=e855]: Selected
+                - listitem [ref=e856]:
+                  - article [ref=e857]:
+                    - generic [ref=e858]:
+                      - generic [ref=e859]:
+                        - img [ref=e861]
+                        - generic [ref=e863]:
+                          - generic [ref=e864]:
+                            - generic [ref=e865]: Assembly move
+                            - generic [ref=e866]: Mar 30, 2026
+                          - heading "Source added · Operator Sentences" [level=3] [ref=e867]
+                      - button "Open source" [ref=e869] [cursor=pointer]:
+                        - img [ref=e870]
+                    - paragraph [ref=e873]: Added Operator Sentences to the box.
+                    - generic [ref=e875]: Selected
+                - listitem [ref=e876]:
+                  - article [ref=e877]:
+                    - generic [ref=e878]:
+                      - generic [ref=e879]:
+                        - img [ref=e881]
+                        - generic [ref=e884]:
+                          - generic [ref=e885]:
+                            - generic [ref=e886]: Source
+                            - generic [ref=e887]: Apr 2, 2026
+                          - heading "Echo Canon" [level=3] [ref=e888]
+                      - button "Open source" [ref=e890] [cursor=pointer]:
+                        - img [ref=e891]
+                    - paragraph [ref=e894]: 154 blocks · Text source · uploaded
+                    - generic [ref=e896]: Selected
+                - listitem [ref=e897]:
+                  - article [ref=e898]:
+                    - generic [ref=e899]:
+                      - generic [ref=e900]:
+                        - img [ref=e902]
+                        - generic [ref=e904]:
+                          - generic [ref=e905]:
+                            - generic [ref=e906]: Assembly move
+                            - generic [ref=e907]: Apr 2, 2026
+                          - heading "Source added · Echo Canon" [level=3] [ref=e908]
+                      - button "Open source" [ref=e910] [cursor=pointer]:
+                        - img [ref=e911]
+                    - paragraph [ref=e914]: Added Echo Canon to the box.
+                    - generic [ref=e916]: Selected
+                - listitem [ref=e917]:
+                  - article [ref=e918]:
+                    - generic [ref=e919]:
+                      - generic [ref=e920]:
+                        - img [ref=e922]
+                        - generic [ref=e925]:
+                          - generic [ref=e926]:
+                            - generic [ref=e927]: Source
+                            - generic [ref=e928]: Apr 2, 2026
+                          - heading "A monolith does not move." [level=3] [ref=e929]
+                      - button "Open source" [ref=e931] [cursor=pointer]:
+                        - img [ref=e932]
+                    - paragraph [ref=e935]: 39 blocks · Text source · uploaded
+                    - generic [ref=e937]: Selected
+                - listitem [ref=e938]:
+                  - article [ref=e939]:
+                    - generic [ref=e940]:
+                      - generic [ref=e941]:
+                        - img [ref=e943]
+                        - generic [ref=e945]:
+                          - generic [ref=e946]:
+                            - generic [ref=e947]: Assembly move
+                            - generic [ref=e948]: Apr 2, 2026
+                          - heading "Source added · A monolith does not move." [level=3] [ref=e949]
+                      - button "Open source" [ref=e951] [cursor=pointer]:
+                        - img [ref=e952]
+                    - paragraph [ref=e955]: Added A monolith does not move. to the box.
+                    - generic [ref=e957]: Selected
+                - listitem [ref=e958]:
+                  - article [ref=e959]:
+                    - generic [ref=e960]:
+                      - generic [ref=e961]:
+                        - img [ref=e963]
+                        - generic [ref=e968]:
+                          - generic [ref=e969]:
+                            - generic [ref=e970]: History export
+                            - generic [ref=e971]: Apr 3, 2026
+                          - heading "The Meaning Operator" [level=3] [ref=e972]
+                      - button "Open witness" [ref=e974] [cursor=pointer]:
+                        - img [ref=e975]
+                    - paragraph [ref=e978]: Imported chronology witness ready for normalization.
+                    - generic [ref=e980]: Staged
+                - listitem [ref=e981]:
+                  - article [ref=e982]:
+                    - generic [ref=e983]:
+                      - generic [ref=e984]:
+                        - img [ref=e986]
+                        - generic [ref=e988]:
+                          - generic [ref=e989]:
+                            - generic [ref=e990]: Assembly move
+                            - generic [ref=e991]: Apr 3, 2026
+                          - heading "Source added · The Meaning Operator" [level=3] [ref=e992]
+                      - button "Open source" [ref=e994] [cursor=pointer]:
+                        - img [ref=e995]
+                    - paragraph [ref=e998]: Added The Meaning Operator to the box.
+                    - generic [ref=e1000]: Selected
+                - listitem [ref=e1001]:
+                  - article [ref=e1002]:
+                    - generic [ref=e1003]:
+                      - generic [ref=e1004]:
+                        - img [ref=e1006]
+                        - generic [ref=e1009]:
+                          - generic [ref=e1010]:
+                            - generic [ref=e1011]: Source
+                            - generic [ref=e1012]: Apr 4, 2026
+                          - heading "The Ghost Operator" [level=3] [ref=e1013]
+                      - button "Open source" [ref=e1015] [cursor=pointer]:
+                        - img [ref=e1016]
+                    - paragraph [ref=e1019]: 66 blocks · Text source · uploaded
+                    - generic [ref=e1021]: Selected
+                - listitem [ref=e1022]:
+                  - article [ref=e1023]:
+                    - generic [ref=e1024]:
+                      - generic [ref=e1025]:
+                        - img [ref=e1027]
+                        - generic [ref=e1029]:
+                          - generic [ref=e1030]:
+                            - generic [ref=e1031]: Assembly move
+                            - generic [ref=e1032]: Apr 4, 2026
+                          - heading "Source added · The Ghost Operator" [level=3] [ref=e1033]
+                      - button "Open source" [ref=e1035] [cursor=pointer]:
+                        - img [ref=e1036]
+                    - paragraph [ref=e1039]: Added The Ghost Operator to the box.
+                    - generic [ref=e1041]: Selected
+                - listitem [ref=e1042]:
+                  - article [ref=e1043]:
+                    - generic [ref=e1044]:
+                      - generic [ref=e1045]:
+                        - img [ref=e1047]
+                        - generic [ref=e1050]:
+                          - generic [ref=e1051]:
+                            - generic [ref=e1052]: Source
+                            - generic [ref=e1053]: Apr 5, 2026
+                          - heading "Lœgos Self-Assembly Seed Spec" [level=3] [ref=e1054]
+                      - button "Open source" [ref=e1056] [cursor=pointer]:
+                        - img [ref=e1057]
+                    - paragraph [ref=e1060]: 308 blocks · Text source · uploaded
+                    - generic [ref=e1062]: Selected
+                - listitem [ref=e1063]:
+                  - article [ref=e1064]:
+                    - generic [ref=e1065]:
+                      - generic [ref=e1066]:
+                        - img [ref=e1068]
+                        - generic [ref=e1070]:
+                          - generic [ref=e1071]:
+                            - generic [ref=e1072]: Assembly move
+                            - generic [ref=e1073]: Apr 5, 2026
+                          - heading "Source added · Lœgos Self-Assembly Seed Spec" [level=3] [ref=e1074]
+                      - button "Open source" [ref=e1076] [cursor=pointer]:
+                        - img [ref=e1077]
+                    - paragraph [ref=e1080]: Added Lœgos Self-Assembly Seed Spec to the box.
+                    - generic [ref=e1082]: Selected
+                - listitem [ref=e1083]:
+                  - article [ref=e1084]:
+                    - generic [ref=e1085]:
+                      - generic [ref=e1086]:
+                        - img [ref=e1088]
+                        - generic [ref=e1093]:
+                          - generic [ref=e1094]:
+                            - generic [ref=e1095]: History export
+                            - generic [ref=e1096]: Apr 5, 2026
+                          - heading "Loegos Git history export" [level=3] [ref=e1097]
+                      - button "Open witness" [ref=e1099] [cursor=pointer]:
+                        - img [ref=e1100]
+                    - paragraph [ref=e1103]: Imported chronology witness ready for normalization.
+                    - generic [ref=e1105]: Staged
+                - listitem [ref=e1106]:
+                  - article [ref=e1107]:
+                    - generic [ref=e1108]:
+                      - generic [ref=e1109]:
+                        - img [ref=e1111]
+                        - generic [ref=e1113]:
+                          - generic [ref=e1114]:
+                            - generic [ref=e1115]: Assembly move
+                            - generic [ref=e1116]: Apr 5, 2026
+                          - heading "Source added · Loegos Git history export" [level=3] [ref=e1117]
+                      - button "Open source" [ref=e1119] [cursor=pointer]:
+                        - img [ref=e1120]
+                    - paragraph [ref=e1123]: Added Loegos Git history export to the box.
+                    - generic [ref=e1125]: Selected
+                - listitem [ref=e1126]:
+                  - article [ref=e1127]:
+                    - generic [ref=e1128]:
+                      - generic [ref=e1129]:
+                        - img [ref=e1131]
+                        - generic [ref=e1133]:
+                          - generic [ref=e1134]:
+                            - generic [ref=e1135]: Assembly move
+                            - generic [ref=e1136]: Apr 5, 2026
+                          - heading "Source derived · Loegos Git history export" [level=3] [ref=e1137]
+                      - button "Open source" [ref=e1139] [cursor=pointer]:
+                        - img [ref=e1140]
+                    - paragraph [ref=e1143]: Derived Loegos Git history export into a working source.
+                    - generic [ref=e1145]: Selected
+                - listitem [ref=e1146]:
+                  - article [ref=e1147]:
+                    - generic [ref=e1148]:
+                      - generic [ref=e1149]:
+                        - img [ref=e1151]
+                        - generic [ref=e1153]:
+                          - generic [ref=e1154]:
+                            - generic [ref=e1155]: Assembly move
+                            - generic [ref=e1156]: Apr 5, 2026
+                          - heading "History imported · Loegos Git history export" [level=3] [ref=e1157]
+                      - button "Open witness" [ref=e1159] [cursor=pointer]:
+                        - img [ref=e1160]
+                    - paragraph [ref=e1163]: Imported git-log as a chronology witness.
+                    - generic [ref=e1165]: Staged
+                - listitem [ref=e1166]:
+                  - article [ref=e1167]:
+                    - generic [ref=e1168]:
+                      - generic [ref=e1169]:
+                        - img [ref=e1171]
+                        - generic [ref=e1174]:
+                          - generic [ref=e1175]:
+                            - generic [ref=e1176]: Source
+                            - generic [ref=e1177]: Apr 5, 2026
+                          - heading "The Law of the Echo" [level=3] [ref=e1178]
+                      - button "Open source" [ref=e1180] [cursor=pointer]:
+                        - img [ref=e1181]
+                    - paragraph [ref=e1184]: 208 blocks · Text source · uploaded
+                    - generic [ref=e1186]: Selected
+                - listitem [ref=e1187]:
+                  - article [ref=e1188]:
+                    - generic [ref=e1189]:
+                      - generic [ref=e1190]:
+                        - img [ref=e1192]
+                        - generic [ref=e1194]:
+                          - generic [ref=e1195]:
+                            - generic [ref=e1196]: Assembly move
+                            - generic [ref=e1197]: Apr 5, 2026
+                          - heading "Source added · The Law of the Echo" [level=3] [ref=e1198]
+                      - button "Open source" [ref=e1200] [cursor=pointer]:
+                        - img [ref=e1201]
+                    - paragraph [ref=e1204]: Added The Law of the Echo to the box.
+                    - generic [ref=e1206]: Selected
+                - listitem [ref=e1207]:
+                  - article [ref=e1208]:
+                    - generic [ref=e1209]:
+                      - generic [ref=e1210]:
+                        - img [ref=e1212]
+                        - generic [ref=e1215]:
+                          - generic [ref=e1216]:
+                            - generic [ref=e1217]: Derived source
+                            - generic [ref=e1218]: Apr 5, 2026
+                          - heading "Lœgos — Origin, Evolution, Feedback, and Receipt" [level=3] [ref=e1219]
+                      - button "Open source" [ref=e1221] [cursor=pointer]:
+                        - img [ref=e1222]
+                    - paragraph [ref=e1225]: 99 blocks · Image source · uploaded
+                    - generic [ref=e1227]: Selected
+                - listitem [ref=e1228]:
+                  - article [ref=e1229]:
+                    - generic [ref=e1230]:
+                      - generic [ref=e1231]:
+                        - img [ref=e1233]
+                        - generic [ref=e1235]:
+                          - generic [ref=e1236]:
+                            - generic [ref=e1237]: Assembly move
+                            - generic [ref=e1238]: Apr 5, 2026
+                          - heading "Source added · Lœgos — Origin, Evolution, Feedback, and Receipt" [level=3] [ref=e1239]
+                      - button "Open source" [ref=e1241] [cursor=pointer]:
+                        - img [ref=e1242]
+                    - paragraph [ref=e1245]: Added Lœgos — Origin, Evolution, Feedback, and Receipt to the box.
+                    - generic [ref=e1247]: Selected
+                - listitem [ref=e1248]:
+                  - article [ref=e1249]:
+                    - generic [ref=e1250]:
+                      - generic [ref=e1251]:
+                        - img [ref=e1253]
+                        - generic [ref=e1255]:
+                          - generic [ref=e1256]:
+                            - generic [ref=e1257]: Assembly move
+                            - generic [ref=e1258]: Apr 5, 2026
+                          - heading "Source derived · Lœgos — Origin, Evolution, Feedback, and Receipt" [level=3] [ref=e1259]
+                      - button "Open source" [ref=e1261] [cursor=pointer]:
+                        - img [ref=e1262]
+                    - paragraph [ref=e1265]: Derived Lœgos — Origin, Evolution, Feedback, and Receipt into a working source.
+                    - generic [ref=e1267]: Selected
+                - listitem [ref=e1268]:
+                  - article [ref=e1269]:
+                    - generic [ref=e1270]:
+                      - generic [ref=e1271]:
+                        - img [ref=e1273]
+                        - generic [ref=e1276]:
+                          - generic [ref=e1277]:
+                            - generic [ref=e1278]: Source
+                            - generic [ref=e1279]: Apr 5, 2026
+                          - heading "What’s In The Box" [level=3] [ref=e1280]
+                      - generic [ref=e1281]:
+                        - button "Inspect evidence" [ref=e1282] [cursor=pointer]:
+                          - img [ref=e1283]
+                        - button "Inspect evidence" [ref=e1286] [cursor=pointer]:
+                          - img [ref=e1287]
+                    - paragraph [ref=e1292]: 46 blocks · Text source · uploaded
+                    - generic [ref=e1294]: Selected
+                - listitem [ref=e1295]:
+                  - article [ref=e1296]:
+                    - generic [ref=e1297]:
+                      - generic [ref=e1298]:
+                        - img [ref=e1300]
+                        - generic [ref=e1302]:
+                          - generic [ref=e1303]:
+                            - generic [ref=e1304]: Assembly move
+                            - generic [ref=e1305]: Apr 5, 2026
+                          - heading "Source added · What’s In The Box" [level=3] [ref=e1306]
+                      - button "Open source" [ref=e1308] [cursor=pointer]:
+                        - img [ref=e1309]
+                    - paragraph [ref=e1312]: Added What’s In The Box to the box.
+                    - generic [ref=e1314]: Selected
+            - generic [ref=e1315]:
+              - generic [ref=e1316]:
+                - generic [ref=e1317]: Assembly
+                - strong [ref=e1318]: 14 entries
+              - list [ref=e1319]:
+                - listitem [ref=e1320]:
+                  - article [ref=e1321]:
+                    - generic [ref=e1322]:
+                      - generic [ref=e1323]:
+                        - img [ref=e1325]
+                        - generic [ref=e1327]:
+                          - generic [ref=e1328]:
+                            - generic [ref=e1329]: Assembly move
+                            - generic [ref=e1330]: Mar 29, 2026
+                          - heading "Collaborative reader and receipts appear" [level=3] [ref=e1331]
+                      - button "Open source" [ref=e1333] [cursor=pointer]:
+                        - img [ref=e1334]
+                    - paragraph [ref=e1337]: Shared reading and proof begin to enter the product surface instead of living outside it.
+                    - generic [ref=e1339]: Advanced
+                - listitem [ref=e1340]:
+                  - article [ref=e1341]:
+                    - generic [ref=e1342]:
+                      - generic [ref=e1343]:
+                        - img [ref=e1345]
+                        - generic [ref=e1347]:
+                          - generic [ref=e1348]:
+                            - generic [ref=e1349]: Assembly move
+                            - generic [ref=e1350]: Mar 30, 2026
+                          - heading "Seven, audio, and the player take over" [level=3] [ref=e1351]
+                      - button "Open source" [ref=e1353] [cursor=pointer]:
+                        - img [ref=e1354]
+                    - paragraph [ref=e1357]: "The interface shifts from a reader toward a player: blocks become tracks, listening becomes a primary path, and Seven becomes a visible guide."
+                    - generic [ref=e1359]: Advanced
+                - listitem [ref=e1360]:
+                  - article [ref=e1361]:
+                    - generic [ref=e1362]:
+                      - generic [ref=e1363]:
+                        - img [ref=e1365]
+                        - generic [ref=e1367]:
+                          - generic [ref=e1368]:
+                            - generic [ref=e1369]: Assembly move
+                            - generic [ref=e1370]: Apr 2, 2026
+                          - heading "Listener-first experiment lands" [level=3] [ref=e1371]
+                      - button "Open source" [ref=e1373] [cursor=pointer]:
+                        - img [ref=e1374]
+                    - paragraph [ref=e1377]: The product tests a listener-first guest flow and pushes harder on audio-led assembly.
+                    - generic [ref=e1379]: Advanced
+                - listitem [ref=e1380]:
+                  - article [ref=e1381]:
+                    - generic [ref=e1382]:
+                      - generic [ref=e1383]:
+                        - img [ref=e1385]
+                        - generic [ref=e1387]:
+                          - generic [ref=e1388]:
+                            - generic [ref=e1389]: Assembly move
+                            - generic [ref=e1390]: Apr 2, 2026
+                          - heading "Listener-first rollback becomes a lesson" [level=3] [ref=e1391]
+                      - button "Open source" [ref=e1393] [cursor=pointer]:
+                        - img [ref=e1394]
+                    - paragraph [ref=e1397]: The flow is rolled back, and the rollback itself becomes evidence about what the product should not become.
+                    - paragraph [ref=e1398]: listener -> box
+                    - generic [ref=e1399]:
+                      - generic [ref=e1400]: Advanced
+                      - generic [ref=e1401]: Lakin moment
+                    - paragraph [ref=e1402]: A Lakin moment is a turn where something fell away and something more durable was carried forward.
+                - listitem [ref=e1403]:
+                  - article [ref=e1404]:
+                    - generic [ref=e1405]:
+                      - generic [ref=e1406]:
+                        - img [ref=e1408]
+                        - generic [ref=e1410]:
+                          - generic [ref=e1411]:
+                            - generic [ref=e1412]: Assembly move
+                            - generic [ref=e1413]: Apr 3, 2026
+                          - heading "Pivot to document assembler workspace" [level=3] [ref=e1414]
+                      - button "Open source" [ref=e1416] [cursor=pointer]:
+                        - img [ref=e1417]
+                    - paragraph [ref=e1420]: The center of gravity moves from reader/player to a workspace that can read, assemble, and prove.
+                    - paragraph [ref=e1421]: player -> workspace
+                    - generic [ref=e1422]:
+                      - generic [ref=e1423]: Advanced
+                      - generic [ref=e1424]: Lakin moment
+                - listitem [ref=e1425]:
+                  - article [ref=e1426]:
+                    - generic [ref=e1427]:
+                      - generic [ref=e1428]:
+                        - img [ref=e1430]
+                        - generic [ref=e1432]:
+                          - generic [ref=e1433]:
+                            - generic [ref=e1434]: Assembly move
+                            - generic [ref=e1435]: Apr 3, 2026
+                          - heading "Workspace shell and box home become explicit" [level=3] [ref=e1436]
+                      - button "Open source" [ref=e1438] [cursor=pointer]:
+                        - img [ref=e1439]
+                    - paragraph [ref=e1442]: Project-aware shell, home, and receipt history make the box itself legible as a working object.
+                    - generic [ref=e1444]: Advanced
+                - listitem [ref=e1445]:
+                  - article [ref=e1446]:
+                    - generic [ref=e1447]:
+                      - generic [ref=e1448]:
+                        - img [ref=e1450]
+                        - generic [ref=e1452]:
+                          - generic [ref=e1453]:
+                            - generic [ref=e1454]: Assembly move
+                            - generic [ref=e1455]: Apr 4, 2026
+                          - heading "The product becomes Lœgos" [level=3] [ref=e1456]
+                      - button "Open source" [ref=e1458] [cursor=pointer]:
+                        - img [ref=e1459]
+                    - paragraph [ref=e1462]: The naming fragment and the product finally fuse. The app inherits the word that had been waiting for it.
+                    - generic [ref=e1464]: Advanced
+                - listitem [ref=e1465]:
+                  - article [ref=e1466]:
+                    - generic [ref=e1467]:
+                      - generic [ref=e1468]:
+                        - img [ref=e1470]
+                        - generic [ref=e1472]:
+                          - generic [ref=e1473]:
+                            - generic [ref=e1474]: Assembly move
+                            - generic [ref=e1475]: Apr 4, 2026
+                          - heading "Workspace language migrates to boxes" [level=3] [ref=e1476]
+                      - button "Open source" [ref=e1478] [cursor=pointer]:
+                        - img [ref=e1479]
+                    - paragraph [ref=e1482]: The product stops talking about generic projects and starts speaking in the box grammar that now defines it.
+                    - generic [ref=e1484]: Advanced
+                - listitem [ref=e1485]:
+                  - article [ref=e1486]:
+                    - generic [ref=e1487]:
+                      - generic [ref=e1488]:
+                        - img [ref=e1490]
+                        - generic [ref=e1492]:
+                          - generic [ref=e1493]:
+                            - generic [ref=e1494]: Assembly move
+                            - generic [ref=e1495]: Apr 4, 2026
+                          - heading "Operate and the seed-first loop land" [level=3] [ref=e1496]
+                      - button "Open source" [ref=e1498] [cursor=pointer]:
+                        - img [ref=e1499]
+                    - paragraph [ref=e1502]: Think, Create, Operate, and the seed-first flow turn the box into a readable assembly machine instead of a storage surface.
+                    - generic [ref=e1504]: Advanced
+                - listitem [ref=e1505]:
+                  - article [ref=e1506]:
+                    - generic [ref=e1507]:
+                      - generic [ref=e1508]:
+                        - img [ref=e1510]
+                        - generic [ref=e1512]:
+                          - generic [ref=e1513]:
+                            - generic [ref=e1514]: Assembly move
+                            - generic [ref=e1515]: Apr 5, 2026
+                          - heading "Assembly moved to released" [level=3] [ref=e1516]
+                      - button "Open seed" [ref=e1518] [cursor=pointer]:
+                        - img [ref=e1519]
+                    - paragraph [ref=e1522]: The example box reached a released state.
+                    - generic [ref=e1524]: Sealed
+                - listitem [ref=e1525]:
+                  - article [ref=e1526]:
+                    - generic [ref=e1527]:
+                      - generic [ref=e1528]:
+                        - img [ref=e1530]
+                        - generic [ref=e1532]:
+                          - generic [ref=e1533]:
+                            - generic [ref=e1534]: Assembly move
+                            - generic [ref=e1535]: Apr 5, 2026
+                          - heading "The product becomes its own example box" [level=3] [ref=e1536]
+                      - button "Open source" [ref=e1538] [cursor=pointer]:
+                        - img [ref=e1539]
+                    - paragraph [ref=e1542]: The self-assembly idea stops being a future spec and becomes a real seeded box that every user can inspect, edit, and delete.
+                    - generic [ref=e1544]: Advanced
+                - listitem [ref=e1545]:
+                  - article [ref=e1546]:
+                    - generic [ref=e1547]:
+                      - generic [ref=e1548]:
+                        - img [ref=e1550]
+                        - generic [ref=e1552]:
+                          - generic [ref=e1553]:
+                            - generic [ref=e1554]: Assembly move
+                            - generic [ref=e1555]: Apr 5, 2026
+                          - heading "Seed created" [level=3] [ref=e1556]
+                      - button "Open seed" [ref=e1558] [cursor=pointer]:
+                        - img [ref=e1559]
+                    - paragraph [ref=e1562]: Created seed Seed of seeds.
+                    - generic [ref=e1564]: Advanced
+                - listitem [ref=e1565]:
+                  - article [ref=e1566]:
+                    - generic [ref=e1567]:
+                      - generic [ref=e1568]:
+                        - img [ref=e1570]
+                        - generic [ref=e1572]:
+                          - generic [ref=e1573]:
+                            - generic [ref=e1574]: Assembly move
+                            - generic [ref=e1575]: Apr 5, 2026
+                          - heading "The box begins to read its own language" [level=3] [ref=e1576]
+                      - button "Open source" [ref=e1578] [cursor=pointer]:
+                        - img [ref=e1579]
+                    - paragraph [ref=e1582]: "Vocabulary becomes evidence inside the lane: carried terms, dropped terms, selection points, and Lakin moments make the box's own turns readable."
+                    - generic [ref=e1584]: Advanced
+                - listitem [ref=e1585]:
+                  - article [ref=e1586]:
+                    - generic [ref=e1587]:
+                      - generic [ref=e1588]:
+                        - img [ref=e1590]
+                        - generic [ref=e1593]:
+                          - generic [ref=e1594]:
+                            - generic [ref=e1595]: Seed
+                            - generic [ref=e1596]: Apr 5, 2026
+                          - heading "Seed of seeds" [level=3] [ref=e1597]
+                      - button "Open seed" [ref=e1599] [cursor=pointer]:
+                        - img [ref=e1600]
+                    - paragraph [ref=e1603]: Current live assembly shape.
+                    - generic [ref=e1605]: Advanced
+            - generic [ref=e1606]:
+              - generic [ref=e1607]:
+                - generic [ref=e1608]: Proof
+                - strong [ref=e1609]: 5 entries
+              - list [ref=e1610]:
+                - listitem [ref=e1611]:
+                  - article [ref=e1612]:
+                    - generic [ref=e1613]:
+                      - generic [ref=e1614]:
+                        - img [ref=e1616]
+                        - generic [ref=e1618]:
+                          - generic [ref=e1619]:
+                            - generic [ref=e1620]: Assembly move
+                            - generic [ref=e1621]: Apr 5, 2026
+                          - heading "Prototype is shared for feedback" [level=3] [ref=e1622]
+                      - button "Open source" [ref=e1624] [cursor=pointer]:
+                        - img [ref=e1625]
+                    - paragraph [ref=e1628]: The tool reaches a real stakeholder. The product sentence travels in its natural habitat and reality answers back.
+                    - generic [ref=e1630]: Advanced
+                - listitem [ref=e1631]:
+                  - article [ref=e1632]:
+                    - generic [ref=e1633]:
+                      - generic [ref=e1634]:
+                        - img [ref=e1636]
+                        - generic [ref=e1638]:
+                          - generic [ref=e1639]:
+                            - generic [ref=e1640]: Assembly move
+                            - generic [ref=e1641]: Apr 5, 2026
+                          - heading "The tool receipted its own release" [level=3] [ref=e1642]
+                      - button "Open source" [ref=e1644] [cursor=pointer]:
+                        - img [ref=e1645]
+                    - paragraph [ref=e1648]: The WhatsApp share becomes attached evidence, AI verification runs over it, and the proof closes as a seal.
+                    - generic [ref=e1650]: Sealed
+                - listitem [ref=e1651]:
+                  - article [ref=e1652]:
+                    - generic [ref=e1653]:
+                      - generic [ref=e1654]:
+                        - img [ref=e1656]
+                        - generic [ref=e1658]:
+                          - generic [ref=e1659]:
+                            - generic [ref=e1660]: Assembly move
+                            - generic [ref=e1661]: Apr 5, 2026
+                          - heading "Receipt drafted" [level=3] [ref=e1662]
+                      - button "Open receipts" [ref=e1664] [cursor=pointer]:
+                        - img [ref=e1665]
+                    - paragraph [ref=e1668]: Drafted receipt Share prototype for feedback.
+                    - generic [ref=e1670]: Advanced
+                - listitem [ref=e1671]:
+                  - article [ref=e1672]:
+                    - generic [ref=e1673]:
+                      - generic [ref=e1674]:
+                        - img [ref=e1676]
+                        - generic [ref=e1678]:
+                          - generic [ref=e1679]:
+                            - generic [ref=e1680]: Assembly move
+                            - generic [ref=e1681]: Apr 5, 2026
+                          - heading "Receipt sealed" [level=3] [ref=e1682]
+                      - button "Open receipts" [ref=e1684] [cursor=pointer]:
+                        - img [ref=e1685]
+                    - paragraph [ref=e1688]: Sealed receipt Share prototype for feedback.
+                    - generic [ref=e1690]: Sealed
+                - listitem [ref=e1691]:
+                  - article [ref=e1692]:
+                    - generic [ref=e1693]:
+                      - generic [ref=e1694]:
+                        - img [ref=e1696]
+                        - generic [ref=e1700]:
+                          - generic [ref=e1701]:
+                            - generic [ref=e1702]: Receipt
+                            - generic [ref=e1703]: Apr 5, 2026
+                          - heading "Share prototype for feedback" [level=3] [ref=e1704]
+                      - button "Open receipts" [ref=e1706] [cursor=pointer]:
+                        - img [ref=e1707]
+                    - paragraph [ref=e1710]: Local only
+                    - generic [ref=e1712]: Sealed
+          - group [ref=e1713]:
+            - generic "Word layer Lexical archaeology 311 terms 4 selection points" [ref=e1714] [cursor=pointer]:
+              - generic [ref=e1715]:
+                - generic [ref=e1716]: Word layer
+                - strong [ref=e1717]: Lexical archaeology
+              - generic [ref=e1718]:
+                - generic [ref=e1719]: 311 terms
+                - generic [ref=e1720]: 4 selection points
+            - region "Word layer" [ref=e1721]:
+              - button "Interpret with Seven" [ref=e1723] [cursor=pointer]:
+                - img [ref=e1724]
+                - generic [ref=e1729]: Interpret with Seven
+              - generic [ref=e1730]:
+                - generic [ref=e1731]:
+                  - strong [ref=e1732]: Structural
+                  - generic [ref=e1733]: "8"
+                - generic [ref=e1734]:
+                  - strong [ref=e1735]: Diagnostic
+                  - generic [ref=e1736]: "10"
+                - generic [ref=e1737]:
+                  - strong [ref=e1738]: Canonical
+                  - generic [ref=e1739]: "7"
+                - generic [ref=e1740]:
+                  - strong [ref=e1741]: Operational
+                  - generic [ref=e1742]: "6"
+                - generic [ref=e1743]:
+                  - strong [ref=e1744]: Uncategorized
+                  - generic [ref=e1745]: "280"
+              - generic [ref=e1746]:
+                - generic [ref=e1747]:
+                  - generic [ref=e1748]:
+                    - generic [ref=e1749]: Invariant
+                    - strong [ref=e1750]: "8"
+                  - list [ref=e1751]:
+                    - listitem [ref=e1752]:
+                      - generic [ref=e1753]: the
+                      - strong [ref=e1754]: "50"
+                    - listitem [ref=e1755]:
+                      - generic [ref=e1756]: words
+                      - strong [ref=e1757]: "27"
+                    - listitem [ref=e1758]:
+                      - generic [ref=e1759]: and
+                      - strong [ref=e1760]: "23"
+                    - listitem [ref=e1761]:
+                      - generic [ref=e1762]: are
+                      - strong [ref=e1763]: "14"
+                    - listitem [ref=e1764]:
+                      - generic [ref=e1765]: box
+                      - strong [ref=e1766]: "14"
+                    - listitem [ref=e1767]:
+                      - generic [ref=e1768]: not
+                      - strong [ref=e1769]: "13"
+                    - listitem [ref=e1770]:
+                      - generic [ref=e1771]: word
+                      - strong [ref=e1772]: "13"
+                    - listitem [ref=e1773]:
+                      - generic [ref=e1774]: assembly
+                      - strong [ref=e1775]: "11"
+                - generic [ref=e1776]:
+                  - generic [ref=e1777]:
+                    - generic [ref=e1778]: Emerging
+                    - strong [ref=e1779]: "8"
+                  - list [ref=e1780]:
+                    - listitem [ref=e1781]:
+                      - generic [ref=e1782]: word
+                      - strong [ref=e1783]: "13"
+                    - listitem [ref=e1784]:
+                      - generic [ref=e1785]: can
+                      - strong [ref=e1786]: "7"
+                    - listitem [ref=e1787]:
+                      - generic [ref=e1788]: user
+                      - strong [ref=e1789]: "4"
+                    - listitem [ref=e1790]:
+                      - generic [ref=e1791]: were
+                      - strong [ref=e1792]: "4"
+                    - listitem [ref=e1793]:
+                      - generic [ref=e1794]: compressed
+                      - strong [ref=e1795]: "3"
+                    - listitem [ref=e1796]:
+                      - generic [ref=e1797]: currently
+                      - strong [ref=e1798]: "3"
+                    - listitem [ref=e1799]:
+                      - generic [ref=e1800]: pattern
+                      - strong [ref=e1801]: "3"
+                    - listitem [ref=e1802]:
+                      - generic [ref=e1803]: why
+                      - strong [ref=e1804]: "3"
+                - generic [ref=e1805]:
+                  - generic [ref=e1806]:
+                    - generic [ref=e1807]: Receding
+                    - strong [ref=e1808]: "8"
+                  - list [ref=e1809]:
+                    - listitem [ref=e1810]:
+                      - generic [ref=e1811]: examples
+                      - strong [ref=e1812]: "4"
+                    - listitem [ref=e1813]:
+                      - generic [ref=e1814]: proof
+                      - strong [ref=e1815]: "4"
+                    - listitem [ref=e1816]:
+                      - generic [ref=e1817]: path
+                      - strong [ref=e1818]: "3"
+                    - listitem [ref=e1819]:
+                      - generic [ref=e1820]: asking
+                      - strong [ref=e1821]: "2"
+                    - listitem [ref=e1822]:
+                      - generic [ref=e1823]: bearing
+                      - strong [ref=e1824]: "2"
+                    - listitem [ref=e1825]:
+                      - generic [ref=e1826]: became
+                      - strong [ref=e1827]: "2"
+                    - listitem [ref=e1828]:
+                      - generic [ref=e1829]: brief
+                      - strong [ref=e1830]: "2"
+                    - listitem [ref=e1831]:
+                      - generic [ref=e1832]: classes
+                      - strong [ref=e1833]: "2"
+              - generic [ref=e1834]:
+                - generic [ref=e1835]:
+                  - generic [ref=e1836]:
+                    - generic [ref=e1837]: Carried
+                    - strong [ref=e1838]: "8"
+                  - list [ref=e1839]:
+                    - listitem [ref=e1840]:
+                      - generic [ref=e1841]: the
+                      - strong [ref=e1842]: "50"
+                    - listitem [ref=e1843]:
+                      - generic [ref=e1844]: and
+                      - strong [ref=e1845]: "23"
+                    - listitem [ref=e1846]:
+                      - generic [ref=e1847]: was
+                      - strong [ref=e1848]: "5"
+                    - listitem [ref=e1849]:
+                      - generic [ref=e1850]: its
+                      - strong [ref=e1851]: "4"
+                    - listitem [ref=e1852]:
+                      - generic [ref=e1853]: proof
+                      - strong [ref=e1854]: "4"
+                    - listitem [ref=e1855]:
+                      - generic [ref=e1856]: content
+                      - strong [ref=e1857]: "2"
+                    - listitem [ref=e1858]:
+                      - generic [ref=e1859]: evidence
+                      - strong [ref=e1860]: "2"
+                    - listitem [ref=e1861]:
+                      - generic [ref=e1862]: first
+                      - strong [ref=e1863]: "2"
+                - generic [ref=e1864]:
+                  - generic [ref=e1865]:
+                    - generic [ref=e1866]: Dropped
+                    - strong [ref=e1867]: "8"
+                  - list [ref=e1868]:
+                    - listitem [ref=e1869]:
+                      - generic [ref=e1870]: words
+                      - strong [ref=e1871]: "27"
+                    - listitem [ref=e1872]:
+                      - generic [ref=e1873]: are
+                      - strong [ref=e1874]: "14"
+                    - listitem [ref=e1875]:
+                      - generic [ref=e1876]: box
+                      - strong [ref=e1877]: "14"
+                    - listitem [ref=e1878]:
+                      - generic [ref=e1879]: not
+                      - strong [ref=e1880]: "13"
+                    - listitem [ref=e1881]:
+                      - generic [ref=e1882]: word
+                      - strong [ref=e1883]: "13"
+                    - listitem [ref=e1884]:
+                      - generic [ref=e1885]: assembly
+                      - strong [ref=e1886]: "11"
+                    - listitem [ref=e1887]:
+                      - generic [ref=e1888]: how
+                      - strong [ref=e1889]: "8"
+                    - listitem [ref=e1890]:
+                      - generic [ref=e1891]: can
+                      - strong [ref=e1892]: "7"
+                - generic [ref=e1893]:
+                  - generic [ref=e1894]:
+                    - generic [ref=e1895]: Selection points
+                    - strong [ref=e1896]: "4"
+                  - list [ref=e1897]:
+                    - listitem [ref=e1898]:
+                      - strong [ref=e1899]: the persists after words recedes
+                      - generic [ref=e1900]: Chronology explicit
+                      - generic [ref=e1901]: words -> the
+                    - listitem [ref=e1902]:
+                      - strong [ref=e1903]: the persists after are recedes
+                      - generic [ref=e1904]: Chronology explicit
+                      - generic [ref=e1905]: are -> the
+                    - listitem [ref=e1906]:
+                      - strong [ref=e1907]: the persists after box recedes
+                      - generic [ref=e1908]: Chronology explicit
+                      - generic [ref=e1909]: Lakin pair · listener -> box
+                    - listitem [ref=e1910]:
+                      - strong [ref=e1911]: content persists after not recedes
+                      - generic [ref=e1912]: Chronology explicit
+                      - generic [ref=e1913]: not -> content
+              - paragraph [ref=e1914]: Interpretations are hypotheses, not facts.
+  - button "Open Next.js Dev Tools" [ref=e360] [cursor=pointer]:
+    - img [ref=e361]
+  - alert [ref=e373]

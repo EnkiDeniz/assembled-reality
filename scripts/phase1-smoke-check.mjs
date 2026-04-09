@@ -16,6 +16,7 @@ async function main() {
     workspaceShell,
     workspaceStarter,
     founderShell,
+    founderInfoPanel,
     loegosRenderer,
     loegosExplainPanel,
     founderRendererUtils,
@@ -44,6 +45,7 @@ async function main() {
     read("src/components/WorkspaceShell.jsx"),
     read("src/components/WorkspaceStarter.jsx"),
     read("src/components/founder/FounderShell.jsx"),
+    read("src/components/founder/FounderInfoPanel.jsx"),
     read("src/components/founder/LoegosRenderer.jsx"),
     read("src/components/founder/LoegosExplainPanel.jsx"),
     read("src/lib/founder-renderer.js"),
@@ -122,11 +124,12 @@ async function main() {
   assert.match(founderShell, /founder-shell/);
   assert.match(founderShell, /LoegosRenderer/);
   assert.match(founderShell, /LoegosExplainPanel/);
-  assert.match(founderShell, /Open full workspace/);
+  assert.match(founderShell, /Open box/);
   assert.match(founderShell, /Ask Seven/);
   assert.match(founderShell, /founder-shell-open-full-workspace/);
   assert.match(founderShell, /founder-shell-assistant-toggle/);
   assert.match(founderShell, /FounderWorkbenchTree/);
+  assert.match(founderInfoPanel, /FounderInfoPanel/);
   assert.match(loegosRenderer, /Workbench/);
   assert.match(loegosRenderer, /loegos-learner-toggle/);
   assert.match(loegosRenderer, /loegos-block__stage/);
@@ -134,6 +137,12 @@ async function main() {
   assert.match(founderRendererUtils, /Contradicted/);
   assert.match(workspaceShell, /founderPlaybackSurface/);
   assert.match(workspaceShell, /handleFounderPlaybackSourceSelect/);
+  assert.match(workspaceShell, /workspace-founder-compile-witness/);
+  assert.match(workspaceShell, /workspace-founder-run-operate/);
+  assert.match(workspaceShell, /workspace-box-view/);
+  assert.match(workspaceShell, /workspace-witness-view/);
+  assert.match(workspaceShell, /workspace-receipt-view/);
+  assert.match(workspaceShell, /compiledFromDocumentKey/);
   assert.match(workspaceShell, /workspace-founder-seal-latest/);
   assert.match(loegosExplainPanel, /Lœgos read/);
   assert.match(loegosExplainPanel, /workspace-attest-block-input/);

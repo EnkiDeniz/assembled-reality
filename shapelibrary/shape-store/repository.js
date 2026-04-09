@@ -105,15 +105,15 @@ export function insertRun(db, ir, result) {
     inputMode: ir.inputMode,
     mode: ir.mode,
     intentLayer: ir.intentLayer,
-    granularity: result.granularity,
-    resultType: result.resultType,
-    confidence: result.confidence,
-    confidenceSource: result.confidenceSource,
+    granularity: result.granularity || "unknown",
+    resultType: result.resultType || result.status || "not_sealable_yet",
+    confidence: typeof result.confidence === "number" ? result.confidence : 0.25,
+    confidenceSource: result.confidenceSource || "single_run",
     modelVersion: String(ir?.metadata?.trace?.modelVersion || "unknown"),
     promptHash: String(ir?.metadata?.trace?.promptHash || "unknown"),
     traceJson: toJson(ir?.metadata?.trace || {}),
-    readsJson: toJson(result.reads),
-    gateJson: toJson(result.gate),
+    readsJson: toJson(result.reads || {}),
+    gateJson: toJson(result.gate || result.maturation?.gate || {}),
     kernelState,
     kernelTraceJson,
     convergenceScore,
@@ -126,7 +126,7 @@ export function insertRun(db, ir, result) {
 }
 
 export function insertCandidateFromRun(db, ir, result) {
-  if (!result.resultType.startsWith("candidate_")) return null;
+  if (!String(result.resultType || "").startsWith("candidate_")) return null;
   const candidateId = randomUUID();
   const kernelState = result.kernel?.stateMode ?? null;
   const convergenceScore = result.crossDomain?.convergenceScore ?? null;

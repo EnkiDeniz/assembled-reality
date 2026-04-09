@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: Lœgos language tool
+        - generic [ref=e7]: An IDE for reality.
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]: Category
+          - heading "The language tool for speaking with reality." [level=1] [ref=e11]
+          - paragraph [ref=e12]: An IDE for turning promises, evidence, and decisions into receipts.
+          - generic [ref=e13]:
+            - paragraph [ref=e14]: Declare what you intend. Capture what reality gives back. Let Seven infer what is missing or misread. Seal what survived as a receipt.
+            - generic [ref=e15]:
+              - generic [ref=e16]: Seven infers
+              - generic [ref=e17]: Humans interpret
+              - generic [ref=e18]: Reality replies
+              - generic [ref=e19]: Receipts record
+            - generic [ref=e20]:
+              - generic [ref=e21]: Declare an aim.
+              - generic [ref=e22]: Capture what reality returns.
+              - generic [ref=e23]: Let Seven infer.
+              - generic [ref=e24]: Seal what survived.
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: Enter the box
+            - heading "Open the runtime." [level=2] [ref=e28]
+            - paragraph [ref=e29]: Identity is the threshold, not the product. The work begins once you are inside the box with sources, blocks, diagnostics, and receipts.
+            - generic [ref=e30]:
+              - generic [ref=e31]: "Desktop: write, infer, interpret, seal."
+              - generic [ref=e32]: "Mobile: capture, listen, append reality."
+          - generic [ref=e34]:
+            - button "Continue with Apple" [ref=e36] [cursor=pointer]
+            - generic [ref=e38]:
+              - generic [ref=e39]: Email magic link
+              - textbox "Email magic link" [ref=e40]:
+                - /placeholder: you@example.com
+              - button "Send magic link" [disabled] [ref=e42]
+            - paragraph [ref=e43]:
+              - text: Read the
+              - link "disclaimer" [ref=e44] [cursor=pointer]:
+                - /url: /disclaimer
+              - text: before you open the box.
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]: How it works
+          - heading "Write the block. Let the box check it." [level=2] [ref=e48]
+          - paragraph [ref=e49]: Lœgos gives the exchange a grammar. Seven infers what is missing or mislabeled. Box keeps the runtime state. Seal commits the receipt when the work is ready to travel.
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]: Lœgos
+            - generic [ref=e53]: The language that structures the exchange.
+          - generic [ref=e54]:
+            - generic [ref=e55]: Box
+            - generic [ref=e56]: The IDE and runtime where authored work lives.
+          - generic [ref=e57]:
+            - generic [ref=e58]: Seven
+            - generic [ref=e59]: The inference agent that parses, flags, and preflights.
+          - generic [ref=e60]:
+            - generic [ref=e61]: Receipt
+            - generic [ref=e62]: The compiled artifact that carries what survived.
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]: △ Aim
+            - generic [ref=e66]: Declare what matters. Name the direction. Sharpen the claim.
+            - generic [ref=e67]: declare · name · sharpen
+          - generic [ref=e68]:
+            - generic [ref=e69]: □ Reality
+            - generic [ref=e70]: Capture what the world gives back and what can be pointed at.
+            - generic [ref=e71]: capture · listen · inspect
+          - generic [ref=e72]:
+            - generic [ref=e73]: œ Weld
+            - generic [ref=e74]: Stage the comparison, rewrite the object, and test convergence.
+            - generic [ref=e75]: stage · rewrite · operate
+          - generic [ref=e76]:
+            - generic [ref=e77]: 𒐛 Seal
+            - generic [ref=e78]: Commit what survived and let the receipt travel as proof.
+            - generic [ref=e79]: review · seal · share
+        - generic [ref=e80]:
+          - generic [ref=e81]:
+            - generic [ref=e82]: Build state
+            - generic "Settlement vessel 4 of 7" [ref=e83]:
+              - img [ref=e84]
+              - generic [ref=e91]: 4 / 7
+            - generic "Settlement 4 of 7" [ref=e92]:
+              - generic [ref=e101]: Resolution process
+          - generic [ref=e102]:
+            - generic [ref=e103]: Runtime signals
+            - generic [ref=e104]:
+              - generic [ref=e105]: Verified
+              - generic [ref=e106]: Partial
+              - generic [ref=e107]: Unknown
+      - generic [ref=e108]:
+        - navigation "Public pages" [ref=e109]:
+          - link "About" [ref=e110] [cursor=pointer]:
+            - /url: /about
+          - link "Disclaimer" [ref=e111] [cursor=pointer]:
+            - /url: /disclaimer
+          - link "Privacy" [ref=e112] [cursor=pointer]:
+            - /url: /privacy
+          - link "Terms" [ref=e113] [cursor=pointer]:
+            - /url: /terms
+          - link "Trust" [ref=e114] [cursor=pointer]:
+            - /url: /trust
+        - link "Proposal" [ref=e115] [cursor=pointer]:
+          - /url: /design-proposal
+  - alert [ref=e116]

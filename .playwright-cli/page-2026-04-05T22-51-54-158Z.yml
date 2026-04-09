@@ -1,0 +1,200 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - text: Temporary proposal
+          - heading "Loegos workspace direction" [level=1] [ref=e6]
+          - paragraph [ref=e7]: A calmer shell built from the intro screen’s restraint, the source reader’s focus, and a tighter three-signal trust model.
+        - generic [ref=e8]:
+          - link "Back to intro" [ref=e9] [cursor=pointer]:
+            - /url: /intro
+            - img [ref=e10]
+            - text: Back to intro
+          - link "Open workspace" [ref=e12] [cursor=pointer]:
+            - /url: /workspace
+            - text: Open workspace
+            - img [ref=e13]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: Lœgos
+            - generic [ref=e19]: desktop-first
+            - generic [ref=e20]: proposal v0.1
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - text: Visual thesis
+              - heading "Less shell. Sharper work." [level=2] [ref=e23]
+              - paragraph [ref=e24]: The authenticated product should feel as controlled as the intro screen, but as useful as the source reader. One strong plane, one clear phase, one next move.
+            - generic [ref=e25]:
+              - generic [ref=e26]:
+                - text: Shell rules
+                - generic [ref=e27]:
+                  - generic [ref=e28]: Graphite surfaces
+                  - generic [ref=e29]: One blue action accent
+                  - generic [ref=e30]: Three trust signals
+                  - generic [ref=e31]: Fewer nested cards
+              - generic [ref=e32]:
+                - text: Brand anchor
+                - strong [ref=e33]: Intro restraint
+                - paragraph [ref=e34]: Use the intro screen’s spacing, calm header behavior, and concentration of emphasis as the benchmark for the rest of the shell.
+        - complementary [ref=e35]:
+          - generic [ref=e36]:
+            - text: Proposed first moves
+            - list [ref=e37]:
+              - listitem [ref=e38]: Header narrows to current box, current phase, and one primary action.
+              - listitem [ref=e39]: Source rows compress to title, one support line, and a single trust signal.
+              - listitem [ref=e40]: Seed mode centers the seed and queue instead of showing every available concept at once.
+              - listitem [ref=e41]: Operate failures get a dedicated rate-limit state, not a generic error banner.
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - text: Principles
+          - heading "What this proposal is trying to fix" [level=2] [ref=e44]
+        - generic [ref=e45]:
+          - article [ref=e46]:
+            - text: Orientation
+            - heading "One star per screen" [level=3] [ref=e47]
+            - paragraph [ref=e48]: Every screen gets one dominant job. The shell stops competing with the work and starts framing it.
+          - article [ref=e49]:
+            - text: Trust
+            - heading "Signals over taxonomy" [level=3] [ref=e50]
+            - paragraph [ref=e51]: Trust becomes a compact signal pattern with richer interpretation held for Operate and proof, not repeated in every row.
+          - article [ref=e52]:
+            - text: Rhythm
+            - heading "Calmer chrome" [level=3] [ref=e53]
+            - paragraph [ref=e54]: Graphite surfaces, one blue action accent, fewer nested panels, and stronger spacing discipline borrowed from the intro screen.
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - text: Flow
+          - heading "Phase ownership, not phase soup" [level=2] [ref=e57]
+        - generic [ref=e58]:
+          - article [ref=e59]:
+            - img [ref=e61]
+            - generic [ref=e62]:
+              - text: Think
+              - heading "Read and orient" [level=3] [ref=e63]
+              - paragraph [ref=e64]: The document is the star. Source switching, playback, and Seven stay close but quieter.
+          - article [ref=e65]:
+            - img [ref=e67]
+            - generic [ref=e70]:
+              - text: Create
+              - heading "Shape the seed" [level=3] [ref=e71]
+              - paragraph [ref=e72]: The seed and staging relationship is explicit. Inputs support the edit instead of crowding it.
+          - article [ref=e73]:
+            - img [ref=e75]
+            - generic [ref=e77]:
+              - text: Proof
+              - heading "Operate, then receipt" [level=3] [ref=e78]
+              - paragraph [ref=e79]: Diagnosis and proof become distinct destinations with their own success and failure states.
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - text: Signals
+          - heading "Trust as a compact shell language" [level=2] [ref=e82]
+          - paragraph [ref=e83]: Trust should help the user decide quickly. The shell only needs a small signal. Rich provenance can stay in Operate, receipts, and details.
+        - generic [ref=e84]:
+          - article [ref=e85]:
+            - img [ref=e87]
+            - generic [ref=e90]:
+              - heading "Verified" [level=3] [ref=e91]
+              - paragraph [ref=e92]: Use for evidence that survived a real proof step.
+          - article [ref=e93]:
+            - img [ref=e95]
+            - generic [ref=e97]:
+              - heading "Partial" [level=3] [ref=e98]
+              - paragraph [ref=e99]: Use when evidence is promising but still needs confirmation.
+          - article [ref=e100]:
+            - img [ref=e102]
+            - generic [ref=e104]:
+              - heading "Unknown" [level=3] [ref=e105]
+              - paragraph [ref=e106]: Default neutral state when the system has not earned a stronger claim.
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - text: Mock shell
+          - heading "A proposed workspace composition" [level=2] [ref=e109]
+        - generic [ref=e110]:
+          - complementary [ref=e111]:
+            - generic [ref=e112]:
+              - generic [ref=e113]: Sources
+              - button "Rail" [ref=e114] [cursor=pointer]:
+                - img [ref=e115]
+                - text: Rail
+            - generic [ref=e117]:
+              - article [ref=e118]:
+                - generic [ref=e119]:
+                  - strong [ref=e120]: Operator Sentences
+                  - paragraph [ref=e121]: 95 blocks · text source
+                - generic [ref=e122]: Verified
+              - article [ref=e123]:
+                - generic [ref=e124]:
+                  - strong [ref=e125]: What’s In The Box
+                  - paragraph [ref=e126]: 46 blocks · product note
+                - generic [ref=e127]: Partial
+              - article [ref=e128]:
+                - generic [ref=e129]:
+                  - strong [ref=e130]: Seed of seeds
+                  - paragraph [ref=e131]: working seed · current box
+                - generic [ref=e132]: Unknown
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - text: Create
+                - heading "Shape the seed" [level=3] [ref=e136]
+              - button "Apply update" [ref=e137] [cursor=pointer]:
+                - img [ref=e138]
+                - text: Apply update
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]: Current seed
+                - generic [ref=e144]: Unknown
+              - heading "How Lœgos Assembled Itself" [level=4] [ref=e145]
+              - paragraph [ref=e146]: The box has real source material, proof movement, and a working seed. The next step is to sharpen the statement of what the proof changes.
+              - generic [ref=e147]:
+                - generic [ref=e148]:
+                  - text: Aim
+                  - paragraph [ref=e149]: Make the direction legible enough to act on.
+                - generic [ref=e150]:
+                  - text: Gap
+                  - paragraph [ref=e151]: Turn proof activity into a clearer seed statement.
+          - complementary [ref=e152]:
+            - generic [ref=e153]:
+              - text: Stage
+              - heading "Queue" [level=4] [ref=e154]
+              - paragraph [ref=e155]: Keep staging explicit and close to the seed, but quieter than the edit itself.
+              - generic [ref=e156]:
+                - generic [ref=e157]: 3 staged blocks
+                - generic [ref=e158]: 1 Seven reply
+            - generic [ref=e159]:
+              - text: Proof
+              - heading "Operate" [level=4] [ref=e160]
+              - paragraph [ref=e161]: Failures and success need a dedicated state, not shared shell feedback.
+              - generic [ref=e162]: Retry after cooldown
+      - generic [ref=e163]:
+        - generic [ref=e164]:
+          - text: Component family
+          - heading "The UI should feel like one product family" [level=2] [ref=e165]
+        - generic [ref=e166]:
+          - article [ref=e167]:
+            - text: Primary action
+            - generic [ref=e168]:
+              - button "Run Operate" [ref=e169] [cursor=pointer]
+              - button "Open receipts" [ref=e170] [cursor=pointer]
+          - article [ref=e171]:
+            - text: Meta language
+            - generic [ref=e172]:
+              - generic [ref=e173]: Verified
+              - generic [ref=e174]: Partial
+              - generic [ref=e175]: Unknown
+          - article [ref=e176]:
+            - text: Panel restraint
+            - paragraph [ref=e177]: Panels still exist, but they stop piling shadows, badges, and status language on top of each other.
+      - generic [ref=e178]:
+        - generic [ref=e179]:
+          - text: Temporary review surface
+          - paragraph [ref=e180]: This screen is meant to guide the next shell pass. It belongs in settings now and can be removed once the real workspace absorbs the direction.
+        - generic [ref=e181]:
+          - link "View intro" [ref=e182] [cursor=pointer]:
+            - /url: /intro
+          - link "Back to product" [ref=e183] [cursor=pointer]:
+            - /url: /workspace
+  - button "Open Next.js Dev Tools" [ref=e189] [cursor=pointer]:
+    - img [ref=e190]

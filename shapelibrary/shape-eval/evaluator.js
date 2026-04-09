@@ -5,6 +5,7 @@ import {
   scoreEpisodeQuality,
   scoreUtility,
   scoreExpectedAlignment,
+  scoreGranularityAlignment,
 } from "./metrics.js";
 
 export function evaluateEpisodes({
@@ -13,6 +14,10 @@ export function evaluateEpisodes({
   library = { primitives: [], assemblies: [] },
   features = {},
 } = {}) {
+  const isCorrectPreScreen = (run) =>
+    run?.status === "not_sealable_yet" &&
+    (run?.resultType === undefined || run?.resultType === null || run?.resultType === "");
+
   const episodeReports = [];
   for (const episode of episodes) {
     const runs = [];
@@ -62,10 +67,15 @@ export function evaluateEpisodes({
         : utilityV01;
 
     const expectedAlignment = scoreExpectedAlignment(runs[0], episode.expected);
+    const granularityAlignment = scoreGranularityAlignment(runs[0], episode.expected);
     const maturationPass = runs.every((run) =>
-      run?.maturation?.gate ? run.maturation.gate.passed === true : true,
+      isCorrectPreScreen(run) || (run?.maturation?.gate ? run.maturation.gate.passed === true : true),
     );
     const maturationScore = maturationPass ? 1 : 0;
+    const episodeHardFailures = [];
+    if (String(episode.label || "").toLowerCase().includes("adversarial") && !maturationPass) {
+      episodeHardFailures.push("adversarial_maturation_failure");
+    }
 
     episodeReports.push({
       episodeId: episode.episodeId,
@@ -75,10 +85,16 @@ export function evaluateEpisodes({
       reproducibility,
       utility,
       utilityV01,
-      pass: reproducibility >= 0.8 && utility >= 0.5,
+      pass:
+        reproducibility >= 0.8 &&
+        utility >= 0.5 &&
+        maturationPass &&
+        episodeHardFailures.length === 0,
       expectedAlignment,
+      granularityAlignment,
       maturationPass,
       maturationScore,
+      hardFailures: episodeHardFailures,
       runs,
     });
   }
@@ -106,6 +122,13 @@ export function evaluateEpisodes({
     alignments.length > 0
       ? alignments.reduce((a, b) => a + b, 0) / alignments.length
       : null;
+  const granularityAlignments = episodeReports
+    .map((r) => r.granularityAlignment)
+    .filter((x) => x != null && typeof x === "number");
+  const granularityAlignment =
+    granularityAlignments.length > 0
+      ? granularityAlignments.reduce((a, b) => a + b, 0) / granularityAlignments.length
+      : null;
 
   let convergenceScore = null;
   let domainCoverageCount = 0;
@@ -128,15 +151,9 @@ export function evaluateEpisodes({
     convergenceScore >= 0.45 ||
     domainCoverageCount >= 2;
 
-  const failedAdversarialMaturation = episodeReports.some(
-    (report) =>
-      String(report.label || "").toLowerCase().includes("adversarial") &&
-      !report.maturationPass,
+  const hardFailures = Array.from(
+    new Set(episodeReports.flatMap((report) => report.hardFailures || [])),
   );
-  const hardFailures = [];
-  if (failedAdversarialMaturation) {
-    hardFailures.push("adversarial_maturation_failure");
-  }
 
   const releaseGatePass =
     reproducibility >= 0.8 &&
@@ -156,6 +173,7 @@ export function evaluateEpisodes({
     quality,
     releaseGatePass,
     expectedAlignment,
+    granularityAlignment,
     convergenceScore,
     domainCoverageCount: domainCoverageCount || 0,
     crossDomainPass,

@@ -1,0 +1,348 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - text: Proposal v0.2 · code-aware
+          - heading "Meaning assembles here." [level=1] [ref=e6]
+          - paragraph [ref=e7]: "A competition-ready Loegos system built from the live code, the intro anchor, and the real product theory: operator blocks, settlement logic, and a seed that becomes real."
+        - generic [ref=e8]:
+          - link "Back to intro" [ref=e9] [cursor=pointer]:
+            - /url: /intro
+            - img [ref=e10]
+            - text: Back to intro
+          - link "Open workspace" [ref=e12] [cursor=pointer]:
+            - /url: /workspace
+            - text: Open workspace
+            - img [ref=e13]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: Loegos
+            - generic [ref=e19]: desktop-first
+            - generic [ref=e20]: assembly system
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - text: System thesis
+              - heading "Less dashboard. More object." [level=2] [ref=e23]
+              - paragraph [ref=e24]: The workspace should not feel like files plus chrome. It should feel like one assembled object gaining reality as sources, operator blocks, and receipts press it into form.
+              - generic [ref=e25]:
+                - generic [ref=e26]: seed as object
+                - generic [ref=e27]: blocks as primitives
+                - generic [ref=e28]: solidity over rainbow state
+                - generic [ref=e29]: settlement earns trust
+            - generic [ref=e30]:
+              - generic [ref=e31]: Object preview
+              - generic [ref=e32]:
+                - article [ref=e33]:
+                  - generic [ref=e38]:
+                    - generic [ref=e39]:
+                      - generic [ref=e40]: Declared
+                      - generic [ref=e41]: 0 receipts
+                    - heading "Wireframe seed" [level=3] [ref=e42]
+                    - paragraph [ref=e43]: Aim exists. The object is visible, but reality has not answered yet.
+                - article [ref=e44]:
+                  - generic [ref=e49]:
+                    - generic [ref=e50]:
+                      - generic [ref=e51]: Grounded
+                      - generic [ref=e52]: 3 receipts
+                    - heading "Partial solidity" [level=3] [ref=e53]
+                    - paragraph [ref=e54]: Sources and early returns give the shape weight without pretending it is finished.
+                - article [ref=e55]:
+                  - generic [ref=e60]:
+                    - generic [ref=e61]:
+                      - generic [ref=e62]: Sealed
+                      - generic [ref=e63]: 14 receipts
+                    - heading "Object becoming real" [level=3] [ref=e64]
+                    - paragraph [ref=e65]: Receipts have filled enough of the shape that the next move can be made honestly.
+        - complementary [ref=e66]:
+          - generic [ref=e67]:
+            - text: Competition edge
+            - list [ref=e68]:
+              - listitem [ref=e69]: Blue stays brand and action. Trust never steals the accent.
+              - listitem [ref=e70]: Assembly depth moves through solidity, not a rainbow token ladder.
+              - listitem [ref=e71]: Operator blocks become a native UI primitive, not just copy inside a paragraph.
+              - listitem [ref=e72]: The seed, Operate, and receipts read as the same object from different angles.
+              - listitem [ref=e73]: Phone capture and desktop assembly share one navigation grammar.
+          - generic [ref=e74]:
+            - text: Working sentence
+            - heading "Think in the box. Create the assembly. Operate on reality." [level=3] [ref=e75]
+            - paragraph [ref=e76]: The system should make that loop visible without dragging the deeper coordinate system in front of the user, and it should begin out in the world when the user captures something worth assembling.
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - text: System pillars
+          - heading "The product only wins if the theory stays visible in the interface" [level=2] [ref=e79]
+        - generic [ref=e80]:
+          - article [ref=e81]:
+            - text: Object
+            - heading "One box, one seed, one changing shape" [level=3] [ref=e82]
+            - paragraph [ref=e83]: The seed is not a note beside the work. It is the work becoming legible to itself across phone capture, desktop assembly, and proof.
+          - article [ref=e84]:
+            - text: Language
+            - heading "Words behave like assembled parts" [level=3] [ref=e85]
+            - paragraph [ref=e86]: Operator sentences are small enough to carry, but strong enough to change what the user does next.
+          - article [ref=e87]:
+            - text: Proof
+            - heading "Settlement earns solidity" [level=3] [ref=e88]
+            - paragraph [ref=e89]: Receipts do more than log history. They turn wireframe intention into something the box can stand on.
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - text: Operator blocks
+          - heading "Language becomes a native interaction material" [level=2] [ref=e92]
+          - paragraph [ref=e93]: In Loegos, sentences are not garnish. They are small assembled parts that can be carried, staged, rewritten, and pressure-tested.
+        - generic [ref=e94]:
+          - article [ref=e95]:
+            - generic [ref=e96]:
+              - img [ref=e98]
+              - generic [ref=e102]: Aim block
+            - strong [ref=e103]: Open a sourdough bakery in Cobble Hill by Q1.
+            - paragraph [ref=e104]: Issues the invoice. It names what reality would have to answer.
+          - article [ref=e105]:
+            - generic [ref=e106]:
+              - img [ref=e108]
+              - generic [ref=e112]: Ground block
+            - strong [ref=e113]: Lease research for 3 locations. Cost estimate verified.
+            - paragraph [ref=e114]: Adds material with provenance instead of vague context around the goal.
+          - article [ref=e115]:
+            - generic [ref=e116]:
+              - img [ref=e118]
+              - generic [ref=e120]: Bridge block
+            - strong [ref=e121]: "Funding gap remains $40K. Next move: lender shortlist."
+            - paragraph [ref=e122]: Turns diagnosis into a runnable next move rather than another discussion loop.
+          - article [ref=e123]:
+            - generic [ref=e124]:
+              - img [ref=e126]
+              - generic [ref=e128]: Seal block
+            - strong [ref=e129]: Startup cost estimate verified. Receipt sealed Mar 8.
+            - paragraph [ref=e130]: Marks the point where a claim survived contact and earned solidity.
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - generic [ref=e133]: Operator chain
+            - img [ref=e134]
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - generic [ref=e140]: Aim
+              - img [ref=e141]
+            - generic [ref=e143]:
+              - generic [ref=e144]: Ground
+              - img [ref=e145]
+            - generic [ref=e147]:
+              - generic [ref=e148]: Bridge
+              - img [ref=e149]
+            - generic [ref=e152]: Seal
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - text: Settlement
+          - heading "Trust is a settlement outcome, not a decorative state" [level=2] [ref=e155]
+          - paragraph [ref=e156]: "The shell shows compact signals. Rich trust only appears where the user expects proof: Operate, receipts, and the seed's solidifying edge."
+        - generic [ref=e157]:
+          - article [ref=e158]:
+            - generic [ref=e159]: "01"
+            - heading "Invoice" [level=3] [ref=e160]
+            - paragraph [ref=e161]: A declaration opens an account with reality. The system frames what would count.
+          - article [ref=e162]:
+            - generic [ref=e163]: "02"
+            - heading "Move" [level=3] [ref=e164]
+            - paragraph [ref=e165]: The user acts. The box should preserve intention, cost, and chosen direction.
+          - article [ref=e166]:
+            - generic [ref=e167]: "03"
+            - heading "Return" [level=3] [ref=e168]
+            - paragraph [ref=e169]: Reality answers back through friction, witness, or external evidence.
+          - article [ref=e170]:
+            - generic [ref=e171]: "04"
+            - heading "Receipt" [level=3] [ref=e172]
+            - paragraph [ref=e173]: That answer becomes a portable proof object with provenance attached.
+          - article [ref=e174]:
+            - generic [ref=e175]: "05"
+            - heading "Seal" [level=3] [ref=e176]
+            - paragraph [ref=e177]: Trust is earned only after settlement. The object becomes more solid here.
+      - generic [ref=e178]:
+        - generic [ref=e179]:
+          - text: Foundations
+          - heading "One visual system, with clear jobs for color, type, and motion" [level=2] [ref=e180]
+        - generic [ref=e181]:
+          - article [ref=e182]:
+            - text: Palette
+            - generic [ref=e183]:
+              - generic [ref=e184]:
+                - generic [ref=e186]:
+                  - strong [ref=e187]: Canvas
+                  - paragraph [ref=e188]: Whole-app ground and negative space.
+                - generic [ref=e189]: "#0d0e10"
+              - generic [ref=e190]:
+                - generic [ref=e192]:
+                  - strong [ref=e193]: Shell
+                  - paragraph [ref=e194]: Main workbench plane and structural surfaces.
+                - generic [ref=e195]: "#121315"
+              - generic [ref=e196]:
+                - generic [ref=e198]:
+                  - strong [ref=e199]: Raised
+                  - paragraph [ref=e200]: Focused work regions that need separation, not decoration.
+                - generic [ref=e201]: "#1b1f24"
+              - generic [ref=e202]:
+                - generic [ref=e204]:
+                  - strong [ref=e205]: Action blue
+                  - paragraph [ref=e206]: Identity, active states, selected controls, and the one primary action.
+                - generic [ref=e207]: "#5ea7ff"
+              - generic [ref=e208]:
+                - generic [ref=e210]:
+                  - strong [ref=e211]: Verified
+                  - paragraph [ref=e212]: Settlement succeeded and the proof can bear weight.
+                - generic [ref=e213]: "#7fd9a0"
+              - generic [ref=e214]:
+                - generic [ref=e216]:
+                  - strong [ref=e217]: Partial
+                  - paragraph [ref=e218]: Promising, cooling down, or still awaiting stronger contact.
+                - generic [ref=e219]: "#f0bf69"
+          - article [ref=e220]:
+            - text: System laws
+            - list [ref=e221]:
+              - listitem [ref=e222]: Assembly depth is shown through fill, density, and seal marks.
+              - listitem [ref=e223]: Green, amber, and red never become brand language.
+              - listitem [ref=e224]: Monoline icons stay in a 16 to 18 px band for routine controls.
+              - listitem [ref=e225]: Mono is for tags and proof metadata. Sans is for the work itself.
+          - article [ref=e226]:
+            - text: Control family
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - button "Run Operate" [ref=e229] [cursor=pointer]:
+                  - img [ref=e230]
+                  - text: Run Operate
+                - button "Open receipts" [ref=e233] [cursor=pointer]:
+                  - img [ref=e234]
+                  - text: Open receipts
+              - generic [ref=e236]:
+                - generic [ref=e237]: Seed prompt
+                - textbox "Seed prompt" [ref=e238]: State the next proof move in one sentence.
+              - generic [ref=e239]:
+                - generic [ref=e240]: Verified
+                - generic [ref=e241]: Cooling down
+                - generic [ref=e242]: Open
+      - generic [ref=e243]:
+        - generic [ref=e244]:
+          - text: Navigation grammar
+          - heading "The tool should navigate the way assembly itself moves" [level=2] [ref=e245]
+          - paragraph [ref=e246]: Navigation is not a separate decoration layer. It should follow the same phase logic as the work, getting louder or quieter depending on what the user is assembling from the first field capture to the sealed receipt.
+        - generic [ref=e247]:
+          - article [ref=e248]:
+            - generic [ref=e249]:
+              - img [ref=e251]
+              - generic [ref=e254]: Capture
+            - heading "Take in the world" [level=3] [ref=e255]
+            - generic [ref=e256]: see -> capture -> file to box
+            - paragraph [ref=e257]: Phone intake should be immediate and low-friction. A photo, voice note, or pasted link enters the same object the desktop later shapes.
+          - article [ref=e258]:
+            - generic [ref=e259]:
+              - img [ref=e261]
+              - generic [ref=e263]: Think
+            - heading "Read the source" [level=3] [ref=e264]
+            - generic [ref=e265]: source -> listen -> select
+            - paragraph [ref=e266]: The document owns the screen. Navigation quiets down to source switching, playback, and Seven support.
+          - article [ref=e267]:
+            - generic [ref=e268]:
+              - img [ref=e270]
+              - generic [ref=e273]: Create
+            - heading "Shape the seed" [level=3] [ref=e274]
+            - generic [ref=e275]: staging -> rewrite -> compare
+            - paragraph [ref=e276]: The tool becomes tactile here. Navigation pulls the seed, staging, and editable blocks into one working posture.
+          - article [ref=e277]:
+            - generic [ref=e278]:
+              - img [ref=e280]
+              - generic [ref=e283]: Operate
+            - heading "Read the box" [level=3] [ref=e284]
+            - generic [ref=e285]: run -> diagnose -> decide
+            - paragraph [ref=e286]: Operate should feel singular and decisive. The shell sheds side-noise and frames one honest read.
+          - article [ref=e287]:
+            - generic [ref=e288]:
+              - img [ref=e290]
+              - generic [ref=e292]: Proof
+            - heading "Inspect the return" [level=3] [ref=e293]
+            - generic [ref=e294]: receipt -> witness -> seal
+            - paragraph [ref=e295]: Proof is not another editor. Navigation shifts into ledger mode, where return, witness, and next move become legible.
+      - generic [ref=e296]:
+        - generic [ref=e297]:
+          - text: Workspace proposition
+          - heading "The shell should frame the object instead of burying it" [level=2] [ref=e298]
+        - generic [ref=e299]:
+          - complementary [ref=e300]:
+            - generic [ref=e301]:
+              - generic [ref=e302]: Think
+              - button "Sources" [ref=e303] [cursor=pointer]:
+                - img [ref=e304]
+                - text: Sources
+            - generic [ref=e306]:
+              - article [ref=e307]:
+                - generic [ref=e308]:
+                  - strong [ref=e309]: Roadside storefront photo
+                  - paragraph [ref=e310]: captured on phone · image source
+                - generic [ref=e311]: Open
+              - article [ref=e312]:
+                - generic [ref=e313]:
+                  - strong [ref=e314]: Voice memo from the car
+                  - paragraph [ref=e315]: speak note · audio source
+                - generic [ref=e316]: Queued
+              - article [ref=e317]:
+                - generic [ref=e318]:
+                  - strong [ref=e319]: Operator Sentences
+                  - paragraph [ref=e320]: 95 blocks · text source
+                - generic [ref=e321]: Verified
+              - article [ref=e322]:
+                - generic [ref=e323]:
+                  - strong [ref=e324]: Seed of seeds
+                  - paragraph [ref=e325]: working seed · current box
+                - generic [ref=e326]: Active
+          - generic [ref=e327]:
+            - generic [ref=e328]:
+              - generic [ref=e329]:
+                - text: Create
+                - heading "Current seed" [level=3] [ref=e330]
+              - button "Refine seed" [ref=e331] [cursor=pointer]:
+                - img [ref=e332]
+                - text: Refine seed
+            - generic [ref=e335]:
+              - generic [ref=e336]:
+                - generic [ref=e337]: One object, multiple views
+                - generic [ref=e338]: 3 receipts sealed
+              - generic [ref=e340]:
+                - heading "Open a sourdough bakery in Cobble Hill by Q1." [level=4] [ref=e341]
+                - paragraph [ref=e342]: Lease research for three locations is sealed. Cost estimate verified. Funding gap remains open. The next move is a lender shortlist.
+              - generic [ref=e347]:
+                - generic [ref=e348]:
+                  - img [ref=e349]
+                  - text: Aim
+                - generic [ref=e353]:
+                  - img [ref=e354]
+                  - text: Ground
+                - generic [ref=e357]:
+                  - img [ref=e358]
+                  - text: Bridge
+          - complementary [ref=e360]:
+            - generic [ref=e361]:
+              - text: Operate
+              - heading "Honest read" [level=4] [ref=e362]
+              - paragraph [ref=e363]: Show Aim, Ground, Bridge, convergence, and next move without turning it into chat.
+              - generic [ref=e364]: Retry after cooldown
+            - generic [ref=e365]:
+              - text: Receipts
+              - heading "Proof ledger" [level=4] [ref=e366]
+              - paragraph [ref=e367]: Each sealed receipt fills the object and leaves behind portable evidence.
+              - generic [ref=e368]:
+                - img [ref=e369]
+                - text: Cost estimate sealed
+              - generic [ref=e372]:
+                - img [ref=e373]
+                - text: Funding still open
+              - generic [ref=e375]:
+                - img [ref=e376]
+                - text: Permits unknown
+      - generic [ref=e378]:
+        - generic [ref=e379]:
+          - text: Temporary review surface
+          - paragraph [ref=e380]: This hidden pre-login screen is the live proposal board. It should be disposable once the real workspace absorbs the system.
+        - generic [ref=e381]:
+          - link "View intro" [ref=e382] [cursor=pointer]:
+            - /url: /intro
+          - link "Back to product" [ref=e383] [cursor=pointer]:
+            - /url: /workspace
+  - button "Open Next.js Dev Tools" [ref=e389] [cursor=pointer]:
+    - img [ref=e390]

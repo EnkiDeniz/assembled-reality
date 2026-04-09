@@ -19,6 +19,7 @@
     "releaseGatePass": { "type": "boolean" },
     "episodes": { "type": "array" },
     "expectedAlignment": { "type": ["number", "null"] },
+    "granularityAlignment": { "type": ["number", "null"] },
     "convergenceScore": { "type": ["number", "null"] },
     "domainCoverageCount": { "type": "number" },
     "crossDomainPass": { "type": "boolean" },

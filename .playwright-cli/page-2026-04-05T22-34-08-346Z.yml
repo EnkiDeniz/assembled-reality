@@ -1,0 +1,285 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - link "Account" [ref=e5] [cursor=pointer]:
+        - /url: /account
+        - img [ref=e6]
+      - generic [ref=e9]:
+        - complementary [ref=e10]:
+          - generic [ref=e11]:
+            - generic [ref=e12]:
+              - generic [ref=e13]: Box
+              - generic [ref=e14]: How Lœgos Assembled Itself
+            - generic [ref=e15]:
+              - button "Assembly lane" [ref=e16] [cursor=pointer]
+              - button "Add file" [ref=e17] [cursor=pointer]
+              - button "Photo" [ref=e18] [cursor=pointer]
+              - button "Paste" [ref=e19] [cursor=pointer]
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e22]:
+                - generic [ref=e23]: Sources
+                - generic [ref=e24]: "12"
+              - generic [ref=e25]:
+                - generic [ref=e26]:
+                  - button "Listen to What’s In The Box" [ref=e27] [cursor=pointer]:
+                    - img [ref=e28]
+                  - button "What’s In The Box 46 blocks · Text source · uploaded Load-bearing · Text · preserved" [ref=e30] [cursor=pointer]:
+                    - generic [ref=e31]: What’s In The Box
+                    - generic [ref=e32]: 46 blocks · Text source · uploaded
+                    - generic [ref=e33]: Load-bearing · Text · preserved
+                  - generic [ref=e34]:
+                    - generic [ref=e35]: Load-bearing
+                    - generic [ref=e36]: Text
+                    - generic [ref=e37]: Uploaded
+                    - generic [ref=e38]: L1 trust
+                - generic [ref=e39]:
+                  - button "Listen to Lœgos — Origin, Evolution, Feedback, and Receipt" [ref=e40] [cursor=pointer]:
+                    - img [ref=e41]
+                  - button "Lœgos — Origin, Evolution, Feedback, and Receipt 99 blocks · Image source · uploaded Proof witness · Image-derived · normalized" [ref=e43] [cursor=pointer]:
+                    - generic [ref=e44]: Lœgos — Origin, Evolution, Feedback, and Receipt
+                    - generic [ref=e45]: 99 blocks · Image source · uploaded
+                    - generic [ref=e46]: Proof witness · Image-derived · normalized
+                  - generic [ref=e47]:
+                    - generic [ref=e48]: Proof witness
+                    - generic [ref=e49]: Image
+                    - generic [ref=e50]: Uploaded
+                    - generic [ref=e51]: L1 trust
+                - generic [ref=e52]:
+                  - button "Listen to The Law of the Echo" [ref=e53] [cursor=pointer]:
+                    - img [ref=e54]
+                  - button "The Law of the Echo 208 blocks · Text source · uploaded Carried indirectly · Text · preserved" [ref=e56] [cursor=pointer]:
+                    - generic [ref=e57]: The Law of the Echo
+                    - generic [ref=e58]: 208 blocks · Text source · uploaded
+                    - generic [ref=e59]: Carried indirectly · Text · preserved
+                  - generic [ref=e60]:
+                    - generic [ref=e61]: Carried indirectly
+                    - generic [ref=e62]: Text
+                    - generic [ref=e63]: Uploaded
+                    - generic [ref=e64]: L1 trust
+                - generic [ref=e65]:
+                  - button "Listen to Loegos Git history export" [ref=e66] [cursor=pointer]:
+                    - img [ref=e67]
+                  - button "Loegos Git history export 1692 blocks · Text source · uploaded Proof witness · History export · captured" [ref=e69] [cursor=pointer]:
+                    - generic [ref=e70]: Loegos Git history export
+                    - generic [ref=e71]: 1692 blocks · Text source · uploaded
+                    - generic [ref=e72]: Proof witness · History export · captured
+                  - generic [ref=e73]:
+                    - generic [ref=e74]: Proof witness
+                    - generic [ref=e75]: Text
+                    - generic [ref=e76]: Uploaded
+                    - generic [ref=e77]: L2 trust
+                - generic [ref=e78]:
+                  - button "Listen to Lœgos Self-Assembly Seed Spec" [ref=e79] [cursor=pointer]:
+                    - img [ref=e80]
+                  - button "Lœgos Self-Assembly Seed Spec 308 blocks · Text source · uploaded Carried indirectly · Text · preserved" [ref=e82] [cursor=pointer]:
+                    - generic [ref=e83]: Lœgos Self-Assembly Seed Spec
+                    - generic [ref=e84]: 308 blocks · Text source · uploaded
+                    - generic [ref=e85]: Carried indirectly · Text · preserved
+                  - generic [ref=e86]:
+                    - generic [ref=e87]: Carried indirectly
+                    - generic [ref=e88]: Text
+                    - generic [ref=e89]: Uploaded
+                    - generic [ref=e90]: L1 trust
+                - generic [ref=e91]:
+                  - button "Listen to The Ghost Operator" [ref=e92] [cursor=pointer]:
+                    - img [ref=e93]
+                  - button "The Ghost Operator 66 blocks · Text source · uploaded Latent · Text · preserved" [ref=e95] [cursor=pointer]:
+                    - generic [ref=e96]: The Ghost Operator
+                    - generic [ref=e97]: 66 blocks · Text source · uploaded
+                    - generic [ref=e98]: Latent · Text · preserved
+                  - generic [ref=e99]:
+                    - generic [ref=e100]: Latent
+                    - generic [ref=e101]: Text
+                    - generic [ref=e102]: Uploaded
+                    - generic [ref=e103]: L1 trust
+                - generic [ref=e104]:
+                  - button "Listen to The Meaning Operator" [ref=e105] [cursor=pointer]:
+                    - img [ref=e106]
+                  - button "The Meaning Operator 563 blocks · Text source · uploaded Carried indirectly · Text · preserved" [ref=e108] [cursor=pointer]:
+                    - generic [ref=e109]: The Meaning Operator
+                    - generic [ref=e110]: 563 blocks · Text source · uploaded
+                    - generic [ref=e111]: Carried indirectly · Text · preserved
+                  - generic [ref=e112]:
+                    - generic [ref=e113]: Carried indirectly
+                    - generic [ref=e114]: Text
+                    - generic [ref=e115]: Uploaded
+                    - generic [ref=e116]: L1 trust
+                - generic [ref=e117]:
+                  - button "Listen to A monolith does not move." [ref=e118] [cursor=pointer]:
+                    - img [ref=e119]
+                  - button "A monolith does not move. 39 blocks · Text source · uploaded Latent · Text · preserved" [ref=e121] [cursor=pointer]:
+                    - generic [ref=e122]: A monolith does not move.
+                    - generic [ref=e123]: 39 blocks · Text source · uploaded
+                    - generic [ref=e124]: Latent · Text · preserved
+                  - generic [ref=e125]:
+                    - generic [ref=e126]: Latent
+                    - generic [ref=e127]: Text
+                    - generic [ref=e128]: Uploaded
+                    - generic [ref=e129]: L1 trust
+                - generic [ref=e130]:
+                  - button "Listen to Echo Canon" [ref=e131] [cursor=pointer]:
+                    - img [ref=e132]
+                  - button "Echo Canon 154 blocks · Text source · uploaded Latent · Text · preserved" [ref=e134] [cursor=pointer]:
+                    - generic [ref=e135]: Echo Canon
+                    - generic [ref=e136]: 154 blocks · Text source · uploaded
+                    - generic [ref=e137]: Latent · Text · preserved
+                  - generic [ref=e138]:
+                    - generic [ref=e139]: Latent
+                    - generic [ref=e140]: Text
+                    - generic [ref=e141]: Uploaded
+                    - generic [ref=e142]: L1 trust
+                - generic [ref=e143]:
+                  - button "Listen to Operator Sentences" [ref=e144] [cursor=pointer]:
+                    - img [ref=e145]
+                  - button "Operator Sentences 95 blocks · Text source · uploaded Load-bearing · Text · preserved" [ref=e147] [cursor=pointer]:
+                    - generic [ref=e148]: Operator Sentences
+                    - generic [ref=e149]: 95 blocks · Text source · uploaded
+                    - generic [ref=e150]: Load-bearing · Text · preserved
+                  - generic [ref=e151]:
+                    - generic [ref=e152]: Load-bearing
+                    - generic [ref=e153]: Text
+                    - generic [ref=e154]: Uploaded
+                    - generic [ref=e155]: L1 trust
+                - generic [ref=e156]:
+                  - button "Listen to Assembled Reality" [ref=e157] [cursor=pointer]:
+                    - img [ref=e158]
+                  - button "Assembled Reality 187 blocks · Text source · uploaded Load-bearing · Text · preserved" [ref=e160] [cursor=pointer]:
+                    - generic [ref=e161]: Assembled Reality
+                    - generic [ref=e162]: 187 blocks · Text source · uploaded
+                    - generic [ref=e163]: Load-bearing · Text · preserved
+                  - generic [ref=e164]:
+                    - generic [ref=e165]: Load-bearing
+                    - generic [ref=e166]: Text
+                    - generic [ref=e167]: Uploaded
+                    - generic [ref=e168]: L1 trust
+                - generic [ref=e169]:
+                  - button "Listen to words are lœgos" [ref=e170] [cursor=pointer]:
+                    - img [ref=e171]
+                  - button "words are lœgos 1 block · Text source · uploaded Load-bearing · Text · preserved" [ref=e173] [cursor=pointer]:
+                    - generic [ref=e174]: words are lœgos
+                    - generic [ref=e175]: 1 block · Text source · uploaded
+                    - generic [ref=e176]: Load-bearing · Text · preserved
+                  - generic [ref=e177]:
+                    - generic [ref=e178]: Load-bearing
+                    - generic [ref=e179]: Text
+                    - generic [ref=e180]: Uploaded
+                    - generic [ref=e181]: L1 trust
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]: Seeds
+                - generic [ref=e185]: "1"
+              - generic [ref=e187]:
+                - button "Listen to Seed of seeds" [ref=e188] [cursor=pointer]:
+                  - img [ref=e189]
+                - button "Seed of seeds 1 block · Seed source · assembled Current seed of the box. Useful for Create and Operate, not independent proof." [ref=e191] [cursor=pointer]:
+                  - generic [ref=e192]: Seed of seeds
+                  - generic [ref=e193]: 1 block · Seed source · assembled
+                  - generic [ref=e194]: Current seed of the box. Useful for Create and Operate, not independent proof.
+                - generic [ref=e195]:
+                  - generic [ref=e196]: Seed
+                  - generic [ref=e197]: Assembled
+                  - generic [ref=e198]: working trust
+        - generic [ref=e199]:
+          - generic [ref=e201]:
+            - button "All boxes" [ref=e202] [cursor=pointer]: Lœgos
+            - 'button "Current box: How Lœgos Assembled Itself" [ref=e205] [cursor=pointer]':
+              - generic [ref=e207]: How Lœgos Assembled Itself
+              - img [ref=e208]
+            - generic [ref=e211]:
+              - button "Assembly lane" [ref=e212] [cursor=pointer]:
+                - img [ref=e213]
+              - button "Seed" [ref=e215] [cursor=pointer]:
+                - img [ref=e216]
+              - button "Operate" [ref=e219] [cursor=pointer]:
+                - img [ref=e220]
+              - button "Receipts" [ref=e225] [cursor=pointer]:
+                - img [ref=e226]
+            - 'button "Root: Show how Lœgos assembled itself" [ref=e230] [cursor=pointer]': Show how Lœgos assembled itself
+            - generic [ref=e232]:
+              - button "Add source" [ref=e233] [cursor=pointer]:
+                - img [ref=e234]
+              - button "Speak" [ref=e235] [cursor=pointer]:
+                - img [ref=e236]
+              - button "Box settings" [ref=e239] [cursor=pointer]:
+                - img [ref=e240]
+          - generic [ref=e242]:
+            - generic [ref=e243]:
+              - generic [ref=e244]:
+                - generic [ref=e245]: Seed
+                - heading "Shape the seed." [level=2] [ref=e246]
+              - generic [ref=e247]:
+                - generic [ref=e248]: How Lœgos Assembled Itself
+                - generic [ref=e249]: 0 staged
+                - generic [ref=e250]: 0 Seven replies
+            - generic [ref=e251]:
+              - generic [ref=e252]:
+                - img "Seed of seeds" [ref=e254]
+                - generic [ref=e265]: Seed of seeds
+              - generic [ref=e266]:
+                - generic [ref=e267]: Current seed
+                - heading "Seed of seeds" [level=3] [ref=e268]
+            - generic [ref=e269]:
+              - generic [ref=e270]:
+                - generic [ref=e271]:
+                  - heading "Seed of seeds" [level=2] [ref=e272]
+                  - paragraph [ref=e273]: Current live assembly shape
+                - generic [ref=e274]:
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: Seed
+                    - generic [ref=e277]: 0 blocks
+                  - button "Delete seed" [ref=e279] [cursor=pointer]:
+                    - img [ref=e280]
+              - article [ref=e283]:
+                - button "+" [ref=e286] [cursor=pointer]
+                - generic [ref=e287]:
+                  - generic [ref=e288]:
+                    - generic [ref=e289]: "001"
+                    - generic [ref=e290]: 1 · Assembly
+                    - generic [ref=e291]: imported
+                  - generic [ref=e292]: No content yet.
+        - complementary [ref=e293]:
+          - generic [ref=e294]:
+            - generic [ref=e295]:
+              - generic [ref=e296]:
+                - generic [ref=e297]: Stage
+                - heading "Shape the next seed revision." [level=3] [ref=e298]
+                - paragraph [ref=e299]: The queue is the handoff between sources, Seven, and the living seed.
+              - tablist "Workspace sidecar" [ref=e300]:
+                - button "Seven" [ref=e301] [cursor=pointer]:
+                  - img [ref=e302]
+                  - generic [ref=e304]: Seven
+                - button "Stage" [ref=e305] [cursor=pointer]:
+                  - img [ref=e306]
+                  - generic [ref=e309]: Stage
+                - button "Details" [ref=e310] [cursor=pointer]:
+                  - img [ref=e311]
+                  - generic [ref=e317]: Details
+            - generic [ref=e321]:
+              - generic [ref=e322]:
+                - generic [ref=e323]: Seed queue
+                - generic [ref=e324]:
+                  - button "Assemble" [disabled] [ref=e325]
+                  - button "Clear" [disabled] [ref=e326]
+              - paragraph [ref=e327]: Add blocks from a source to shape the seed.
+      - generic [ref=e328]:
+        - generic [ref=e329]:
+          - button "Seek back 10 seconds" [ref=e330] [cursor=pointer]:
+            - img [ref=e331]
+          - button "Play" [ref=e334] [cursor=pointer]:
+            - img [ref=e335]
+          - button "Seek forward 10 seconds" [ref=e337] [cursor=pointer]:
+            - img [ref=e338]
+          - button "Previous block" [ref=e341] [cursor=pointer]:
+            - img [ref=e342]
+          - button "Next block" [ref=e344] [cursor=pointer]:
+            - img [ref=e345]
+        - generic [ref=e348]: 1/1
+        - generic [ref=e351]:
+          - button "1x" [ref=e352] [cursor=pointer]
+          - combobox [ref=e353]:
+            - option "Seven" [selected]
+            - option "Sage"
+          - generic [ref=e354]: Seven · block 1
+  - button "Open Next.js Dev Tools" [ref=e360] [cursor=pointer]:
+    - img [ref=e361]

@@ -41,6 +41,7 @@ import WorkspaceDiagnosticsRail from "@/components/WorkspaceDiagnosticsRail";
 import WorkspaceDisclaimerGate from "@/components/WorkspaceDisclaimerGate";
 import WorkspaceGlyph from "@/components/WorkspaceGlyph";
 import WorkspaceStarter from "@/components/WorkspaceStarter";
+import FounderInfoPanel from "@/components/founder/FounderInfoPanel";
 import FounderShell from "@/components/founder/FounderShell";
 import WorkspaceDocumentWorkbench from "@/components/workspace/WorkspaceDocumentWorkbench";
 import { useOperateOverlayController } from "@/components/workspace/useOperateOverlayController";
@@ -162,6 +163,23 @@ const DESKTOP_PLAYER_STATES = Object.freeze({
   expanded: "expanded",
   active: "active",
 });
+const DESKTOP_SHELL_SELECTIONS = Object.freeze({
+  box: "box",
+  witness: "witness",
+  compare: "compare",
+  language: "language",
+  receipt: "receipt",
+});
+
+function normalizeDesktopShellSelection(
+  value = DESKTOP_SHELL_SELECTIONS.box,
+  fallback = DESKTOP_SHELL_SELECTIONS.box,
+) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return Object.values(DESKTOP_SHELL_SELECTIONS).includes(normalized)
+    ? normalized
+    : fallback;
+}
 const IMAGE_DERIVATION_OPTIONS = [
   { value: "document", label: "Convert to document", shortLabel: "IMAGE → DOC" },
   { value: "notes", label: "Create source notes", shortLabel: "IMAGE → NOTES" },
@@ -4701,6 +4719,9 @@ export default function WorkspaceShell({
   const [founderSelectedWitnessDocumentKey, setFounderSelectedWitnessDocumentKey] = useState("");
   const [founderPlaybackSurface, setFounderPlaybackSurface] = useState("language");
   const [founderPlaybackBlockId, setFounderPlaybackBlockId] = useState(null);
+  const [desktopShellSelection, setDesktopShellSelection] = useState(
+    DESKTOP_SHELL_SELECTIONS.box,
+  );
   const [resumeSessionSummaryState, setResumeSessionSummaryState] = useState(
     resumeSessionSummary,
   );
@@ -4959,6 +4980,15 @@ export default function WorkspaceShell({
     projectDocuments: hydratedProjectDocuments,
     projectDrafts: projectDraftsState,
     pendingSuggestion: seedSuggestion,
+  });
+  const currentBoxViewModel = buildBoxViewModel({
+    activeProject,
+    projectDocuments: hydratedProjectDocuments,
+    currentAssemblyDocument: currentSeedDocument,
+    projectDrafts: projectDraftsState,
+    resumeSessionSummary: resumeSessionSummaryState,
+    connectionStatus: getReceiptsConnectionStatus,
+    connectionLastError: getReceiptsConnectionLastError,
   });
   const entryStateViewModel = buildEntryStateViewModel({
     projects: hydratedProjects,
@@ -5249,28 +5279,87 @@ export default function WorkspaceShell({
   const showStarterSeedEntry =
     Boolean(starterSeedEntrySourceKey) &&
     boxPhase === BOX_PHASES.create;
+  const showDesktopCapabilityShell =
+    !isMobileLayout &&
+    !launchpadOpen &&
+    !isFirstTimeSurface;
+  const founderCompiledWitnessDocument =
+    currentSeedDocument?.seedMeta?.compiledFromDocumentKey
+      ? projectDocumentsByKey.get(String(currentSeedDocument.seedMeta.compiledFromDocumentKey || "").trim()) ||
+        documentCache[String(currentSeedDocument.seedMeta.compiledFromDocumentKey || "").trim()] ||
+        null
+      : null;
   const founderPreferredWitnessDocument = founderSelectedWitnessDocumentKey
     ? projectDocumentsByKey.get(String(founderSelectedWitnessDocumentKey || "").trim()) ||
       documentCache[String(founderSelectedWitnessDocumentKey || "").trim()] ||
       null
-    : null;
+    : founderCompiledWitnessDocument || null;
   const founderWitnessDocument =
     (isRealSourceDocument(founderPreferredWitnessDocument) ? founderPreferredWitnessDocument : null) ||
     starterSeedEntryDocument ||
     (boxPhase === BOX_PHASES.create && isRealSourceDocument(activeDocument)
       ? activeDocument
       : latestRealSourceDocument || null);
-  const founderCompareActive =
-    !isMobileLayout &&
-    (boxPhase === BOX_PHASES.create ||
-      boxPhase === BOX_PHASES.operate ||
-      boxPhase === BOX_PHASES.receipts) &&
+  const founderCompiledWitnessTimestamp = Date.parse(
+    String(currentSeedDocument?.seedMeta?.compiledFromUpdatedAt || "").trim(),
+  );
+  const founderWitnessTimestamp = Date.parse(
+    String(founderWitnessDocument?.updatedAt || founderWitnessDocument?.createdAt || "").trim(),
+  );
+  const founderWitnessIsStale =
+    Boolean(currentSeedDocument?.documentKey) &&
+    Boolean(founderWitnessDocument?.documentKey) &&
+    String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+      String(founderWitnessDocument?.documentKey || "").trim() &&
+    !Number.isNaN(founderCompiledWitnessTimestamp) &&
+    !Number.isNaN(founderWitnessTimestamp) &&
+    founderWitnessTimestamp > founderCompiledWitnessTimestamp;
+  const founderCanCompare =
+    showDesktopCapabilityShell &&
     Boolean(currentSeedDocument?.documentKey) &&
     Boolean(founderWitnessDocument?.documentKey) &&
     founderWitnessDocument.documentKey !== currentSeedDocument.documentKey;
-  const founderJourneyActive = showStarterSourceSurface || founderCompareActive;
+  const resolvedDesktopShellSelection =
+    desktopShellSelection === DESKTOP_SHELL_SELECTIONS.compare && !founderCanCompare
+      ? currentSeedDocument?.documentKey
+        ? DESKTOP_SHELL_SELECTIONS.language
+        : founderWitnessDocument?.documentKey
+          ? DESKTOP_SHELL_SELECTIONS.witness
+          : DESKTOP_SHELL_SELECTIONS.box
+      : desktopShellSelection === DESKTOP_SHELL_SELECTIONS.language && !currentSeedDocument?.documentKey
+        ? founderWitnessDocument?.documentKey
+          ? DESKTOP_SHELL_SELECTIONS.witness
+          : DESKTOP_SHELL_SELECTIONS.box
+        : desktopShellSelection === DESKTOP_SHELL_SELECTIONS.receipt &&
+            !(Array.isArray(projectDraftsState) ? projectDraftsState.length : 0)
+          ? currentSeedDocument?.documentKey
+            ? DESKTOP_SHELL_SELECTIONS.language
+            : DESKTOP_SHELL_SELECTIONS.box
+          : desktopShellSelection === DESKTOP_SHELL_SELECTIONS.witness && !founderWitnessDocument?.documentKey
+            ? currentSeedDocument?.documentKey
+              ? DESKTOP_SHELL_SELECTIONS.language
+              : DESKTOP_SHELL_SELECTIONS.box
+            : desktopShellSelection;
+  const founderCompareActive =
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.compare &&
+    founderCanCompare;
+  const founderViewingBox =
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.box;
+  const founderViewingWitness =
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.witness;
+  const founderViewingLanguage =
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.language;
+  const founderViewingReceipt =
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.receipt;
+  const founderJourneyActive = showStarterSourceSurface || showDesktopCapabilityShell;
   const founderArtifactDocument =
-    founderCompareActive && currentSeedDocument?.documentKey
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.language ||
+    founderCompareActive ||
+    resolvedDesktopShellSelection === DESKTOP_SHELL_SELECTIONS.receipt
+      ? currentSeedDocument?.documentKey
+        ? currentSeedDocument
+        : activeDocument
+      : founderCompareActive && currentSeedDocument?.documentKey
       ? currentSeedDocument
       : activeDocument;
   const founderArtifactBlocks = founderArtifactDocument?.blocks ?? EMPTY_BLOCKS;
@@ -5281,6 +5370,7 @@ export default function WorkspaceShell({
     founderArtifactBlocks[0] ||
     null;
   const showDesktopUnifiedShell =
+    !showDesktopCapabilityShell &&
     !isMobileLayout &&
     !launchpadOpen &&
     !isFirstTimeSurface &&
@@ -6292,21 +6382,54 @@ export default function WorkspaceShell({
       };
     }
 
+    if (founderViewingLanguage) {
+      return {
+        title: founderWitnessIsStale
+          ? "The active structure is stale against its witness."
+          : "Active Lœgos structure is the working object.",
+        copy: founderWitnessIsStale
+          ? "The witness changed after the last compile. Recompile before treating this language as current."
+          : "This is the editable Lœgos file for the box. Operate, override, and receipts all flow from here rather than from the witness prose.",
+        excerptLabel: founderCompiledWitnessDocument?.title
+          ? `Compiled from ${founderCompiledWitnessDocument.title}`
+          : "",
+        excerpt: founderShellExcerpt || "",
+      };
+    }
+
+    if (founderViewingReceipt) {
+      return {
+        title: "Receipts close the move without replacing the language.",
+        copy:
+          "Receipts remain downstream proof objects. They preserve what changed, but they do not become the active language file.",
+        excerptLabel: currentSeedDocument?.title ? `Active language · ${currentSeedDocument.title}` : "",
+        excerpt: founderShellExcerpt || "",
+      };
+    }
+
     const selectedLabel = founderShellSelectedBlock
       ? `Selected block ${String((founderShellSelectedBlock?.sourcePosition || 0) + 1).padStart(3, "0")}`
       : "";
 
     return {
-      title: founderShellSelectedBlock
-        ? "Raw source held steady."
+      title: founderViewingWitness && founderShellSelectedBlock
+        ? "Witness stays literal and editable."
         : "Reading stays literal here.",
       copy:
-        "This view is for the source as captured. Lœgos stays close to the text here, then the next step shapes it into the first seed.",
+        founderViewingWitness
+          ? "This is the normalized witness file. Edit it like notes, listen to it directly, then compile or recompile explicitly when you want language to move."
+          : "This view is for the source as captured. Lœgos stays close to the text here, then the next step shapes it into the first seed.",
       excerptLabel: selectedLabel,
       excerpt: founderShellExcerpt || "",
     };
   }, [
     founderCompareActive,
+    founderCompiledWitnessDocument?.title,
+    currentSeedDocument?.title,
+    founderViewingLanguage,
+    founderViewingReceipt,
+    founderViewingWitness,
+    founderWitnessIsStale,
     founderWitnessDocument?.blocks,
     founderWitnessDocument?.documentKey,
     founderWitnessDocument?.title,
@@ -6345,9 +6468,13 @@ export default function WorkspaceShell({
           document.documentKey === founderWitnessDocument?.documentKey
             ? founderCompareActive
               ? "current"
-              : "open"
+              : founderViewingWitness
+                ? "open"
+                : "current"
             : "",
-        active: document.documentKey === founderWitnessDocument?.documentKey,
+        active:
+          document.documentKey === founderWitnessDocument?.documentKey &&
+          (founderCompareActive || founderViewingWitness),
         onClick: () => {
           if (founderCompareActive) {
             setFounderSelectedWitnessDocumentKey(document.documentKey);
@@ -6357,10 +6484,7 @@ export default function WorkspaceShell({
           }
 
           setStarterSourceDocumentKey(document.documentKey);
-          void loadDocument(document.documentKey, {
-            mode: WORKSPACE_MODES.listen,
-            phase: BOX_PHASES.think,
-          });
+          void openDesktopWitness(document.documentKey);
         },
       }));
     const language = languageDocuments
@@ -6372,13 +6496,19 @@ export default function WorkspaceShell({
           document.documentKey === currentSeedDocument?.documentKey
             ? "Current active structure"
             : document.subtitle || "Seed draft",
-        badge: document.documentKey === currentSeedDocument?.documentKey ? "current" : "",
-        active: document.documentKey === currentSeedDocument?.documentKey,
+        badge:
+          document.documentKey === currentSeedDocument?.documentKey
+            ? founderWitnessIsStale
+              ? "stale"
+              : "current"
+            : "",
+        active:
+          document.documentKey === currentSeedDocument?.documentKey &&
+          founderViewingLanguage,
         onClick: () => {
           setFounderPlaybackSurface("language");
           setFounderPlaybackBlockId(null);
-          void loadDocument(document.documentKey, {
-            mode: WORKSPACE_MODES.assemble,
+          void openDesktopLanguage(document.documentKey, {
             phase:
               boxPhase === BOX_PHASES.receipts
                 ? BOX_PHASES.receipts
@@ -6397,15 +6527,10 @@ export default function WorkspaceShell({
           title: draft.title || "Untitled receipt",
           detail: draft.courthouseStatusLine || draft.statusLabel || draft.mode || "Receipt draft",
           badge: isSealed ? "sealed" : "draft",
-          active: false,
+          active: founderViewingReceipt,
           onClick: () => {
             setFounderPlaybackSurface("language");
-            if (isSealed) {
-              openReceiptsSurface();
-              return;
-            }
-            setBoxPhase(BOX_PHASES.receipts);
-            openReceiptSealDialog(draft);
+            openReceiptsSurface();
           },
         };
       });
@@ -6516,6 +6641,11 @@ export default function WorkspaceShell({
       setFounderSelectedWitnessDocumentKey("");
     }
   }, [documentCache, founderSelectedWitnessDocumentKey, projectDocumentsByKey]);
+
+  useEffect(() => {
+    if (isMobileLayout) return;
+    setDesktopShellSelection(DESKTOP_SHELL_SELECTIONS.box);
+  }, [activeProjectKey, isMobileLayout]);
 
   useEffect(() => {
     if (founderCompareActive) return;
@@ -7813,6 +7943,7 @@ export default function WorkspaceShell({
     setFounderSelectedWitnessDocumentKey(normalizedDocumentKey);
     setFounderPlaybackSurface("language");
     setFounderPlaybackBlockId(null);
+    setDesktopShellSelection(DESKTOP_SHELL_SELECTIONS.witness);
     setStarterSeedEntrySourceKey("");
     setLaunchpadOpen(false);
     setDropAnythingOpen(false);
@@ -7830,12 +7961,11 @@ export default function WorkspaceShell({
 
   async function openStarterSeedFlow() {
     const sourceDocumentKey = String(starterSourceDocumentKey || activeDocumentKey || "").trim();
-    setStarterSeedEntrySourceKey(sourceDocumentKey);
-    setFounderSelectedWitnessDocumentKey(sourceDocumentKey);
-    setFounderPlaybackSurface("language");
-    setFounderPlaybackBlockId(null);
-    clearStarterFlowState({ keepScopedProject: true, keepSeedEntry: true });
-    await handleSelectBoxPhase(BOX_PHASES.create, { skipRootGate: false });
+    if (!sourceDocumentKey) return;
+    await compileWitnessToLoegos({
+      witnessDocumentKey: sourceDocumentKey,
+      announce: true,
+    });
   }
 
   async function returnToStarterSourceView() {
@@ -7846,10 +7976,12 @@ export default function WorkspaceShell({
     setFounderSelectedWitnessDocumentKey(sourceDocumentKey);
     setFounderPlaybackSurface("language");
     setFounderPlaybackBlockId(null);
+    setDesktopShellSelection(DESKTOP_SHELL_SELECTIONS.witness);
     setStarterSeedEntrySourceKey("");
     await loadDocument(sourceDocumentKey, {
       mode: WORKSPACE_MODES.listen,
       phase: BOX_PHASES.think,
+      selection: DESKTOP_SHELL_SELECTIONS.witness,
     });
   }
 
@@ -7858,6 +7990,7 @@ export default function WorkspaceShell({
     setFounderPlaybackSurface("language");
     setFounderPlaybackBlockId(null);
     clearStarterFlowState({ keepScopedProject: true });
+    openCurrentBoxHome(activeProjectKey);
   }
 
   function openProjectLaunchpad(projectKey, nextLaunchpadView = LAUNCHPAD_VIEWS.box) {
@@ -7987,6 +8120,19 @@ export default function WorkspaceShell({
   }
 
   function openCurrentBoxHome(projectKey = activeProjectKey) {
+    if (!isMobileLayout && projectKey === activeProjectKey) {
+      setLaunchpadOpen(false);
+      setBoxPhase(BOX_PHASES.lane);
+      setListenPickerOpen(false);
+      setWorkspacePickerOpen(false);
+      setMobileBoxSheetOpen(false);
+      setDropAnythingOpen(false);
+      setPhotoIntakeOpen(false);
+      setDesktopShellSelection(DESKTOP_SHELL_SELECTIONS.box);
+      clearStarterFlowState({ keepScopedProject: true });
+      updateUrl(activeDocumentKey, activeProjectKey, { mode: workspaceMode });
+      return;
+    }
     openProjectLaunchpad(projectKey, LAUNCHPAD_VIEWS.box);
   }
 
@@ -8834,7 +8980,11 @@ export default function WorkspaceShell({
     });
   }
 
-  const requestSeedOperation = useCallback(async (mode = "ensure", nextSuggestion = null) => {
+  const requestSeedOperation = useCallback(async (
+    mode = "ensure",
+    nextSuggestion = null,
+    options = {},
+  ) => {
     const response = await fetch("/api/workspace/seed", {
       method: "POST",
       headers: {
@@ -8846,6 +8996,7 @@ export default function WorkspaceShell({
         suggestion: nextSuggestion,
         receiptCount: projectDraftsState.length,
         latestOperateAt: operateResult?.ranAt || "",
+        sourceDocumentKey: String(options?.sourceDocumentKey || "").trim(),
       }),
     });
     const payload = await response.json().catch(() => null);
@@ -8990,6 +9141,124 @@ export default function WorkspaceShell({
     setFeedback("Dismissed the current seed suggestion.");
   }
 
+  async function openDesktopWitness(documentKey = "") {
+    const normalizedDocumentKey = String(documentKey || "").trim();
+    if (!normalizedDocumentKey) return false;
+
+    setFounderSelectedWitnessDocumentKey(normalizedDocumentKey);
+    setFounderPlaybackSurface("witness");
+    setFounderPlaybackBlockId(null);
+
+    return loadDocument(normalizedDocumentKey, {
+      mode: WORKSPACE_MODES.listen,
+      phase: BOX_PHASES.think,
+      selection: DESKTOP_SHELL_SELECTIONS.witness,
+    });
+  }
+
+  async function openDesktopLanguage(documentKey = "", options = {}) {
+    const normalizedDocumentKey = String(documentKey || currentSeedDocument?.documentKey || "").trim();
+    if (!normalizedDocumentKey) return false;
+
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
+
+    return loadDocument(normalizedDocumentKey, {
+      mode: WORKSPACE_MODES.assemble,
+      phase: normalizeBoxPhase(options.phase, BOX_PHASES.create),
+      selection: DESKTOP_SHELL_SELECTIONS.language,
+      focusBlockId: options.focusBlockId || null,
+    });
+  }
+
+  async function openDesktopCompare(witnessDocumentKey = "", options = {}) {
+    const normalizedWitnessDocumentKey = String(
+      witnessDocumentKey ||
+        founderSelectedWitnessDocumentKey ||
+        founderCompiledWitnessDocument?.documentKey ||
+        founderWitnessDocument?.documentKey ||
+        "",
+    ).trim();
+    const normalizedSeedDocumentKey = String(
+      options.documentKey || currentSeedDocument?.documentKey || "",
+    ).trim();
+
+    if (!normalizedSeedDocumentKey) return false;
+
+    if (normalizedWitnessDocumentKey) {
+      setFounderSelectedWitnessDocumentKey(normalizedWitnessDocumentKey);
+    }
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
+
+    return loadDocument(normalizedSeedDocumentKey, {
+      mode: WORKSPACE_MODES.assemble,
+      phase: normalizeBoxPhase(options.phase, BOX_PHASES.create),
+      selection: DESKTOP_SHELL_SELECTIONS.compare,
+      focusBlockId: options.focusBlockId || null,
+    });
+  }
+
+  async function compileWitnessToLoegos({
+    witnessDocumentKey = "",
+    announce = false,
+  } = {}) {
+    const normalizedWitnessDocumentKey = String(
+      witnessDocumentKey ||
+        founderSelectedWitnessDocumentKey ||
+        founderWitnessDocument?.documentKey ||
+        activeDocument?.documentKey ||
+        "",
+    ).trim();
+
+    if (!normalizedWitnessDocumentKey) {
+      setFeedback("Open a witness before compiling it into Lœgos.", "error");
+      return null;
+    }
+
+    setSeedStatusPending(true);
+    setFounderSelectedWitnessDocumentKey(normalizedWitnessDocumentKey);
+    setFounderPlaybackSurface("language");
+    setFounderPlaybackBlockId(null);
+
+    try {
+      const payload = await requestSeedOperation("compile", null, {
+        sourceDocumentKey: normalizedWitnessDocumentKey,
+      });
+      if (payload?.seed?.documentKey) {
+        upsertDocumentRef.current?.(payload.seed, { replaceLogs: true });
+        attachDocumentToActiveProjectRef.current?.(payload.seed, {
+          role: "ASSEMBLY",
+          setAsCurrentAssembly: true,
+        });
+        applyProjectPayloadRef.current?.(payload?.project);
+        setEntryStateOverride("");
+        clearActiveRerouteContext();
+        await openDesktopCompare(normalizedWitnessDocumentKey, {
+          documentKey: payload.seed.documentKey,
+          phase: BOX_PHASES.create,
+        });
+        if (announce) {
+          setFeedback(
+            payload.created
+              ? "Compiled the first active Lœgos file."
+              : "Recompiled the active Lœgos file from the witness.",
+            "success",
+          );
+        }
+      }
+      return payload?.seed || null;
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "Could not compile this witness into Lœgos yet.",
+        "error",
+      );
+      return null;
+    } finally {
+      setSeedStatusPending(false);
+    }
+  }
+
   function getMobileListenTargetKey() {
     return (
       String(resumeSessionSummaryState?.documentKey || "").trim() ||
@@ -9024,10 +9293,12 @@ export default function WorkspaceShell({
 
     if (!isMobileLayout) {
       setDesktopRightPanel(DESKTOP_RIGHT_PANELS.diagnostics);
+      setDesktopShellSelection(DESKTOP_SHELL_SELECTIONS.receipt);
     }
 
     void enterWorkspace(targetDocumentKey, WORKSPACE_MODES.assemble, {
       phase: BOX_PHASES.receipts,
+      selection: DESKTOP_SHELL_SELECTIONS.receipt,
     });
   }
 
@@ -9165,6 +9436,10 @@ export default function WorkspaceShell({
       });
     }
     const normalizedMode = applyWorkspaceMode(mode);
+    const nextSelection = normalizeDesktopShellSelection(
+      options.selection,
+      desktopShellSelection,
+    );
     setLaunchpadOpen(false);
     setWorkspacePickerOpen(false);
     setMobileBoxSheetOpen(false);
@@ -9180,6 +9455,9 @@ export default function WorkspaceShell({
         : boxPhase,
     );
     setBoxPhase(nextPhase);
+    if (!isMobileLayout && options.selection) {
+      setDesktopShellSelection(nextSelection);
+    }
     if (!isMobileLayout && normalizedMode === WORKSPACE_MODES.assemble) {
       const nextSidecarPanel = getDefaultDesktopSidecarPanel(nextPhase);
       setDesktopSidecarPanel(nextSidecarPanel);
@@ -9211,9 +9489,16 @@ export default function WorkspaceShell({
       inferBoxPhaseForDocument(nextDocumentSummary, boxPhase),
     );
     const nextFocusBlockId = options.focusBlockId || null;
+    const nextSelection = normalizeDesktopShellSelection(
+      options.selection,
+      desktopShellSelection,
+    );
 
     if (documentKey === activeDocumentKey) {
       setBoxPhase(nextPhase);
+      if (!isMobileLayout && options.selection) {
+        setDesktopShellSelection(nextSelection);
+      }
       if (!isMobileLayout && nextMode === WORKSPACE_MODES.assemble) {
         const nextSidecarPanel = getDefaultDesktopSidecarPanel(nextPhase);
         setDesktopSidecarPanel(nextSidecarPanel);
@@ -9247,6 +9532,9 @@ export default function WorkspaceShell({
         setActiveDocumentKey(documentKey);
       });
       setBoxPhase(nextPhase);
+      if (!isMobileLayout && options.selection) {
+        setDesktopShellSelection(nextSelection);
+      }
       if (!isMobileLayout && nextMode === WORKSPACE_MODES.assemble) {
         const nextSidecarPanel = getDefaultDesktopSidecarPanel(nextPhase);
         setDesktopSidecarPanel(nextSidecarPanel);
@@ -12455,24 +12743,261 @@ export default function WorkspaceShell({
         Date.parse(String(right?.updatedAt || right?.createdAt || "")) -
         Date.parse(String(left?.updatedAt || left?.createdAt || "")),
     )[0] || null;
-  const founderPrimaryAction = founderCompareActive
-    ? isReceiptsPhase
-      ? founderLatestOpenDraft?.id
+  const founderCompileActionLabel =
+    currentSeedDocument?.documentKey
+      ? founderWitnessIsStale
+        ? "Recompile to Lœgos"
+        : "Compile to Lœgos"
+      : "Compile to Lœgos";
+  const founderBoxCurrentPositionAction = founderCanCompare
+    ? {
+        label: "Open compare",
+        onClick: () => void openDesktopCompare(),
+      }
+    : currentSeedDocument?.documentKey
+      ? {
+          label: "Open language",
+          onClick: () => void openDesktopLanguage(currentSeedDocument.documentKey),
+        }
+      : founderWitnessDocument?.documentKey
         ? {
-            label: "Next: Seal latest",
-            title: "Seal the latest receipt.",
-            detail:
-              "The language stays central. Seal the latest receipt only when the proof boundary is honest enough to carry outward.",
-            testId: "workspace-founder-seal-latest",
-            onClick: () => openReceiptSealDialog(founderLatestOpenDraft),
+            label: "Open witness",
+            onClick: () => void openDesktopWitness(founderWitnessDocument.documentKey),
           }
         : {
-            label: "Next: Draft receipt",
-            title: "Draft the first receipt.",
-            detail:
-              "No receipt draft exists yet for this move. Draft one from the current seed and Operate state before sealing.",
-            testId: "workspace-founder-draft-receipt",
-            onClick: () =>
+            label: "Add source",
+            onClick: () => openStarterLaunchpad(activeProjectKey),
+          };
+  const founderPrimaryAction = founderViewingBox
+    ? {
+        label: "Add source",
+        title: "Bring a new witness into the box.",
+        detail: "Start from real material, not from a blank language file.",
+        testId: "workspace-founder-add-source",
+        onClick: () => openStarterLaunchpad(activeProjectKey),
+      }
+    : founderViewingWitness
+      ? {
+          label:
+            currentSeedDocument?.documentKey &&
+            !founderWitnessIsStale &&
+            String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+              String(founderWitnessDocument?.documentKey || "").trim()
+              ? "Open compare"
+              : founderCompileActionLabel,
+          title:
+            currentSeedDocument?.documentKey &&
+            !founderWitnessIsStale &&
+            String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+              String(founderWitnessDocument?.documentKey || "").trim()
+              ? "Compare witness against active language."
+              : "Compile the witness into active Lœgos.",
+          detail:
+            currentSeedDocument?.documentKey &&
+            !founderWitnessIsStale &&
+            String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+              String(founderWitnessDocument?.documentKey || "").trim()
+              ? "The witness and active language are already linked. Open compare to inspect the crossing."
+              : "Witness edits stay local until you compile explicitly.",
+          testId: "workspace-founder-compile-witness",
+          onClick:
+            currentSeedDocument?.documentKey &&
+            !founderWitnessIsStale &&
+            String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+              String(founderWitnessDocument?.documentKey || "").trim()
+              ? () => void openDesktopCompare(founderWitnessDocument?.documentKey || "")
+              : () =>
+                  void compileWitnessToLoegos({
+                    witnessDocumentKey: founderWitnessDocument?.documentKey || activeDocument?.documentKey || "",
+                    announce: true,
+                  }),
+        }
+      : founderCompareActive
+        ? {
+            label: founderWitnessIsStale ? "Recompile to Lœgos" : "Open language file",
+            title: founderWitnessIsStale
+              ? "Refresh the active language from the witness."
+              : "Move from compare into the active language file.",
+            detail: founderWitnessIsStale
+              ? "The witness changed after the last compile, so the compare surface is now showing a stale language object."
+              : "Compare proves the crossing; language is where active editing and Operate continue.",
+            testId: "workspace-founder-open-language",
+            onClick: founderWitnessIsStale
+              ? () =>
+                  void compileWitnessToLoegos({
+                    witnessDocumentKey: founderWitnessDocument?.documentKey || "",
+                    announce: true,
+                  })
+              : () => void openDesktopLanguage(currentSeedDocument?.documentKey || ""),
+          }
+        : founderViewingLanguage
+          ? {
+              label: founderWitnessIsStale ? "Recompile to Lœgos" : "Run Operate",
+              title: founderWitnessIsStale
+                ? "Refresh the language before reading it."
+                : "Read the active language without leaving the file.",
+              detail: founderWitnessIsStale
+                ? "The witness changed after the last compile, so this language file must be refreshed before it can claim to be current."
+                : "Operate stays attached to the active language object and returns findings in the same workbench.",
+              testId: founderWitnessIsStale
+                ? "workspace-founder-recompile-language"
+                : "workspace-founder-run-operate",
+              onClick: founderWitnessIsStale
+                ? () =>
+                    void compileWitnessToLoegos({
+                      witnessDocumentKey:
+                        founderWitnessDocument?.documentKey ||
+                        founderCompiledWitnessDocument?.documentKey ||
+                        "",
+                      announce: true,
+                    })
+                : () => void runSeedVisibleInlineOperate(),
+            }
+          : founderViewingReceipt
+            ? founderLatestOpenDraft?.id
+              ? {
+                  label: "Seal latest",
+                  title: "Seal the latest receipt.",
+                  detail: "Seal the receipt only when the proof boundary is honest enough to carry outward.",
+                  testId: "workspace-founder-seal-latest",
+                  onClick: () => openReceiptSealDialog(founderLatestOpenDraft),
+                }
+              : {
+                  label: "Draft receipt",
+                  title: "Draft the first receipt.",
+                  detail: "Receipts remain downstream proof objects attached to the language file.",
+                  testId: "workspace-founder-draft-receipt",
+                  onClick: () =>
+                    void createReceiptDraft(
+                      operateResult
+                        ? {
+                            mode: "operate",
+                            operateResult,
+                          }
+                        : {
+                            mode: "workspace",
+                          },
+                    ),
+                }
+            : null;
+  const founderSecondaryAction = founderViewingBox
+    ? founderBoxCurrentPositionAction
+    : founderViewingWitness
+      ? {
+          label: "Open box",
+          testId: "workspace-founder-open-box",
+          onClick: () => openCurrentBoxHome(activeProjectKey),
+        }
+      : founderCompareActive
+        ? {
+            label: "Back to witness",
+            testId: "workspace-founder-back-witness",
+            onClick: () => {
+              if (!founderWitnessDocument?.documentKey) return;
+              void openDesktopWitness(founderWitnessDocument.documentKey);
+            },
+          }
+        : founderViewingLanguage
+          ? founderCanCompare
+            ? {
+                label: "Open compare",
+                testId: "workspace-founder-open-compare",
+                onClick: () => void openDesktopCompare(),
+              }
+            : {
+                label: "Open receipts",
+                testId: "workspace-founder-open-receipts",
+                onClick: () => openReceiptsSurface(),
+              }
+          : founderViewingReceipt
+            ? {
+                label: "Open language",
+                testId: "workspace-founder-back-language",
+                onClick: () => void openDesktopLanguage(currentSeedDocument?.documentKey || ""),
+              }
+            : null;
+  const founderPlayerSourceOptions = founderCompareActive
+    ? [
+        { key: "language", label: "Language" },
+        { key: "witness", label: "Witness" },
+      ]
+    : [];
+  const founderBoxWorkspaceContent = founderViewingBox ? (
+    <div className="founder-shell__workspace founder-shell__workspace--single">
+      <main className="founder-shell__artifact founder-shell__artifact--panel" data-testid="workspace-box-view">
+        <div className="founder-shell__artifact-scroll">
+          <ProjectHome
+            boxViewModel={currentBoxViewModel}
+            activeProject={activeProject}
+            loadingDocumentKey={loadingDocumentKey}
+            guideDocument={guideSourceDocument}
+            sourceDocuments={visibleSourceDocuments}
+            currentPositionAction={founderBoxCurrentPositionAction}
+            onBrowseBoxes={openBoxesIndex}
+            onOpenReceipts={openReceiptsSurface}
+            onOpenDocument={(documentKey) => {
+              const targetDocument = projectDocumentsByKey.get(String(documentKey || "").trim()) || null;
+              if (!targetDocument) return;
+              if (targetDocument?.isAssembly || targetDocument?.documentType === "assembly") {
+                void openDesktopLanguage(targetDocument.documentKey);
+                return;
+              }
+              void openDesktopWitness(targetDocument.documentKey);
+            }}
+            getDocumentBlockCountLabel={getDocumentBlockCountLabel}
+            getDocumentKindLabel={getDocumentKindLabel}
+            sourceOpenMode={WORKSPACE_MODES.listen}
+          />
+        </div>
+      </main>
+    </div>
+  ) : null;
+  const founderWitnessWorkspaceContent = founderViewingWitness ? (
+    <div className="founder-shell__workspace founder-shell__workspace--single">
+      <main className="founder-shell__artifact founder-shell__artifact--panel" data-testid="workspace-witness-view">
+        <div className="founder-shell__artifact-scroll">
+          <WorkspaceDocumentWorkbench
+            className=""
+            streamClassName=""
+            blocksClassName="assembler-document__blocks founder-shell__document"
+            blocks={blocks}
+            documents={hydratedProjectDocuments}
+            operateOverlayFindingMap={null}
+            showingInlineOperateDocument={false}
+            operateOverlayOpen={false}
+            selectedOperateFindingId=""
+            blockRefs={blockRefs}
+            focusBlockId={focusBlockId}
+            currentBlockId={currentBlock?.id || ""}
+            nextBlockId={nextBlock?.id || ""}
+            isPlaying={isPlaying}
+            selectedBlockIds={[]}
+            editMode={Boolean(activeDocument?.isEditable)}
+            showNativeActions={false}
+            blockActionPendingId=""
+            canDeleteBlock={false}
+            blockSaveStates={blockSaveStates}
+            emptyTitle="No witness content yet."
+            emptyDetail="Import or paste a source, then edit it here like notes."
+            testId="workspace-witness-workbench"
+            onFocusBlock={focusBlock}
+            onEditBlock={editBlock}
+          />
+        </div>
+      </main>
+    </div>
+  ) : null;
+  const founderReceiptWorkspaceContent = founderViewingReceipt ? (
+    <div className="founder-shell__workspace founder-shell__workspace--single">
+      <main className="founder-shell__artifact founder-shell__artifact--panel" data-testid="workspace-receipt-view">
+        <div className="founder-shell__artifact-scroll">
+          <ReceiptSurface
+            logEntries={currentSeedDocument?.logEntries || activeDocument?.logEntries || []}
+            drafts={projectDraftsState}
+            receiptSummary={receiptSummaryViewModel}
+            receiptPending={receiptPending}
+            activeDocumentTitle={currentSeedDocument?.title || activeDocument?.title || activeBoxTitle}
+            onCreateReceipt={() =>
               void createReceiptDraft(
                 operateResult
                   ? {
@@ -12482,109 +13007,173 @@ export default function WorkspaceShell({
                   : {
                       mode: "workspace",
                     },
-              ),
-          }
-      : isOperatePhase
-        ? {
-            label: operateResult ? "Next: Draft receipt" : "Run Operate again",
-            title: operateResult ? "Draft the first receipt." : "Complete the constrained read.",
-            detail: operateResult
-              ? "Operate has read the active structure. The next move is to draft the receipt that closes what changed."
-              : "Operate has not yet returned a current read for this seed. Run the constrained read before moving to receipts.",
-            testId: "workspace-founder-next-draft-receipt",
-            onClick: operateResult
-              ? () =>
-                  void createReceiptDraft({
-                    mode: "operate",
-                    operateResult,
-                  })
-              : () => void runOperate(),
-          }
-        : {
-            label: "Next: Run Operate",
-            title: "Run the first constrained read.",
-            detail:
-              "The crossing is complete. The next move is to let Operate read this active structure against what the box can honestly support.",
-            testId: "workspace-seed-next-run-operate",
-            onClick: () => void runOperate(),
-          }
-    : {
-        label: "Next: Shape seed",
-        title: "Shape the first seed.",
-        detail:
-          "Keep the source raw here. The next move turns it into the first working seed you can operate on.",
-        testId: "workspace-source-next-shape-seed",
-        onClick: () => void openStarterSeedFlow(),
-      };
-  const founderSecondaryAction = founderCompareActive
-    ? isReceiptsPhase
-      ? {
-          label: "Back to Operate",
-          testId: "workspace-founder-back-operate",
-          onClick: () => {
-            if (!currentSeedDocument?.documentKey) return;
-            void enterWorkspace(currentSeedDocument.documentKey, WORKSPACE_MODES.assemble, {
-              phase: BOX_PHASES.operate,
-            });
-          },
-        }
-      : isOperatePhase
-        ? {
-            label: "Open receipts",
-            testId: "workspace-founder-open-receipts",
-            onClick: () => openReceiptsSurface(),
-          }
-        : {
-            label: showStarterSeedEntry ? "Back to source" : "Open source",
-            testId: "workspace-source-open-box",
-            onClick: showStarterSeedEntry
-              ? () => void returnToStarterSourceView()
-              : () => {
-                  if (!founderWitnessDocument?.documentKey) return;
-                  void loadDocument(founderWitnessDocument.documentKey, {
-                    mode: WORKSPACE_MODES.listen,
-                    phase: BOX_PHASES.think,
-                  });
-                },
-          }
-    : {
-        label: "Open box",
-        testId: "workspace-source-open-box",
-        onClick: () => {
-          clearStarterFlowState({ keepScopedProject: true });
-          openCurrentBoxHome(activeProjectKey);
+              )
+            }
+            onSealReceipt={openReceiptSealDialog}
+            onRunOperate={() => void runSeedVisibleInlineOperate()}
+            onExportReceipt={exportReceipt}
+            onExportDocument={exportDocument}
+            onOpenGetReceipts={() => openGetReceiptsConnection()}
+            onRetryRemoteSync={(draft) => void retryReceiptRemoteSync(draft)}
+            onOpenVerifyUrl={(url) => {
+              if (url && typeof window !== "undefined") {
+                window.open(url, "_blank", "noopener,noreferrer");
+              }
+            }}
+            isMobileLayout={false}
+          />
+        </div>
+      </main>
+    </div>
+  ) : null;
+  const founderSidePanel = founderViewingBox ? (
+    <FounderInfoPanel
+      testId="workspace-box-info-panel"
+      eyebrow="Box"
+      title={activeBoxTitle}
+      copy="The box is the container. Witnesses, language, and receipts stay distinct inside it."
+      sections={[
+        {
+          key: "state",
+          label: "Status",
+          title: currentBoxViewModel?.resumeTarget?.title || "Ready",
+          copy: currentBoxViewModel?.resumeTarget?.detail || "Add a source or open the current object.",
+          items: [
+            { key: "sources", label: "Witnesses", value: String(visibleSourceDocuments.length) },
+            { key: "language", label: "Language", value: currentSeedDocument?.documentKey ? "Live" : "None" },
+            { key: "receipts", label: "Receipts", value: String(receiptSummaryViewModel?.draftCount || 0) },
+          ],
         },
-      };
-  const founderPlayerSourceOptions = founderCompareActive
-    ? [
-        { key: "language", label: "Language" },
-        { key: "witness", label: "Witness" },
-      ]
-    : [];
+      ]}
+    />
+  ) : founderViewingWitness ? (
+    <FounderInfoPanel
+      testId="workspace-witness-info-panel"
+      eyebrow="Witness"
+      title={activeDocument?.title || founderWitnessDocument?.title || "Witness"}
+      copy="Witness remains editable and listenable. Language only changes when you compile or recompile explicitly."
+      sections={[
+        {
+          key: "compile",
+          label: "Compile boundary",
+          title: founderWitnessIsStale
+            ? "The active language is stale."
+            : currentSeedDocument?.documentKey
+              ? "A language file already exists."
+              : "No language file yet.",
+          copy: founderWitnessIsStale
+            ? "This witness changed after the last compile."
+            : currentSeedDocument?.documentKey
+              ? "Open compare or recompile from this witness."
+              : "Compile this witness to create the first active Lœgos file.",
+          items: [
+            { key: "blocks", label: "Lines", value: String(blocks.length) },
+            {
+              key: "compiled-from",
+              label: "Compiled",
+              value:
+                String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+                String(founderWitnessDocument?.documentKey || "").trim()
+                  ? founderWitnessIsStale
+                    ? "Stale"
+                    : "Current"
+                  : "Not from this witness",
+            },
+          ],
+          action: {
+            label:
+              currentSeedDocument?.documentKey &&
+              !founderWitnessIsStale &&
+              String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+                String(founderWitnessDocument?.documentKey || "").trim()
+                ? "Open compare"
+                : founderCompileActionLabel,
+            onClick:
+              currentSeedDocument?.documentKey &&
+              !founderWitnessIsStale &&
+              String(currentSeedDocument?.seedMeta?.compiledFromDocumentKey || "").trim() ===
+                String(founderWitnessDocument?.documentKey || "").trim()
+                ? () => void openDesktopCompare(founderWitnessDocument?.documentKey || "")
+                : () =>
+                    void compileWitnessToLoegos({
+                      witnessDocumentKey: founderWitnessDocument?.documentKey || activeDocument?.documentKey || "",
+                      announce: true,
+                    }),
+            testId: "workspace-witness-side-compile",
+            primary: true,
+          },
+        },
+      ]}
+    />
+  ) : founderViewingReceipt ? (
+    <FounderInfoPanel
+      testId="workspace-receipt-info-panel"
+      eyebrow="Receipt"
+      title={receiptSummaryViewModel?.latestDraftTitle || "Receipt state"}
+      copy="Receipts remain proof objects attached to the active language file, not replacements for it."
+      sections={[
+        {
+          key: "proof",
+          label: "Proof",
+          title: receiptSummaryViewModel?.courthouseStatusLine || receiptSummaryViewModel?.latestDraftStatusLabel || "Local only",
+          copy: receiptSummaryViewModel?.syncLine || "Draft a receipt when the language is ready to move outward.",
+          items: [
+            { key: "drafts", label: "Drafts", value: String(receiptSummaryViewModel?.draftCount || 0) },
+            { key: "sealed", label: "Sealed", value: String(receiptSummaryViewModel?.sealedDraftCount || 0) },
+          ],
+        },
+      ]}
+    />
+  ) : null;
+  const founderCustomWorkspaceContent =
+    founderBoxWorkspaceContent ||
+    founderWitnessWorkspaceContent ||
+    founderReceiptWorkspaceContent ||
+    null;
   const founderSourceShell = founderJourneyActive ? (
     <FounderShell
       testId="workspace-source-view"
-      artifactKind={founderCompareActive ? "Language" : "Source"}
+      artifactKind={
+        founderViewingBox
+          ? "Box"
+          : founderViewingReceipt
+            ? "Receipts"
+            : founderCompareActive || founderViewingLanguage
+              ? "Language"
+              : "Witness"
+      }
       artifactTitle={
-        founderCompareActive
+        founderViewingBox
+          ? activeBoxTitle
+          : founderViewingReceipt
+            ? `${activeBoxTitle} receipts`
+            : founderCompareActive || founderViewingLanguage
           ? founderArtifactDocument?.title || activeDocument?.title || "Untitled seed"
           : activeDocument?.title || "Untitled source"
       }
       artifactSubtitle={
-        founderCompareActive
+        founderViewingBox
+          ? activeProject?.subtitle || ""
+          : founderCompareActive || founderViewingLanguage
           ? founderArtifactDocument?.subtitle || activeDocument?.subtitle || ""
           : activeDocument?.subtitle || ""
       }
       projectTitle={activeBoxTitle}
       intro={
-        founderCompareActive
-          ? isOperatePhase
-            ? "Operate reads the active structure while the witness stays fixed beside it."
-            : isReceiptsPhase
-              ? "The language stays central while receipt drafts and seals close the move."
-              : "The witness stays fixed on the left. The compiled seed is now active structure on the right."
-          : "See the source as captured, listen to it as-is, then take one clear next step into Lœgos."
+        founderViewingBox
+          ? "The box is the calm container. Open a witness, inspect the active language, or review receipts from one stable tree."
+          : founderViewingReceipt
+            ? "Receipts stay attached to the box as proof objects while the language remains the working file."
+            : founderCompareActive
+              ? "The witness stays fixed on the left. The compiled seed is now active structure on the right."
+              : founderViewingLanguage
+                ? founderWitnessIsStale
+                  ? "This language file is stale against its witness until you recompile it."
+                  : "Language is the active structure. Edit it, inspect it, and run Operate without leaving the file."
+                : "Read and edit the witness directly, then compile it explicitly into active Lœgos."
       }
+      rootActive={founderViewingBox}
+      onSelectRoot={() => openCurrentBoxHome(activeProjectKey)}
       witnessTitle={founderCompareActive ? founderWitnessDocument?.title || "Source witness" : ""}
       witnessSubtitle={founderCompareActive ? founderWitnessDocument?.subtitle || "" : ""}
       witnessBlocks={founderCompareActive ? founderWitnessDocument?.blocks || EMPTY_BLOCKS : EMPTY_BLOCKS}
@@ -12602,8 +13191,13 @@ export default function WorkspaceShell({
       findingMap={founderFindingMap}
       seedState={founderSeedState}
       treeSections={founderTreeSections}
+      workspaceContent={founderCustomWorkspaceContent}
+      sidePanel={founderSidePanel}
       stagedBlockIds={founderStagedBlockIds}
-      editable={Boolean(founderCompareActive && founderArtifactDocument?.isEditable)}
+      editable={Boolean(
+        (founderCompareActive || founderViewingLanguage) &&
+          founderArtifactDocument?.isEditable,
+      )}
       blockActionPendingId={blockActionPendingId}
       blockSaveStates={blockSaveStates}
       onStageBlock={(block) => addBlockToClipboard(block, founderArtifactDocument)}
@@ -12657,7 +13251,7 @@ export default function WorkspaceShell({
           />
         ) : null
       }
-      player={
+      player={!founderViewingBox ? (
         <PlayerBar
           workspaceMode={WORKSPACE_MODES.listen}
           currentBlock={founderPlayerCurrentBlock}
@@ -12728,7 +13322,7 @@ export default function WorkspaceShell({
             setProviderLabel(choice?.label || "Voice");
           }}
         />
-      }
+      ) : null}
     />
   ) : null;
   const { shapeKey: activeMobileShape, verb: activeMobileVerb } = launchpadOpen

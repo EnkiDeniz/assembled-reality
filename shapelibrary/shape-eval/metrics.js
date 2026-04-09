@@ -55,17 +55,14 @@ export function scoreUtility(result = {}) {
 }
 
 /**
- * Compare first analyze outcome to episode.expected (granularity, resultType, shapeIds).
- * Returns null if expected has no comparable fields.
+ * Compare first analyze outcome to episode.expected for shape identity only.
+ * Uses resultType/shapeIds; excludes granularity to avoid inflated closure claims.
+ * Returns null if expected has no identity fields.
  */
 export function scoreExpectedAlignment(run, expected) {
   if (!expected || typeof expected !== "object") return null;
   let hits = 0;
   let total = 0;
-  if (expected.granularity != null && String(expected.granularity).length > 0) {
-    total += 1;
-    if (run.granularity === expected.granularity) hits += 1;
-  }
   if (expected.resultType != null && String(expected.resultType).length > 0) {
     total += 1;
     if (run.resultType === expected.resultType) hits += 1;
@@ -76,6 +73,13 @@ export function scoreExpectedAlignment(run, expected) {
     if (top && expected.shapeIds.includes(top)) hits += 1;
   }
   return total ? hits / total : null;
+}
+
+/** Granularity-only alignment kept separate from identity alignment. */
+export function scoreGranularityAlignment(run, expected) {
+  if (!expected || typeof expected !== "object") return null;
+  if (expected.granularity == null || String(expected.granularity).length === 0) return null;
+  return run.granularity === expected.granularity ? 1 : 0;
 }
 
 export function scoreEpisodeQuality(episodes = []) {

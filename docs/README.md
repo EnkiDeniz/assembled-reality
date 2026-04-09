@@ -1,29 +1,33 @@
 # Docs
 
-This folder now separates the live canon from project history.
+This folder now holds the prior runtime canon, support specs, audits, and preserved history.
 
-## Start Here
+It is no longer the primary kickoff center for the next product pivot.
 
-If you are building or changing the current product, start with:
+## Start Here For The Pivot
 
-1. `language/README.md`
-2. `docs/current-state-audit.md`
-3. `docs/loegos-product-spec.md`
-4. `docs/operate-spec-v2.md`
-5. `docs/think-create-operate-spec.md`
-6. `docs/source-model-spec.md`
-7. `docs/provenance-trust-policy.md`
-8. `docs/seven-operate-receipt-contract.md`
-9. `docs/user-flows.md`
-10. `docs/phase-1-proof-runbook.md`
+If you are defining or rebuilding the next product shape, start in:
 
-## Status
+1. `version 1/README.md`
+2. `version 1/loegos-v1-product-redefinition.md`
+3. `version 1/seven-governance-protocol-for-loegos-v1.md`
+4. `version 1/loegos-v1-capability-assembly-map.md`
 
-These are the current docs in the main `docs/` path:
+## Use This Folder For
 
-- canonical product/runtime documents
-- current audits grounded in the repo as it exists now
-- the active proof runbook pointer
+- prior runtime specifications
+- current implementation-facing support docs
+- audits grounded in the repo as it existed before the pivot
+- runbooks
+- policies
+- preserved operational detail
+
+## Important distinction
+
+- `version 1/` defines where the product is going
+- `docs/` explains much of what the system has been and how the current runtime works
+
+Both matter, but they are not the same layer.
 
 ## History
 
@@ -31,7 +35,7 @@ Historical seed and evolution material lives in:
 
 - `docs/LoegosSeed/`
 
-That folder is the preserved source trail for how the project assembled itself into the current box/runtime direction.
+That folder preserves how the project assembled itself into the current system.
 
 ## Archive
 
@@ -39,4 +43,4 @@ Superseded proposals, audits, and planning documents live in:
 
 - `docs/archive/`
 
-They are preserved for history and context, but they are not the starting point for current engineering work.
+They are preserved for history and context, but they are not the starting point for current kickoff work.

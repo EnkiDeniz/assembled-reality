@@ -11,7 +11,7 @@ import {
 import { analyzeCanonicalIR } from "../shape-core/engine.js";
 import { normalizeToCanonicalIR } from "../shape-core/translator.js";
 import { evaluateEpisodes } from "../shape-eval/evaluator.js";
-import { scoreExpectedAlignment } from "../shape-eval/metrics.js";
+import { scoreExpectedAlignment, scoreGranularityAlignment } from "../shape-eval/metrics.js";
 import { validateMythPayload, applyMythDecompression } from "../shape-core/myth.js";
 import { validateIR } from "../shape-api/validator.js";
 import {
@@ -86,12 +86,13 @@ test("expectedAlignment aggregates against seeded primitive", () => {
 test("scoreExpectedAlignment partial expected", () => {
   const run = { granularity: "primitive", resultType: "candidate_primitive", shapeIds: [] };
   const a = scoreExpectedAlignment(run, { granularity: "primitive" });
-  assert.equal(a, 1);
+  assert.equal(a, null);
+  const g = scoreGranularityAlignment(run, { granularity: "primitive" });
+  assert.equal(g, 1);
   const b = scoreExpectedAlignment(run, {
-    granularity: "primitive",
     resultType: "primitive_match",
   });
-  assert.equal(b, 0.5);
+  assert.equal(b, 0);
 });
 
 test("myth payload validates and expands to standard IR fields", () => {
@@ -181,4 +182,31 @@ test("assembly class inference and maturation gate", () => {
   assert.equal(klass, "path_dependent");
   const gate = runMaturationGate(ir, klass);
   assert.equal(gate.passed, true);
+});
+
+test("read-order precheck returns not_sealable_yet without candidate naming", () => {
+  const ir = normalizeToCanonicalIR({
+    mode: "standard",
+    intentLayer: "behavior",
+    assumptionStatus: "explicit",
+    assemblyClass: "path_dependent",
+    observables: ["handoff"],
+    timescale: { horizon: "short", window: "2 weeks" },
+    constraints: [],
+    resourceBudget: { time: "2 weeks", money: "low", attention: "high", other: [] },
+    operationalFailure: "handoff latency",
+    invariant: "A constrained transition step governs downstream flow.",
+    granularity: "primitive",
+    falsifier: "parallelize transition",
+    transferPrediction: "latency drops",
+  });
+  const r = analyzeCanonicalIR(ir, {
+    library: { primitives: [], assemblies: [] },
+    features: { enableV01Fidelity: true },
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.value.status, "not_sealable_yet");
+  assert.equal(r.value.resultType, undefined);
+  assert.equal(r.value.shapeIds, undefined);
+  assert.ok(Array.isArray(r.value.maturationBlockers));
 });

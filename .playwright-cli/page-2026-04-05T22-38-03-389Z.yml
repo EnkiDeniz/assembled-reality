@@ -1,0 +1,180 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - link "Account" [ref=e5] [cursor=pointer]:
+        - /url: /account
+        - img [ref=e6]
+      - generic [ref=e392]:
+        - button "Open Assembly lane" [ref=e393] [cursor=pointer]:
+          - img [ref=e394]
+        - generic [ref=e396]: What’s In The Box
+        - generic [ref=e397]:
+          - button "Sources" [ref=e398] [cursor=pointer]
+          - button "More listening actions" [ref=e400] [cursor=pointer]:
+            - img [ref=e401]
+      - generic [ref=e403]:
+        - paragraph [ref=e405]: Load-bearing · Product spec
+        - generic [ref=e406]:
+          - article [ref=e407] [cursor=pointer]:
+            - generic [ref=e408]: "001"
+            - generic [ref=e410]: "*For the development team. The question this brief is asking: what are we already capturing, and what would it take to surface the ghost operator from the data we already have?*"
+          - article [ref=e411] [cursor=pointer]:
+            - generic [ref=e412]: "002"
+            - generic [ref=e414]: "-----"
+          - article [ref=e415] [cursor=pointer]:
+            - generic [ref=e416]: "003"
+            - generic [ref=e418]: Every box contains a corpus of words. We’ve been treating that corpus as content — text to be processed and surfaced.
+          - article [ref=e419] [cursor=pointer]:
+            - generic [ref=e420]: "004"
+            - generic [ref=e422]: We need to start treating it as **behavioral data**.
+          - article [ref=e423] [cursor=pointer]:
+            - generic [ref=e424]: "005"
+            - generic [ref=e426]: The words a person uses, how often, in what sequence, and when they stop using certain words and start using others — this is not decoration. This is the record of how they think. It is their assembly path. And like any assembly, it was shaped by forces they may not be aware of.
+          - article [ref=e427] [cursor=pointer]:
+            - generic [ref=e428]: "006"
+            - generic [ref=e430]: "That is the question this brief is asking: **what shaped the assembly?**"
+          - article [ref=e431] [cursor=pointer]:
+            - generic [ref=e432]: "007"
+            - generic [ref=e434]: "-----"
+          - article [ref=e435] [cursor=pointer]:
+            - generic [ref=e436]: "008"
+            - generic [ref=e438]: "Not all words in a box carry equal weight. We propose four functional classes:"
+          - article [ref=e439] [cursor=pointer]:
+            - generic [ref=e440]: "009"
+            - generic [ref=e442]: "**Structural words** — load-bearing. The architecture depends on them. If they disappear from a box, something fundamental has shifted. Examples: *receipt, seal, assembly, proof, aim, basis*"
+          - article [ref=e443] [cursor=pointer]:
+            - generic [ref=e444]: "010"
+            - generic [ref=e446]: "**Diagnostic words** — connector pieces. They test whether something is working. They appear at decision points. Examples: *verify, signal, friction, index, reroute, gap*"
+          - article [ref=e447] [cursor=pointer]:
+            - generic [ref=e448]: "011"
+            - generic [ref=e450]: "**Canonical words** — path-dependent. No other system has them. Their presence is a fingerprint. High frequency = high identity. Examples: *volunteer, hineni, monolith, chemotaxis, ghost, œ*"
+          - article [ref=e451] [cursor=pointer]:
+            - generic [ref=e452]: "012"
+            - generic [ref=e454]: "**Operational words** — standard bricks. They move work forward without carrying unique signal. Examples: *build, ship, move, update, send, check*"
+          - article [ref=e455] [cursor=pointer]:
+            - generic [ref=e456]: "013"
+            - generic [ref=e458]: The ratio between these classes inside a box is diagnostic. A box heavy with canonical words is a box with high identity density. A box of mostly operational words is a box that hasn’t found its language yet.
+          - article [ref=e459] [cursor=pointer]:
+            - generic [ref=e460]: "014"
+            - generic [ref=e462]: "-----"
+          - article [ref=e463] [cursor=pointer]:
+            - generic [ref=e464]: "015"
+            - generic [ref=e466]: Words don’t just appear — they appear *when*.
+          - article [ref=e467] [cursor=pointer]:
+            - generic [ref=e468]: "016"
+            - generic [ref=e470]: "Some words are **invariant**: they appear in every session, every document, every phase. These are the true load-bearing words. The system cannot operate without them."
+          - article [ref=e471] [cursor=pointer]:
+            - generic [ref=e472]: "017"
+            - generic [ref=e474]: "Some words are **emergent**: they appear suddenly after a threshold. Something happened — a conversation, a receipt, an external event — and a new word entered the vocabulary and stayed. That threshold moment is worth detecting."
+          - article [ref=e475] [cursor=pointer]:
+            - generic [ref=e476]: "018"
+            - generic [ref=e478]: "Some words are **receding**: they appeared frequently early and then dropped. Something was resolved, abandoned, or absorbed into something more compressed."
+          - article [ref=e479] [cursor=pointer]:
+            - generic [ref=e480]: "019"
+            - generic [ref=e482]: The pattern of appearance and disappearance is a timeline of understanding. We can literally read how someone assembled their thinking over time — and where the turns were.
+          - article [ref=e483] [cursor=pointer]:
+            - generic [ref=e484]: "020"
+            - generic [ref=e486]: "-----"
+          - article [ref=e487] [cursor=pointer]:
+            - generic [ref=e488]: "021"
+            - generic [ref=e490]: "Assembly Theory asks: why did this specific assembly happen, and not another one?"
+          - article [ref=e491] [cursor=pointer]:
+            - generic [ref=e492]: "022"
+            - generic [ref=e494]: Every box contains not just the assembly that occurred — it implicitly contains the roads not taken. Words that appeared once and never recurred. Threads that were opened and closed. Framings that were tried and replaced.
+          - article [ref=e495] [cursor=pointer]:
+            - generic [ref=e496]: "023"
+            - generic [ref=e498]: "We can see this. If the data is there, we can surface:"
+          - article [ref=e499] [cursor=pointer]:
+            - generic [ref=e500]: "024"
+            - generic [ref=e503]:
+              - generic [ref=e504]: •
+              - generic [ref=e505]: The assembly that happened (current state)
+          - article [ref=e506] [cursor=pointer]:
+            - generic [ref=e507]: "025"
+            - generic [ref=e510]:
+              - generic [ref=e511]: •
+              - generic [ref=e512]: The assemblies that were attempted (low-frequency word clusters that didn’t propagate)
+          - article [ref=e513] [cursor=pointer]:
+            - generic [ref=e514]: "026"
+            - generic [ref=e517]:
+              - generic [ref=e518]: •
+              - generic [ref=e519]: The point of selection — where the path narrowed
+          - article [ref=e520] [cursor=pointer]:
+            - generic [ref=e521]: "027"
+            - generic [ref=e523]: This is not analytics. This is archaeology.
+          - article [ref=e524] [cursor=pointer]:
+            - generic [ref=e525]: "028"
+            - generic [ref=e527]: "-----"
+          - article [ref=e528] [cursor=pointer]:
+            - generic [ref=e529]: "029"
+            - generic [ref=e531]: "Here is what this all points to:"
+          - article [ref=e532] [cursor=pointer]:
+            - generic [ref=e533]: "030"
+            - generic [ref=e535]: "**The word patterns in a box are a ghost operator made visible.**"
+          - article [ref=e536] [cursor=pointer]:
+            - generic [ref=e537]: "031"
+            - generic [ref=e539]: A ghost operator is an invisible behavioral rule — never consciously authored, born from real experience, compressed into automatic pattern, persisting long after the conditions that created it have changed. It cannot be found by introspection. It can only be found through its outputs.
+          - article [ref=e540] [cursor=pointer]:
+            - generic [ref=e541]: "032"
+            - generic [ref=e543]: The box is full of outputs. Word frequency, word sequence, word co-occurrence, word timing — these are the receipts the ghost operator left behind.
+          - article [ref=e544] [cursor=pointer]:
+            - generic [ref=e545]: "033"
+            - generic [ref=e547]: The question is not just *what words are in this box*. The question is *why these words and not others*. What rule selected them? What experience compressed into what automatic pattern?
+          - article [ref=e548] [cursor=pointer]:
+            - generic [ref=e549]: "034"
+            - generic [ref=e551]: "Assembly Theory says: high assembly index objects are not random. Something selected them. The selection pressure is the ghost."
+          - article [ref=e552] [cursor=pointer]:
+            - generic [ref=e553]: "035"
+            - generic [ref=e555]: "-----"
+          - article [ref=e556] [cursor=pointer]:
+            - generic [ref=e557]: "036"
+            - generic [ref=e559]: "**1. What are we currently capturing at the word level?** When a source document is uploaded and processed into blocks, are individual words tracked — their frequency, their position, their co-occurrence with other words? Or are we operating entirely at the block/sentence level?"
+          - article [ref=e560] [cursor=pointer]:
+            - generic [ref=e561]: "037"
+            - generic [ref=e563]: "**2. Do we have a timestamp on word appearance?** Can we currently answer the question: when did the word “seal” first appear in this user’s corpus, and how has its frequency changed over time?"
+          - article [ref=e564] [cursor=pointer]:
+            - generic [ref=e565]: "038"
+            - generic [ref=e567]: "**3. Are any words treated as signals vs. noise?** Is the system currently distinguishing between high-signal words (canonical, structural) and operational filler? Or are all words equal atoms?"
+          - article [ref=e568] [cursor=pointer]:
+            - generic [ref=e569]: "039"
+            - generic [ref=e571]: "**4. What would a word inventory surface look like?** If we could show a user their box’s word manifest — their most frequent words by class, their emerging words, their receding words — is the data infrastructure there to support it? What’s missing?"
+          - article [ref=e572] [cursor=pointer]:
+            - generic [ref=e573]: "040"
+            - generic [ref=e575]: "**5. Can we model the divergence?** Do we have enough data to show not just what assembled, but what was attempted and didn’t propagate? What would we need to build this?"
+          - article [ref=e576] [cursor=pointer]:
+            - generic [ref=e577]: "041"
+            - generic [ref=e579]: "-----"
+          - article [ref=e580] [cursor=pointer]:
+            - generic [ref=e581]: "042"
+            - generic [ref=e583]: The most powerful thing Lœgos can do is not help a user manage information.
+          - article [ref=e584] [cursor=pointer]:
+            - generic [ref=e585]: "043"
+            - generic [ref=e587]: It is to show a user how they think — and why they think that way — using their own words as the evidence.
+          - article [ref=e588] [cursor=pointer]:
+            - generic [ref=e589]: "044"
+            - generic [ref=e591]: The box is not a filing cabinet. It is a mirror. The word layer is how the mirror works.
+          - article [ref=e592] [cursor=pointer]:
+            - generic [ref=e593]: "045"
+            - generic [ref=e595]: "-----"
+          - article [ref=e596] [cursor=pointer]:
+            - generic [ref=e597]: "046"
+            - generic [ref=e599]: "*Draft — April 2026*"
+      - generic [ref=e600]:
+        - generic [ref=e601]:
+          - button "Previous block" [ref=e602] [cursor=pointer]:
+            - img [ref=e603]
+          - button "Play" [ref=e605] [cursor=pointer]:
+            - img [ref=e606]
+          - button "Next block" [ref=e608] [cursor=pointer]:
+            - img [ref=e609]
+        - generic [ref=e612]: 1/46
+        - generic [ref=e615]:
+          - button "1x" [ref=e616] [cursor=pointer]
+          - combobox [ref=e617]:
+            - option "Seven" [selected]
+            - option "Sage"
+            - option "Device"
+          - generic [ref=e618]: Seven · block 1
+  - button "Open Next.js Dev Tools" [ref=e360] [cursor=pointer]:
+    - img [ref=e361]
+  - alert [ref=e373]

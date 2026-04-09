@@ -15,6 +15,8 @@ export default function FounderShell({
   artifactSubtitle = "",
   projectTitle = "",
   intro = "",
+  rootActive = false,
+  onSelectRoot,
   blocks = [],
   selectedBlockId = "",
   currentBlockId = "",
@@ -34,6 +36,8 @@ export default function FounderShell({
   onOpenStarter,
   onOpenFullWorkspace,
   treeSections = [],
+  workspaceContent = null,
+  sidePanel = null,
   assistantOpen = false,
   onToggleAssistant,
   assistant = null,
@@ -113,7 +117,7 @@ export default function FounderShell({
                 data-testid="founder-shell-open-full-workspace"
                 onClick={onOpenFullWorkspace}
               >
-                Open full workspace
+                Open box
               </button>
               <Link
                 href="/account"
@@ -137,71 +141,83 @@ export default function FounderShell({
             sections={treeSections}
             primaryAction={primaryAction}
             secondaryAction={secondaryAction}
+            rootActive={rootActive}
+            onSelectRoot={onSelectRoot}
           />
 
-          <div className={`founder-shell__workspace ${hasWitnessBlocks ? "is-compare" : ""}`}>
-            {hasWitnessBlocks ? (
-              <FounderWitnessPane
-                title={witnessTitle}
-                subtitle={witnessSubtitle}
-                blocks={witnessBlocks}
-                selectedBlockId={selectedWitnessBlock?.id || ""}
-                onSelectBlock={(blockId) => {
-                  onSelectWitnessBlock?.(blockId);
-                  setMobileExplainOpen(true);
-                }}
-              />
-            ) : null}
-
-            <main className="founder-shell__artifact" data-testid="founder-shell-artifact">
-              <div className="founder-shell__artifact-scroll">
-                <LoegosRenderer
-                  artifactKind={artifactKind}
-                  blocks={hasBlocks ? blocks : []}
-                  findingMap={findingMap}
-                  selectedBlockId={selectedBlock?.id || ""}
-                  currentBlockId={currentBlockId}
-                  nextBlockId={nextBlockId}
-                  learnerMode={learnerMode}
-                  onToggleLearnerMode={() => setLearnerMode((value) => !value)}
-                  stagedBlockIds={stagedBlockIds}
-                  editable={editable}
-                  blockActionPendingId={blockActionPendingId}
-                  blockSaveStates={blockSaveStates}
-                  onStageBlock={onStageBlock}
-                  onUnstageBlock={onUnstageBlock}
-                  onRewriteBlock={onRewriteBlock}
-                  onKeepDraftBlock={onKeepDraftBlock}
-                  onAcceptBlockInference={onAcceptBlockInference}
-                  onRecastBlockTag={onRecastBlockTag}
-                  onOpenSourceWitness={onOpenSourceWitness}
-                  onSplitBlock={onSplitBlock}
-                  onMergeBlock={onMergeBlock}
+          {workspaceContent ? (
+            workspaceContent
+          ) : (
+            <div className={`founder-shell__workspace ${hasWitnessBlocks ? "is-compare" : ""}`}>
+              {hasWitnessBlocks ? (
+                <FounderWitnessPane
+                  title={witnessTitle}
+                  subtitle={witnessSubtitle}
+                  blocks={witnessBlocks}
+                  selectedBlockId={selectedWitnessBlock?.id || ""}
                   onSelectBlock={(blockId) => {
-                    onSelectBlock?.(blockId);
+                    onSelectWitnessBlock?.(blockId);
                     setMobileExplainOpen(true);
                   }}
                 />
-              </div>
-            </main>
-          </div>
+              ) : null}
 
-          <LoegosExplainPanel
-            block={selectedBlock}
-            finding={selectedFinding}
-            contextTitle={systemTitle}
-            contextCopy={systemCopy}
-            contextExcerptLabel={systemExcerptLabel}
-            contextExcerpt={systemExcerpt}
-            witnessBlock={selectedWitnessBlock}
-            witnessTitle={witnessTitle}
-            activeTitle={artifactTitle}
-            mobileOpen={mobileExplainOpen}
-            onCloseMobile={() => setMobileExplainOpen(false)}
-            overridePending={overridePending}
-            onCreateOverride={onCreateOverride}
-            onDeleteOverride={onDeleteOverride}
-          />
+              <main className="founder-shell__artifact" data-testid="founder-shell-artifact">
+                <div className="founder-shell__artifact-scroll">
+                  <LoegosRenderer
+                    artifactKind={artifactKind}
+                    blocks={hasBlocks ? blocks : []}
+                    findingMap={findingMap}
+                    selectedBlockId={selectedBlock?.id || ""}
+                    currentBlockId={currentBlockId}
+                    nextBlockId={nextBlockId}
+                    learnerMode={learnerMode}
+                    onToggleLearnerMode={() => setLearnerMode((value) => !value)}
+                    stagedBlockIds={stagedBlockIds}
+                    editable={editable}
+                    blockActionPendingId={blockActionPendingId}
+                    blockSaveStates={blockSaveStates}
+                    onStageBlock={onStageBlock}
+                    onUnstageBlock={onUnstageBlock}
+                    onRewriteBlock={onRewriteBlock}
+                    onKeepDraftBlock={onKeepDraftBlock}
+                    onAcceptBlockInference={onAcceptBlockInference}
+                    onRecastBlockTag={onRecastBlockTag}
+                    onOpenSourceWitness={onOpenSourceWitness}
+                    onSplitBlock={onSplitBlock}
+                    onMergeBlock={onMergeBlock}
+                    onSelectBlock={(blockId) => {
+                      onSelectBlock?.(blockId);
+                      setMobileExplainOpen(true);
+                    }}
+                  />
+                </div>
+              </main>
+            </div>
+          )}
+
+          {sidePanel ? (
+            <aside className="founder-shell__side" data-testid="founder-shell-side-panel">
+              {sidePanel}
+            </aside>
+          ) : (
+            <LoegosExplainPanel
+              block={selectedBlock}
+              finding={selectedFinding}
+              contextTitle={systemTitle}
+              contextCopy={systemCopy}
+              contextExcerptLabel={systemExcerptLabel}
+              contextExcerpt={systemExcerpt}
+              witnessBlock={selectedWitnessBlock}
+              witnessTitle={witnessTitle}
+              activeTitle={artifactTitle}
+              mobileOpen={mobileExplainOpen}
+              onCloseMobile={() => setMobileExplainOpen(false)}
+              overridePending={overridePending}
+              onCreateOverride={onCreateOverride}
+              onDeleteOverride={onDeleteOverride}
+            />
+          )}
         </div>
 
         {player ? <div className="founder-shell__player">{player}</div> : null}

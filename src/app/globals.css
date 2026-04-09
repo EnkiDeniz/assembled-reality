@@ -8500,6 +8500,10 @@ button.assembler-ide-statusbar__segment {
   grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
 }
 
+.founder-shell__workspace--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .founder-tree,
 .founder-witness,
 .founder-shell__artifact,
@@ -8528,6 +8532,29 @@ button.assembler-ide-statusbar__segment {
 .founder-tree__root {
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.founder-tree__root-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.founder-tree__root-button:hover,
+.founder-tree__root-button:focus-visible {
+  color: inherit;
+  opacity: 1;
+}
+
+.founder-tree__root.is-active {
+  padding: 12px;
+  border: 1px solid rgba(138, 193, 255, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(138, 193, 255, 0.08), transparent 72%),
+    rgba(255, 255, 255, 0.03);
 }
 
 .founder-tree__root-label,
@@ -8646,6 +8673,52 @@ button.assembler-ide-statusbar__segment {
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
   background: rgba(10, 12, 13, 0.98);
+}
+
+.founder-shell__artifact--panel {
+  border-right: 0;
+  border-radius: 0;
+}
+
+.founder-info-panel {
+  align-content: start;
+}
+
+.founder-info-panel__head,
+.founder-info-panel__body,
+.founder-info-panel__section,
+.founder-info-panel__list {
+  display: grid;
+  gap: 10px;
+}
+
+.founder-info-panel__section {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.founder-info-panel__section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.founder-info-panel__list-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.founder-info-panel__list-label {
+  color: rgba(184, 190, 189, 0.74);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.founder-info-panel__list-value {
+  color: var(--white);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .founder-witness {

@@ -1,0 +1,90 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "Lœgos public documents" [ref=e7] [cursor=pointer]:
+            - /url: /
+          - generic [ref=e8]: Navigate by shape. Act by verb.
+        - generic [ref=e9]:
+          - generic [ref=e10]: Trust
+          - heading "Trust" [level=1] [ref=e11]
+          - paragraph [ref=e12]: Loegos accepts many kinds of source material, but it does not treat them as equally trustworthy. The point of the trust model is not to exclude signal. The point is to keep the product from rewarding ambiguity with fake confidence.
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]:
+            - img [ref=e17]
+            - generic [ref=e19]: Aim
+          - generic [ref=e20]:
+            - generic [ref=e21]: declare
+            - generic [ref=e22]: Direction, declaration, next move.
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - img [ref=e26]
+            - generic [ref=e28]: Reality
+          - generic [ref=e29]:
+            - generic [ref=e30]: capture
+            - generic [ref=e31]: Capture, listen, inspect what is here.
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - generic [ref=e35]: œ
+            - generic [ref=e36]: Weld
+          - generic [ref=e37]:
+            - generic [ref=e38]: stage
+            - generic [ref=e39]: Stage, rewrite, operate the object.
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - img [ref=e43]
+            - generic [ref=e51]: Seal
+          - generic [ref=e52]:
+            - generic [ref=e53]: review
+            - generic [ref=e54]: Review, seal, share the proof.
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - heading "What provenance means" [level=2] [ref=e57]
+          - paragraph [ref=e58]: Provenance answers where a source came from, who brought it in, when it was captured, and how it was transformed.
+          - list [ref=e59]:
+            - listitem [ref=e60]: Origin method
+            - listitem [ref=e61]: Author or speaker when available
+            - listitem [ref=e62]: Importer
+            - listitem [ref=e63]: Capture time
+            - listitem [ref=e64]: Source URL
+            - listitem [ref=e65]: Filename and mime type
+            - listitem [ref=e66]: Parent source for derived material
+        - generic [ref=e67]:
+          - heading "The live trust levels" [level=2] [ref=e68]
+          - paragraph [ref=e69]: The current product surfaces L1 to L3. Those levels are intentionally modest in the live beta.
+          - list [ref=e70]:
+            - listitem [ref=e71]:
+              - generic [ref=e72]: L1
+              - paragraph [ref=e73]: Self-reported, weakly attributed, or minimally grounded material.
+            - listitem [ref=e74]:
+              - generic [ref=e75]: L2
+              - paragraph [ref=e76]: Supporting exhibit-level evidence such as stable links, files with meaningful metadata, or captured media with useful origin context.
+            - listitem [ref=e77]:
+              - generic [ref=e78]: L3
+              - paragraph [ref=e79]: Material that has been meaningfully audited for coherence or provenance inside the current product model.
+        - generic [ref=e80]:
+          - heading "Normalization is not verification" [level=2] [ref=e81]
+          - paragraph [ref=e82]: Loegos can transcribe voice, structure documents, extract text, or describe an image. That makes a source more readable. It does not, by itself, make the source more trustworthy.
+          - paragraph [ref=e83]: Verification changes how much weight a source carries. Normalization only changes how usable it is.
+        - generic [ref=e84]:
+          - heading "Derived material keeps lineage" [level=2] [ref=e85]
+          - paragraph [ref=e86]: Derived material may compress or interpret, but it should not erase the source that produced it. That rule applies to summaries, image descriptions, transcript reductions, and Operate-linked receipt metadata.
+        - generic [ref=e87]:
+          - heading "Public AI-use policy" [level=2] [ref=e88]
+          - paragraph [ref=e89]: "The public Loegos site declares a machine-use policy through robots.txt and Content Signals: search indexing is allowed, AI inference input is allowed, and AI training is not allowed."
+          - paragraph [ref=e90]: That policy applies to the public site content surfaces. It does not grant access to private workspace content or override the access controls on user Boxes.
+      - generic [ref=e91]:
+        - paragraph [ref=e92]: Close the gap between what you think and what you do.
+        - navigation "Public pages" [ref=e93]:
+          - link "About" [ref=e94] [cursor=pointer]:
+            - /url: /about
+          - link "Privacy" [ref=e95] [cursor=pointer]:
+            - /url: /privacy
+          - link "Terms" [ref=e96] [cursor=pointer]:
+            - /url: /terms
+          - link "Trust" [ref=e97] [cursor=pointer]:
+            - /url: /trust
+  - button "Open Next.js Dev Tools" [ref=e103] [cursor=pointer]:
+    - img [ref=e104]

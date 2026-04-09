@@ -1,0 +1,508 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - link "Account" [ref=e5] [cursor=pointer]:
+        - /url: /account
+        - img [ref=e6]
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - complementary [ref=e12]:
+            - generic [ref=e13]:
+              - generic [ref=e14]:
+                - generic [ref=e15]: Box
+                - generic [ref=e16]: How Lœgos Assembled Itself
+              - generic [ref=e17]:
+                - button "Box home" [ref=e18] [cursor=pointer]
+                - button "Add file" [ref=e19] [cursor=pointer]
+                - button "Photo" [ref=e20] [cursor=pointer]
+                - button "Paste" [ref=e21] [cursor=pointer]
+            - generic [ref=e22]:
+              - generic [ref=e23]:
+                - generic [ref=e24]:
+                  - generic [ref=e25]: Runtime
+                  - strong [ref=e26]: IDE state stays live.
+                - generic "Settlement vessel 1 of 7" [ref=e27]:
+                  - img [ref=e28]
+                  - generic [ref=e35]: stage 1
+              - generic [ref=e36]:
+                - generic [ref=e37]:
+                  - generic [ref=e38]: Convergence
+                  - strong [ref=e39]: 0%
+                - generic [ref=e40]:
+                  - generic [ref=e41]: Trust
+                  - strong [ref=e42]: L1
+                - generic [ref=e43]:
+                  - generic [ref=e44]: Branches
+                  - strong [ref=e45]: "0"
+                - generic [ref=e46]:
+                  - generic [ref=e47]: Receipts
+                  - strong [ref=e48]: "1"
+              - generic [ref=e49]:
+                - generic [ref=e50]: 1 blockers
+                - button "Open build output" [ref=e51] [cursor=pointer]
+            - generic [ref=e52]:
+              - generic [ref=e53]:
+                - generic [ref=e54]:
+                  - generic [ref=e55]: Sources
+                  - generic [ref=e56]: "12"
+                - generic [ref=e57]:
+                  - generic [ref=e58]:
+                    - button "Listen to What’s In The Box" [ref=e59] [cursor=pointer]:
+                      - img [ref=e60]
+                    - button "What’s In The Box 46 blocks · Text source · uploaded Load-bearing · Text · preserved" [ref=e62] [cursor=pointer]:
+                      - generic [ref=e63]: What’s In The Box
+                      - generic [ref=e64]: 46 blocks · Text source · uploaded
+                      - generic [ref=e65]: Load-bearing · Text · preserved
+                    - generic [ref=e66]:
+                      - generic [ref=e67]: Load-bearing
+                      - generic [ref=e68]: Text
+                      - generic [ref=e69]: Uploaded
+                      - generic [ref=e70]: L1 trust
+                  - generic [ref=e71]:
+                    - button "Listen to Lœgos — Origin, Evolution, Feedback, and Receipt" [ref=e72] [cursor=pointer]:
+                      - img [ref=e73]
+                    - button "Lœgos — Origin, Evolution, Feedback, and Receipt 99 blocks · Image source · uploaded Proof witness · Image-derived · normalized" [ref=e75] [cursor=pointer]:
+                      - generic [ref=e76]: Lœgos — Origin, Evolution, Feedback, and Receipt
+                      - generic [ref=e77]: 99 blocks · Image source · uploaded
+                      - generic [ref=e78]: Proof witness · Image-derived · normalized
+                    - generic [ref=e79]:
+                      - generic [ref=e80]: Proof witness
+                      - generic [ref=e81]: Image
+                      - generic [ref=e82]: Uploaded
+                      - generic [ref=e83]: L1 trust
+                  - generic [ref=e84]:
+                    - button "Listen to The Law of the Echo" [ref=e85] [cursor=pointer]:
+                      - img [ref=e86]
+                    - button "The Law of the Echo 208 blocks · Text source · uploaded Carried indirectly · Text · preserved" [ref=e88] [cursor=pointer]:
+                      - generic [ref=e89]: The Law of the Echo
+                      - generic [ref=e90]: 208 blocks · Text source · uploaded
+                      - generic [ref=e91]: Carried indirectly · Text · preserved
+                    - generic [ref=e92]:
+                      - generic [ref=e93]: Carried indirectly
+                      - generic [ref=e94]: Text
+                      - generic [ref=e95]: Uploaded
+                      - generic [ref=e96]: L1 trust
+                  - generic [ref=e97]:
+                    - button "Listen to Loegos Git history export" [ref=e98] [cursor=pointer]:
+                      - img [ref=e99]
+                    - button "Loegos Git history export 1692 blocks · Text source · uploaded Proof witness · History export · captured" [ref=e101] [cursor=pointer]:
+                      - generic [ref=e102]: Loegos Git history export
+                      - generic [ref=e103]: 1692 blocks · Text source · uploaded
+                      - generic [ref=e104]: Proof witness · History export · captured
+                    - generic [ref=e105]:
+                      - generic [ref=e106]: Proof witness
+                      - generic [ref=e107]: Text
+                      - generic [ref=e108]: Uploaded
+                      - generic [ref=e109]: L2 trust
+                  - generic [ref=e110]:
+                    - button "Listen to Lœgos Self-Assembly Seed Spec" [ref=e111] [cursor=pointer]:
+                      - img [ref=e112]
+                    - button "Lœgos Self-Assembly Seed Spec 308 blocks · Text source · uploaded Carried indirectly · Text · preserved" [ref=e114] [cursor=pointer]:
+                      - generic [ref=e115]: Lœgos Self-Assembly Seed Spec
+                      - generic [ref=e116]: 308 blocks · Text source · uploaded
+                      - generic [ref=e117]: Carried indirectly · Text · preserved
+                    - generic [ref=e118]:
+                      - generic [ref=e119]: Carried indirectly
+                      - generic [ref=e120]: Text
+                      - generic [ref=e121]: Uploaded
+                      - generic [ref=e122]: L1 trust
+                  - generic [ref=e123]:
+                    - button "Listen to The Ghost Operator" [ref=e124] [cursor=pointer]:
+                      - img [ref=e125]
+                    - button "The Ghost Operator 66 blocks · Text source · uploaded Latent · Text · preserved" [ref=e127] [cursor=pointer]:
+                      - generic [ref=e128]: The Ghost Operator
+                      - generic [ref=e129]: 66 blocks · Text source · uploaded
+                      - generic [ref=e130]: Latent · Text · preserved
+                    - generic [ref=e131]:
+                      - generic [ref=e132]: Latent
+                      - generic [ref=e133]: Text
+                      - generic [ref=e134]: Uploaded
+                      - generic [ref=e135]: L1 trust
+                  - generic [ref=e136]:
+                    - button "Listen to The Meaning Operator" [ref=e137] [cursor=pointer]:
+                      - img [ref=e138]
+                    - button "The Meaning Operator 563 blocks · Text source · uploaded Carried indirectly · Text · preserved" [ref=e140] [cursor=pointer]:
+                      - generic [ref=e141]: The Meaning Operator
+                      - generic [ref=e142]: 563 blocks · Text source · uploaded
+                      - generic [ref=e143]: Carried indirectly · Text · preserved
+                    - generic [ref=e144]:
+                      - generic [ref=e145]: Carried indirectly
+                      - generic [ref=e146]: Text
+                      - generic [ref=e147]: Uploaded
+                      - generic [ref=e148]: L1 trust
+                  - generic [ref=e149]:
+                    - button "Listen to A monolith does not move." [ref=e150] [cursor=pointer]:
+                      - img [ref=e151]
+                    - button "A monolith does not move. 39 blocks · Text source · uploaded Latent · Text · preserved" [ref=e153] [cursor=pointer]:
+                      - generic [ref=e154]: A monolith does not move.
+                      - generic [ref=e155]: 39 blocks · Text source · uploaded
+                      - generic [ref=e156]: Latent · Text · preserved
+                    - generic [ref=e157]:
+                      - generic [ref=e158]: Latent
+                      - generic [ref=e159]: Text
+                      - generic [ref=e160]: Uploaded
+                      - generic [ref=e161]: L1 trust
+                  - generic [ref=e162]:
+                    - button "Listen to Echo Canon" [ref=e163] [cursor=pointer]:
+                      - img [ref=e164]
+                    - button "Echo Canon 154 blocks · Text source · uploaded Latent · Text · preserved" [ref=e166] [cursor=pointer]:
+                      - generic [ref=e167]: Echo Canon
+                      - generic [ref=e168]: 154 blocks · Text source · uploaded
+                      - generic [ref=e169]: Latent · Text · preserved
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: Latent
+                      - generic [ref=e172]: Text
+                      - generic [ref=e173]: Uploaded
+                      - generic [ref=e174]: L1 trust
+                  - generic [ref=e175]:
+                    - button "Listen to Operator Sentences" [ref=e176] [cursor=pointer]:
+                      - img [ref=e177]
+                    - button "Operator Sentences 95 blocks · Text source · uploaded Load-bearing · Text · preserved" [ref=e179] [cursor=pointer]:
+                      - generic [ref=e180]: Operator Sentences
+                      - generic [ref=e181]: 95 blocks · Text source · uploaded
+                      - generic [ref=e182]: Load-bearing · Text · preserved
+                    - generic [ref=e183]:
+                      - generic [ref=e184]: Load-bearing
+                      - generic [ref=e185]: Text
+                      - generic [ref=e186]: Uploaded
+                      - generic [ref=e187]: L1 trust
+                  - generic [ref=e188]:
+                    - button "Listen to Assembled Reality" [ref=e189] [cursor=pointer]:
+                      - img [ref=e190]
+                    - button "Assembled Reality 187 blocks · Text source · uploaded Load-bearing · Text · preserved" [ref=e192] [cursor=pointer]:
+                      - generic [ref=e193]: Assembled Reality
+                      - generic [ref=e194]: 187 blocks · Text source · uploaded
+                      - generic [ref=e195]: Load-bearing · Text · preserved
+                    - generic [ref=e196]:
+                      - generic [ref=e197]: Load-bearing
+                      - generic [ref=e198]: Text
+                      - generic [ref=e199]: Uploaded
+                      - generic [ref=e200]: L1 trust
+                  - generic [ref=e201]:
+                    - button "Listen to words are lœgos" [ref=e202] [cursor=pointer]:
+                      - img [ref=e203]
+                    - button "words are lœgos 1 block · Text source · uploaded Load-bearing · Text · preserved" [ref=e205] [cursor=pointer]:
+                      - generic [ref=e206]: words are lœgos
+                      - generic [ref=e207]: 1 block · Text source · uploaded
+                      - generic [ref=e208]: Load-bearing · Text · preserved
+                    - generic [ref=e209]:
+                      - generic [ref=e210]: Load-bearing
+                      - generic [ref=e211]: Text
+                      - generic [ref=e212]: Uploaded
+                      - generic [ref=e213]: L1 trust
+              - generic [ref=e214]:
+                - generic [ref=e215]:
+                  - generic [ref=e216]: Seeds
+                  - generic [ref=e217]: "1"
+                - generic [ref=e219]:
+                  - button "Listen to Seed of seeds" [ref=e220] [cursor=pointer]:
+                    - img [ref=e221]
+                  - button "Seed of seeds 1 block · Seed source · assembled Current seed of the box. Useful for Create and Operate, not independent proof." [ref=e223] [cursor=pointer]:
+                    - generic [ref=e224]: Seed of seeds
+                    - generic [ref=e225]: 1 block · Seed source · assembled
+                    - generic [ref=e226]: Current seed of the box. Useful for Create and Operate, not independent proof.
+                  - generic [ref=e227]:
+                    - generic [ref=e228]: Seed
+                    - generic [ref=e229]: Assembled
+                    - generic [ref=e230]: working trust
+          - generic [ref=e231]:
+            - generic [ref=e233]:
+              - generic [ref=e234]:
+                - button "All boxes" [ref=e235] [cursor=pointer]: Lœgos
+                - generic [ref=e236]:
+                  - button "Manage box" [ref=e237] [cursor=pointer]
+                  - button "Speak" [ref=e238] [cursor=pointer]
+                  - button "Add source" [ref=e239] [cursor=pointer]
+              - 'button "Current box: How Lœgos Assembled Itself" [ref=e242] [cursor=pointer]':
+                - generic [ref=e243]: How Lœgos Assembled Itself
+                - generic [ref=e244]: Released · Committing
+              - generic [ref=e245]:
+                - button "Aim declare Direction, declaration, next move." [ref=e246] [cursor=pointer]:
+                  - generic [ref=e247]:
+                    - img [ref=e249]
+                    - generic [ref=e251]: Aim
+                  - generic [ref=e252]:
+                    - generic [ref=e253]: declare
+                    - generic [ref=e254]: Direction, declaration, next move.
+                - button "Reality capture Capture, listen, inspect what is here." [ref=e255] [cursor=pointer]:
+                  - generic [ref=e256]:
+                    - img [ref=e258]
+                    - generic [ref=e260]: Reality
+                  - generic [ref=e261]:
+                    - generic [ref=e262]: capture
+                    - generic [ref=e263]: Capture, listen, inspect what is here.
+                - button "Weld rewrite Stage, rewrite, operate the object." [ref=e264] [cursor=pointer]:
+                  - generic [ref=e265]:
+                    - generic [ref=e267]: œ
+                    - generic [ref=e268]: Weld
+                  - generic [ref=e269]:
+                    - generic [ref=e270]: rewrite
+                    - generic [ref=e271]: Stage, rewrite, operate the object.
+                - button "Seal review Review, seal, share the proof." [ref=e272] [cursor=pointer]:
+                  - generic [ref=e273]:
+                    - img [ref=e275]
+                    - generic [ref=e283]: Seal
+                  - generic [ref=e284]:
+                    - generic [ref=e285]: review
+                    - generic [ref=e286]: Review, seal, share the proof.
+              - generic [ref=e287]:
+                - 'button "Root: Show how Lœgos assembled itself" [ref=e288] [cursor=pointer]': Show how Lœgos assembled itself
+                - generic [ref=e289]:
+                  - generic [ref=e290]: Released
+                  - button "Run Operate" [ref=e291] [cursor=pointer]
+              - generic "Weld verbs" [ref=e292]:
+                - button "stage" [ref=e293] [cursor=pointer]
+                - button "rewrite" [ref=e294] [cursor=pointer]
+                - button "operate" [ref=e295] [cursor=pointer]
+            - generic [ref=e297]:
+              - generic [ref=e298]:
+                - generic [ref=e299]:
+                  - generic [ref=e300]: Editor
+                  - heading "Write the current block stack." [level=2] [ref=e301]
+                  - paragraph [ref=e302]: The center stays for authored blocks. Diagnostics, compile state, and seal readiness stay beside it.
+                - generic [ref=e304]: Seed of seeds
+              - generic [ref=e305]:
+                - generic [ref=e306]:
+                  - generic [ref=e307]:
+                    - heading "Seed of seeds" [level=2] [ref=e308]
+                    - paragraph [ref=e309]: Current live assembly shape
+                  - generic [ref=e310]:
+                    - generic [ref=e311]:
+                      - generic [ref=e312]: Seed
+                      - generic [ref=e313]: 0 blocks
+                    - generic [ref=e314]:
+                      - generic [ref=e315]: Seed
+                      - generic [ref=e316]: 1 block
+                      - generic [ref=e317]: 0% convergence
+                    - button "Delete seed" [ref=e319] [cursor=pointer]:
+                      - img [ref=e320]
+                - article [ref=e323]:
+                  - button "+" [ref=e326] [cursor=pointer]
+                  - generic [ref=e327]:
+                    - generic [ref=e328]:
+                      - generic [ref=e329]: "001"
+                      - generic [ref=e330]: 1 · Assembly
+                      - generic [ref=e331]: imported
+                    - generic [ref=e332]:
+                      - textbox [ref=e333]: No content yet.
+                      - generic [ref=e334]: Blur or Cmd/Ctrl+Enter to save
+                    - generic [ref=e335]:
+                      - generic [ref=e336]:
+                        - generic [ref=e337]:
+                          - img [ref=e339]
+                          - generic [ref=e341]: Reads as Aim
+                        - generic [ref=e342]: green
+                      - generic [ref=e343]:
+                        - generic [ref=e344]:
+                          - generic [ref=e345]: warn
+                          - generic [ref=e346]: Operator sentence length is outside the preferred 5–9 word range.
+                        - generic [ref=e347]:
+                          - generic [ref=e348]: warn
+                          - generic [ref=e349]: Sentence is semantically ungrounded because it contains no □ or 𒐛 word.
+              - generic [ref=e352]:
+                - generic [ref=e353]:
+                  - generic [ref=e354]: Seed queue
+                  - generic [ref=e355]:
+                    - button "Assemble" [disabled] [ref=e356]
+                    - button "Clear" [disabled] [ref=e357]
+                - paragraph [ref=e358]: Add blocks from a source to shape the seed.
+          - complementary "Box diagnostics" [ref=e359]:
+            - generic [ref=e360]:
+              - generic [ref=e361]:
+                - generic [ref=e362]: Diagnostics
+                - heading "Compile state stays next to the work." [level=2] [ref=e363]
+                - paragraph [ref=e364]: Seven infers, the runtime computes, and the human remains the interpreter and committer of record.
+              - generic [ref=e365]:
+                - generic "Settlement vessel 1 of 7" [ref=e366]:
+                  - img [ref=e367]
+                  - generic [ref=e374]: stage 1
+                - generic [ref=e376]: blocked
+            - generic [ref=e377]:
+              - generic [ref=e378]:
+                - generic [ref=e379]: 1. Seal preflight
+                - generic [ref=e380]: Seal requires at least one □ reality block.
+              - generic [ref=e381]:
+                - generic [ref=e382]:
+                  - generic [ref=e383]:
+                    - generic [ref=e384]: Weld exists
+                    - generic [ref=e385]: Seal requires a weld with both aim and reality.
+                  - generic [ref=e386]: blocked
+                - generic [ref=e387]:
+                  - generic [ref=e388]:
+                    - generic [ref=e389]: Convergence threshold
+                    - generic [ref=e390]: 0% in the current box.
+                  - generic [ref=e391]: blocked
+                - generic [ref=e392]:
+                  - generic [ref=e393]:
+                    - generic [ref=e394]: Trust floor
+                    - generic [ref=e395]: L1 minimum.
+                  - generic [ref=e396]: blocked
+                - generic [ref=e397]:
+                  - generic [ref=e398]:
+                    - generic [ref=e399]: Depth requirement
+                    - generic [ref=e400]: At least one block has moved into proved depth.
+                  - generic [ref=e401]: pass
+                - generic [ref=e402]:
+                  - generic [ref=e403]:
+                    - generic [ref=e404]: Evidence chain
+                    - generic [ref=e405]: Add reality evidence before sealing.
+                  - generic [ref=e406]: blocked
+              - generic [ref=e407]:
+                - button "Run Operate" [ref=e408] [cursor=pointer]
+                - button "Open receipts" [ref=e409] [cursor=pointer]
+            - generic [ref=e410]:
+              - generic [ref=e411]:
+                - generic [ref=e412]: 2. Blocking contradictions
+                - generic [ref=e413]: "5"
+              - generic [ref=e414]:
+                - article [ref=e415]:
+                  - generic [ref=e416]:
+                    - generic [ref=e417]: error
+                    - generic [ref=e418]: seal-needs-reality
+                  - paragraph [ref=e419]: Seal requires at least one □ reality block.
+                - article [ref=e420]:
+                  - generic [ref=e421]:
+                    - generic [ref=e422]: error
+                    - generic [ref=e423]: seal-needs-weld
+                  - paragraph [ref=e424]: Seal requires a weld with both aim and reality in scope.
+                - article [ref=e425]:
+                  - generic [ref=e426]:
+                    - generic [ref=e427]: error
+                    - generic [ref=e428]: seal-low-convergence
+                  - paragraph [ref=e429]: "Seal requires convergence >= 70%. Current: 0%."
+                - article [ref=e430]:
+                  - generic [ref=e431]:
+                    - generic [ref=e432]: error
+                    - generic [ref=e433]: seal-low-trust
+                  - paragraph [ref=e434]: Seal requires a trust floor of L2 or higher.
+                - article [ref=e435]:
+                  - generic [ref=e436]:
+                    - generic [ref=e437]: error
+                    - generic [ref=e438]: seal-without-weld
+                  - paragraph [ref=e439]: "Seal requires a weld with convergence >= 70%. Current: 0%."
+            - generic [ref=e440]:
+              - generic [ref=e441]:
+                - generic [ref=e442]: 3. Shape + parse issues
+                - generic [ref=e443]: "3"
+              - generic [ref=e444]:
+                - article [ref=e445]:
+                  - generic [ref=e446]:
+                    - generic [ref=e447]: warn
+                    - generic [ref=e448]: sentence-length
+                  - paragraph [ref=e449]: Operator sentence length is outside the preferred 5–9 word range.
+                  - paragraph [ref=e450]: 3 content words
+                - article [ref=e451]:
+                  - generic [ref=e452]:
+                    - generic [ref=e453]: warn
+                    - generic [ref=e454]: sentence-length
+                  - paragraph [ref=e455]: Operator sentence length is outside the preferred 5–9 word range.
+                  - paragraph [ref=e456]: 2 content words
+                - article [ref=e457]:
+                  - generic [ref=e458]:
+                    - generic [ref=e459]: warn
+                    - generic [ref=e460]: ungrounded
+                  - paragraph [ref=e461]: Sentence is semantically ungrounded because it contains no □ or 𒐛 word.
+            - generic [ref=e462]:
+              - generic [ref=e463]:
+                - generic [ref=e464]: 4. Convergence + Operate
+                - generic [ref=e465]: 0%
+              - generic "Convergence" [ref=e466]:
+                - 'generic "Aim: 2" [ref=e467]'
+                - 'generic "Reality: 0" [ref=e468]'
+                - 'generic "Weld: 0" [ref=e469]'
+              - paragraph [ref=e470]: Run Operate to get a compiler-style read of the current box.
+            - generic [ref=e471]:
+              - generic [ref=e472]:
+                - generic [ref=e473]: 5. Trust / depth / settlement
+                - generic [ref=e474]: 1/6 edges
+              - generic [ref=e475]:
+                - article [ref=e476]:
+                  - generic [ref=e477]: Trust floor
+                  - strong [ref=e478]: L1
+                  - generic [ref=e479]: ceiling L2
+                - article [ref=e480]:
+                  - generic [ref=e481]: Depth ready
+                  - strong [ref=e482]: "yes"
+                  - generic [ref=e483]: 3 typed blocks
+                - article [ref=e484]:
+                  - generic [ref=e485]: In stage
+                  - strong [ref=e486]: "0"
+                  - generic [ref=e487]: Unresolved assembly state
+              - generic [ref=e488]:
+                - generic [ref=e489]:
+                  - generic [ref=e490]:
+                    - text: Aim completeness
+                    - generic [ref=e491]: 0%
+                  - generic [ref=e492]: neutral
+                - generic [ref=e493]:
+                  - generic [ref=e494]:
+                    - text: Evidence quality
+                    - generic [ref=e495]: 0%
+                  - generic [ref=e496]: neutral
+                - generic [ref=e497]:
+                  - generic [ref=e498]:
+                    - text: Convergence strength
+                    - generic [ref=e499]: 0%
+                  - generic [ref=e500]: neutral
+                - generic [ref=e501]:
+                  - generic [ref=e502]:
+                    - text: Weld validity
+                    - generic [ref=e503]: 0%
+                  - generic [ref=e504]: neutral
+                - generic [ref=e505]:
+                  - generic [ref=e506]:
+                    - text: Depth distribution
+                    - generic [ref=e507]: 44%
+                  - generic [ref=e508]: red
+                - generic [ref=e509]:
+                  - generic [ref=e510]:
+                    - text: Seal integrity
+                    - generic [ref=e511]: 100%
+                  - generic [ref=e512]: green
+            - generic [ref=e513]:
+              - generic [ref=e514]:
+                - generic [ref=e515]: Build output
+                - generic [ref=e516]: "1"
+              - article [ref=e518]:
+                - generic [ref=e519]:
+                  - generic [ref=e520]: Compiled output
+                  - generic [ref=e521]: Sealed
+                - strong [ref=e522]: Share prototype for feedback
+                - paragraph [ref=e523]: The prototype was shared with a real stakeholder, the share was witnessed in WhatsApp, and the contact became portable proof.
+                - generic [ref=e524]:
+                  - button "Open receipts" [ref=e525] [cursor=pointer]
+                  - button "Draft receipt" [disabled] [ref=e526]
+            - generic [ref=e527]:
+              - generic [ref=e528]:
+                - generic [ref=e529]: Seven
+                - generic [ref=e530]: Seed of seeds
+              - paragraph [ref=e531]: Seven stays inference-first here. Ask for a reroute, a contradiction trace, or a missing-evidence read.
+              - generic [ref=e532]:
+                - button "What matters in this block?" [ref=e533] [cursor=pointer]
+                - button "Rewrite this more clearly." [ref=e534] [cursor=pointer]
+                - button "What evidence supports this?" [ref=e535] [cursor=pointer]
+                - button "What should change here?" [ref=e536] [cursor=pointer]
+              - generic [ref=e537]:
+                - textbox "Ask Seven to diagnose the current box…" [ref=e538]
+                - button "Ask Seven" [disabled] [ref=e539]
+        - generic [ref=e540]:
+          - generic [ref=e541]:
+            - button "Seek back 10 seconds" [ref=e542] [cursor=pointer]:
+              - img [ref=e543]
+            - button "Play" [ref=e546] [cursor=pointer]:
+              - img [ref=e547]
+            - button "Seek forward 10 seconds" [ref=e549] [cursor=pointer]:
+              - img [ref=e550]
+            - button "Previous block" [ref=e553] [cursor=pointer]:
+              - img [ref=e554]
+            - button "Next block" [ref=e556] [cursor=pointer]:
+              - img [ref=e557]
+          - generic [ref=e560]: 1/1
+          - generic [ref=e563]:
+            - button "1x" [ref=e564] [cursor=pointer]
+            - combobox [ref=e565]:
+              - option "Seven" [selected]
+              - option "Sage"
+            - generic [ref=e566]: Seven · block 1
+  - button "Open Next.js Dev Tools" [ref=e572] [cursor=pointer]:
+    - img [ref=e573]

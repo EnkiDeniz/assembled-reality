@@ -145,6 +145,13 @@ app.post("/v1/analyze", (req, res) => {
   }
 
   insertRun(db, ir, result.value);
+  if (result.value.status === "not_sealable_yet") {
+    if (!assertAnalyzeResultShape(result.value)) {
+      return writeError(res, 500, ERROR_CODES.INVALID_INPUT, "Analyze result schema mismatch");
+    }
+    const exportedTo = relPath(exportAnalyzeSuccess({ ir, value: result.value }));
+    return res.json({ ok: true, value: result.value, exportedTo });
+  }
   if (!result.value.gate?.passed) {
     const details = [
       { gate: result.value.gate, reads: result.value.reads, ambiguities: result.value.ambiguities },

@@ -1,0 +1,91 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: Lœgos assembled reality
+        - generic [ref=e7]: Navigate by shape. Act by verb.
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]: Assemble reality
+          - heading "Meaning is an assembled object." [level=1] [ref=e11]
+          - paragraph [ref=e12]: Close the gap between what you think and what you do.
+          - paragraph [ref=e14]: The box is the noun. The verbs are the tools inside it. Capture from life on the phone, then return on desktop to stage, rewrite, operate, and seal the proof.
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: Enter
+            - heading "Open the assembler." [level=2] [ref=e18]
+            - paragraph [ref=e19]: Identity is lightweight. The important thing is what box you return to and what move becomes clear once you are inside.
+          - generic [ref=e21]:
+            - button "Continue with Apple" [ref=e23] [cursor=pointer]
+            - generic [ref=e25]:
+              - generic [ref=e26]: Email magic link
+              - textbox "Email magic link" [ref=e27]:
+                - /placeholder: you@example.com
+              - button "Send magic link" [disabled] [ref=e29]
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]: System thesis
+          - heading "Navigate by shape. Act by verb." [level=2] [ref=e33]
+          - paragraph [ref=e34]: Four rooms keep orientation stable. Each room exposes a different toolset for the same object as it moves from direction, to evidence, to assembly, to proof.
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e41]: Aim
+            - generic [ref=e42]:
+              - generic [ref=e43]: declare
+              - generic [ref=e44]: Direction, declaration, next move.
+          - generic [ref=e45]:
+            - generic [ref=e46]:
+              - img [ref=e48]
+              - generic [ref=e50]: Reality
+            - generic [ref=e51]:
+              - generic [ref=e52]: capture
+              - generic [ref=e53]: Capture, listen, inspect what is here.
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - generic [ref=e57]: œ
+              - generic [ref=e58]: Weld
+            - generic [ref=e59]:
+              - generic [ref=e60]: stage
+              - generic [ref=e61]: Stage, rewrite, operate the object.
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - img [ref=e65]
+              - generic [ref=e73]: Seal
+            - generic [ref=e74]:
+              - generic [ref=e75]: review
+              - generic [ref=e76]: Review, seal, share the proof.
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]: Settlement
+            - generic "Settlement vessel 4 of 7" [ref=e80]:
+              - img [ref=e81]
+              - generic [ref=e88]: 4 / 7
+            - generic "Settlement 4 of 7" [ref=e89]:
+              - generic [ref=e98]: Resolution process
+          - generic [ref=e99]:
+            - generic [ref=e100]: Signals
+            - generic [ref=e101]: Verified
+            - generic [ref=e102]: Partial
+            - generic [ref=e103]: Unknown
+          - generic [ref=e104]:
+            - generic [ref=e105]: Desktop posture
+            - generic [ref=e106]: Quiet navigation. Dominant canvas. One right sidecar. Proof kept distinct from the workbench.
+          - generic [ref=e107]:
+            - generic [ref=e108]: Mobile posture
+            - generic [ref=e109]: Capture first. Listen on the move. Re-enter the current box in Reality, not in a shrunk desktop shell.
+      - generic [ref=e110]:
+        - navigation "Public pages" [ref=e111]:
+          - link "About" [ref=e112] [cursor=pointer]:
+            - /url: /about
+          - link "Privacy" [ref=e113] [cursor=pointer]:
+            - /url: /privacy
+          - link "Terms" [ref=e114] [cursor=pointer]:
+            - /url: /terms
+          - link "Trust" [ref=e115] [cursor=pointer]:
+            - /url: /trust
+        - link "Proposal" [ref=e116] [cursor=pointer]:
+          - /url: /design-proposal
+  - button "Open Next.js Dev Tools" [ref=e122] [cursor=pointer]:
+    - img [ref=e123]

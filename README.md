@@ -1,200 +1,81 @@
 # Loegos
 
 **Meaning is an assembled object.**  
-**Build working documents from source material.**
+**Build reality through visible assembly.**
 
-Loegos `1.0` is an invite-only beta for solo operators. It is a desktop-first web workbench for turning source material into a working assembly with visible proof.
+This repository is in an intentional product pivot.
 
-This `README.md` is the repo entry point.
+The purpose has stayed stable, but the product center has changed. The current direction is no longer best described as a workspace made of phases and panels. It is now better described as a system for:
 
-For the live canon:
+- capturing witness material quickly
+- listening and marking what matters
+- converting witness into explicit Lœgos structure
+- choosing bounded moves
+- testing them in reality
+- preserving receipts of what actually held
 
-- product/runtime docs start at `docs/README.md`
-- language/renderer docs start at `language/README.md`
-- historical seed and evolution material lives in `docs/LoegosSeed/`
+## Start Here
 
-## Active Docs
+The kickoff canon for the pivot is now:
 
-- `README.md`
-- `language/README.md`
-- `docs/README.md`
-- `docs/current-state-audit.md`
-- `docs/loegos-product-spec.md`
-- `docs/operate-spec-v2.md`
-- `docs/think-create-operate-spec.md`
-- `docs/source-model-spec.md`
-- `docs/source-normalization-table.md`
-- `docs/provenance-trust-policy.md`
-- `docs/user-flows.md`
-- `docs/seven-operate-receipt-contract.md`
-- `docs/phase-1-proof-runbook.md`
+1. `version 1/README.md`
+2. `version 1/loegos-aim-brief-final-v1.0.md`
+3. `version 1/loegos-language-spec-final-v1.0.md`
+4. `version 1/loegos-v1-product-redefinition.md`
 
-## Release Posture
+Use `version 1/` when defining the next product, shell, agent behavior, and build sequence.
 
-- invite-only beta
-- `noindex`
-- desktop-first
-- solo operator first
-- GetReceipts optional
-- warm-audience landing, not broad public marketing
+## Current Backbone
 
-## Core Loop
+Three layers now define the system:
 
-`import source → listen / ask Seven → stage blocks → assemble → operate → draft receipt`
+### Product
 
-This is the only loop that must feel excellent in `1.0`.
+`state -> move -> test -> receipt -> update -> seal / flag / stop -> return`
 
-## Product Model
+### Language
 
-The authenticated product is one workbench with three clear verbs:
+`declare -> capture -> observe -> weld -> move -> test -> receipt -> seal`
 
-- `7` talks
-- `Staging` collects
-- `Edit` rewrites
+### Agents
 
-And one box-level read:
+`rate -> tighten weakest axis -> rerate -> seal / flag / stop`
 
-- `Operate` reads the box
+These layers should remain distinct.
 
-The active hierarchy is:
+## Repo Map
 
-- box
-- sources
-- assembly
-- receipts
+- `version 1/` is the current strategic center for the pivot
+- `language/` holds important language/rendering reference
+- `docs/` preserves the prior runtime canon, audits, runbooks, and supporting specs
+- `docs/LoegosSeed/` preserves the seed and evolution trail
+- `docs/archive/` preserves older superseded material
 
-The built-in `Lœgos` guide stays pinned in the source list, but it is not the hero of the app.
+## Product Stance
 
-## Supported Intake For 1.0
+### Mobile
 
-Launch-supported intake paths:
+Mobile is primarily for:
 
-- PDF
-- DOCX
-- Markdown / TXT
-- paste
-- link import
-- voice memo capture via `Speak note`
+- fast source addition
+- reading
+- listening
+- following text while audio plays
+- marking blocks that matter to the aim
 
-Supported in code but not part of the public `1.0` promise:
+### Desktop
 
-- folder import
-- image-to-document flows
-- arbitrary audio-file upload
-- legacy DOC upload
+Desktop is primarily for:
 
-If those paths remain reachable, they should feel secondary or beta-quality, not like the main product promise.
+- witness inspection
+- explicit compile to Lœgos
+- compare
+- structural editing
+- move/test judgment
+- receipt review
 
-## Workspace Model
+## Important rule
 
-The live product is the workspace.
+Do not treat the current shell as the product definition.
 
-### Public routes
-
-- `/`
-- `/workspace`
-- `/account`
-- `/opengraph-image`
-
-### Main surfaces
-
-- boxes page as the launcher for opening or creating a box
-- box home as a dense launcher
-- source rail for navigation
-- main document surface for read, listen, select, and edit
-- right-side context split between Seven conversation and staging
-- receipts as proof/history, not as a peer editing mode
-- playback always visible
-
-### Seven
-
-- `7` opens a real thread tied to the active document
-- replies render as conversation, not hidden operator output
-- useful replies can move into staging with one explicit action
-- deeper `△ □ ○ × 1–7` box analysis is deferred beyond the first Box pass
-
-### Operate
-
-- Operate is the box-read engine
-- it is not chat, not summary, and not rewrite
-- it reads the active box across real sources plus the current assembly
-- it returns `Aim`, `Ground`, `Bridge`, a `Gradient`, a trust floor and ceiling in `L1–L3`, one convergence state, and one next move
-- it can draft a local-first receipt and optionally sync it to GetReceipts
-
-### Staging
-
-- staging collects selected blocks and accepted Seven output
-- staging is the input to assembly
-- staging is not the same thing as Seven
-
-### Edit
-
-- edit is literal block editing
-- it only affects editable document blocks
-- saves must expose clear saving, saved, conflict, and error states
-
-## What 1.0 Must Do
-
-1. Authenticate users with Apple or magic link.
-2. Let users open an existing box or create a new box.
-3. Import supported sources into the active box and normalize them into usable source documents.
-4. Let users open a source, listen to it, and ask Seven about it.
-5. Let users stage blocks from the source and from Seven replies.
-6. Assemble a new working document from staged material.
-7. Run Operate on the active box to read the current position honestly.
-8. Draft a local receipt for the current document, assembly, or Operate result.
-9. Optionally push that receipt draft to GetReceipts without making GetReceipts required.
-
-## Trust And Proof Bar
-
-For launch, these flows need clear status handling:
-
-- auth
-- source intake
-- document save/edit
-- delete
-- playback
-- Seven replies
-- assembly creation
-- Operate reads
-- receipt drafting
-
-Failure to sync with GetReceipts must never block a local receipt draft.
-
-## Share Surface
-
-Shared links should keep the canonical app brand:
-
-- root metadata
-- Open Graph card
-- Twitter card
-
-## Out Of Scope For 1.0
-
-- collaboration
-- teams
-- billing
-- public discovery growth loops
-- reflection / Learn flows
-- voice economics
-- “all file types” marketing
-
-## Current Visual Direction
-
-The visual system is locked to the current graphite/blue desktop workbench language:
-
-- graphite surfaces
-- blue accent
-- system UI typography in app chrome
-- restrained, tool-first composition
-
-The goal is calm, trustworthy utility, not feature theater.
-
-## Repo Posture
-
-Current engineering work should begin from the live canon, not the historical proposal trail.
-
-- `language/` is the canonical language/rendering surface.
-- `docs/` holds current product/runtime docs plus an archive.
-- `docs/LoegosSeed/` preserves the seed corpus and evolution artifacts that led to the box.
-- `docs/archive/` preserves superseded docs without keeping them in the main path.
+Treat the existing backend, intake, listening, language, Operate, override, and receipt substrate as reusable assembly parts for the next product shape.

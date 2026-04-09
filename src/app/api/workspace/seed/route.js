@@ -222,8 +222,10 @@ function coerceSeedResult(result = null, fallback = {}) {
   };
 }
 
-function buildSeedBlocks(documentKey, seedResult) {
+function buildSeedBlocks(documentKey, seedResult, options = {}) {
   const resolvedDocumentKey = String(documentKey || "seed").trim() || "seed";
+  const sourceDocumentKey = String(options.sourceDocumentKey || resolvedDocumentKey).trim() || resolvedDocumentKey;
+  const sourceTitle = String(options.sourceTitle || "").trim();
   const markdown = buildSeedMarkdown({
     aim: seedResult.aim,
     whatsHere: seedResult.whatsHere,
@@ -233,9 +235,57 @@ function buildSeedBlocks(documentKey, seedResult) {
 
   return buildWorkspaceBlocksFromDocument(parseDocument(markdown, { documentKey: resolvedDocumentKey }), {
     documentKey: resolvedDocumentKey,
-    defaultSourceDocumentKey: resolvedDocumentKey,
+    defaultSourceDocumentKey: sourceDocumentKey,
     defaultIsEditable: true,
     defaultIsAssemblyBlock: true,
+  }).map((block) => ({
+    ...block,
+    sourceTitle: sourceTitle || block.sourceTitle,
+    provenance: sourceDocumentKey
+      ? {
+          ...(block?.provenance && typeof block.provenance === "object" ? block.provenance : {}),
+          importedFromDocumentKey: sourceDocumentKey,
+        }
+      : block.provenance,
+  }));
+}
+
+function buildSeedCompileMeta({
+  currentSeedMeta = null,
+  sourceFingerprint = "",
+  sourceDocument = null,
+  isAutoTitled = false,
+  suggestionPending = false,
+} = {}) {
+  const normalizedSourceDocument = sourceDocument && typeof sourceDocument === "object"
+    ? sourceDocument
+    : null;
+
+  return normalizeSeedMeta({
+    ...(currentSeedMeta && typeof currentSeedMeta === "object" ? currentSeedMeta : {}),
+    isSeed: true,
+    templateVersion: SEED_TEMPLATE_VERSION,
+    status: "live",
+    updatedAt: new Date().toISOString(),
+    suggestionPending: Boolean(suggestionPending),
+    autoTitled: Boolean(isAutoTitled),
+    sourceFingerprint,
+    compiledFromDocumentKey: String(normalizedSourceDocument?.documentKey || "").trim(),
+    compiledFromUpdatedAt: String(
+      normalizedSourceDocument?.updatedAt || normalizedSourceDocument?.createdAt || "",
+    ).trim(),
+    compiledFromTitle: String(normalizedSourceDocument?.title || "").trim(),
+    witnessAnchorReferences: (Array.isArray(normalizedSourceDocument?.blocks)
+      ? normalizedSourceDocument.blocks
+      : []
+    )
+      .slice(0, 64)
+      .map((block) => ({
+        blockId: String(block?.id || "").trim(),
+        sourcePosition: Number.isFinite(Number(block?.sourcePosition))
+          ? Number(block.sourcePosition)
+          : -1,
+      })),
   });
 }
 
@@ -325,6 +375,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   const mode = String(body?.mode || "ensure").trim().toLowerCase();
   const projectKey = String(body?.projectKey || "").trim();
+  const sourceDocumentKey = String(body?.sourceDocumentKey || "").trim();
   const suggestion = body?.suggestion && typeof body.suggestion === "object" ? body.suggestion : null;
 
   if (!projectKey) {
@@ -341,6 +392,12 @@ export async function POST(request) {
 
   const projectDocuments = getProjectDocuments(documents, activeProject);
   const realSources = listRealSourceDocuments(projectDocuments);
+  const compileSourceDocument =
+    (sourceDocumentKey
+      ? realSources.find((document) => document.documentKey === sourceDocumentKey) || null
+      : null) ||
+    realSources[0] ||
+    null;
   const currentSeedDocument = getSeedDocument(activeProject, projectDocuments);
   const receiptCount = Number(body?.receiptCount) || 0;
   const currentSeedSections = currentSeedDocument
@@ -374,6 +431,108 @@ export async function POST(request) {
         ...nextSuggestion,
         sourceFingerprint,
       },
+    });
+  }
+
+  if (mode === "compile") {
+    const nextSeed = await generateSeedResult({
+      mode,
+      boxTitle: activeProject.boxTitle || activeProject.title || "Untitled Box",
+      realSources,
+      currentSeedSections,
+      receiptCount,
+    });
+
+    if (currentSeedDocument?.documentKey) {
+      const nextBlocks = buildSeedBlocks(currentSeedDocument.documentKey, nextSeed, {
+        sourceDocumentKey: compileSourceDocument?.documentKey || "",
+        sourceTitle: compileSourceDocument?.title || "",
+      });
+      const nextLogEntries = normalizeWorkspaceLogEntries(
+        [
+          ...(Array.isArray(currentSeedDocument.logEntries) ? currentSeedDocument.logEntries : []),
+          createWorkspaceLogEntry({
+            action: "EDITED",
+            detail: `Seed compiled from ${compileSourceDocument?.title || "the current witness"}.`,
+            documentKey: currentSeedDocument.documentKey,
+            blockIds: nextBlocks.map((block) => block.id),
+          }),
+        ],
+        currentSeedDocument.documentKey,
+      );
+
+      const savedSeed = await saveWorkspaceDocumentForUser(session.user.id, {
+        documentKey: currentSeedDocument.documentKey,
+        title: nextSeed.title,
+        subtitle: "Seed",
+        baseUpdatedAt: currentSeedDocument.updatedAt,
+        blocks: nextBlocks,
+        logEntries: nextLogEntries,
+      });
+
+      await updateWorkspaceDocumentMetadataForUser(session.user.id, currentSeedDocument.documentKey, {
+        seedMeta: buildSeedCompileMeta({
+          currentSeedMeta: savedSeed.seedMeta,
+          sourceFingerprint,
+          sourceDocument: compileSourceDocument,
+          isAutoTitled: savedSeed.seedMeta?.autoTitled,
+        }),
+      });
+
+      const renamedProject = await renameProjectIfNeeded(
+        session.user.id,
+        activeProject,
+        nextSeed.title,
+      );
+      const projectRecord =
+        renamedProject || (await getReaderProjectForUser(session.user.id, projectKey));
+
+      return NextResponse.json({
+        ok: true,
+        created: false,
+        seed: await getWorkspaceDocumentForUser(session.user.id, currentSeedDocument.documentKey),
+        project: projectRecord
+          ? {
+              projectKey: projectRecord.projectKey,
+              title: projectRecord.title,
+              subtitle: projectRecord.subtitle || "",
+              currentAssemblyDocumentKey: projectRecord.currentAssemblyDocumentKey || null,
+            }
+          : null,
+      });
+    }
+
+    const seedDocument = await createAssemblyDocumentForUser(session.user.id, {
+      title: nextSeed.title,
+      subtitle: "Seed",
+      projectKey,
+      blocks: buildSeedBlocks("", nextSeed, {
+        sourceDocumentKey: compileSourceDocument?.documentKey || "",
+        sourceTitle: compileSourceDocument?.title || "",
+      }),
+      seedMeta: buildSeedCompileMeta({
+        sourceFingerprint,
+        sourceDocument: compileSourceDocument,
+        isAutoTitled: shouldAutoRenameBox(activeProject),
+      }),
+    });
+
+    const renamedProject = await renameProjectIfNeeded(session.user.id, activeProject, nextSeed.title);
+    const projectRecord =
+      renamedProject || (await getReaderProjectForUser(session.user.id, projectKey));
+
+    return NextResponse.json({
+      ok: true,
+      created: true,
+      seed: seedDocument,
+      project: projectRecord
+        ? {
+            projectKey: projectRecord.projectKey,
+            title: projectRecord.title,
+            subtitle: projectRecord.subtitle || "",
+            currentAssemblyDocumentKey: projectRecord.currentAssemblyDocumentKey || null,
+          }
+        : null,
     });
   }
 
@@ -419,13 +578,12 @@ export async function POST(request) {
 
     await updateWorkspaceDocumentMetadataForUser(session.user.id, seedDocument.documentKey, {
       seedMeta: normalizeSeedMeta({
-        ...savedSeed.seedMeta,
-        isSeed: true,
-        templateVersion: SEED_TEMPLATE_VERSION,
-        status: "live",
-        updatedAt: new Date().toISOString(),
-        suggestionPending: false,
-        sourceFingerprint,
+        ...buildSeedCompileMeta({
+          currentSeedMeta: savedSeed.seedMeta,
+          sourceFingerprint,
+          sourceDocument: compileSourceDocument,
+          isAutoTitled: savedSeed.seedMeta?.autoTitled,
+        }),
         lastSuggestedFingerprint: sourceFingerprint,
       }),
     });
@@ -482,6 +640,15 @@ export async function POST(request) {
         updatedAt: currentSeedDocument.updatedAt || new Date().toISOString(),
         suggestionPending: false,
         sourceFingerprint,
+        compiledFromDocumentKey:
+          currentSeedDocument.seedMeta?.compiledFromDocumentKey || sourceDocumentKey,
+        compiledFromUpdatedAt:
+          currentSeedDocument.seedMeta?.compiledFromUpdatedAt ||
+          compileSourceDocument?.updatedAt ||
+          compileSourceDocument?.createdAt ||
+          "",
+        compiledFromTitle:
+          currentSeedDocument.seedMeta?.compiledFromTitle || compileSourceDocument?.title || "",
       }),
     });
 
@@ -503,15 +670,14 @@ export async function POST(request) {
     title: nextSeed.title,
     subtitle: "Seed",
     projectKey,
-    blocks: buildSeedBlocks("", nextSeed),
-    seedMeta: normalizeSeedMeta({
-      isSeed: true,
-      templateVersion: SEED_TEMPLATE_VERSION,
-      status: "live",
-      updatedAt: new Date().toISOString(),
-      suggestionPending: false,
-      autoTitled: shouldAutoRenameBox(activeProject),
+    blocks: buildSeedBlocks("", nextSeed, {
+      sourceDocumentKey: compileSourceDocument?.documentKey || "",
+      sourceTitle: compileSourceDocument?.title || "",
+    }),
+    seedMeta: buildSeedCompileMeta({
       sourceFingerprint,
+      sourceDocument: compileSourceDocument,
+      isAutoTitled: shouldAutoRenameBox(activeProject),
     }),
   });
 

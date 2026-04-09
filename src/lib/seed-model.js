@@ -13,6 +13,23 @@ export function normalizeSeedMeta(seedMeta = null) {
   const nextSeedMeta =
     seedMeta && typeof seedMeta === "object" ? seedMeta : {};
 
+  const compiledFromDocumentKey =
+    String(nextSeedMeta.compiledFromDocumentKey || "").trim() || "";
+  const compiledFromUpdatedAt =
+    String(nextSeedMeta.compiledFromUpdatedAt || "").trim() || "";
+  const compiledFromTitle =
+    String(nextSeedMeta.compiledFromTitle || "").trim() || "";
+  const witnessAnchorReferences = Array.isArray(nextSeedMeta.witnessAnchorReferences)
+    ? nextSeedMeta.witnessAnchorReferences
+        .map((reference) => ({
+          blockId: String(reference?.blockId || "").trim(),
+          sourcePosition: Number.isFinite(Number(reference?.sourcePosition))
+            ? Number(reference.sourcePosition)
+            : -1,
+        }))
+        .filter((reference) => reference.blockId || reference.sourcePosition >= 0)
+    : [];
+
   return {
     ...nextSeedMeta,
     isSeed: Boolean(nextSeedMeta.isSeed),
@@ -27,6 +44,10 @@ export function normalizeSeedMeta(seedMeta = null) {
     sourceFingerprint: String(nextSeedMeta.sourceFingerprint || "").trim() || "",
     lastSuggestedFingerprint:
       String(nextSeedMeta.lastSuggestedFingerprint || "").trim() || "",
+    compiledFromDocumentKey,
+    compiledFromUpdatedAt,
+    compiledFromTitle,
+    witnessAnchorReferences,
   };
 }
 

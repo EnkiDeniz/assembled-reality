@@ -197,6 +197,55 @@ function buildDiscriminatingTest(ir, resultType) {
   };
 }
 
+function buildNotSealableYet(ir, granularity, assemblyClass, intentCheck, maturationModel, maturationGate) {
+  const blocker = maturationGate.failures[0] || "missing_stage_evidence";
+  const map = {
+    missing_order_signal: {
+      mainGap: "No observable proving ordered transition behavior yet.",
+      nextLawfulMove: "Run one bounded transition test with explicit before/after metric.",
+      receiptType: "stage_transition_proof",
+      validWhen: "transition_order_logged && before_after_metric_shift",
+      disconfirmation: "If changing order does not change outcomes, this is likely not path-dependent.",
+    },
+    missing_embodied_time_budget: {
+      mainGap: "No time-bound adaptation evidence present.",
+      nextLawfulMove: "Define adaptation window and field-contact observable, then run one cycle.",
+      receiptType: "embodied_feedback",
+      validWhen: "adaptation_window_declared && field_contact_observed",
+      disconfirmation:
+        "If adaptation cycles produce no measurable retention change, this may not be developmental.",
+    },
+  };
+  const rule = map[blocker] || {
+    mainGap: "Stage evidence is not yet sufficient to name a structural candidate.",
+    nextLawfulMove: "Capture one stage-specific witness that can falsify the current read.",
+    receiptType: maturationModel.requiredReceipts[0] || "runtime_observation",
+    validWhen: "stage_specific_observation_logged",
+    disconfirmation: "If the next stage witness contradicts the current class, reclassify the assembly path.",
+  };
+  return {
+    runId: ir.runId,
+    status: "not_sealable_yet",
+    granularity,
+    assemblyClass,
+    intentLayerCheck: intentCheck,
+    maturationBlockers: maturationGate.failures,
+    mainGap: rule.mainGap,
+    nextLawfulMove: rule.nextLawfulMove,
+    receiptCondition: {
+      receiptType: rule.receiptType,
+      validWhen: rule.validWhen,
+    },
+    possibleDisconfirmation: rule.disconfirmation,
+    requiredReceipts: maturationModel.requiredReceipts,
+    maturation: {
+      requiredStages: maturationModel.requiredStages,
+      nonImportableProperties: maturationModel.nonImportable,
+      gate: maturationGate,
+    },
+  };
+}
+
 export function analyzeCanonicalIR(ir, { library, features = {} } = {}) {
   const granularity = inferGranularity(ir);
   const intentCheck = enforceIntentLayer(ir);
@@ -211,10 +260,28 @@ export function analyzeCanonicalIR(ir, { library, features = {} } = {}) {
     };
   }
 
+  const assemblyClass = inferAssemblyClass(ir, {});
+  const maturationModel = getMaturationModel(assemblyClass);
+  const stagePrecheck =
+    assemblyClass === "path_dependent" || assemblyClass === "developmental_embodied"
+      ? runMaturationGate(ir, assemblyClass)
+      : { passed: true, failures: [], warnings: [], requiredStages: maturationModel.requiredStages };
+  if (!stagePrecheck.passed) {
+    return {
+      ok: true,
+      value: buildNotSealableYet(
+        ir,
+        granularity,
+        assemblyClass,
+        intentCheck,
+        maturationModel,
+        stagePrecheck,
+      ),
+    };
+  }
+
   const reads = runFiveReads(ir);
   const gate = runGates(ir, reads);
-  const assemblyClass = inferAssemblyClass(ir, reads);
-  const maturationModel = getMaturationModel(assemblyClass);
   const maturationGate = runMaturationGate(ir, assemblyClass);
   const chosen = chooseResult({ ...ir, granularity }, gate, library, features, reads);
   const ambiguities = [];
