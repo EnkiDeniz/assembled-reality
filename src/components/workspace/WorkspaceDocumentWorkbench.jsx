@@ -281,6 +281,9 @@ function BlockRow({
   isSelected,
   editMode,
   showNativeActions = false,
+  showSelectionActions = false,
+  selectionActionAddLabel = "Stage into weld",
+  selectionActionRemoveLabel = "Remove from weld",
   actionPending = false,
   canDelete = false,
   saveState,
@@ -318,7 +321,9 @@ function BlockRow({
   const controlsDisabled = actionPending || saveState === "saving";
   const canMutateBlock = Boolean(editMode && block.isEditable);
   const primaryShapeKey = primarySentence?.shapeKey || "";
-  const showContextActions = showNativeActions && (isFocused || isSelected || recastOpen);
+  const showContextActions =
+    (showNativeActions || showSelectionActions) &&
+    (isFocused || isSelected || (showNativeActions && recastOpen));
   const originLabel =
     block.sectionLabel ||
     block.sourceTitle ||
@@ -471,22 +476,26 @@ function BlockRow({
                 </button>
               </>
             ) : null}
-            <button
-              type="button"
-              className={`assembler-tiny-button ${isSelected ? "is-active" : ""}`}
-              onClick={() => (isSelected ? onRemove(block.id) : onAdd(block))}
-              disabled={controlsDisabled}
-            >
-              {isSelected ? "Remove from weld" : "Stage into weld"}
-            </button>
-            <button
-              type="button"
-              className="assembler-tiny-button"
-              onClick={() => onOpenSourceWitness?.(block)}
-              disabled={controlsDisabled || !String(block?.sourceDocumentKey || block?.documentKey || "").trim()}
-            >
-              Open witness
-            </button>
+            {showSelectionActions || showNativeActions ? (
+              <button
+                type="button"
+                className={`assembler-tiny-button ${isSelected ? "is-active" : ""}`}
+                onClick={() => (isSelected ? onRemove(block.id) : onAdd(block))}
+                disabled={controlsDisabled}
+              >
+                {isSelected ? selectionActionRemoveLabel : selectionActionAddLabel}
+              </button>
+            ) : null}
+            {showNativeActions ? (
+              <button
+                type="button"
+                className="assembler-tiny-button"
+                onClick={() => onOpenSourceWitness?.(block)}
+                disabled={controlsDisabled || !String(block?.sourceDocumentKey || block?.documentKey || "").trim()}
+              >
+                Open witness
+              </button>
+            ) : null}
             {canDelete ? (
               <button
                 type="button"
@@ -545,6 +554,9 @@ export default function WorkspaceDocumentWorkbench({
   selectedBlockIds = [],
   editMode = false,
   showNativeActions = false,
+  showSelectionActions = false,
+  selectionActionAddLabel = "Stage into weld",
+  selectionActionRemoveLabel = "Remove from weld",
   blockActionPendingId = "",
   canDeleteBlock = false,
   blockSaveStates = {},
@@ -596,6 +608,9 @@ export default function WorkspaceDocumentWorkbench({
                 isSelected={selectedIds.has(block.id)}
                 editMode={editMode}
                 showNativeActions={showNativeActions}
+                showSelectionActions={showSelectionActions}
+                selectionActionAddLabel={selectionActionAddLabel}
+                selectionActionRemoveLabel={selectionActionRemoveLabel}
                 actionPending={blockActionPendingId === block.id}
                 canDelete={canDeleteBlock}
                 saveState={blockSaveStates[block.id] || ""}

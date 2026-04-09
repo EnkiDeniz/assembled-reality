@@ -1,0 +1,5 @@
+GND box @marketing_campaign
+DIR aim launch_summer_campaign
+GND witness @audience_data from "audience_data_apr9.csv" with v_apr9
+MOV move send_email_blast via queue
+CLS flag needs_test

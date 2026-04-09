@@ -39,6 +39,19 @@ function buildWorkspaceBlockId(documentKey, sourcePosition, extractionPassId = "
     : `${resolvedDocumentKey}:block:${positionLabel}`;
 }
 
+function normalizeAdvancementMark(mark = null) {
+  if (!mark || typeof mark !== "object") return null;
+
+  const kind = String(mark.kind || "").trim().toLowerCase();
+  if (kind !== "advance") return null;
+
+  return {
+    kind: "advance",
+    markedAt: timestamp(mark.markedAt || new Date().toISOString()),
+    markedBy: String(mark.markedBy || "").trim() || "human",
+  };
+}
+
 export function cleanDisplayTitle(title) {
   return String(title || "")
     .replace(/^\\?#{1,6}\s+/g, "")
@@ -134,6 +147,7 @@ export function normalizeWorkspaceBlock(input, options = {}) {
     sectionTitle: input?.sectionTitle || "",
     sourceTitle: cleanDisplayTitle(input?.sourceTitle || ""),
     provenance: normalizeWorkspaceBlockProvenance(input?.provenance),
+    advancementMark: normalizeAdvancementMark(input?.advancementMark),
     ...architectureFields,
   };
 }

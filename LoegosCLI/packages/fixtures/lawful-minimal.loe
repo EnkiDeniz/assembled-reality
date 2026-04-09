@@ -1,0 +1,9 @@
+# Tiny career pivot window
+GND box @career_pivot
+DIR aim switch_to_independent_consulting
+GND witness @market_research from "market_research_apr9.md" with v_apr9
+GND constraint budget_needs_3_months
+MOV move post_first_offer via manual
+TST test first_client_signs
+RTN receipt @client_a_signed via user as score
+CLS seal pivot_confirmed

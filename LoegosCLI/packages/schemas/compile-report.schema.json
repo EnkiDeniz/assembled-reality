@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LoegosCompileReport",
+  "type": "object",
+  "required": [
+    "artifactVersion",
+    "compilationId",
+    "filename",
+    "tokenizedLines",
+    "ast",
+    "symbolTable",
+    "assemblyGraph",
+    "diagnostics",
+    "compileState",
+    "runtimeState",
+    "closureType",
+    "mergedWindowState",
+    "stats",
+    "summary",
+    "metadata"
+  ],
+  "properties": {
+    "artifactVersion": { "type": "string" },
+    "compilationId": { "type": "string" },
+    "filename": { "type": "string" },
+    "tokenizedLines": { "type": "array" },
+    "ast": { "type": "array" },
+    "symbolTable": { "type": "array" },
+    "assemblyGraph": { "type": "object" },
+    "diagnostics": { "type": "array" },
+    "compileState": { "type": "string", "enum": ["clean", "warning", "blocked"] },
+    "runtimeState": { "type": "string", "enum": ["open", "awaiting", "returned", "closed"] },
+    "closureType": { "type": ["string", "null"] },
+    "mergedWindowState": {
+      "type": "string",
+      "enum": ["shape_error", "flagged", "awaiting", "attested", "rerouted", "stopped", "sealed", "open"]
+    },
+    "stats": {
+      "type": "object",
+      "required": ["lineCount", "clauseCount", "errorCount", "warningCount", "symbolCount"],
+      "properties": {
+        "lineCount": { "type": "integer", "minimum": 0 },
+        "clauseCount": { "type": "integer", "minimum": 0 },
+        "errorCount": { "type": "integer", "minimum": 0 },
+        "warningCount": { "type": "integer", "minimum": 0 },
+        "symbolCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["hardErrorCount", "warningCount", "ok"],
+      "properties": {
+        "hardErrorCount": { "type": "integer", "minimum": 0 },
+        "warningCount": { "type": "integer", "minimum": 0 },
+        "ok": { "type": "boolean" }
+      }
+    },
+    "metadata": { "type": "object" }
+  }
+}

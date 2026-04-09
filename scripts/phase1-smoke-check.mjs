@@ -13,8 +13,12 @@ async function main() {
     receiptRoute,
     workspaceAiRoute,
     workspacePage,
+    workspacePageData,
+    workspaceV1Page,
     workspaceShell,
     workspaceStarter,
+    realityAssemblyShell,
+    realityAssemblyDialog,
     founderShell,
     founderInfoPanel,
     loegosRenderer,
@@ -42,8 +46,12 @@ async function main() {
     read("src/app/api/workspace/receipt/route.js"),
     read("src/app/api/workspace/ai/route.js"),
     read("src/app/workspace/page.jsx"),
+    read("src/lib/workspace-page-data.js"),
+    read("src/app/workspace/v1/page.jsx"),
     read("src/components/WorkspaceShell.jsx"),
     read("src/components/WorkspaceStarter.jsx"),
+    read("src/components/reality-assembly/RealityAssemblyShell.jsx"),
+    read("src/components/reality-assembly/RealityAssemblyAddSourceDialog.jsx"),
     read("src/components/founder/FounderShell.jsx"),
     read("src/components/founder/FounderInfoPanel.jsx"),
     read("src/components/founder/LoegosRenderer.jsx"),
@@ -86,8 +94,11 @@ async function main() {
 
   assert.match(workspaceAiRoute, /unavailable:\s*true/);
   assert.doesNotMatch(workspaceAiRoute, /fallbackBlocks/);
-  assert.match(workspacePage, /defaultStarterEntry/);
-  assert.match(workspacePage, /"start"/);
+  assert.match(workspacePage, /WorkspaceShell/);
+  assert.match(workspacePageData, /defaultStarterEntry/);
+  assert.match(workspacePageData, /"start"/);
+  assert.match(workspaceV1Page, /RealityAssemblyShell/);
+  assert.match(workspaceV1Page, /loadWorkspacePageData/);
 
   assert.match(operateOverlay, /Local evidence did not survive validation/);
   assert.match(operateOverlay, /displaySignal/);
@@ -144,6 +155,15 @@ async function main() {
   assert.match(workspaceShell, /workspace-receipt-view/);
   assert.match(workspaceShell, /compiledFromDocumentKey/);
   assert.match(workspaceShell, /workspace-founder-seal-latest/);
+  assert.match(realityAssemblyShell, /reality-assembly-shell/);
+  assert.match(realityAssemblyShell, /\/api\/reader\/listening-session/);
+  assert.match(realityAssemblyShell, /\/api\/workspace\/seed/);
+  assert.match(realityAssemblyShell, /Compile to Lœgos/);
+  assert.match(realityAssemblyShell, /selectionActionAddLabel="Advance"/);
+  assert.match(realityAssemblyShell, /view: VIEW_KEYS\.compare/);
+  assert.match(realityAssemblyDialog, /ra-add-source-upload/);
+  assert.match(realityAssemblyDialog, /ra-add-source-paste/);
+  assert.match(realityAssemblyDialog, /ra-add-source-link/);
   assert.match(loegosExplainPanel, /Lœgos read/);
   assert.match(loegosExplainPanel, /workspace-attest-block-input/);
   assert.match(loegosExplainPanel, /workspace-attest-block-submit/);

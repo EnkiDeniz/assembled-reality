@@ -1,0 +1,19 @@
+{
+  "name": "loegoscli",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "loe": "node apps/cli/src/index.mjs",
+    "compile": "node apps/cli/src/index.mjs compile",
+    "run": "node apps/cli/src/index.mjs run",
+    "status": "node apps/cli/src/index.mjs status",
+    "return": "node apps/cli/src/index.mjs return",
+    "fixtures": "node apps/cli/src/index.mjs fixtures",
+    "test": "node --test packages/compiler/test/*.test.mjs"
+  }
+}

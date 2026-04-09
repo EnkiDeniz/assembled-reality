@@ -1,0 +1,6 @@
+DIR aim confirm_deck_matches_current_state
+GND witness @pitch_deck_v3 from "pitch_deck_v3.pdf" with hash_a83f19
+MOV move send_deck_to_melih via manual
+TST test melih_confirms_numbers_accurate
+RTN contradict @slide_7_overstates_pipeline
+CLS seal deck_ok

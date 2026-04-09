@@ -1,0 +1,5 @@
+GND box @external_audit_window
+DIR aim accept_external_audit_result
+XFM use @prior_audit_receipt from @audit_archive_box
+RTN receipt @prior_audit_receipt via registry as score
+CLS seal audit_result_accepted

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LoegosDiagnostic",
+  "type": "object",
+  "required": ["code", "severity", "phase", "message", "span"],
+  "properties": {
+    "code": { "type": "string" },
+    "severity": { "type": "string", "enum": ["error", "warning", "info"] },
+    "phase": { "type": "string", "enum": ["parse", "kind", "shape", "runtime"] },
+    "message": { "type": "string" },
+    "span": {
+      "type": "object",
+      "required": ["line", "startCol", "endCol"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 1 },
+        "startCol": { "type": "integer", "minimum": 1 },
+        "endCol": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
