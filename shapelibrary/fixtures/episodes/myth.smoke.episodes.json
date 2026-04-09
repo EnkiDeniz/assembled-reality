@@ -1,0 +1,27 @@
+[
+  {
+    "episodeId": "myth-smoke-1",
+    "label": "myth smoke — operational mapping",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "myth",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "timescale": { "horizon": "short", "window": "1 iteration" },
+      "constraints": [],
+      "resourceBudget": { "time": "1 week", "money": "low", "attention": "medium", "other": [] },
+      "granularity": "primitive",
+      "transferPrediction": "observe response when ritual constraint relaxes",
+      "mythDecompression": {
+        "mythicHandle": "threshold_guardian",
+        "canonicalInvariant": "Progress halts until a single guardian approves the crossing.",
+        "falsifier": "Remove guardian step and measure lead time",
+        "triLayerMap": {
+          "operational": ["approval queue", "blocked requests"]
+        }
+      }
+    },
+    "expected": { "granularity": "primitive" }
+  }
+]

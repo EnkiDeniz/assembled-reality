@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AnalyzeResult",
+  "type": "object",
+  "required": [
+    "runId",
+    "resultType",
+    "shapeIds",
+    "granularity",
+    "gate",
+    "reads",
+    "ambiguities",
+    "discriminatingTest",
+    "requiredReceipts",
+    "confidence",
+    "confidenceSource"
+  ],
+  "properties": {
+    "runId": { "type": "string" },
+    "resultType": {
+      "type": "string",
+      "enum": ["primitive_match", "assembly_match", "candidate_primitive", "candidate_assembly", "rejection"]
+    },
+    "shapeIds": { "type": "array", "items": { "type": "string" } },
+    "granularity": { "type": "string", "enum": ["primitive", "assembly", "unknown"] },
+    "assemblyClass": {
+      "type": "string",
+      "enum": ["combinable", "path_dependent", "developmental_embodied"]
+    },
+    "gate": { "type": "object" },
+    "reads": { "type": "object" },
+    "ambiguities": { "type": "array", "items": { "type": "string" } },
+    "discriminatingTest": {
+      "type": "object",
+      "required": ["observable", "expectedOutcomeA", "expectedOutcomeB", "timeWindow"],
+      "properties": {
+        "observable": { "type": "string" },
+        "expectedOutcomeA": { "type": "string" },
+        "expectedOutcomeB": { "type": "string" },
+        "timeWindow": { "type": "string" }
+      }
+    },
+    "requiredReceipts": { "type": "array", "items": { "type": "string" } },
+    "confidence": { "type": "number" },
+    "confidenceSource": { "type": "string", "enum": ["convergence", "heuristic", "single_run"] },
+    "candidateId": { "type": ["string", "null"] },
+    "intentLayerCheck": { "type": "object" },
+    "matchBasis": { "type": ["string", "null"] },
+    "nearMiss": {
+      "type": ["object", "null"],
+      "properties": {
+        "shapeId": { "type": "string" },
+        "score": { "type": "number" }
+      }
+    },
+    "kernel": { "type": "object" },
+    "crossDomain": { "type": "object" },
+    "isMythDerived": { "type": "boolean" },
+    "maturation": {
+      "type": "object",
+      "properties": {
+        "requiredStages": { "type": "array", "items": { "type": "string" } },
+        "nonImportableProperties": { "type": "array", "items": { "type": "string" } },
+        "gate": { "type": "object" }
+      }
+    }
+  }
+}

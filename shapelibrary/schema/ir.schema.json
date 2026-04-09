@@ -1,0 +1,151 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CanonicalIR",
+  "type": "object",
+  "required": [
+    "irVersion",
+    "runId",
+    "runType",
+    "inputMode",
+    "mode",
+    "intentLayer",
+    "assumptionStatus",
+    "granularity"
+  ],
+  "properties": {
+    "irVersion": { "type": "string", "enum": ["0.1", "0.2"] },
+    "runId": { "type": "string", "minLength": 1 },
+    "runType": { "type": "string", "enum": ["single", "evaluation", "promotion_check"] },
+    "inputMode": { "type": "string", "enum": ["human", "ai", "myth"] },
+    "mode": { "type": "string", "enum": ["exploratory", "standard"] },
+    "intentLayer": {
+      "type": "string",
+      "enum": ["ontology", "behavior", "communication", "intervention", "evaluation"]
+    },
+    "assumptionStatus": { "type": "string", "enum": ["explicit", "inferred", "repaired"] },
+    "observables": { "type": "array", "items": { "type": "string" } },
+    "timescale": {
+      "type": "object",
+      "properties": {
+        "horizon": { "type": "string" },
+        "window": { "type": "string" }
+      },
+      "required": ["horizon", "window"]
+    },
+    "constraints": { "type": "array", "items": { "type": "string" } },
+    "resourceBudget": { "type": "object" },
+    "operationalFailure": { "type": "string" },
+    "invariant": { "type": "string" },
+    "variables": { "type": "array", "items": { "type": "string" } },
+    "granularity": { "type": "string", "enum": ["primitive", "assembly", "unknown"] },
+    "assemblyClass": {
+      "type": "string",
+      "enum": ["combinable", "path_dependent", "developmental_embodied"]
+    },
+    "shapeClass": { "type": "string" },
+    "constituentShapes": { "type": "array", "items": { "type": "string" } },
+    "assemblyRule": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "type"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["amplifies", "inhibits", "gates", "saturates", "extracts"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "joinPattern": { "type": "string" },
+    "pressureClaim": { "type": "string" },
+    "failureSignature": { "type": "string" },
+    "repairLogic": { "type": "string" },
+    "falsifier": { "type": "string" },
+    "transferPrediction": { "type": "string" },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "metadata": { "type": "object" },
+    "mythDecompression": { "type": "object", "additionalProperties": true },
+    "aliases": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "mythic": { "type": "array", "items": { "type": "string" } },
+        "technical": { "type": "array", "items": { "type": "string" } },
+        "deprecated": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "crossDomainMap": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "domains": { "type": "array", "items": { "type": "string" } },
+        "functionalClass": { "type": "string" },
+        "consistencyScore": { "type": "number" }
+      }
+    },
+    "stateMode": {
+      "type": "string",
+      "enum": ["candidate", "viable", "unstable", "extinct", "locked"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "mode": { "const": "standard" } } },
+          { "not": { "properties": { "inputMode": { "const": "myth" } } } }
+        ]
+      },
+      "then": {
+        "required": [
+          "observables",
+          "timescale",
+          "constraints",
+          "resourceBudget",
+          "operationalFailure"
+        ],
+        "properties": {
+          "observables": { "minItems": 1 },
+          "operationalFailure": { "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "mode": { "const": "standard" } } },
+          { "properties": { "inputMode": { "const": "myth" } } }
+        ]
+      },
+      "then": {
+        "required": ["timescale", "constraints", "resourceBudget", "mythDecompression"],
+        "properties": {
+          "mythDecompression": { "type": "object" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": { "const": "exploratory" }
+        }
+      },
+      "then": {
+        "properties": {
+          "assumptionStatus": {
+            "type": "string",
+            "enum": ["inferred", "repaired"]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvaluateResult",
+  "type": "object",
+  "required": [
+    "reproducibility",
+    "utility",
+    "thresholds",
+    "quality",
+    "releaseGatePass",
+    "episodes"
+  ],
+  "properties": {
+    "reproducibility": { "type": "number" },
+    "utility": { "type": "number" },
+    "utilityV01": { "type": "number" },
+    "thresholds": { "type": "object" },
+    "quality": { "type": "object" },
+    "releaseGatePass": { "type": "boolean" },
+    "episodes": { "type": "array" },
+    "expectedAlignment": { "type": ["number", "null"] },
+    "convergenceScore": { "type": ["number", "null"] },
+    "domainCoverageCount": { "type": "number" },
+    "crossDomainPass": { "type": "boolean" },
+    "maturationScore": { "type": "number" },
+    "maturationPass": { "type": "boolean" },
+    "maturationThreshold": { "type": "number" },
+    "hardFailures": { "type": "array", "items": { "type": "string" } }
+  }
+}

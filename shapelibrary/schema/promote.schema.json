@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PromoteRequest",
+  "type": "object",
+  "required": ["candidateId", "targetType", "receiptEvidence"],
+  "properties": {
+    "candidateId": { "type": "string", "minLength": 1 },
+    "targetType": { "type": "string", "enum": ["primitive", "assembly"] },
+    "reproducibility": { "type": "number", "minimum": 0, "maximum": 1 },
+    "utility": { "type": "number", "minimum": 0, "maximum": 1 },
+    "nonAdditive": { "type": "boolean" },
+    "newFailureSignature": { "type": "boolean" },
+    "newTransferPrediction": { "type": "boolean" },
+    "crossDomainConvergence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "assemblyClass": { "type": "string", "enum": ["combinable", "path_dependent", "developmental_embodied"] },
+    "libraryAction": { "type": "string", "enum": ["link", "mint", "pending"] },
+    "targetShapeId": { "type": "string" },
+    "mintedName": { "type": "string" },
+    "receiptEvidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["receiptType", "payload"],
+        "properties": {
+          "receiptType": { "type": "string" },
+          "payload": { "type": "object" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "targetType": { "const": "assembly" }
+        }
+      },
+      "then": {
+        "required": ["nonAdditive", "newFailureSignature", "newTransferPrediction"]
+      }
+    }
+  ]
+}

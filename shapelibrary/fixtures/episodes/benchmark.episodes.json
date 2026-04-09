@@ -1,0 +1,417 @@
+[
+  {
+    "episodeId": "ep-001",
+    "label": "primitive bottleneck onboarding",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["queue growth", "single reviewer delay"],
+      "timescale": { "horizon": "short", "window": "2 weeks" },
+      "constraints": ["one reviewer"],
+      "resourceBudget": { "time": "2 weeks", "money": "low", "attention": "high", "other": [] },
+      "operationalFailure": "cycle time keeps increasing",
+      "invariant": "One constrained review step limits the full flow.",
+      "granularity": "primitive",
+      "falsifier": "Add second reviewer and check if cycle time remains unchanged",
+      "transferPrediction": "Throughput improves within one sprint after removing the gate"
+    },
+    "expected": {
+      "granularity": "primitive",
+      "resultType": "primitive_match",
+      "shapeIds": ["primitive_bottleneck"]
+    }
+  },
+  {
+    "episodeId": "ep-002",
+    "label": "primitive feedback growth loop",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["shares increase signups", "signups increase shares"],
+      "timescale": { "horizon": "medium", "window": "6 weeks" },
+      "constraints": ["limited moderation"],
+      "resourceBudget": { "time": "6 weeks", "money": "medium", "attention": "high", "other": [] },
+      "operationalFailure": "quality drops while growth rises",
+      "invariant": "Output reinforces its own input in repeated cycles.",
+      "granularity": "primitive",
+      "falsifier": "Disable sharing prompt and observe loop collapse",
+      "transferPrediction": "Reducing loop gain lowers volatility"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-003",
+    "label": "primitive gate dependency procurement",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "intervention",
+      "assumptionStatus": "explicit",
+      "observables": ["requests wait for finance approval"],
+      "timescale": { "horizon": "short", "window": "10 days" },
+      "constraints": ["approval policy"],
+      "resourceBudget": { "time": "10 days", "money": "medium", "attention": "medium", "other": [] },
+      "operationalFailure": "teams idle awaiting one approval",
+      "invariant": "No progress occurs until one dependency clears.",
+      "granularity": "primitive",
+      "falsifier": "Auto-approve low-risk spend and measure lead time change",
+      "transferPrediction": "Lead time drops after gate relaxation"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-004",
+    "label": "primitive saturation ads",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "ai",
+      "mode": "standard",
+      "intentLayer": "evaluation",
+      "assumptionStatus": "explicit",
+      "observables": ["spend up", "conversion flat"],
+      "timescale": { "horizon": "short", "window": "1 month" },
+      "constraints": ["same audience"],
+      "resourceBudget": { "time": "1 month", "money": "high", "attention": "medium", "other": [] },
+      "operationalFailure": "ROI plateaus despite extra spend",
+      "invariant": "Added input yields diminishing return after threshold.",
+      "granularity": "primitive",
+      "falsifier": "Reallocate spend to new audience and test ROI slope",
+      "transferPrediction": "Marginal gains remain low in same channel"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-005",
+    "label": "primitive extraction knowledge drain",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["senior departures", "onboarding slows"],
+      "timescale": { "horizon": "long", "window": "2 quarters" },
+      "constraints": ["no documentation process"],
+      "resourceBudget": { "time": "2 quarters", "money": "medium", "attention": "high", "other": [] },
+      "operationalFailure": "capacity declines each month",
+      "invariant": "Value exits faster than replenishment capacity.",
+      "granularity": "primitive",
+      "falsifier": "Implement retention + documentation and watch decline curve",
+      "transferPrediction": "Knowledge half-life improves after counterflow"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-006",
+    "label": "assembly gate plus bottleneck release train",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "intervention",
+      "assumptionStatus": "explicit",
+      "observables": ["release blocked by security gate", "single release manager overloaded"],
+      "timescale": { "horizon": "short", "window": "3 sprints" },
+      "constraints": ["fixed train dates"],
+      "resourceBudget": { "time": "3 sprints", "money": "medium", "attention": "high", "other": [] },
+      "operationalFailure": "missed release windows",
+      "invariant": "A gate and a narrow reviewer path combine to stall release.",
+      "granularity": "assembly",
+      "constituentShapes": ["primitive_gate_dependency", "primitive_bottleneck"],
+      "assemblyRule": { "edges": [{ "from": "primitive_gate_dependency", "to": "primitive_bottleneck", "type": "amplifies" }] },
+      "falsifier": "Parallelize security checks and add release manager",
+      "transferPrediction": "Window misses drop when both constraints are addressed"
+    },
+    "expected": { "granularity": "assembly" }
+  },
+  {
+    "episodeId": "ep-007",
+    "label": "assembly adversarial rhetorical summary",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "ai",
+      "mode": "standard",
+      "intentLayer": "ontology",
+      "assumptionStatus": "explicit",
+      "observables": ["none concrete"],
+      "timescale": { "horizon": "short", "window": "unknown" },
+      "constraints": ["insufficient data"],
+      "resourceBudget": { "time": "unknown", "money": "unknown", "attention": "low", "other": [] },
+      "operationalFailure": "claims are elegant but untestable",
+      "invariant": "Narrative coherence without measurable observables.",
+      "granularity": "unknown",
+      "falsifier": "Provide measurable observable and retest",
+      "transferPrediction": "Current read should reject until observables appear",
+      "metadata": { "trace": { "requestedOutputs": ["communication_optimization"] } }
+    },
+    "expected": { "granularity": "unknown" }
+  },
+  {
+    "episodeId": "ep-008",
+    "label": "assembly feedback and saturation creator economy",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["posting frequency up", "engagement flat"],
+      "timescale": { "horizon": "medium", "window": "8 weeks" },
+      "constraints": ["same audience pool"],
+      "resourceBudget": { "time": "8 weeks", "money": "low", "attention": "high", "other": [] },
+      "operationalFailure": "burnout without growth",
+      "invariant": "Reinforcing output loop collides with attention saturation.",
+      "granularity": "assembly",
+      "constituentShapes": ["primitive_feedback_loop", "primitive_saturation"],
+      "assemblyRule": { "edges": [{ "from": "primitive_feedback_loop", "to": "primitive_saturation", "type": "saturates" }] },
+      "falsifier": "Shift to differentiated audience and reduce loop intensity",
+      "transferPrediction": "Engagement variance improves after loop dampening"
+    },
+    "expected": { "granularity": "assembly" }
+  },
+  {
+    "episodeId": "ep-009",
+    "label": "unknown exploratory early discovery",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "exploratory",
+      "intentLayer": "behavior",
+      "assumptionStatus": "inferred",
+      "invariant": "Something keeps breaking when demand rises.",
+      "granularity": "unknown",
+      "falsifier": "Identify one measurable bottleneck and test load split",
+      "transferPrediction": "If bottleneck exists, split should stabilize latency"
+    },
+    "expected": { "granularity": "unknown" }
+  },
+  {
+    "episodeId": "ep-010",
+    "label": "unknown adversarial metaphor-heavy prompt",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "ai",
+      "mode": "exploratory",
+      "intentLayer": "communication",
+      "assumptionStatus": "repaired",
+      "invariant": "The organization is a ship in stormy waters.",
+      "granularity": "unknown",
+      "falsifier": "Replace metaphor with concrete failure metric",
+      "transferPrediction": "Classification remains unknown until observables added"
+    },
+    "expected": { "granularity": "unknown" }
+  },
+  {
+    "episodeId": "ep-011",
+    "label": "primitive review cycle bottleneck",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "evaluation",
+      "assumptionStatus": "explicit",
+      "observables": ["review backlog", "single approver"],
+      "timescale": { "horizon": "short", "window": "2 weeks" },
+      "constraints": ["compliance signoff"],
+      "resourceBudget": { "time": "2 weeks", "money": "low", "attention": "medium", "other": [] },
+      "operationalFailure": "throughput drops each cycle",
+      "invariant": "Throughput constrained by one mandatory review lane.",
+      "granularity": "primitive",
+      "falsifier": "Rotate reviewer and track throughput",
+      "transferPrediction": "Throughput rises when reviewer monopoly is broken"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-012",
+    "label": "assembly extraction plus bottleneck support team",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "intervention",
+      "assumptionStatus": "explicit",
+      "observables": ["experts leave", "ticket queue rises"],
+      "timescale": { "horizon": "medium", "window": "12 weeks" },
+      "constraints": ["limited hiring"],
+      "resourceBudget": { "time": "12 weeks", "money": "medium", "attention": "high", "other": [] },
+      "operationalFailure": "response times explode",
+      "invariant": "Knowledge extraction amplifies queue bottleneck effects.",
+      "granularity": "assembly",
+      "constituentShapes": ["primitive_extraction", "primitive_bottleneck"],
+      "assemblyRule": { "edges": [{ "from": "primitive_extraction", "to": "primitive_bottleneck", "type": "amplifies" }] },
+      "falsifier": "Increase retention and cross-training",
+      "transferPrediction": "Queue growth slows if extraction pressure drops"
+    },
+    "expected": { "granularity": "assembly" }
+  },
+  {
+    "episodeId": "ep-013",
+    "label": "primitive gate dependency legal review",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "ai",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["contracts pause at legal step"],
+      "timescale": { "horizon": "short", "window": "3 weeks" },
+      "constraints": ["single legal queue"],
+      "resourceBudget": { "time": "3 weeks", "money": "medium", "attention": "medium", "other": [] },
+      "operationalFailure": "deal cycle unpredictability",
+      "invariant": "A mandatory gate controls end-to-end progress timing.",
+      "granularity": "primitive",
+      "falsifier": "Introduce pre-approved templates and compare delay",
+      "transferPrediction": "Variance falls with narrower legal gate scope"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-014",
+    "label": "assembly adversarial conflicting evidence",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "evaluation",
+      "assumptionStatus": "repaired",
+      "observables": ["metric A up", "metric B down"],
+      "timescale": { "horizon": "short", "window": "4 weeks" },
+      "constraints": ["partial instrumentation"],
+      "resourceBudget": { "time": "4 weeks", "money": "low", "attention": "high", "other": [] },
+      "operationalFailure": "cannot identify single driver",
+      "invariant": "Competing dynamics create contradictory top-line signals.",
+      "granularity": "unknown",
+      "falsifier": "Isolate variables in controlled rollout",
+      "transferPrediction": "Unknown remains until controlled split resolves conflict"
+    },
+    "expected": { "granularity": "unknown" }
+  },
+  {
+    "episodeId": "ep-015",
+    "label": "primitive saturation support documentation",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "intervention",
+      "assumptionStatus": "explicit",
+      "observables": ["docs updated", "ticket reduction minimal"],
+      "timescale": { "horizon": "medium", "window": "10 weeks" },
+      "constraints": ["legacy product complexity"],
+      "resourceBudget": { "time": "10 weeks", "money": "low", "attention": "medium", "other": [] },
+      "operationalFailure": "improvements flatten quickly",
+      "invariant": "Intervention shows diminishing returns after baseline fixes.",
+      "granularity": "primitive",
+      "falsifier": "Shift effort to UI simplification and compare slope",
+      "transferPrediction": "Doc-only gains plateau near current level"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-016",
+    "label": "assembly gate and extraction healthcare ops",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["specialists leave", "approval queue lengthens"],
+      "timescale": { "horizon": "long", "window": "16 weeks" },
+      "constraints": ["strict approvals"],
+      "resourceBudget": { "time": "16 weeks", "money": "high", "attention": "high", "other": [] },
+      "operationalFailure": "patient throughput declines",
+      "invariant": "Talent extraction combines with gate dependency to reduce throughput.",
+      "granularity": "assembly",
+      "constituentShapes": ["primitive_extraction", "primitive_gate_dependency"],
+      "assemblyRule": { "edges": [{ "from": "primitive_extraction", "to": "primitive_gate_dependency", "type": "amplifies" }] },
+      "falsifier": "Backfill specialists and reduce approval scope",
+      "transferPrediction": "Throughput recovers only when both effects are addressed"
+    },
+    "expected": { "granularity": "assembly" }
+  },
+  {
+    "episodeId": "ep-017",
+    "label": "unknown exploratory fragmented notes",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "exploratory",
+      "intentLayer": "ontology",
+      "assumptionStatus": "inferred",
+      "invariant": "Pieces feel related but no stable pattern yet.",
+      "granularity": "unknown",
+      "falsifier": "Collect 3 repeated observations and retest",
+      "transferPrediction": "No stable mapping until recurrence emerges"
+    },
+    "expected": { "granularity": "unknown" }
+  },
+  {
+    "episodeId": "ep-018",
+    "label": "primitive feedback churn referral",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "ai",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["referrals increase low-fit users", "churn increases negative reviews"],
+      "timescale": { "horizon": "short", "window": "6 weeks" },
+      "constraints": ["no quality filter"],
+      "resourceBudget": { "time": "6 weeks", "money": "medium", "attention": "medium", "other": [] },
+      "operationalFailure": "acquisition loop worsens retention",
+      "invariant": "Reinforcing loop increases low-fit intake and downstream churn.",
+      "granularity": "primitive",
+      "falsifier": "Add quality gate before referral credit",
+      "transferPrediction": "Loop weakens after fit filter is introduced"
+    },
+    "expected": { "granularity": "primitive" }
+  },
+  {
+    "episodeId": "ep-019",
+    "label": "assembly saturation and bottleneck infrastructure",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "evaluation",
+      "assumptionStatus": "explicit",
+      "observables": ["traffic up", "db write queue spikes"],
+      "timescale": { "horizon": "short", "window": "4 weeks" },
+      "constraints": ["single write shard"],
+      "resourceBudget": { "time": "4 weeks", "money": "high", "attention": "high", "other": [] },
+      "operationalFailure": "latency worsens with more load",
+      "invariant": "Capacity saturation and write bottleneck combine under peak demand.",
+      "granularity": "assembly",
+      "constituentShapes": ["primitive_saturation", "primitive_bottleneck"],
+      "assemblyRule": { "edges": [{ "from": "primitive_saturation", "to": "primitive_bottleneck", "type": "gates" }] },
+      "falsifier": "Shard writes and test peak latency response",
+      "transferPrediction": "Peak latency normalizes after bottleneck split"
+    },
+    "expected": { "granularity": "assembly" }
+  },
+  {
+    "episodeId": "ep-020",
+    "label": "unknown adversarial contradictory prompt",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "ai",
+      "mode": "exploratory",
+      "intentLayer": "communication",
+      "assumptionStatus": "repaired",
+      "invariant": "Everything causes everything and nothing can be tested.",
+      "granularity": "unknown",
+      "falsifier": "Pin one variable and one outcome",
+      "transferPrediction": "System should reject over-broad claim as unknown"
+    },
+    "expected": { "granularity": "unknown" }
+  }
+]

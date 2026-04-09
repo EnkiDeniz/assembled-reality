@@ -1,0 +1,28 @@
+[
+  {
+    "episodeId": "xd-smoke-1",
+    "label": "cross-domain smoke",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["latency", "handoffs"],
+      "timescale": { "horizon": "short", "window": "2 weeks" },
+      "constraints": [],
+      "resourceBudget": { "time": "2 weeks", "money": "low", "attention": "high", "other": [] },
+      "operationalFailure": "work stalls at boundary",
+      "invariant": "One constrained step limits throughput in repeated cycles.",
+      "granularity": "primitive",
+      "falsifier": "parallel path",
+      "transferPrediction": "throughput rises",
+      "crossDomainMap": {
+        "domains": ["engineering", "operations"],
+        "functionalClass": "flow",
+        "consistencyScore": 0.62
+      }
+    },
+    "expected": { "granularity": "primitive" }
+  }
+]
