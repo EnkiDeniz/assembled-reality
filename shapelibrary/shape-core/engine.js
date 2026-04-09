@@ -7,7 +7,7 @@ import {
   runMaturationGate,
 } from "./assembly-path.js";
 
-const MATCH_THRESHOLD = 0.55;
+const MATCH_THRESHOLD = 0.4;
 
 function normalizeText(value = "") {
   return String(value || "").trim().toLowerCase();
@@ -108,15 +108,65 @@ function tokenize(text = "") {
     .filter(Boolean);
 }
 
+function normalizeTokens(tokens = []) {
+  const synonymMap = {
+    single: "one",
+    reviewer: "review",
+    approvals: "approval",
+    lane: "step",
+    throttles: "limits",
+    throttle: "limit",
+    throughput: "flow",
+    queue: "backlog",
+    handoffs: "handoff",
+    blocked: "gate",
+    gating: "gate",
+    signoff: "approval",
+    approvals: "approval",
+  };
+  return tokens.map((t) => synonymMap[t] || t);
+}
+
 function similarityScore(a, b) {
-  const left = new Set(tokenize(a));
-  const right = new Set(tokenize(b));
+  const left = new Set(normalizeTokens(tokenize(a)));
+  const right = new Set(normalizeTokens(tokenize(b)));
   if (!left.size || !right.size) return 0;
   let overlap = 0;
   for (const token of left) {
     if (right.has(token)) overlap += 1;
   }
-  return overlap / Math.max(left.size, right.size);
+  // Balanced overlap is slightly more tolerant than max-size normalization.
+  return (2 * overlap) / (left.size + right.size);
+}
+
+function scoreShapeSimilarity(ir, shape) {
+  const invariantTarget = shape.invariantText || shape.name || "";
+  const invariantScore = similarityScore(ir.invariant, invariantTarget);
+  const constraintsScore = similarityScore(
+    Array.isArray(ir.constraints) ? ir.constraints.join(" ") : "",
+    invariantTarget,
+  );
+  const metadata = shape.metadata || {};
+  const joinScore = similarityScore(ir.joinPattern || "", metadata.joinPattern || "");
+  const falsifierScore = similarityScore(
+    ir.falsifier || "",
+    metadata.disconfirmationCondition || "",
+  );
+  const failureScore = similarityScore(
+    ir.operationalFailure || ir.failureSignature || "",
+    metadata.failureSignature || "",
+  );
+  const structuralScore = Math.max(joinScore, falsifierScore, failureScore);
+  const score = Math.min(
+    1,
+    0.7 * invariantScore + 0.2 * constraintsScore + 0.1 * structuralScore,
+  );
+  return {
+    score,
+    invariantScore,
+    constraintsScore,
+    structuralScore,
+  };
 }
 
 /**
@@ -150,7 +200,7 @@ function chooseResult(ir, gate, library, features, reads) {
   const scored = pool
     .map((shape) => ({
       id: shape.shapeId,
-      score: similarityScore(ir.invariant, shape.invariantText || shape.name || ""),
+      ...scoreShapeSimilarity(ir, shape),
     }))
     .sort((a, b) => b.score - a.score);
 
@@ -165,7 +215,16 @@ function chooseResult(ir, gate, library, features, reads) {
       confidence,
       ...(fidelity
         ? {
-            matchBasis: "token_overlap",
+            matchBasis: "hybrid_structural_overlap",
+            ...(best
+              ? {
+                  matchDetail: {
+                    invariantScore: Number(best.invariantScore.toFixed(4)),
+                    constraintsScore: Number(best.constraintsScore.toFixed(4)),
+                    structuralScore: Number(best.structuralScore.toFixed(4)),
+                  },
+                }
+              : {}),
             nearMiss: null,
           }
         : {}),
@@ -178,7 +237,7 @@ function chooseResult(ir, gate, library, features, reads) {
     confidence: fidelity ? deriveCandidateConfidence(reads, nearMissScore) : 0.58,
     ...(fidelity
       ? {
-          matchBasis: "token_overlap",
+          matchBasis: "hybrid_structural_overlap",
           nearMiss:
             best && best.id != null
               ? { shapeId: best.id, score: Number(best.score.toFixed(4)) }

@@ -42,7 +42,7 @@ test("analyze fidelity: matchBasis and nearMiss when enableV01Fidelity", () => {
   };
   const r = analyzeCanonicalIR(ir, { library, features: { enableV01Fidelity: true } });
   assert.equal(r.ok, true);
-  assert.equal(r.value.matchBasis, "token_overlap");
+  assert.equal(r.value.matchBasis, "hybrid_structural_overlap");
   assert.ok(r.value.nearMiss && r.value.nearMiss.shapeId === "primitive_bottleneck");
 });
 

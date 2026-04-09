@@ -1,0 +1,29 @@
+[
+  {
+    "episodeId": "match-001-bottleneck-lane-throttle",
+    "label": "match-case bottleneck lane throttle",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["queue growth", "single reviewer delay"],
+      "timescale": { "horizon": "short", "window": "2 weeks" },
+      "constraints": ["one reviewer", "single approval lane"],
+      "resourceBudget": { "time": "2 weeks", "money": "low", "attention": "high", "other": [] },
+      "operationalFailure": "cycle time keeps increasing",
+      "invariant": "A single approval lane throttles throughput and causes backlog growth.",
+      "granularity": "primitive",
+      "assemblyClass": "path_dependent",
+      "joinPattern": "request->review->approve->ship",
+      "falsifier": "add second reviewer and compare queue depth",
+      "transferPrediction": "throughput improves when lane is widened"
+    },
+    "expected": {
+      "granularity": "primitive",
+      "resultType": "primitive_match",
+      "shapeIds": ["primitive_bottleneck"]
+    }
+  }
+]

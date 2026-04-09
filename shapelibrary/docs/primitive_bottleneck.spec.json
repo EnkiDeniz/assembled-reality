@@ -1,0 +1,18 @@
+{
+  "shapeId": "primitive_bottleneck",
+  "invariant": "A single constrained transition lane governs system throughput, so upstream demand accumulates and downstream flow is paced by that narrow step.",
+  "joinPattern": "inflow -> constrained review/approval/write lane -> queued backlog -> delayed downstream completion",
+  "failureSignature": "Removing or parallelizing the suspected narrow lane does not materially reduce queue depth, cycle time, or throughput variance; flow remains constrained by another mechanism.",
+  "repairLogic": "Identify the narrow lane, split or parallelize it, add bounded transition rules, and verify stabilization by before/after queue-depth and cycle-time measurements.",
+  "assemblyClass": "path_dependent",
+  "requiredStages": ["sequence_design", "ordered_transition", "stability_check"],
+  "nonImportableProperties": ["ordered_transition", "failure_timing_dynamics"],
+  "disconfirmationCondition": "If controlled lane-splitting or reviewer/processor parallelization produces no meaningful improvement in throughput or queue behavior within the declared window, classify as not bottleneck (likely saturation, gate dependency, or mixed assembly).",
+  "exampleObservables": [
+    "queue growth with one mandatory reviewer",
+    "single approval lane delays all downstream work",
+    "review backlog rises each cycle while inflow stays steady",
+    "single write shard queue spikes under load",
+    "release manager overload creates missed release windows"
+  ]
+}
