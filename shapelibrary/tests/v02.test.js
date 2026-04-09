@@ -62,7 +62,7 @@ test("expectedAlignment aggregates against seeded primitive", () => {
         constraints: ["one reviewer"],
         resourceBudget: { time: "2 weeks", money: "low", attention: "high", other: [] },
         operationalFailure: "cycle time keeps increasing",
-        invariant: "One constrained review step limits the full flow.",
+        invariant: "One constrained step limits whole flow.",
         granularity: "primitive",
         falsifier: "Add second reviewer and check if cycle time remains unchanged",
         transferPrediction: "Throughput improves within one sprint after removing the gate",

@@ -113,16 +113,22 @@ function normalizeTokens(tokens = []) {
     single: "one",
     reviewer: "review",
     approvals: "approval",
+    approval: "approve",
+    signoff: "approve",
+    gate: "approve",
+    gating: "approve",
     lane: "step",
     throttles: "limits",
     throttle: "limit",
     throughput: "flow",
     queue: "backlog",
+    backlog: "backlog",
     handoffs: "handoff",
-    blocked: "gate",
-    gating: "gate",
-    signoff: "approval",
-    approvals: "approval",
+    blocked: "stalled",
+    stalls: "stalled",
+    stalled: "stalled",
+    waits: "wait",
+    waiting: "wait",
   };
   return tokens.map((t) => synonymMap[t] || t);
 }
@@ -157,14 +163,29 @@ function scoreShapeSimilarity(ir, shape) {
     metadata.failureSignature || "",
   );
   const structuralScore = Math.max(joinScore, falsifierScore, failureScore);
+  const weights = {
+    invariant: 0.55,
+    constraints: 0.15,
+    join: 0.25,
+    falsifier: 0.03,
+    failure: 0.02,
+  };
   const score = Math.min(
     1,
-    0.7 * invariantScore + 0.2 * constraintsScore + 0.1 * structuralScore,
+    weights.invariant * invariantScore +
+      weights.constraints * constraintsScore +
+      weights.join * joinScore +
+      weights.falsifier * falsifierScore +
+      weights.failure * failureScore,
   );
   return {
     score,
+    weights,
     invariantScore,
     constraintsScore,
+    joinScore,
+    falsifierScore,
+    failureScore,
     structuralScore,
   };
 }
@@ -221,7 +242,11 @@ function chooseResult(ir, gate, library, features, reads) {
                   matchDetail: {
                     invariantScore: Number(best.invariantScore.toFixed(4)),
                     constraintsScore: Number(best.constraintsScore.toFixed(4)),
+                    joinScore: Number(best.joinScore.toFixed(4)),
+                    falsifierScore: Number(best.falsifierScore.toFixed(4)),
+                    failureScore: Number(best.failureScore.toFixed(4)),
                     structuralScore: Number(best.structuralScore.toFixed(4)),
+                    weights: best.weights,
                   },
                 }
               : {}),

@@ -23,6 +23,8 @@ test("evaluation computes reproducibility and utility", () => {
   assert.equal(typeof result.maturationPass, "boolean");
   assert.equal(typeof result.maturationThreshold, "number");
   assert.ok(Array.isArray(result.hardFailures));
+  assert.equal(typeof result.matchBasisDistribution, "object");
+  assert.equal(typeof result.nearMissHistogram, "object");
   assert.ok(Array.isArray(result.episodes));
   assert.ok(result.episodes.every((ep) => typeof ep.utilityV01 === "number"));
 });

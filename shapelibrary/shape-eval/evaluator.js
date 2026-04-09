@@ -165,6 +165,51 @@ export function evaluateEpisodes({
     quality.structuredPass &&
     crossDomainPass;
 
+  const allRuns = episodeReports.flatMap((report) => report.runs || []);
+  const matchBasisDistribution = {};
+  for (const run of allRuns) {
+    const key = run?.matchBasis || "none";
+    matchBasisDistribution[key] = (matchBasisDistribution[key] || 0) + 1;
+  }
+
+  const bins = [
+    { key: "0.00-0.19", min: 0, max: 0.2 },
+    { key: "0.20-0.39", min: 0.2, max: 0.4 },
+    { key: "0.40-0.59", min: 0.4, max: 0.6 },
+    { key: "0.60-0.79", min: 0.6, max: 0.8 },
+    { key: "0.80-1.00", min: 0.8, max: 1.000001 },
+  ];
+  const nearMissHistogram = {
+    totalNearMisses: 0,
+    byShape: {},
+    bins: Object.fromEntries(bins.map((b) => [b.key, 0])),
+  };
+  for (const run of allRuns) {
+    const nm = run?.nearMiss;
+    if (!nm || typeof nm.score !== "number" || !nm.shapeId) continue;
+    nearMissHistogram.totalNearMisses += 1;
+    const shape = String(nm.shapeId);
+    if (!nearMissHistogram.byShape[shape]) {
+      nearMissHistogram.byShape[shape] = { count: 0, avgScore: 0, minScore: 1, maxScore: 0 };
+    }
+    const stat = nearMissHistogram.byShape[shape];
+    stat.count += 1;
+    stat.avgScore += nm.score;
+    if (nm.score < stat.minScore) stat.minScore = nm.score;
+    if (nm.score > stat.maxScore) stat.maxScore = nm.score;
+
+    const bin = bins.find((b) => nm.score >= b.min && nm.score < b.max);
+    if (bin) nearMissHistogram.bins[bin.key] += 1;
+  }
+  for (const [shape, stat] of Object.entries(nearMissHistogram.byShape)) {
+    nearMissHistogram.byShape[shape] = {
+      ...stat,
+      avgScore: Number((stat.avgScore / Math.max(1, stat.count)).toFixed(4)),
+      minScore: Number(stat.minScore.toFixed(4)),
+      maxScore: Number(stat.maxScore.toFixed(4)),
+    };
+  }
+
   return {
     reproducibility,
     utility,
@@ -181,6 +226,8 @@ export function evaluateEpisodes({
     maturationPass,
     maturationThreshold,
     hardFailures,
+    matchBasisDistribution,
+    nearMissHistogram,
     episodes: episodeReports,
   };
 }

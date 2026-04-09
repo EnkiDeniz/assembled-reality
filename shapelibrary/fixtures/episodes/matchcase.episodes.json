@@ -25,5 +25,32 @@
       "resultType": "primitive_match",
       "shapeIds": ["primitive_bottleneck"]
     }
+  },
+  {
+    "episodeId": "match-002-gate-dependency",
+    "label": "control match valid gate dependency",
+    "payload": {
+      "runType": "evaluation",
+      "inputMode": "human",
+      "mode": "standard",
+      "intentLayer": "behavior",
+      "assumptionStatus": "explicit",
+      "observables": ["requests pause at legal signoff", "execution waits on approval clearance"],
+      "timescale": { "horizon": "short", "window": "3 weeks" },
+      "constraints": ["mandatory approval policy", "single legal queue"],
+      "resourceBudget": { "time": "3 weeks", "money": "medium", "attention": "medium", "other": [] },
+      "operationalFailure": "deal cycle time stalls at approval gate",
+      "invariant": "Work stays blocked until a required approval condition is satisfied, even when execution capacity is available.",
+      "granularity": "primitive",
+      "assemblyClass": "path_dependent",
+      "joinPattern": "draft->legal_review->approval->execute",
+      "falsifier": "introduce pre-approved templates for low-risk requests and compare lead time variance",
+      "transferPrediction": "lead-time variance decreases when low-risk gate load is removed"
+    },
+    "expected": {
+      "granularity": "primitive",
+      "resultType": "primitive_match",
+      "shapeIds": ["primitive_gate_dependency"]
+    }
   }
 ]

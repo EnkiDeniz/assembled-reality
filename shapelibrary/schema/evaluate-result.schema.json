@@ -26,6 +26,8 @@
     "maturationScore": { "type": "number" },
     "maturationPass": { "type": "boolean" },
     "maturationThreshold": { "type": "number" },
-    "hardFailures": { "type": "array", "items": { "type": "string" } }
+    "hardFailures": { "type": "array", "items": { "type": "string" } },
+    "matchBasisDistribution": { "type": "object" },
+    "nearMissHistogram": { "type": "object" }
   }
 }
