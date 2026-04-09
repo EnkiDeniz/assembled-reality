@@ -1,31 +1,22 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { compileSource } from "../packages/compiler/src/index.mjs";
 import { buildBoxSectionsFromArtifact, splitDiagnostics } from "./lib/artifact-view-model.mjs";
 import { applySevenProposalGate } from "./lib/proposal-gate.mjs";
+import { fetchSevenProposal } from "./lib/seven-proposal-client.mjs";
 import { importSourceLink, pasteSource, uploadSources } from "./lib/intake-adapter.mjs";
 import {
   loadListeningSession,
   requestVoiceAudio,
   saveListeningSession,
 } from "./lib/voice-player-adapter.mjs";
-
-const SAMPLE_SOURCES = {
-  "phase1-window.loe": `GND box @phase1_window
-DIR aim prove_compiler_truth_ui
-GND witness @handoff from "handoff.md" with v_apr9
-INT story reset_shell_without_regressing_intake_or_player
-MOV move build_phase1_shell via manual
-TST test intake_and_player_survive
-`,
-  "attest-window.loe": `GND box @recovery_window
-DIR aim close_with_full_audit
-GND witness @audit_note from "audit_note.md" with v_apr9
-INT story evidence_is_partial
-CLS attest unresolved_dependency if "Waiting on external evidence delivery window"
-`,
-};
+import {
+  appendEvent,
+  appendReceipt,
+  applyClosureState,
+  createWindowState,
+} from "../packages/runtime/src/index.mjs";
 
 const TOKENS = {
   bg: "#FAFAF8",
@@ -57,35 +48,157 @@ const BADGE_COLORS = {
   open: TOKENS.muted,
 };
 
-function buildRuntimeRecord(artifact, previousRecord = null) {
-  return {
-    runtimeState: artifact.runtimeState,
-    closureType: artifact.closureType,
-    mergedWindowState: artifact.mergedWindowState,
-    compileState: artifact.compileState,
-    events: Array.isArray(previousRecord?.events) ? previousRecord.events : [],
-    receipts: Array.isArray(previousRecord?.receipts) ? previousRecord.receipts : [],
-    updatedAt: new Date().toISOString(),
-  };
+function toIdentifier(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
 }
 
-async function sevenRespond(inputText) {
-  const text = String(inputText || "").trim();
-  if (!text) return { segments: [] };
-  return {
-    segments: [
-      {
-        text: "I suggest grounding that as witness and one bounded move.",
-        domain: "neutral",
-        suggestedClause: `GND witness @note_${Date.now()} from "chat-note.md" with v_${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "")}
-MOV move next_step via manual
-TST test response_quality`,
-      },
-    ],
+function getStorageKey(projectKey = "", documentKey = "") {
+  return `loegos-phase2:${String(projectKey || "project").trim()}:${String(documentKey || "doc").trim()}`;
+}
+
+function buildDefaultSourceFromBootstrap(bootstrap = {}) {
+  const titleToken = toIdentifier(bootstrap?.documentTitle || "workspace_window") || "workspace_window";
+  return `GND box @${titleToken}
+DIR aim stabilize_phase2_shell
+GND witness @initial_source from "${String(bootstrap?.documentTitle || "workspace").trim()}" with v_phase2
+INT story compiler_truth_is_primary
+MOV move validate_phase2_integration via manual
+TST test mirror_and_editor_agree
+`;
+}
+
+function buildImportedWitnessClause({ kind = "source", documentKey = "", label = "" } = {}) {
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const ref = toIdentifier(documentKey || `${kind}_${stamp}`) || `import_${stamp}`;
+  const sourceLabel = String(label || documentKey || kind || "source").trim();
+  return [
+    `GND witness @${ref} from "${sourceLabel}" with v_${stamp}`,
+    `INT story imported_${toIdentifier(kind || "source") || "source"}_evidence`,
+  ].join("\n");
+}
+
+function applyArtifactToRuntimeWindow(previousWindow, artifact, eventMeta = null) {
+  let nextWindow = {
+    ...(previousWindow || {}),
+    state: artifact.mergedWindowState,
+    updatedAt: new Date().toISOString(),
+    compile: {
+      compilationId: artifact.compilationId,
+      diagnostics: artifact.diagnostics || [],
+      summary: artifact.summary || { ok: false, hardErrorCount: 1, warningCount: 0 },
+      closureVerb: artifact.closureType || null,
+    },
   };
+
+  if (eventMeta) {
+    nextWindow = appendEvent(nextWindow, {
+      kind: eventMeta.kind || "artifact_update",
+      detail: eventMeta.detail || "",
+      compilationId: artifact.compilationId,
+      metadata: eventMeta.metadata || null,
+    });
+  }
+
+  if (artifact.closureType) {
+    nextWindow = applyClosureState(nextWindow, artifact.closureType);
+    const existingReceipt = (nextWindow.receipts || []).some(
+      (receipt) => receipt.compilationId === artifact.compilationId && receipt.kind === artifact.closureType,
+    );
+    if (!existingReceipt) {
+      nextWindow = appendReceipt(nextWindow, {
+        kind: artifact.closureType,
+        compilationId: artifact.compilationId,
+        summary: `Closure ${artifact.closureType}`,
+        diagnosticsSnapshot: artifact.diagnostics || [],
+      });
+    }
+  }
+
+  return nextWindow;
+}
+
+function buildRuntimeRecord(artifact, filename, previousWindow = null) {
+  const baseWindow =
+    previousWindow ||
+    createWindowState({
+      windowId: filename,
+      filePath: filename,
+      compileResult: artifact,
+    });
+  return applyArtifactToRuntimeWindow(baseWindow, artifact);
+}
+
+function buildInitialFiles(bootstrap = {}) {
+  const providedFiles = Array.isArray(bootstrap?.files) ? bootstrap.files : [];
+  if (providedFiles.length > 0) {
+    return providedFiles
+      .map((entry, index) => ({
+        filename:
+          String(entry?.filename || "").trim() ||
+          `workspace-${index + 1}.loe`,
+        source: String(entry?.source || "").trim(),
+      }))
+      .filter((entry) => entry.source);
+  }
+
+  return [
+    {
+      filename: "workspace-phase2.loe",
+      source: buildDefaultSourceFromBootstrap(bootstrap),
+    },
+    {
+      filename: "attest-sentinel.loe",
+      source: `GND box @attest_sentinel
+DIR aim preserve_auditability
+GND witness @handoff from "phase2-handoff.md" with v_phase2
+CLS attest unresolved_dependency if "Human attestation recorded during phase 2 integration"
+`,
+    },
+  ];
+}
+
+function hydrateSourcesFromBootstrap(bootstrap = {}) {
+  const entries = {};
+  const files = buildInitialFiles(bootstrap);
+  files.forEach(({ filename, source }) => {
+    const artifact = compileSource({ source, filename });
+    entries[filename] = {
+      filename,
+      source,
+      artifact,
+      runtimeWindow: buildRuntimeRecord(artifact, filename),
+      lastProposal: null,
+      sourceDocuments: Array.isArray(bootstrap?.sourceDocuments)
+        ? bootstrap.sourceDocuments
+        : [],
+    };
+  });
+  return entries;
+}
+
+function persistShellState(storageKey, state) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  } catch {
+    // Ignore storage failures to avoid blocking UI.
+  }
+}
+
+function readPersistedShellState(storageKey) {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function SectionCard({ title, items = [], accent = TOKENS.accent }) {
@@ -123,9 +236,8 @@ function SectionCard({ title, items = [], accent = TOKENS.accent }) {
   );
 }
 
-function IntakePanel({ onStatus }) {
+function IntakePanel({ projectKey, onStatus, onImported }) {
   const fileInputRef = useRef(null);
-  const [projectKey, setProjectKey] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [linkValue, setLinkValue] = useState("");
   const [busy, setBusy] = useState("");
@@ -137,6 +249,12 @@ function IntakePanel({ onStatus }) {
     try {
       const result = await uploadSources({ files, projectKey });
       onStatus(`Uploaded. project=${result.projectKey || "n/a"} document=${result.documentKey || "n/a"}`);
+      onImported?.({
+        kind: "upload",
+        projectKey: result.projectKey || projectKey,
+        documentKey: result.documentKey || "",
+        label: "Uploaded source",
+      });
     } catch (error) {
       onStatus(error instanceof Error ? error.message : "Upload failed.");
     } finally {
@@ -151,6 +269,12 @@ function IntakePanel({ onStatus }) {
     try {
       const result = await pasteSource({ text: pasteText, projectKey, mode: "source" });
       onStatus(`Pasted source. document=${result.documentKey || "n/a"}`);
+      onImported?.({
+        kind: "paste",
+        projectKey,
+        documentKey: result.documentKey || "",
+        label: "Pasted source",
+      });
       setPasteText("");
     } catch (error) {
       onStatus(error instanceof Error ? error.message : "Paste failed.");
@@ -165,6 +289,12 @@ function IntakePanel({ onStatus }) {
     try {
       const result = await importSourceLink({ projectKey, url: linkValue });
       onStatus(`Imported link. document=${result.documentKey || "n/a"}`);
+      onImported?.({
+        kind: "link",
+        projectKey: result.projectKey || projectKey,
+        documentKey: result.documentKey || "",
+        label: linkValue,
+      });
       setLinkValue("");
     } catch (error) {
       onStatus(error instanceof Error ? error.message : "Link import failed.");
@@ -178,39 +308,38 @@ function IntakePanel({ onStatus }) {
       <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.accent, marginBottom: 8 }}>
         Content Intake (Protected)
       </div>
-      <input
-        value={projectKey}
-        onChange={(event) => setProjectKey(event.target.value)}
-        placeholder="projectKey (optional)"
-        style={{ width: "100%", marginBottom: 8 }}
-      />
+      <div style={{ marginBottom: 8, color: TOKENS.muted, fontSize: 12 }}>
+        project: {projectKey || "unscoped"}
+      </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <input ref={fileInputRef} type="file" multiple onChange={handleUploadFiles} />
+        <input ref={fileInputRef} type="file" multiple onChange={handleUploadFiles} data-testid="phase2-intake-file-input" />
         <button type="button" onClick={() => fileInputRef.current?.click()} disabled={busy === "upload"}>
           {busy === "upload" ? "Importing..." : "Choose files"}
         </button>
       </div>
       <form onSubmit={handlePasteSubmit} style={{ marginBottom: 8 }}>
         <textarea
+          data-testid="phase2-intake-paste-input"
           value={pasteText}
           onChange={(event) => setPasteText(event.target.value)}
           placeholder="Paste source text"
           rows={3}
           style={{ width: "100%" }}
         />
-        <button type="submit" disabled={!pasteText.trim() || busy === "paste"}>
+        <button type="submit" disabled={!pasteText.trim() || busy === "paste"} data-testid="phase2-intake-paste-submit">
           {busy === "paste" ? "Saving..." : "Save pasted source"}
         </button>
       </form>
       <form onSubmit={handleLinkSubmit}>
         <input
+          data-testid="phase2-intake-link-input"
           type="url"
           value={linkValue}
           onChange={(event) => setLinkValue(event.target.value)}
           placeholder="https://example.com"
           style={{ width: "100%", marginBottom: 6 }}
         />
-        <button type="submit" disabled={!linkValue.trim() || busy === "link"}>
+        <button type="submit" disabled={!linkValue.trim() || busy === "link"} data-testid="phase2-intake-link-submit">
           {busy === "link" ? "Importing..." : "Import link"}
         </button>
       </form>
@@ -218,13 +347,38 @@ function IntakePanel({ onStatus }) {
   );
 }
 
-function VoicePlayerPanel({ sourceText = "", onStatus }) {
+function VoicePlayerPanel({ sourceText = "", documentKey = "", onStatus }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [provider, setProvider] = useState("openai");
   const [voiceId, setVoiceId] = useState("");
   const [rate, setRate] = useState(1);
   const [audioUrl, setAudioUrl] = useState("");
   const audioRef = useRef(null);
+
+  useEffect(() => {
+    if (!documentKey) return;
+    let cancelled = false;
+    loadListeningSession({ documentKey })
+      .then((data) => {
+        if (cancelled) return;
+        const preferredRate = Number(data?.voicePreferences?.preferredListeningRate);
+        const preferredProvider = String(data?.voicePreferences?.preferredVoiceProvider || "").trim();
+        const preferredVoiceId = String(data?.voicePreferences?.preferredVoiceId || "").trim();
+        if (Number.isFinite(preferredRate) && preferredRate > 0) {
+          setRate(preferredRate);
+        }
+        if (preferredProvider) {
+          setProvider(preferredProvider);
+        }
+        if (preferredVoiceId) {
+          setVoiceId(preferredVoiceId);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [documentKey]);
 
   async function handlePlay() {
     const excerpt = String(sourceText || "").slice(0, 320).trim();
@@ -251,7 +405,7 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
       setIsPlaying(true);
       onStatus(`Playing via ${result.headers.provider || "provider"}.`);
       await saveListeningSession({
-        documentKey: "phase1-window",
+        documentKey,
         mode: "flow",
         activeNodeId: "sample",
         rate,
@@ -261,6 +415,15 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
       }).catch(() => {});
       audio.addEventListener("ended", () => {
         setIsPlaying(false);
+        void saveListeningSession({
+          documentKey,
+          mode: "flow",
+          activeNodeId: "sample",
+          rate,
+          provider,
+          voiceId,
+          status: "idle",
+        }).catch(() => {});
       });
     } catch (error) {
       onStatus(error instanceof Error ? error.message : "Playback failed.");
@@ -273,7 +436,7 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
       audioRef.current.pause();
       setIsPlaying(false);
       await saveListeningSession({
-        documentKey: "phase1-window",
+        documentKey,
         mode: "flow",
         activeNodeId: "sample",
         rate,
@@ -286,7 +449,7 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
 
   async function handleResumeSession() {
     try {
-      const data = await loadListeningSession({ documentKey: "phase1-window" });
+      const data = await loadListeningSession({ documentKey });
       onStatus(
         `Listening session restored (${data?.listeningSession?.status || "idle"}, rate=${
           data?.voicePreferences?.preferredListeningRate || 1
@@ -302,6 +465,9 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
       <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.success, marginBottom: 8 }}>
         Voice Player (Protected)
       </div>
+      <div style={{ marginBottom: 6, color: TOKENS.muted, fontSize: 12 }}>
+        document: {documentKey || "none"}
+      </div>
       <div style={{ display: "grid", gap: 6, marginBottom: 8 }}>
         <input value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="provider" />
         <input value={voiceId} onChange={(event) => setVoiceId(event.target.value)} placeholder="voice id (optional)" />
@@ -316,13 +482,13 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
         />
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={handlePlay} disabled={isPlaying}>
+        <button type="button" onClick={handlePlay} disabled={isPlaying} data-testid="phase2-voice-play">
           Play
         </button>
-        <button type="button" onClick={handlePause} disabled={!isPlaying}>
+        <button type="button" onClick={handlePause} disabled={!isPlaying} data-testid="phase2-voice-pause">
           Pause
         </button>
-        <button type="button" onClick={handleResumeSession}>
+        <button type="button" onClick={handleResumeSession} data-testid="phase2-voice-resume">
           Resume state
         </button>
       </div>
@@ -330,7 +496,7 @@ function VoicePlayerPanel({ sourceText = "", onStatus }) {
   );
 }
 
-function EditorView({ files, activeFile, onSelectFile }) {
+function EditorView({ files, activeFile, onSelectFile, parityOk }) {
   const artifact = files[activeFile]?.artifact || null;
   const diagnostics = splitDiagnostics(artifact?.diagnostics || []);
   const badgeColor = BADGE_COLORS[artifact?.mergedWindowState] || TOKENS.muted;
@@ -362,12 +528,26 @@ function EditorView({ files, activeFile, onSelectFile }) {
           {artifact?.mergedWindowState || "open"} | {artifact?.compileState || "clean"} |{" "}
           {artifact?.runtimeState || "open"}
         </div>
+        <div
+          data-testid="phase2-parity-indicator"
+          style={{ marginBottom: 8, color: parityOk ? TOKENS.success : TOKENS.error, fontSize: 12 }}
+        >
+          parity: {parityOk ? "ok" : "mismatch"}
+        </div>
         <div style={{ fontFamily: TOKENS.mono, fontSize: 12, lineHeight: 1.7, marginBottom: 12 }}>
           {(artifact?.tokenizedLines || []).map((line) => (
             <div key={`${line.line}-${line.raw}`}>
               <span style={{ color: TOKENS.muted, marginRight: 8 }}>{line.line}</span>
               {(line.tokens || []).map((token, index) => (
-                <span key={`${line.line}-${index}`} style={{ color: token.category === "head" ? TOKENS.accent : TOKENS.textDark }}>
+                <span
+                  key={`${line.line}-${index}`}
+                  style={{
+                    color:
+                      token.category === "head" || token.cat === "head"
+                        ? TOKENS.accent
+                        : TOKENS.textDark,
+                  }}
+                >
                   {token.text}
                   {index < (line.tokens || []).length - 1 ? " " : ""}
                 </span>
@@ -388,35 +568,74 @@ function EditorView({ files, activeFile, onSelectFile }) {
   );
 }
 
-function MirrorView({ fileEntry, onSourceUpdate, statusMessage, onStatus }) {
+function MirrorView({
+  fileEntry,
+  projectKey,
+  documentKey,
+  parityOk,
+  statusMessage,
+  onStatus,
+  onSourceUpdate,
+}) {
   const artifact = fileEntry.artifact;
-  const runtimeRecord = fileEntry.runtimeRecord;
+  const runtimeRecord = fileEntry.runtimeWindow;
   const sections = buildBoxSectionsFromArtifact(artifact);
   const [drillOpen, setDrillOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState([]);
 
-  const badgeColor = BADGE_COLORS[runtimeRecord.mergedWindowState] || TOKENS.muted;
+  const badgeColor = BADGE_COLORS[runtimeRecord.state] || TOKENS.muted;
   const warnings = splitDiagnostics(artifact.diagnostics).warnings;
 
   async function handleSend() {
     const text = String(input || "").trim();
-    if (!text) return;
+    if (!text || pending) return;
     setInput("");
+    setPending(true);
     setMessages((current) => [...current, { role: "human", text }]);
-    const proposal = await sevenRespond(text);
-    const gate = applySevenProposalGate({
-      currentSource: fileEntry.source,
-      proposal,
-      filename: fileEntry.filename,
-    });
-    setMessages((current) => [...current, { role: "seven", proposal, gate }]);
-    if (!gate.accepted) {
-      onStatus(`Proposal rejected: ${gate.reason}`);
-      return;
+    try {
+      const proposal = await fetchSevenProposal({
+        userInput: text,
+        documentKey,
+        boxTitle: sections.aim || "phase2_box",
+        rootText: sections.aim || "",
+        sourceDocuments: fileEntry.sourceDocuments || [],
+      });
+      const gate = applySevenProposalGate({
+        currentSource: fileEntry.source,
+        proposal,
+        filename: fileEntry.filename,
+      });
+      setMessages((current) => [...current, { role: "seven", proposal, gate }]);
+      if (!gate.accepted) {
+        onSourceUpdate(fileEntry.source, {
+          kind: "proposal_rejected",
+          detail: gate.reason,
+          metadata: {
+            diagnosticsCount: gate.diagnostics.length,
+          },
+          proposal,
+          proposalAccepted: false,
+        });
+        onStatus(`Proposal rejected: ${gate.reason}`);
+        return;
+      }
+      onSourceUpdate(gate.nextSource, {
+        kind: "proposal_accepted",
+        detail: "Seven proposal accepted by compiler gate.",
+        metadata: {
+          diagnosticsCount: gate.diagnostics.length,
+        },
+        proposal,
+        proposalAccepted: true,
+      });
+      onStatus("Proposal accepted through compiler gate.");
+    } catch (error) {
+      onStatus(error instanceof Error ? error.message : "Could not fetch Seven proposal.");
+    } finally {
+      setPending(false);
     }
-    onSourceUpdate(gate.nextSource);
-    onStatus("Proposal accepted through compiler gate.");
   }
 
   return (
@@ -435,18 +654,25 @@ function MirrorView({ fileEntry, onSourceUpdate, statusMessage, onStatus }) {
             <strong>Box</strong>
             <button
               type="button"
+              data-testid="phase2-state-badge"
               onClick={() => setDrillOpen((value) => !value)}
               style={{ color: badgeColor, border: "none", background: "transparent", fontFamily: TOKENS.mono }}
             >
-              {runtimeRecord.mergedWindowState}
+              {runtimeRecord.state}
             </button>
           </div>
           {drillOpen ? (
             <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.muted, marginBottom: 8 }}>
-              Compile: {runtimeRecord.compileState} | Runtime: {runtimeRecord.runtimeState} | Closure:{" "}
-              {runtimeRecord.closureType || "none"}
+              Compile: {artifact.compileState} | Runtime: {artifact.runtimeState} | Closure:{" "}
+              {artifact.closureType || "none"}
             </div>
           ) : null}
+          <div
+            data-testid="phase2-parity-chip"
+            style={{ marginBottom: 8, color: parityOk ? TOKENS.success : TOKENS.error, fontSize: 12 }}
+          >
+            mirror/editor parity: {parityOk ? "ok" : "mismatch"}
+          </div>
           <SectionCard title="Aim" items={sections.aim ? [{ text: sections.aim, line: 0 }] : []} accent={TOKENS.accent} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
             <SectionCard title="Evidence" items={sections.evidence} accent={TOKENS.success} />
@@ -491,67 +717,172 @@ function MirrorView({ fileEntry, onSourceUpdate, statusMessage, onStatus }) {
             ))}
           </div>
           <textarea
+            data-testid="phase2-chat-input"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             rows={3}
             placeholder="Type input for Seven"
             style={{ width: "100%", marginBottom: 6 }}
           />
-          <button type="button" onClick={handleSend}>
-            Send
+          <button type="button" onClick={handleSend} data-testid="phase2-chat-send" disabled={pending}>
+            {pending ? "Sending..." : "Send"}
           </button>
           {statusMessage ? <div style={{ marginTop: 6, color: TOKENS.muted, fontSize: 12 }}>{statusMessage}</div> : null}
+        </section>
+
+        <section style={{ border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 10, background: TOKENS.card }}>
+          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, marginBottom: 6 }}>Runtime Ledger Timeline</div>
+          <div data-testid="phase2-ledger-panel" style={{ maxHeight: 200, overflow: "auto", fontSize: 12 }}>
+            {(runtimeRecord?.events || []).length === 0 ? (
+              <div style={{ color: TOKENS.muted }}>No events yet.</div>
+            ) : (
+              (runtimeRecord.events || [])
+                .slice()
+                .reverse()
+                .map((event) => (
+                  <div key={event.id} style={{ marginBottom: 4 }}>
+                    {event.kind} - {event.detail || "updated"}
+                  </div>
+                ))
+            )}
+            {(runtimeRecord?.receipts || []).length > 0 ? (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontFamily: TOKENS.mono, fontSize: 11 }}>Receipts</div>
+                {(runtimeRecord.receipts || [])
+                  .slice()
+                  .reverse()
+                  .map((receipt) => (
+                    <div key={receipt.id} style={{ marginBottom: 4 }}>
+                      {receipt.kind} ({receipt.compilationId})
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+          </div>
         </section>
       </div>
 
       <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
-        <IntakePanel onStatus={onStatus} />
-        <VoicePlayerPanel sourceText={fileEntry.source} onStatus={onStatus} />
+        <IntakePanel
+          projectKey={projectKey}
+          onStatus={onStatus}
+          onImported={(imported) => {
+            const clause = buildImportedWitnessClause(imported);
+            const nextSource = `${String(fileEntry.source || "").trim()}\n${clause}\n`;
+            onSourceUpdate(nextSource, {
+              kind: "intake_imported",
+              detail: `Imported ${imported.kind || "source"} witness`,
+              metadata: imported,
+            });
+          }}
+        />
+        <VoicePlayerPanel
+          sourceText={fileEntry.source}
+          documentKey={documentKey}
+          onStatus={onStatus}
+        />
       </div>
     </div>
   );
 }
 
-export default function LoegosPhase1Shell() {
+export default function LoegosPhase1Shell({ bootstrap = {} }) {
+  const bootstrapProjectKey = String(bootstrap?.projectKey || "").trim();
+  const bootstrapDocumentKey = String(bootstrap?.documentKey || "").trim();
+  const storageKey = getStorageKey(bootstrapProjectKey, bootstrapDocumentKey);
+  const persistedState = readPersistedShellState(storageKey);
+  const initialSources =
+    persistedState?.sources && typeof persistedState.sources === "object"
+      ? (() => {
+          const hydrated = {};
+          Object.entries(persistedState.sources).forEach(([filename, entry]) => {
+            const source = String(entry?.source || "").trim();
+            if (!source) return;
+            const artifact = compileSource({ source, filename });
+            hydrated[filename] = {
+              filename,
+              source,
+              artifact,
+              runtimeWindow: buildRuntimeRecord(artifact, filename, entry?.runtimeWindow || null),
+              lastProposal: entry?.lastProposal || null,
+              sourceDocuments: Array.isArray(entry?.sourceDocuments)
+                ? entry.sourceDocuments
+                : [],
+            };
+          });
+          return Object.keys(hydrated).length
+            ? hydrated
+            : hydrateSourcesFromBootstrap(bootstrap);
+        })()
+      : hydrateSourcesFromBootstrap(bootstrap);
+
   const [view, setView] = useState("mirror");
-  const [activeFile, setActiveFile] = useState("phase1-window.loe");
+  const [activeFile, setActiveFile] = useState(
+    persistedState?.activeFile && initialSources[persistedState.activeFile]
+      ? persistedState.activeFile
+      : Object.keys(initialSources)[0] || "",
+  );
   const [statusMessage, setStatusMessage] = useState("");
-  const [sources, setSources] = useState(() => {
-    const entries = {};
-    Object.entries(SAMPLE_SOURCES).forEach(([filename, source]) => {
-      const artifact = compileSource({ source, filename });
-      entries[filename] = {
-        filename,
-        source,
-        artifact,
-        runtimeRecord: buildRuntimeRecord(artifact),
-      };
-    });
-    return entries;
-  });
+  const [sources, setSources] = useState(initialSources);
 
-  const activeEntry = sources[activeFile];
+  const resolvedActiveFile = sources[activeFile]
+    ? activeFile
+    : Object.keys(sources)[0] || "";
 
-  function updateActiveSource(nextSource) {
+  function updateActiveSource(nextSource, eventMeta = null) {
     setSources((current) => {
-      const entry = current[activeFile];
-      const artifact = compileSource({ source: nextSource, filename: activeFile });
-      return {
+      const fileKey = current[activeFile] ? activeFile : Object.keys(current)[0] || "";
+      const entry = current[fileKey];
+      if (!entry) return current;
+      const artifact = compileSource({ source: nextSource, filename: fileKey });
+      const runtimeWindow = applyArtifactToRuntimeWindow(
+        buildRuntimeRecord(entry.artifact, entry.filename, entry.runtimeWindow),
+        artifact,
+        eventMeta,
+      );
+      const next = {
         ...current,
-        [activeFile]: {
+        [fileKey]: {
           ...entry,
           source: nextSource,
           artifact,
-          runtimeRecord: buildRuntimeRecord(artifact, entry.runtimeRecord),
+          runtimeWindow,
+          lastProposal: eventMeta?.proposal
+            ? {
+                accepted: Boolean(eventMeta?.proposalAccepted),
+                at: new Date().toISOString(),
+                proposal: eventMeta.proposal,
+                detail: eventMeta.detail || "",
+              }
+            : entry.lastProposal,
         },
+      };
+      persistShellState(storageKey, { activeFile: fileKey, sources: next });
+      return {
+        ...next,
       };
     });
   }
 
+  const activeEntry = sources[resolvedActiveFile];
+  const parityOk = Boolean(
+    activeEntry?.artifact?.compilationId &&
+      activeEntry?.runtimeWindow?.compile?.compilationId === activeEntry?.artifact?.compilationId,
+  );
+
   const isEditor = view === "editor";
+
+  if (!activeEntry) {
+    return (
+      <div style={{ padding: 20, fontFamily: TOKENS.sans }} data-testid="phase2-shell-root">
+        Loading Phase 2 shell...
+      </div>
+    );
+  }
 
   return (
     <div
+      data-testid="phase2-shell-root"
       style={{
         height: "100vh",
         background: isEditor ? TOKENS.bgDark : TOKENS.bg,
@@ -568,12 +899,15 @@ export default function LoegosPhase1Shell() {
           borderBottom: `1px solid ${isEditor ? TOKENS.borderDark : TOKENS.border}`,
         }}
       >
-        <strong style={{ letterSpacing: "0.08em", fontFamily: TOKENS.mono }}>Loeogs Phase 1</strong>
+        <strong style={{ letterSpacing: "0.08em", fontFamily: TOKENS.mono }}>Loegos Phase 2</strong>
+        <div style={{ color: isEditor ? TOKENS.muted : TOKENS.text, fontSize: 12 }}>
+          {bootstrapProjectKey || "project"} / {bootstrapDocumentKey || "document"}
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => setView("mirror")}>
+          <button type="button" onClick={() => setView("mirror")} data-testid="phase2-nav-mirror">
             Mirror
           </button>
-          <button type="button" onClick={() => setView("editor")}>
+          <button type="button" onClick={() => setView("editor")} data-testid="phase2-nav-editor">
             Editor
           </button>
         </div>
@@ -582,12 +916,20 @@ export default function LoegosPhase1Shell() {
       {view === "mirror" ? (
         <MirrorView
           fileEntry={activeEntry}
+          projectKey={bootstrapProjectKey}
+          documentKey={bootstrapDocumentKey}
+          parityOk={parityOk}
           onSourceUpdate={updateActiveSource}
           statusMessage={statusMessage}
           onStatus={setStatusMessage}
         />
       ) : (
-        <EditorView files={sources} activeFile={activeFile} onSelectFile={setActiveFile} />
+        <EditorView
+          files={sources}
+          activeFile={resolvedActiveFile}
+          onSelectFile={setActiveFile}
+          parityOk={parityOk}
+        />
       )}
     </div>
   );

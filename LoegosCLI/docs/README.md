@@ -15,6 +15,8 @@ This folder is the implementation control center for turning the prototype visio
 7. `phase1-execution-tracker.md`
 8. `protected-capability-map-v0.md`
 9. `phase1-validation-report-2026-04-09.md`
+10. `phase2-execution-tracker.md`
+11. `phase2-readiness-report-2026-04-09.md`
 
 ## Purpose
 

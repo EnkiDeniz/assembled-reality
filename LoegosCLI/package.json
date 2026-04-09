@@ -14,6 +14,9 @@
     "status": "node apps/cli/src/index.mjs status",
     "return": "node apps/cli/src/index.mjs return",
     "fixtures": "node apps/cli/src/index.mjs fixtures",
-    "test": "node --test packages/compiler/test/*.test.mjs"
+    "test": "node --test packages/compiler/test/*.test.mjs packages/runtime/test/*.test.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.18.0"
   }
 }
