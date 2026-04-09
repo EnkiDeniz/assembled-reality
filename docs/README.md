@@ -24,6 +24,14 @@ If you are defining or rebuilding the next product shape, start in:
 - policies
 - preserved operational detail
 
+## Current implementation handoff
+
+To understand what is currently built right now (including Shape Library UI integration inside the workspace app), read:
+
+1. `docs/current-runtime-state-2026-04-09.md`
+2. `docs/partner-developer-handoff-loegos.md`
+3. `shapelibrary/docs/shape-library-ui-refactor-2026-04-08.md`
+
 ## Important distinction
 
 - `version 1/` defines where the product is going

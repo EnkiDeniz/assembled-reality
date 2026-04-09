@@ -416,3 +416,32 @@ The most important distinction is:
 
 Remote sync should never block local draft creation.
 
+---
+
+## 12. Current Shape Library integration state (2026-04-09)
+
+The project now includes a dedicated Shape Library UI slice inside the Next.js app.
+
+### UI routes
+
+- `/shapelibrary`
+- `/shapelibrary/history`
+- `/shapelibrary/drift`
+
+### App-level bridge routes
+
+- `POST /api/shapelibrary/analyze`
+- `GET /api/shapelibrary/candidates`
+- `POST /api/shapelibrary/promote`
+- `GET /api/shapelibrary/history`
+- `GET /api/shapelibrary/drift`
+
+These proxy routes forward to the standalone Shape Library service (default `http://localhost:4310`) and keep browser integration inside the app boundary.
+
+### Design alignment note
+
+The Shape Library UI has been refactored to use project tokens/styles rather than isolated inline styles. See:
+
+- `shapelibrary/docs/shape-library-ui-refactor-2026-04-08.md`
+- `docs/current-runtime-state-2026-04-09.md`
+

@@ -153,6 +153,24 @@ npm run dev
 
 API default: `http://localhost:4310` (see [docs/api-contract.md](./docs/api-contract.md)).
 
+### Workspace integration (current)
+
+Shape Library also has an operator-facing UI slice in the main Next.js app:
+
+- `/shapelibrary`
+- `/shapelibrary/history`
+- `/shapelibrary/drift`
+
+These pages call app-level bridge routes:
+
+- `POST /api/shapelibrary/analyze`
+- `GET /api/shapelibrary/candidates`
+- `POST /api/shapelibrary/promote`
+- `GET /api/shapelibrary/history`
+- `GET /api/shapelibrary/drift`
+
+Bridge routes proxy to this standalone service and keep browser requests app-native.
+
 **Results on disk:** analyze/evaluate/promote responses are also written under `results/` (`analyze/`, `evaluate/`, `promote/`) as JSON unless you set `SHAPELIBRARY_EXPORT_RESULTS=0`. Override folder with `SHAPELIBRARY_RESULTS_DIR`. Responses include `exportedTo` when a file was written.
 
 **v0.2 feature flags:** `SHAPELIBRARY_ENABLE_V01_FIDELITY` (default on), `SHAPELIBRARY_ENABLE_MYTH`, `SHAPELIBRARY_ENABLE_KERNEL`, `SHAPELIBRARY_ENABLE_CROSS_DOMAIN` (defaults off). See the API contract doc.
@@ -205,3 +223,5 @@ Expected outcome: candidate or match from analyze, then evidence-backed promotio
 ## Roadmap
 
 Further additive work is tracked in [ShapeLibrary_v0.2_Upgrade_Map.md](./ShapeLibrary_v0.2_Upgrade_Map.md) (e.g. embeddings / `ShapeAlias`, richer kernel semantics). The current codebase implements the phased plan through library closure, myth path, kernel/cross-domain stubs, and eval alignment metrics unless noted as deferred in that file.
+
+For the current project-wide runtime baseline, see `../docs/current-runtime-state-2026-04-09.md`.

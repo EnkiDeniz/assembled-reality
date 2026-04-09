@@ -53,6 +53,14 @@ These layers should remain distinct.
 - `docs/LoegosSeed/` preserves the seed and evolution trail
 - `docs/archive/` preserves older superseded material
 
+## Current Runtime Handoff
+
+For the current implementation baseline (including workspace + Shape Library integration), start with:
+
+1. `docs/current-runtime-state-2026-04-09.md`
+2. `docs/partner-developer-handoff-loegos.md`
+3. `shapelibrary/README.md`
+
 ## Product Stance
 
 ### Mobile
