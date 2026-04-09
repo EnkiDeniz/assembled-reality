@@ -73,6 +73,24 @@ The new product must center:
 
 Lœgos v1 is a system for making assembly visible, teachable, and reality-bearing.
 
+## Reality-assembly stance
+
+The stronger identity is now:
+
+`Lœgos is a visible reality-assembly system with a teachable language layer.`
+
+This means:
+
+- conversation with reality is necessary but not sufficient
+- assembly is what remains when return is kept
+- the product must preserve the difference between:
+  - speech
+  - contact
+  - return
+  - record
+
+Without that distinction, the system can still feel insightful while failing to become reality-bearing.
+
 ## The backbone
 
 Three layers define the product and should remain distinct:
@@ -167,6 +185,19 @@ That is how an imagined farmhouse in upstate New York can become a real farmhous
 - reality
 
 Lœgos should make that assembly trace visible.
+
+## The atomic ladder
+
+The practical progression for v1 is:
+
+`source object -> witness -> block -> marked block -> compiled Lœgos structure -> move/test -> receipt`
+
+This ladder matters because it separates:
+
+- the first manipulable atom: `block`
+- the first accountable runtime atom: `receipt-bearing cycle`
+
+These are not the same thing and should not be treated as the same thing in the product.
 
 ## Core product objects
 

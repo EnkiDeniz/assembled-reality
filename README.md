@@ -21,7 +21,9 @@ The kickoff canon for the pivot is now:
 1. `version 1/README.md`
 2. `version 1/loegos-aim-brief-final-v1.0.md`
 3. `version 1/loegos-language-spec-final-v1.0.md`
-4. `version 1/loegos-v1-product-redefinition.md`
+4. `version 1/loegos-as-a-reality-assembly-language.md`
+5. `version 1/loegos-v1-product-redefinition.md`
+6. `version 1/loegos-v1-kickoff-build-plan.md`
 
 Use `version 1/` when defining the next product, shell, agent behavior, and build sequence.
 

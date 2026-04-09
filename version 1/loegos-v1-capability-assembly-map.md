@@ -4,7 +4,7 @@
 
 ## 1. Why this document exists
 
-The current product is no longer failing mainly because it lacks features. It is failing because the shell and navigation still express an older product shape, while the center of gravity has shifted toward a Lœgos language workbench.
+The current product is no longer failing mainly because it lacks features. It is failing because the shell and navigation still express an older product shape, while the center of gravity has shifted toward a visible reality-assembly system with a teachable language layer.
 
 That means the next step should not be "fix the screen." It should be:
 
@@ -38,6 +38,8 @@ The strongest current reality is this:
 - listening exists as real infrastructure, not just decoration
 - seed, assemble, operate, override, and receipt all exist as real persisted flows
 - the current shell is the main source of confusion
+- the next rebuild should follow the atomic ladder:
+  `source object -> witness -> block -> marked block -> compiled Lœgos structure -> move/test -> receipt`
 
 So the rebuild should preserve the substrate and replace the container.
 

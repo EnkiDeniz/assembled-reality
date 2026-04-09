@@ -10,10 +10,15 @@ Read these in order:
 
 1. `loegos-aim-brief-final-v1.0.md`
 2. `loegos-language-spec-final-v1.0.md`
-3. `loegos-v1-product-redefinition.md`
-4. `loegos-language-workbench-vs-alignment-game.md`
+3. `loegos-as-a-reality-assembly-language.md`
+4. `loegos-v1-product-redefinition.md`
 5. `seven-governance-protocol-for-loegos-v1.md`
 6. `loegos-v1-capability-assembly-map.md`
+7. `loegos-v1-kickoff-build-plan.md`
+
+Supporting note:
+
+- `loegos-language-workbench-vs-alignment-game.md`
 
 ## What these documents do
 
@@ -29,9 +34,13 @@ The language vision and formal direction.
 
 The clean-slate product definition after the recent shift in understanding.
 
+### `loegos-as-a-reality-assembly-language.md`
+
+The stronger theory draft that reframes Lœgos as a visible reality-assembly system with a teachable language layer.
+
 ### `loegos-language-workbench-vs-alignment-game.md`
 
-The note that explains why the workbench is necessary but not primary.
+The supporting note that explains why the workbench is necessary but not primary.
 
 ### `seven-governance-protocol-for-loegos-v1.md`
 
@@ -40,6 +49,10 @@ The constitutional role of Seven inside the alignment game.
 ### `loegos-v1-capability-assembly-map.md`
 
 The substrate and capability read: what already exists, what is partial, and what the shell should be rebuilt around.
+
+### `loegos-v1-kickoff-build-plan.md`
+
+The next build sequence derived from the new theory, object model, and platform split.
 
 ## The current backbone
 
@@ -58,6 +71,14 @@ Three layers now define the system:
 `rate -> tighten weakest axis -> rerate -> seal / flag / stop`
 
 These layers should not be collapsed into one another.
+
+## The atomic ladder
+
+The current object progression is:
+
+`source object -> witness -> block -> marked block -> compiled Lœgos structure -> move / test -> receipt`
+
+This is the most useful working ladder for the next build sequence.
 
 ## Platform stance
 

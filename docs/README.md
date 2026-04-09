@@ -9,9 +9,11 @@ It is no longer the primary kickoff center for the next product pivot.
 If you are defining or rebuilding the next product shape, start in:
 
 1. `version 1/README.md`
-2. `version 1/loegos-v1-product-redefinition.md`
-3. `version 1/seven-governance-protocol-for-loegos-v1.md`
-4. `version 1/loegos-v1-capability-assembly-map.md`
+2. `version 1/loegos-as-a-reality-assembly-language.md`
+3. `version 1/loegos-v1-product-redefinition.md`
+4. `version 1/seven-governance-protocol-for-loegos-v1.md`
+5. `version 1/loegos-v1-capability-assembly-map.md`
+6. `version 1/loegos-v1-kickoff-build-plan.md`
 
 ## Use This Folder For
 
