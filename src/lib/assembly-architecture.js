@@ -1,3 +1,5 @@
+import { mergeRoomState, normalizeRoomState } from "@/lib/room";
+
 export const ASSEMBLY_PRIMARY_TAGS = Object.freeze({
   aim: "aim",
   evidence: "evidence",
@@ -525,6 +527,7 @@ export function normalizeProjectArchitectureMeta(meta = null) {
     stateHistory,
     assemblyIndexMeta,
     system,
+    room: normalizeRoomState(nextMeta.room),
   };
 }
 
@@ -593,6 +596,10 @@ export function mergeProjectArchitectureMeta(currentMeta = null, patch = {}) {
           : current.assemblyIndexMeta.lastUpdatedAt),
     },
     system: nextSystem,
+    room:
+      patch.room === undefined
+        ? current.room
+        : mergeRoomState(current.room, patch.room),
   };
 }
 

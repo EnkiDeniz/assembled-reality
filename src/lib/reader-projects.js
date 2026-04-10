@@ -578,6 +578,7 @@ export async function updateReaderProjectForUser(
     touchSystemExample = false,
     skipExampleTouch = false,
     systemPatch = undefined,
+    roomState = undefined,
   } = {},
 ) {
   const readerProjectModel = getReaderProjectModel();
@@ -597,6 +598,7 @@ export async function updateReaderProjectForUser(
   const hasDomainRationales = domainRationales !== undefined;
   const hasAssemblyState = assemblyState !== undefined;
   const hasStateHistory = stateHistory !== undefined;
+  const hasRoomState = roomState !== undefined;
   const normalizedTitle = String(title || "").trim();
 
   if (
@@ -610,6 +612,7 @@ export async function updateReaderProjectForUser(
     !hasDomainRationales &&
     !hasAssemblyState &&
     !hasStateHistory &&
+    !hasRoomState &&
     !touchSystemExample &&
     systemPatch === undefined &&
     !(Array.isArray(appendEvents) && appendEvents.length)
@@ -713,6 +716,7 @@ export async function updateReaderProjectForUser(
           hasDomainRationales ||
           hasAssemblyState ||
           hasStateHistory ||
+          hasRoomState ||
           derivedAppendEvents.length > 0 ||
           nextSystemPatch)
           ? {
@@ -722,6 +726,7 @@ export async function updateReaderProjectForUser(
                 ...(hasDomainRationales ? { domainRationales } : {}),
                 ...(hasAssemblyState ? { assemblyState } : {}),
                 ...(hasStateHistory ? { stateHistory } : {}),
+                ...(hasRoomState ? { room: roomState } : {}),
                 ...(nextSystemPatch ? { system: nextSystemPatch } : {}),
                 ...(derivedAppendEvents.length > 0
                   ? { events: derivedAppendEvents }

@@ -1,0 +1,668 @@
+.page {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 18%),
+    linear-gradient(180deg, #0c0e11 0%, #090b0d 100%);
+  color: #edf1f4;
+}
+
+.shell {
+  width: min(1360px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 20px 0 28px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 4px 0 18px;
+}
+
+.headerCopy {
+  max-width: 720px;
+}
+
+.eyebrow {
+  display: inline-block;
+  color: rgba(186, 196, 205, 0.72);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.headerCopy h1,
+.starter h2 {
+  margin: 8px 0 0;
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  line-height: 0.95;
+  font-weight: 620;
+}
+
+.headerCopy p,
+.starter p,
+.receiptCopy,
+.composerActions p,
+.fog p,
+.inspectBlock small,
+.mirrorPrimary span,
+.mirrorItem span,
+.compareGrid p {
+  margin: 10px 0 0;
+  color: rgba(194, 203, 210, 0.76);
+  line-height: 1.6;
+}
+
+.headerActions,
+.inlineActions,
+.toolRow,
+.tabRow,
+.composerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.headerActions {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.fieldChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #edf1f4;
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fieldDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.stateToneNew {
+  color: #a2adb8;
+}
+
+.stateToneOpen,
+.stateToneAwaiting {
+  color: #7eb4f4;
+}
+
+.stateToneGrounded,
+.stateToneSealed {
+  color: #78d3a2;
+}
+
+.stateToneFlagged {
+  color: #f48e8e;
+}
+
+.stateToneRerouted {
+  color: #f1c26c;
+}
+
+.primaryButton,
+.secondaryButton,
+.inlineLinkButton,
+.toolLink,
+.toolLinkSubtle,
+.tabButton,
+.projectRow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #edf1f4;
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.primaryButton {
+  background: rgba(91, 159, 232, 0.16);
+  border-color: rgba(91, 159, 232, 0.32);
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.inlineLinkButton:hover,
+.toolLink:hover,
+.toolLinkSubtle:hover,
+.tabButton:hover,
+.projectRow:hover {
+  transform: translateY(-1px);
+  border-color: rgba(91, 159, 232, 0.3);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+.toolRow {
+  align-items: center;
+  padding: 14px 0 18px;
+}
+
+.toolLink,
+.toolLinkSubtle {
+  justify-content: flex-start;
+}
+
+.toolLinkSubtle {
+  color: rgba(194, 203, 210, 0.72);
+}
+
+.tabButtonActive {
+  border-color: rgba(91, 159, 232, 0.3);
+  background: rgba(91, 159, 232, 0.1);
+}
+
+.topPanels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 0 0 12px;
+}
+
+.panel,
+.mirror,
+.starter,
+.messageCard,
+.composer,
+.receiptKit,
+.inspectPanel,
+.returnCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.panel,
+.starter,
+.composer,
+.mirror,
+.messageCard,
+.receiptKit,
+.inspectPanel,
+.returnCard {
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+}
+
+.panel {
+  padding: 16px;
+}
+
+.panelHead,
+.receiptHead,
+.returnHead,
+.mirrorSectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelHead strong,
+.receiptHead strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.projectList,
+.stack,
+.mirrorBody,
+.thread,
+.mirrorList,
+.checklist {
+  display: grid;
+  gap: 12px;
+}
+
+.projectRow {
+  justify-content: space-between;
+  text-align: left;
+  min-height: 0;
+  padding: 12px;
+}
+
+.projectRow strong {
+  display: block;
+  margin: 0;
+  font-size: 15px;
+}
+
+.projectRow span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(194, 203, 210, 0.72);
+  font-size: 13px;
+}
+
+.projectRowActive {
+  border-color: rgba(91, 159, 232, 0.3);
+  background: rgba(91, 159, 232, 0.09);
+}
+
+.projectBadge {
+  color: #7eb4f4;
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.formGrid {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.field,
+.selectField {
+  display: grid;
+  gap: 7px;
+}
+
+.field span,
+.selectField span,
+.compareGrid span,
+.inspectBlock span {
+  color: rgba(186, 196, 205, 0.72);
+  font-size: 12px;
+}
+
+.field input,
+.field textarea,
+.selectField select,
+.composer textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(8, 10, 12, 0.78);
+  color: #edf1f4;
+  padding: 12px 13px;
+}
+
+.field textarea,
+.composer textarea {
+  resize: vertical;
+  min-height: 108px;
+}
+
+.selectField select {
+  min-height: 36px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 324px;
+  gap: 20px;
+  align-items: start;
+}
+
+.threadColumn {
+  display: grid;
+  gap: 16px;
+}
+
+.mirrorColumn {
+  position: sticky;
+  top: 18px;
+}
+
+.starter,
+.composer {
+  padding: 18px;
+}
+
+.starter {
+  background:
+    linear-gradient(180deg, rgba(91, 159, 232, 0.12), transparent 40%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.mirrorHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.mirrorHeader strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+}
+
+.mirrorBody {
+  padding: 0 16px 16px;
+}
+
+.mirrorSection {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.mirrorSection + .mirrorSection {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mirrorSectionHead h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 580;
+}
+
+.mirrorSectionHead span,
+.receiptType,
+.moveStatus,
+.returnResult,
+.returnBadge {
+  color: rgba(186, 196, 205, 0.72);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mirrorPrimary,
+.mirrorItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.mirrorPrimary p,
+.mirrorItem strong {
+  margin: 0;
+}
+
+.mirrorItem strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 560;
+}
+
+.inlineLink {
+  color: #7eb4f4;
+  font-size: 13px;
+}
+
+.fog {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01)),
+    rgba(14, 17, 20, 0.72);
+}
+
+.fogLine,
+.fogLineShort {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.fogLineShort {
+  width: 62%;
+}
+
+.thread {
+  min-height: 280px;
+}
+
+.messageCard {
+  padding: 16px;
+}
+
+.messageAssistant {
+  background:
+    linear-gradient(180deg, rgba(91, 159, 232, 0.08), transparent 42%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.messageUser {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.messageMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(186, 196, 205, 0.72);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.messageBody {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.messageBody p,
+.inspectBlock p,
+.compareGrid p,
+.returnCard p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.messageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.inlineLinkButton {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #7eb4f4;
+}
+
+.inspectPanel,
+.receiptKit {
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.inspectGrid,
+.compareGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.inspectBlock,
+.formalBlock {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.inspectBlock ul {
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(237, 241, 244, 0.92);
+}
+
+.inspectBlock li + li {
+  margin-top: 6px;
+}
+
+.formalBlock pre {
+  margin: 0;
+  overflow-x: auto;
+  color: #b9d5f5;
+  font-family: var(--font-code);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.receiptHead {
+  align-items: center;
+}
+
+.receiptCopy {
+  font-size: 14px;
+}
+
+.checklist {
+  padding: 4px 0;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(237, 241, 244, 0.92);
+}
+
+.awaitingText,
+.noticeText {
+  margin: 2px 0 0;
+  color: #7eb4f4;
+  font-size: 13px;
+}
+
+.returnCard {
+  padding: 12px;
+}
+
+.returnHead strong {
+  font-size: 14px;
+}
+
+.composer {
+  position: sticky;
+  bottom: 14px;
+}
+
+.composerActions {
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+
+.emptyThread {
+  padding: 8px 0;
+}
+
+.errorText,
+.errorBanner {
+  margin: 0;
+  color: #f48e8e;
+  font-size: 13px;
+}
+
+.noticeText {
+  color: #78d3a2;
+}
+
+.errorBanner {
+  padding: 12px 14px;
+  border: 1px solid rgba(244, 142, 142, 0.22);
+  border-radius: 8px;
+  background: rgba(244, 142, 142, 0.08);
+}
+
+@media (max-width: 1080px) {
+  .topPanels,
+  .layout,
+  .inspectGrid,
+  .compareGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .mirrorColumn {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    width: min(100% - 20px, 1360px);
+    padding-top: 14px;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    justify-content: flex-start;
+  }
+
+  .toolRow {
+    padding-top: 6px;
+  }
+
+  .messageCard,
+  .starter,
+  .composer,
+  .receiptKit,
+  .inspectPanel,
+  .panel,
+  .mirror {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .composer {
+    bottom: 10px;
+  }
+}
