@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   Boxes,
-  ChevronDown,
   ChevronRight,
   ExternalLink,
   FileText,
@@ -110,12 +109,24 @@ function shouldShowMessageLead(content = "", segments = []) {
   return !segments.some((segment) => normalizeText(segment?.text) === normalizedContent);
 }
 
-function FieldStateChip({ fieldState }) {
+function isActiveProposalMessage(view = null, message = null) {
+  const activeMessageId = normalizeText(view?.proposalWake?.assistantMessageId);
+  const activeProposalId = normalizeText(view?.proposalWake?.proposalId);
+  const messageId = normalizeText(message?.id);
+  const proposalId = normalizeText(message?.roomPayload?.proposalId);
+
+  return Boolean(
+    (activeMessageId && activeMessageId === messageId) ||
+      (activeProposalId && proposalId && activeProposalId === proposalId),
+  );
+}
+
+function FieldStateChip({ fieldState, floating = false }) {
   const toneClass =
     styles[`stateTone${String(fieldState?.tone || "new").replace(/^\w/, (char) => char.toUpperCase())}`] ||
     styles.stateToneNew;
   return (
-    <span className={`${styles.fieldChip} ${toneClass}`}>
+    <span className={`${styles.fieldChip} ${toneClass} ${floating ? styles.fieldChipFloating : ""}`}>
       <span className={styles.fieldDot} />
       {fieldState?.label || "Open"}
     </span>
@@ -132,20 +143,34 @@ function FogPlaceholder({ children = "Not enough signal yet." }) {
   );
 }
 
-function MirrorSection({
+function MirrorRegion({
   title,
+  glyph,
   caption = "",
-  children,
-  emptyCopy = "",
+  children = null,
   highlighted = false,
+  tone = "other",
+  delay = 0,
+  fullWidth = false,
 }) {
+  if (!children) return null;
+
+  const toneClass =
+    styles[`mirrorTone${String(tone || "other").replace(/^\w/, (char) => char.toUpperCase())}`] || "";
+
   return (
-    <section className={`${styles.mirrorSection} ${highlighted ? styles.mirrorSectionActive : ""}`}>
-      <div className={styles.mirrorSectionHead}>
-        <h3>{title}</h3>
-        {caption ? <span>{caption}</span> : null}
+    <section
+      className={`${styles.mirrorRegion} ${toneClass} ${highlighted ? styles.mirrorRegionActive : ""} ${fullWidth ? styles.mirrorRegionFull : ""}`}
+      style={{ "--mirror-delay": `${delay}ms` }}
+    >
+      <div className={styles.mirrorRegionHead}>
+        <div className={styles.mirrorRegionLabel}>
+          {glyph ? <span className={styles.mirrorRegionGlyph}>{glyph}</span> : null}
+          <h3>{title}</h3>
+        </div>
+        {caption ? <span className={styles.mirrorRegionCount}>{caption}</span> : null}
       </div>
-      {children || <FogPlaceholder>{emptyCopy}</FogPlaceholder>}
+      {children}
     </section>
   );
 }
@@ -153,94 +178,128 @@ function MirrorSection({
 function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
   const mirror = view?.mirror || {};
   const projectKey = view?.project?.projectKey || "";
+  const evidenceItems = Array.isArray(mirror?.evidence) ? mirror.evidence : [];
+  const storyItems = Array.isArray(mirror?.story) ? mirror.story : [];
+  const moveItems = Array.isArray(mirror?.moves) ? mirror.moves : [];
+  const returnItems = Array.isArray(mirror?.returns) ? mirror.returns : [];
+  const summary =
+    normalizeText(mirror?.aim?.text) ||
+    normalizeText(evidenceItems[0]?.title) ||
+    normalizeText(storyItems[0]?.text) ||
+    normalizeText(moveItems[0]?.text) ||
+    normalizeText(returnItems[0]?.label || returnItems[0]?.actual) ||
+    "structure forming...";
+  const showEvidenceStory = evidenceItems.length > 0 || storyItems.length > 0;
+  const evidenceRatio = evidenceItems.length / Math.max(1, evidenceItems.length + storyItems.length);
 
   if (!view?.hasStructure) return null;
 
   return (
     <section className={styles.mirrorStrip}>
       <button type="button" className={styles.mirrorToggle} onClick={onToggle}>
-        <div className={styles.mirrorToggleCopy}>
-          <span className={styles.eyebrow}>Box Mirror</span>
-          <strong>{normalizeText(mirror?.aim?.text) || "Structure forming..."}</strong>
-        </div>
-        <div className={styles.mirrorToggleState}>
-          <FieldStateChip fieldState={view?.fieldState} />
-          {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-        </div>
+        <span className={styles.mirrorToggleGlyph}>{collapsed ? "▸" : "▾"}</span>
+        <span className={styles.mirrorToggleSummary}>{summary}</span>
       </button>
 
-      {!collapsed ? (
-        <div className={styles.mirrorGrid}>
-          <MirrorSection
-            title="Aim"
-            highlighted={highlightedRegion === "aim"}
-            emptyCopy="The line is still forming. Keep talking until it gets precise."
-          >
-            {normalizeText(mirror?.aim?.text) ? (
+      <div className={`${styles.mirrorBody} ${collapsed ? styles.mirrorBodyCollapsed : ""}`}>
+        <div className={styles.mirrorBodyInner}>
+          {normalizeText(mirror?.aim?.text) ? (
+            <MirrorRegion
+              title="Aim"
+              glyph="△"
+              tone="aim"
+              highlighted={highlightedRegion === "aim"}
+              delay={0}
+              fullWidth
+            >
               <div className={styles.mirrorPrimary}>
                 <p>{mirror.aim.text}</p>
                 {normalizeText(mirror?.aim?.gloss) ? <span>{mirror.aim.gloss}</span> : null}
               </div>
-            ) : null}
-          </MirrorSection>
-
-          {Array.isArray(mirror?.evidence) && mirror.evidence.length ? (
-            <MirrorSection
-              title="Witness / Evidence"
-              caption={String(mirror.evidence.length)}
-              highlighted={highlightedRegion === "evidence"}
-              emptyCopy="Witness lands here after apply."
-            >
-              <div className={styles.mirrorList}>
-                {mirror.evidence.map((item) => (
-                  <div key={item.id} className={styles.mirrorItem}>
-                    <div>
-                      <strong>{item.title}</strong>
-                      {item.detail ? <span>{item.detail}</span> : null}
-                    </div>
-                    {item.documentKey ? (
-                      <Link
-                        href={buildReaderDocumentHref(projectKey, item.documentKey)}
-                        className={styles.inlineLink}
-                      >
-                        Read
-                      </Link>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </MirrorSection>
+            </MirrorRegion>
           ) : null}
 
-          {Array.isArray(mirror?.story) && mirror.story.length ? (
-            <MirrorSection
-              title="Story"
-              caption={String(mirror.story.length)}
-              highlighted={highlightedRegion === "story"}
-              emptyCopy="Interpretation shows up only when it has a place."
-            >
-              <div className={styles.mirrorList}>
-                {mirror.story.map((item) => (
-                  <div key={item.id} className={styles.mirrorItem}>
-                    <div>
-                      <strong>{item.text}</strong>
-                      {item.detail ? <span>{item.detail}</span> : null}
-                    </div>
-                  </div>
-                ))}
+          {showEvidenceStory ? (
+            <div className={styles.mirrorRatio}>
+              <span className={styles.mirrorRatioGlyph}>◻</span>
+              <div className={styles.mirrorRatioTrack}>
+                <div
+                  className={styles.mirrorRatioFill}
+                  style={{ width: `${Math.max(0, Math.min(100, evidenceRatio * 100))}%` }}
+                />
               </div>
-            </MirrorSection>
+              <span className={`${styles.mirrorRatioGlyph} ${styles.mirrorRatioGlyphStory}`}>○</span>
+            </div>
           ) : null}
 
-          {Array.isArray(mirror?.moves) && mirror.moves.length ? (
-            <MirrorSection
-              title="Pings / Moves"
-              caption={String(mirror.moves.length)}
+          {showEvidenceStory ? (
+            <div className={styles.mirrorSplit}>
+              {evidenceItems.length ? (
+                <MirrorRegion
+                  title="Evidence"
+                  glyph="◻"
+                  tone="evidence"
+                  caption={String(evidenceItems.length)}
+                  highlighted={highlightedRegion === "evidence"}
+                  delay={400}
+                >
+                  <div className={styles.mirrorList}>
+                    {evidenceItems.map((item) => (
+                      <div key={item.id} className={styles.mirrorItem}>
+                        <div>
+                          <strong>{item.title}</strong>
+                          {item.detail ? <span>{item.detail}</span> : null}
+                        </div>
+                        {item.documentKey ? (
+                          <Link
+                            href={buildReaderDocumentHref(projectKey, item.documentKey)}
+                            className={styles.inlineLink}
+                          >
+                            Read
+                          </Link>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </MirrorRegion>
+              ) : null}
+
+              {storyItems.length ? (
+                <MirrorRegion
+                  title="Story"
+                  glyph="○"
+                  tone="story"
+                  caption={String(storyItems.length)}
+                  highlighted={highlightedRegion === "story"}
+                  delay={500}
+                >
+                  <div className={styles.mirrorList}>
+                    {storyItems.map((item) => (
+                      <div key={item.id} className={styles.mirrorItem}>
+                        <div>
+                          <strong>{item.text}</strong>
+                          {item.detail ? <span>{item.detail}</span> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </MirrorRegion>
+              ) : null}
+            </div>
+          ) : null}
+
+          {moveItems.length ? (
+            <MirrorRegion
+              title="Ping Suggested"
+              glyph="→"
+              tone="moves"
+              caption={String(moveItems.length)}
               highlighted={highlightedRegion === "moves"}
-              emptyCopy="A lawful ping appears here after apply."
+              delay={700}
+              fullWidth
             >
               <div className={styles.mirrorList}>
-                {mirror.moves.map((item) => (
+                {moveItems.map((item) => (
                   <div key={item.id} className={styles.mirrorItem}>
                     <div>
                       <strong>{item.text}</strong>
@@ -250,18 +309,21 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
                   </div>
                 ))}
               </div>
-            </MirrorSection>
+            </MirrorRegion>
           ) : null}
 
-          {Array.isArray(mirror?.returns) && mirror.returns.length ? (
-            <MirrorSection
+          {returnItems.length ? (
+            <MirrorRegion
               title="Returns / Receipts"
-              caption={String(mirror.returns.length)}
+              glyph="↩"
+              tone="returns"
+              caption={String(returnItems.length)}
               highlighted={highlightedRegion === "returns"}
-              emptyCopy="Returns change the room here."
+              delay={800}
+              fullWidth
             >
               <div className={styles.mirrorList}>
-                {mirror.returns.map((item) => (
+                {returnItems.map((item) => (
                   <div key={item.id} className={styles.mirrorItem}>
                     <div>
                       <strong>{item.label || item.actual || "Return"}</strong>
@@ -272,88 +334,10 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
                   </div>
                 ))}
               </div>
-            </MirrorSection>
+            </MirrorRegion>
           ) : null}
         </div>
-      ) : null}
-    </section>
-  );
-}
-
-function ProposalWakeCard({ title, region, items = [], highlighted = false, onHighlight }) {
-  if (!items.length) return null;
-
-  return (
-    <button
-      type="button"
-      className={`${styles.wakeCard} ${highlighted ? styles.wakeCardActive : ""}`}
-      onClick={() => onHighlight?.(region)}
-    >
-      <span className={styles.wakeLabel}>{title}</span>
-      <strong>{items[0]?.text}</strong>
-      {items.slice(1, 3).map((item) => (
-        <span key={item.id}>{item.text}</span>
-      ))}
-    </button>
-  );
-}
-
-function ProposalWake({ wake, highlightedRegion, onHighlight }) {
-  if (!wake) return null;
-
-  const aimItems = wake?.sections?.aim ? [wake.sections.aim] : [];
-
-  return (
-    <section className={styles.proposalWake}>
-      <div className={styles.wakeHeader}>
-        <div>
-          <span className={styles.eyebrow}>Structure Waking</span>
-          <strong>{wake?.assistantText || "Preview only until you apply it."}</strong>
-        </div>
-        <span className={styles.wakeMeta}>Preview only</span>
       </div>
-
-      <div className={styles.wakeGrid}>
-        <ProposalWakeCard
-          title="Aim"
-          region="aim"
-          items={aimItems}
-          highlighted={highlightedRegion === "aim"}
-          onHighlight={onHighlight}
-        />
-        <ProposalWakeCard
-          title="Witness / Evidence"
-          region="evidence"
-          items={wake?.sections?.evidence}
-          highlighted={highlightedRegion === "evidence"}
-          onHighlight={onHighlight}
-        />
-        <ProposalWakeCard
-          title="Story"
-          region="story"
-          items={wake?.sections?.story}
-          highlighted={highlightedRegion === "story"}
-          onHighlight={onHighlight}
-        />
-        <ProposalWakeCard
-          title="Pings / Moves"
-          region="moves"
-          items={wake?.sections?.moves}
-          highlighted={highlightedRegion === "moves"}
-          onHighlight={onHighlight}
-        />
-        <ProposalWakeCard
-          title="Returns / Receipts"
-          region="returns"
-          items={wake?.sections?.returns}
-          highlighted={highlightedRegion === "returns"}
-          onHighlight={onHighlight}
-        />
-      </div>
-
-      {normalizeText(wake?.nextBestAction) ? (
-        <p className={styles.wakeCopy}>{wake.nextBestAction}</p>
-      ) : null}
     </section>
   );
 }
@@ -962,12 +946,13 @@ function ProposalSegments({ segments, onHighlight }) {
   );
 }
 
-function ProposalFooter({ roomPayload, onApply, busy }) {
+function ProposalFooter({ roomPayload, onApply, busy, activeAcceptedProposal = false }) {
   const gatePreview = roomPayload?.gatePreview || null;
   const diagnostics = Array.isArray(gatePreview?.diagnostics) ? gatePreview.diagnostics : [];
   const accepted = gatePreview?.accepted !== false;
 
   if (!gatePreview && !hasProposalContent(roomPayload)) return null;
+  if (accepted && !activeAcceptedProposal) return null;
 
   return (
     <div className={styles.proposalFooter}>
@@ -986,7 +971,7 @@ function ProposalFooter({ roomPayload, onApply, busy }) {
       </div>
 
       {accepted && Array.isArray(roomPayload?.segments) && roomPayload.segments.length ? (
-        <button type="button" className={styles.primaryButton} onClick={onApply} disabled={busy}>
+        <button type="button" className={styles.applyButton} onClick={onApply} disabled={busy}>
           {busy ? "Applying..." : "Apply to Room"}
         </button>
       ) : null}
@@ -1008,16 +993,26 @@ function ThreadMessage({
   const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
   const paragraphs = splitParagraphs(message?.content || "");
   const isAssistant = message?.role === "assistant";
+  const activeAcceptedProposal = isAssistant && isActiveProposalMessage(view, message);
 
   return (
     <article className={`${styles.messageRow} ${isAssistant ? styles.messageRowAssistant : styles.messageRowUser}`}>
-      <div className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser}`}>
+      <div
+        className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser} ${activeAcceptedProposal ? styles.messageCardPreview : ""}`}
+      >
         <div className={styles.messageMeta}>
           <span>{isAssistant ? "Seven" : "You"}</span>
           {message?.createdAt ? <small>{String(message.createdAt).slice(0, 16).replace("T", " ")}</small> : null}
         </div>
 
         <div className={styles.messageBody}>
+          {activeAcceptedProposal ? (
+            <div className={styles.messagePreviewMeta}>
+              <span>Structure Waking</span>
+              <small>Preview Only</small>
+            </div>
+          ) : null}
+
           {isAssistant && segments.length ? (
             <>
               {shouldShowMessageLead(message?.content, segments) ? (
@@ -1033,7 +1028,12 @@ function ThreadMessage({
         </div>
 
         {isAssistant && roomPayload ? (
-          <ProposalFooter roomPayload={roomPayload} onApply={() => onApplyProposal(message)} busy={applying} />
+          <ProposalFooter
+            roomPayload={roomPayload}
+            onApply={() => onApplyProposal(message)}
+            busy={applying}
+            activeAcceptedProposal={activeAcceptedProposal}
+          />
         ) : null}
 
         {receiptKit ? (
@@ -1050,28 +1050,53 @@ function ThreadMessage({
 }
 
 function ToolLinks({ deepLinks }) {
+  const items = [
+    {
+      href: normalizeText(deepLinks?.reader),
+      label: "Reader",
+      icon: <FileText size={14} />,
+      subtle: false,
+    },
+    {
+      href: normalizeText(deepLinks?.compare),
+      label: "Compare",
+      icon: <ArrowUpRight size={14} />,
+      subtle: false,
+    },
+    {
+      href: normalizeText(deepLinks?.operate),
+      label: "Operate",
+      icon: <MessageSquareText size={14} />,
+      subtle: false,
+    },
+    {
+      href: normalizeText(deepLinks?.receipts),
+      label: "Receipts",
+      icon: <ReceiptText size={14} />,
+      subtle: false,
+    },
+    {
+      href: normalizeText(deepLinks?.legacy),
+      label: "Legacy Workbench",
+      icon: <ExternalLink size={14} />,
+      subtle: true,
+    },
+  ].filter((item) => item.href);
+
+  if (!items.length) return null;
+
   return (
     <div className={styles.toolRow}>
-      <Link href={deepLinks?.reader || "/workspace/phase1"} className={styles.toolLink}>
-        <FileText size={14} />
-        Reader
-      </Link>
-      <Link href={deepLinks?.compare || "/workspace/phase1"} className={styles.toolLink}>
-        <ArrowUpRight size={14} />
-        Compare
-      </Link>
-      <Link href={deepLinks?.operate || "/workspace/phase1"} className={styles.toolLink}>
-        <MessageSquareText size={14} />
-        Operate
-      </Link>
-      <Link href={deepLinks?.receipts || "/workspace/phase1"} className={styles.toolLink}>
-        <ReceiptText size={14} />
-        Receipts
-      </Link>
-      <Link href={deepLinks?.legacy || "/workspace/phase1"} className={styles.toolLinkSubtle}>
-        <ExternalLink size={14} />
-        Workbench
-      </Link>
+      {items.map((item) => (
+        <Link
+          key={`${item.label}-${item.href}`}
+          href={item.href}
+          className={item.subtle ? styles.toolLinkSubtle : styles.toolLink}
+        >
+          {item.icon}
+          {item.label}
+        </Link>
+      ))}
     </div>
   );
 }
@@ -1085,35 +1110,86 @@ function Composer({
   onOpenAttach,
   listenHref,
 }) {
+  const textareaRef = useRef(null);
+  const isComposingRef = useRef(false);
+  const hasValue = Boolean(normalizeText(value));
+  const canListen = Boolean(normalizeText(listenHref));
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(textarea.scrollHeight, 128);
+    textarea.style.height = `${Math.max(54, nextHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 128 ? "auto" : "hidden";
+  }, [value]);
+
+  function handleKeyDown(event) {
+    if (event.key !== "Enter" || event.shiftKey || isComposingRef.current) return;
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
+
+  async function handleSubmit(event) {
+    const result = onSubmit(event);
+    Promise.resolve(result).finally(() => {
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    });
+  }
+
   return (
-    <form className={styles.composer} onSubmit={onSubmit}>
+    <form className={styles.composer} onSubmit={handleSubmit}>
       <div className={styles.composerShell}>
-        <div className={styles.composerRow}>
-          <button
-            type="button"
-            className={styles.composerTool}
-            onClick={onOpenAttach}
-            aria-label="Add source"
-          >
-            <Paperclip size={16} />
-          </button>
-          <textarea
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            rows={1}
-          />
-          <button type="submit" className={styles.primaryButton} disabled={pending || !normalizeText(value)}>
-            <SendHorizontal size={14} />
-            {pending ? "Listening..." : "Send"}
-          </button>
-        </div>
-        <div className={styles.composerActions}>
-          <Link href={listenHref || "/workspace/phase1"} className={styles.composerListen}>
-            <Play size={14} />
-            Listen
-          </Link>
-          <p>Plain language first. Structure wakes up only when it earns it.</p>
+        <div className={styles.composerCapsule}>
+          <div className={styles.composerRow}>
+            <button
+              type="button"
+              className={styles.composerTool}
+              onClick={onOpenAttach}
+              aria-label="Add source"
+            >
+              <Paperclip size={16} />
+            </button>
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => {
+                isComposingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                isComposingRef.current = false;
+              }}
+              placeholder={placeholder}
+              rows={1}
+            />
+            {canListen ? (
+              <Link href={listenHref} className={styles.composerListenInline}>
+                <Play size={14} />
+                Listen
+              </Link>
+            ) : (
+              <button type="button" className={styles.composerListenInline} onClick={onOpenAttach}>
+                <Play size={14} />
+                Listen
+              </button>
+            )}
+            <button
+              type="submit"
+              className={`${styles.composerSend} ${hasValue && !pending ? styles.composerSendActive : ""}`}
+              disabled={pending || !hasValue}
+              aria-label={pending ? "Sending" : "Send"}
+            >
+              <SendHorizontal size={15} />
+            </button>
+          </div>
+
+          <div className={styles.composerFootnote}>
+            Plain language first. Structure wakes up only when it earns it.
+          </div>
         </div>
       </div>
     </form>
@@ -1239,6 +1315,7 @@ export default function RoomWorkspace({ initialView }) {
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
   const [highlightedRegion, setHighlightedRegion] = useState("");
+  const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
 
@@ -1261,7 +1338,8 @@ export default function RoomWorkspace({ initialView }) {
 
   const projectKey = view?.project?.projectKey || "";
   const messages = Array.isArray(view?.messages) ? view.messages : [];
-  const showStarter = Boolean(view?.starter?.show) && messages.length === 0;
+  const showStarter =
+    Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
 
   function highlightRegion(region = "") {
     const normalizedRegion = normalizeText(region).toLowerCase();
@@ -1330,6 +1408,8 @@ export default function RoomWorkspace({ initialView }) {
     if (!message) return;
     setTurnPending(true);
     setMessageError("");
+    setOptimisticUserMessage(message);
+    setComposerText("");
     try {
       const response = await fetch("/api/workspace/room/turn", {
         method: "POST",
@@ -1346,8 +1426,10 @@ export default function RoomWorkspace({ initialView }) {
         throw new Error(payload?.error || "The room did not answer.");
       }
       setView(payload.view);
-      setComposerText("");
+      setOptimisticUserMessage("");
     } catch (error) {
+      setComposerText((current) => current || message);
+      setOptimisticUserMessage("");
       setMessageError(error instanceof Error ? error.message : "The room did not answer.");
     } finally {
       setTurnPending(false);
@@ -1447,9 +1529,11 @@ export default function RoomWorkspace({ initialView }) {
 
   return (
     <main className={styles.page}>
+      {view?.hasStructure ? <FieldStateChip fieldState={view?.fieldState} floating /> : null}
+
       <button
         type="button"
-        className={styles.instrumentTrigger}
+        className={`${styles.instrumentTrigger} ${view?.hasStructure ? styles.instrumentTriggerWithChip : ""}`}
         onClick={() => setOverlayMode("instrument")}
         aria-label="Open room controls"
       >
@@ -1477,20 +1561,13 @@ export default function RoomWorkspace({ initialView }) {
         ) : null}
 
         <section className={styles.roomCanvas}>
-          {view?.proposalWake || view?.hasStructure ? (
-            <div className={styles.surfaceStack}>
-              <ProposalWake
-                wake={view?.proposalWake}
-                highlightedRegion={highlightedRegion}
-                onHighlight={highlightRegion}
-              />
-              <MirrorPanel
-                view={view}
-                highlightedRegion={highlightedRegion}
-                collapsed={mirrorCollapsed}
-                onToggle={() => setMirrorCollapsed((current) => !current)}
-              />
-            </div>
+          {view?.hasStructure ? (
+            <MirrorPanel
+              view={view}
+              highlightedRegion={highlightedRegion}
+              collapsed={mirrorCollapsed}
+              onToggle={() => setMirrorCollapsed((current) => !current)}
+            />
           ) : null}
 
           <div
@@ -1500,6 +1577,19 @@ export default function RoomWorkspace({ initialView }) {
             {showStarter ? <StarterView starter={view?.starter} /> : null}
 
             <div className={styles.thread}>
+              {optimisticUserMessage ? (
+                <article className={`${styles.messageRow} ${styles.messageRowUser}`}>
+                  <div className={`${styles.messageCard} ${styles.messageUser}`}>
+                    <div className={styles.messageMeta}>
+                      <span>You</span>
+                    </div>
+                    <div className={styles.messageBody}>
+                      <p>{optimisticUserMessage}</p>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
+
               {messages.map((message) => (
                 <ThreadMessage
                   key={message.id}
@@ -1530,7 +1620,7 @@ export default function RoomWorkspace({ initialView }) {
             pending={turnPending}
             placeholder={!view?.hasStructure ? "Start talking..." : "Say more..."}
             onOpenAttach={() => setOverlayMode("source")}
-            listenHref={view?.deepLinks?.reader || "/workspace/phase1"}
+            listenHref={view?.deepLinks?.reader || ""}
           />
         </section>
       </div>

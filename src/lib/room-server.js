@@ -73,16 +73,18 @@ function getLatestRealSource(projectDocuments = []) {
 
 function buildDeepLinks(project = null, currentAssemblyDocument = null, latestRealSource = null) {
   const projectKey = encodeURIComponent(String(project?.projectKey || "").trim());
+  const roomBase = projectKey ? `/workspace?project=${projectKey}` : "/workspace";
   const base = projectKey ? `/workspace/phase1?project=${projectKey}` : "/workspace/phase1";
   const sourceKey = encodeURIComponent(String(latestRealSource?.documentKey || "").trim());
   const assemblyKey = encodeURIComponent(String(currentAssemblyDocument?.documentKey || "").trim());
 
   return {
+    room: roomBase,
     legacy: base,
-    reader: sourceKey ? `${base}&document=${sourceKey}&mode=listen&phase=think` : base,
-    compare: assemblyKey ? `${base}&document=${assemblyKey}&mode=assemble&phase=create` : base,
-    operate: `${base}&phase=operate`,
-    receipts: `${base}&phase=receipts`,
+    reader: sourceKey ? `${base}&document=${sourceKey}&mode=listen&phase=think` : "",
+    compare: assemblyKey ? `${base}&document=${assemblyKey}&mode=assemble&phase=create` : "",
+    operate: projectKey ? `${base}&phase=operate` : "",
+    receipts: projectKey ? `${base}&phase=receipts` : "",
   };
 }
 

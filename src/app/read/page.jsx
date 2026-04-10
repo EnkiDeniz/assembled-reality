@@ -2,5 +2,5 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default function ReadPage() {
-  redirect("/workspace/phase1");
+  redirect("/workspace");
 }

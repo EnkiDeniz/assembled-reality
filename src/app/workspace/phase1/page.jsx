@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import LoegosPhase1Shell from "../../../../LoegosCLI/UX/loegos-phase1-shell";
 import { listReaderDocumentsForUser } from "@/lib/reader-documents";
@@ -68,6 +69,84 @@ function buildMigrationNotice({
   return "";
 }
 
+function buildLegacyBanner(roomHref = "/workspace") {
+  return (
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+        padding: "14px 18px 0",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 14,
+          margin: "0 auto",
+          maxWidth: 1320,
+          padding: "12px 14px",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 8,
+          background: "rgba(16, 18, 22, 0.92)",
+          backdropFilter: "blur(12px)",
+          boxShadow: "0 18px 36px rgba(0,0,0,0.24)",
+        }}
+      >
+        <div style={{ display: "grid", gap: 6 }}>
+          <span
+            style={{
+              fontFamily: "var(--font-code)",
+              fontSize: 11,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "rgba(162, 204, 255, 0.92)",
+            }}
+          >
+            Legacy Workbench
+          </span>
+          <p
+            style={{
+              margin: 0,
+              maxWidth: 680,
+              fontSize: 15,
+              lineHeight: 1.55,
+              color: "rgba(228, 228, 232, 0.84)",
+            }}
+          >
+            The breathing Room now lives at <strong style={{ color: "#e4e4e8" }}>/workspace</strong>.
+            This surface stays available for deep workbench flows and legacy inspection.
+          </p>
+        </div>
+        <Link
+          href={roomHref}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 40,
+            padding: "0 16px",
+            borderRadius: 8,
+            border: "1px solid rgba(84,150,216,0.22)",
+            background: "rgba(84,150,216,0.12)",
+            color: "#8fc4ff",
+            textDecoration: "none",
+            fontFamily: "var(--font-code)",
+            fontSize: 12,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >
+          Open Room
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default async function WorkspacePhase1Page({ searchParams }) {
   await headers();
   const resolvedSearchParams = await searchParams;
@@ -78,6 +157,9 @@ export default async function WorkspacePhase1Page({ searchParams }) {
   const requestedConnected = String(resolvedSearchParams?.connected || "").trim();
   const requestedError = String(resolvedSearchParams?.error || "").trim();
   const requestedDeprecated = String(resolvedSearchParams?.deprecated || "").trim();
+  const roomHref = requestedProjectKey
+    ? `/workspace?project=${encodeURIComponent(requestedProjectKey)}`
+    : "/workspace";
   const migrationNotice = buildMigrationNotice({
     deprecated: requestedDeprecated,
     connected: requestedConnected,
@@ -99,7 +181,18 @@ export default async function WorkspacePhase1Page({ searchParams }) {
       ],
       files: [],
     };
-    return <LoegosPhase1Shell bootstrap={demoBootstrap} />;
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top right, rgba(84, 150, 216, 0.08), transparent 28%), linear-gradient(180deg, #0f1013 0%, #090a0c 100%)",
+        }}
+      >
+        {buildLegacyBanner(roomHref)}
+        <LoegosPhase1Shell bootstrap={demoBootstrap} />
+      </div>
+    );
   }
 
   const session = await getRequiredSession();
@@ -135,5 +228,16 @@ export default async function WorkspacePhase1Page({ searchParams }) {
       : [],
   };
 
-  return <LoegosPhase1Shell bootstrap={bootstrap} />;
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top right, rgba(84, 150, 216, 0.08), transparent 28%), linear-gradient(180deg, #0f1013 0%, #090a0c 100%)",
+      }}
+    >
+      {buildLegacyBanner(roomHref)}
+      <LoegosPhase1Shell bootstrap={bootstrap} />
+    </div>
+  );
 }
