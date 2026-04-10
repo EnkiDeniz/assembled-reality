@@ -6,11 +6,12 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("workspace entry route is launch-shell-only", async () => {
+test("workspace entry route loads the room-first shell", async () => {
   const workspacePage = await read("src/app/workspace/page.jsx");
 
-  assert.match(workspacePage, /redirect\(query \? `\/workspace\/phase1\?\$\{query\}` : "\/workspace\/phase1"\)/);
-  assert.doesNotMatch(workspacePage, /WorkspaceShell/);
+  assert.match(workspacePage, /RoomWorkspace/);
+  assert.match(workspacePage, /loadRoomWorkspacePageData/);
+  assert.doesNotMatch(workspacePage, /redirect\(query \? `\/workspace\/phase1/);
 });
 
 test("phase1 page loads launch shell and bootstraps migration context", async () => {

@@ -6,12 +6,13 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("frozen workspace forks redirect into launch shell", async () => {
+test("workspace entry now renders the room-first shell while phase1 stays available", async () => {
   const workspacePage = await read("src/app/workspace/page.jsx");
 
-  assert.match(workspacePage, /redirect\(query \? `\/workspace\/phase1\?\$\{query\}` : "\/workspace\/phase1"\)/);
-  assert.match(workspacePage, /deprecated/);
-  assert.doesNotMatch(workspacePage, /WorkspaceShell/);
+  assert.match(workspacePage, /RoomWorkspace/);
+  assert.match(workspacePage, /loadRoomWorkspacePageData/);
+  assert.doesNotMatch(workspacePage, /deprecated/);
+  assert.doesNotMatch(workspacePage, /redirect\(query \? `\/workspace\/phase1/);
 });
 
 test("launch shell page emits migration notice context", async () => {
@@ -80,6 +81,8 @@ test("launch shell still exposes protected intake and player adapters", async ()
   assert.match(shell, /data-testid="phase2-compass-lock"/);
   assert.match(shell, /data-testid="phase2-compass-enable"/);
   assert.match(shell, /data-testid="phase2-instrument-drawer"/);
+  assert.match(shell, /data-testid="phase2-instrument-toggle"/);
+  assert.match(shell, /data-testid="phase2-attest-submit"/);
   assert.match(shell, /Manual attest override/);
   assert.match(shell, /derivePaneInteractionContract/);
   assert.match(shell, /data-testid="phase2-editor-field-state"/);
