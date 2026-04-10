@@ -38,11 +38,11 @@ async function main() {
     read("package.json"),
   ]);
 
-  assert.match(workspacePage, /deprecated/);
-  assert.match(workspacePage, /redirect\(query \? `\/workspace\/phase1\?\$\{query\}` : "\/workspace\/phase1"\)/);
-  assert.match(workspacePhase1Page, /buildMigrationNotice/);
-  assert.match(workspacePhase1Page, /migrationNotice/);
-  assert.doesNotMatch(workspacePhase1Page, /workspace-v1/);
+  assert.match(workspacePage, /RoomWorkspace/);
+  assert.match(workspacePage, /loadRoomWorkspacePageData/);
+  assert.match(workspacePhase1Page, /redirect\(query \? `\/workspace\?\$\{query\}` : "\/workspace"\)/);
+  assert.doesNotMatch(workspacePhase1Page, /Legacy Workbench/);
+  assert.doesNotMatch(workspacePhase1Page, /LoegosPhase1Shell/);
 
   assert.match(launchShell, /Loegos Phase 2/);
   assert.match(launchShell, /<MirrorView/);
@@ -85,6 +85,8 @@ async function main() {
   assert.match(launchShell, /phase2-tab-help/);
   assert.match(launchShell, /phase2-compass-lock/);
   assert.match(launchShell, /phase2-instrument-drawer/);
+  assert.match(launchShell, /phase2-instrument-toggle/);
+  assert.match(launchShell, /phase2-attest-submit/);
   assert.match(launchShell, /Manual attest override/);
   assert.match(launchShell, /What is next lawful move\?/);
 
@@ -94,12 +96,12 @@ async function main() {
   assert.match(voiceAdapter, /\/api\/seven\/audio/);
   assert.match(voiceAdapter, /\/api\/reader\/listening-session/);
 
-  assert.match(authTerminal, /\/workspace\/phase1/);
-  assert.match(introLanding, /\/workspace\/phase1/);
-  assert.match(readPage, /redirect\("\/workspace\/phase1"\)/);
-  assert.match(libraryPage, /redirect\("\/workspace\/phase1"\)/);
-  assert.match(connectRoute, /new URL\("\/workspace\/phase1", origin\)/);
-  assert.match(callbackRoute, /new URL\("\/workspace\/phase1", origin\)/);
+  assert.match(authTerminal, /callbackUrl: "\/workspace"/);
+  assert.match(introLanding, /callbackUrl: "\/workspace"/);
+  assert.match(readPage, /redirect\("\/workspace"\)/);
+  assert.match(libraryPage, /redirect\("\/workspace"\)/);
+  assert.match(connectRoute, /new URL\("\/workspace", origin\)/);
+  assert.match(callbackRoute, /new URL\("\/workspace", origin\)/);
   assert.match(callbackRoute, /connected", "getreceipts"/);
 
   assert.match(shapeLibraryPage, /shapelibrary/i);

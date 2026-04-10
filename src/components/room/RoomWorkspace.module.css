@@ -810,7 +810,8 @@
 .toolRow,
 .tabRow,
 .composerActions,
-.overlayActions {
+.overlayActions,
+.overlayUtilityRow {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1015,6 +1016,10 @@
 .overlayContent {
   display: grid;
   gap: 14px;
+}
+
+.overlayUtilityRow {
+  padding-top: 2px;
 }
 
 .overlayMeta {

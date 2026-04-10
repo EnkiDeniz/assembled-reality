@@ -14,31 +14,30 @@ test("workspace entry route loads the room-first shell", async () => {
   assert.doesNotMatch(workspacePage, /redirect\(query \? `\/workspace\/phase1/);
 });
 
-test("phase1 page loads launch shell and bootstraps migration context", async () => {
+test("phase1 page redirects to the room", async () => {
   const phase1Page = await read("src/app/workspace/phase1/page.jsx");
 
-  assert.match(phase1Page, /buildMigrationNotice/);
-  assert.match(phase1Page, /migrationNotice/);
-  assert.match(phase1Page, /<LoegosPhase1Shell bootstrap=\{bootstrap\} \/>/);
+  assert.match(phase1Page, /redirect\(query \? `\/workspace\?/);
+  assert.doesNotMatch(phase1Page, /LoegosPhase1Shell/);
 });
 
-test("auth and read/library routes target launch shell semantics", async () => {
+test("auth and read/library routes target the room", async () => {
   const introLanding = await read("src/components/IntroLanding.jsx");
   const authTerminal = await read("src/components/AuthTerminal.jsx");
   const readPage = await read("src/app/read/page.jsx");
   const libraryPage = await read("src/app/library/page.jsx");
 
-  assert.match(introLanding, /\/workspace\/phase1/);
-  assert.match(authTerminal, /\/workspace\/phase1/);
-  assert.match(readPage, /redirect\("\/workspace\/phase1"\)/);
-  assert.match(libraryPage, /redirect\("\/workspace\/phase1"\)/);
+  assert.match(introLanding, /callbackUrl: "\/workspace"/);
+  assert.match(authTerminal, /callbackUrl: "\/workspace"/);
+  assert.match(readPage, /redirect\("\/workspace"\)/);
+  assert.match(libraryPage, /redirect\("\/workspace"\)/);
 });
 
-test("integration callback lands on launch shell", async () => {
+test("integration callback lands on the room", async () => {
   const connectRoute = await read("src/app/connect/getreceipts/route.js");
   const callbackRoute = await read("src/app/api/integrations/getreceipts/callback/route.js");
 
-  assert.match(connectRoute, /new URL\("\/workspace\/phase1", origin\)/);
-  assert.match(callbackRoute, /new URL\("\/workspace\/phase1", origin\)/);
+  assert.match(connectRoute, /new URL\("\/workspace", origin\)/);
+  assert.match(callbackRoute, /new URL\("\/workspace", origin\)/);
   assert.match(callbackRoute, /url\.searchParams\.set\("connected", "getreceipts"\)/);
 });

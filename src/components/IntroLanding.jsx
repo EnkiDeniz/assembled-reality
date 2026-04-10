@@ -99,8 +99,8 @@ function EntrySystemPanel() {
         <span className="loegos-kicker">Product law</span>
         <h2 className="loegos-entry__panel-title">The Echo Instrument</h2>
         <p className="loegos-entry__panel-body">
-          Lakin gives you one navigable field compiled from returns. This surface is not a document
-          manager. It is a sensing instrument for decision structure.
+          Lœgos gives you one navigable field compiled from returns. It is not a document manager.
+          It is an instrument for decision structure.
         </p>
         <p className="loegos-entry__panel-body">{PRODUCT_LAW}</p>
       </div>
@@ -153,7 +153,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace/phase1",
+        callbackUrl: "/workspace",
       });
 
       if (result?.error) {
@@ -177,7 +177,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       <div className="intro-auth">
         <div className="terminal-actions">
           <Link
-            href="/workspace/phase1"
+            href="/workspace"
             className="terminal-link is-primary"
             onClick={() => onEnter?.()}
           >
@@ -197,7 +197,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
           disabled={!authCapabilities.appleEnabled}
           onClick={() => {
             onEnter?.();
-            void signIn("apple", { callbackUrl: "/workspace/phase1" });
+            void signIn("apple", { callbackUrl: "/workspace" });
           }}
         >
           Continue with Apple
@@ -235,8 +235,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       </form>
 
       <p className="intro-auth__note">
-        Read the <Link href="/disclaimer" className="terminal-link">disclaimer</Link> before you
-        open the box.
+        Read the <Link href="/disclaimer" className="intro-auth__note-link">disclaimer</Link> before opening the box.
       </p>
     </div>
   );
@@ -275,10 +274,10 @@ export default function IntroLanding({
   }
   const returning = stage === "auth";
   const authKicker = returning ? "Return to the box" : "Enter the box";
-  const authTitle = returning ? "Resume your active field." : "Open your first field.";
+  const authTitle = returning ? "Resume the field." : "Open the field.";
   const authBody = returning
-    ? "Signed-in readers re-enter the active box with current signals, stale surfaces, and open listening loops."
-    : "Identity opens the instrument. Inside, you will send pings, hold awaiting as listening, and inspect return provenance before sealing.";
+    ? "Sign in to reopen the active box and continue from the latest signal."
+    : "Sign in to start pinging, listening, and reading returns.";
 
   return (
     <main className="loegos-entry">
@@ -297,14 +296,13 @@ export default function IntroLanding({
             <span className="loegos-kicker">Category</span>
             <h1 className="loegos-display">{BRAND_TRUTH}</h1>
             <p className="loegos-entry__lede">
-              Lakin is an echo instrument for decisions. You send pings into reality, listen for
-              what comes back, and navigate only what has returned signal.
+              Lœgos is an echo instrument for decisions. Send pings into reality, listen for what
+              returns, and navigate only returned signal.
             </p>
             <div className="loegos-entry__support">
               <p className="loegos-entry__lede loegos-entry__lede--support">
                 The field stays honest: mapped where returns are strong, fog where they are not,
-                fractured where contradictions land, and stale where old surfaces need renewed
-                echoes.
+                fractured where contradictions land, stale where surfaces need renewed echoes.
               </p>
               <div className="loegos-entry__boundary">
                 {BOUNDARY_LINE.split(". ")
@@ -331,8 +329,8 @@ export default function IntroLanding({
               <h2 className="loegos-entry__panel-title">{authTitle}</h2>
               <p className="loegos-entry__panel-body">{authBody}</p>
               <div className="loegos-entry__auth-notes">
-                <span>Inside the box: Ping, Listen, Echoes, Field.</span>
-                <span>Seven processes signals; it never fabricates returns.</span>
+                <span>Inside the box: Ping. Listen. Echoes. Field.</span>
+                <span>Seven reads signal. Returns stay attributed.</span>
               </div>
             </div>
             <div className={`intro-auth-inline ${returning ? "intro-auth-inline--stacked" : ""}`}>

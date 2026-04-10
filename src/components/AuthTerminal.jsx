@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { ACTION_LINE, BOUNDARY_LINE, PRODUCT_MARK } from "@/lib/product-language";
+import { PRODUCT_MARK } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 
 export default function AuthTerminal({ authCapabilities }) {
@@ -21,7 +21,7 @@ export default function AuthTerminal({ authCapabilities }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace/phase1",
+        callbackUrl: "/workspace",
       });
 
       if (result?.error) {
@@ -45,8 +45,8 @@ export default function AuthTerminal({ authCapabilities }) {
       <section className="auth-shell__panel">
         <div className="auth-shell__copy">
           <h1 className="auth-shell__title">{PRODUCT_MARK}</h1>
-          <p className="auth-shell__subtitle">{ACTION_LINE}</p>
-          <p className="auth-shell__meta">{BOUNDARY_LINE}</p>
+          <p className="auth-shell__subtitle">Open the field.</p>
+          <p className="auth-shell__meta">Sign in with Apple or email magic link.</p>
         </div>
 
         <div className="auth-shell__body">
@@ -55,7 +55,7 @@ export default function AuthTerminal({ authCapabilities }) {
               type="button"
               className="terminal-button is-primary"
               disabled={!authCapabilities.appleEnabled}
-              onClick={() => signIn("apple", { callbackUrl: "/workspace/phase1" })}
+              onClick={() => signIn("apple", { callbackUrl: "/workspace" })}
             >
               Continue with Apple
             </button>

@@ -53,6 +53,8 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomUi, /mirrorRegion/);
   assert.match(roomUi, /What's on your mind\?/);
   assert.match(roomUi, /Start talking\.\.\./);
+  assert.match(roomUi, /href="\/account"/);
+  assert.match(roomUi, /signOut\(\{ callbackUrl: "\/" \}\)/);
 
   assert.match(seedModel, /isRoomAssemblyDocument/);
 });

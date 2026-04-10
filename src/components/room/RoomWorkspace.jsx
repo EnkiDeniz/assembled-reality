@@ -3,18 +3,17 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
-  ArrowUpRight,
   Boxes,
   ChevronRight,
-  ExternalLink,
   FileText,
-  MessageSquareText,
+  LogOut,
   MoreHorizontal,
   Paperclip,
   Play,
   Plus,
-  ReceiptText,
+  Settings2,
   SendHorizontal,
   Upload,
   X,
@@ -54,12 +53,13 @@ function buildWorkspaceHref(projectKey = "") {
 function buildReaderDocumentHref(projectKey = "", documentKey = "") {
   const normalizedProjectKey = normalizeText(projectKey);
   const normalizedDocumentKey = normalizeText(documentKey);
+  if (!normalizedDocumentKey) {
+    return buildWorkspaceHref(normalizedProjectKey);
+  }
   const params = new URLSearchParams();
   if (normalizedProjectKey) params.set("project", normalizedProjectKey);
-  if (normalizedDocumentKey) params.set("document", normalizedDocumentKey);
-  params.set("mode", "listen");
-  params.set("phase", "think");
-  return `/workspace/phase1?${params.toString()}`;
+  const query = params.toString();
+  return `/read/${encodeURIComponent(normalizedDocumentKey)}${query ? `?${query}` : ""}`;
 }
 
 function splitParagraphs(text = "") {
@@ -1102,30 +1102,6 @@ function ToolLinks({ deepLinks }) {
       icon: <FileText size={14} />,
       subtle: false,
     },
-    {
-      href: normalizeText(deepLinks?.compare),
-      label: "Compare",
-      icon: <ArrowUpRight size={14} />,
-      subtle: false,
-    },
-    {
-      href: normalizeText(deepLinks?.operate),
-      label: "Operate",
-      icon: <MessageSquareText size={14} />,
-      subtle: false,
-    },
-    {
-      href: normalizeText(deepLinks?.receipts),
-      label: "Receipts",
-      icon: <ReceiptText size={14} />,
-      subtle: false,
-    },
-    {
-      href: normalizeText(deepLinks?.legacy),
-      label: "Legacy Workbench",
-      icon: <ExternalLink size={14} />,
-      subtle: true,
-    },
   ].filter((item) => item.href);
 
   if (!items.length) return null;
@@ -1142,6 +1118,28 @@ function ToolLinks({ deepLinks }) {
           {item.label}
         </Link>
       ))}
+    </div>
+  );
+}
+
+function SessionControls({ onClose }) {
+  return (
+    <div className={styles.overlayUtilityRow}>
+      <Link href="/account" className={styles.secondaryButton} onClick={onClose}>
+        <Settings2 size={14} />
+        Account
+      </Link>
+      <button
+        type="button"
+        className={styles.secondaryButton}
+        onClick={() => {
+          onClose?.();
+          void signOut({ callbackUrl: "/" });
+        }}
+      >
+        <LogOut size={14} />
+        Sign Out
+      </button>
     </div>
   );
 }
@@ -1321,6 +1319,7 @@ function OverlaySurface({
             </div>
 
             {view?.hasStructure ? <ToolLinks deepLinks={view?.deepLinks} /> : null}
+            <SessionControls onClose={onClose} />
 
             <div className={styles.overlayMeta}>
               <span>{Number(view?.project?.sourceCount) || 0} source{Number(view?.project?.sourceCount) === 1 ? "" : "s"}</span>

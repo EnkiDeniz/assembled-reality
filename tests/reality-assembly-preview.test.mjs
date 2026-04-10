@@ -6,7 +6,7 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("workspace entry now renders the room-first shell while phase1 stays available", async () => {
+test("workspace entry now renders the room-first shell while phase1 stays out of the way", async () => {
   const workspacePage = await read("src/app/workspace/page.jsx");
 
   assert.match(workspacePage, /RoomWorkspace/);
@@ -15,12 +15,11 @@ test("workspace entry now renders the room-first shell while phase1 stays availa
   assert.doesNotMatch(workspacePage, /redirect\(query \? `\/workspace\/phase1/);
 });
 
-test("launch shell page emits migration notice context", async () => {
+test("phase1 route immediately redirects into the room", async () => {
   const phase1Page = await read("src/app/workspace/phase1/page.jsx");
-  assert.match(phase1Page, /function buildMigrationNotice/);
-  assert.match(phase1Page, /legacy-workspace/);
-  assert.doesNotMatch(phase1Page, /workspace-v1/);
-  assert.match(phase1Page, /normalizedConnected === "getreceipts"/);
+  assert.match(phase1Page, /redirect\(query \? `\/workspace\?/);
+  assert.doesNotMatch(phase1Page, /Legacy Workbench/);
+  assert.doesNotMatch(phase1Page, /LoegosPhase1Shell/);
 });
 
 test("launch shell still exposes protected intake and player adapters", async () => {

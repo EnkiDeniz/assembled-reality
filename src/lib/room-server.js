@@ -71,20 +71,20 @@ function getLatestRealSource(projectDocuments = []) {
     )[0] || null;
 }
 
-function buildDeepLinks(project = null, currentAssemblyDocument = null, latestRealSource = null) {
+function buildDeepLinks(project = null, latestRealSource = null) {
   const projectKey = encodeURIComponent(String(project?.projectKey || "").trim());
   const roomBase = projectKey ? `/workspace?project=${projectKey}` : "/workspace";
-  const base = projectKey ? `/workspace/phase1?project=${projectKey}` : "/workspace/phase1";
   const sourceKey = encodeURIComponent(String(latestRealSource?.documentKey || "").trim());
-  const assemblyKey = encodeURIComponent(String(currentAssemblyDocument?.documentKey || "").trim());
+  const readerBase = sourceKey
+    ? `/read/${sourceKey}${projectKey ? `?project=${projectKey}` : ""}`
+    : "";
 
   return {
     room: roomBase,
-    legacy: base,
-    reader: sourceKey ? `${base}&document=${sourceKey}&mode=listen&phase=think` : "",
-    compare: assemblyKey ? `${base}&document=${assemblyKey}&mode=assemble&phase=create` : "",
-    operate: projectKey ? `${base}&phase=operate` : "",
-    receipts: projectKey ? `${base}&phase=receipts` : "",
+    reader: readerBase,
+    compare: "",
+    operate: "",
+    receipts: "",
   };
 }
 
@@ -175,7 +175,7 @@ export async function buildRoomWorkspaceViewForUser(userId, { projectKey = "" } 
     filename: `${roomDocument?.documentKey || "room"}.loe`,
   });
   const runtimeWindow = createOrHydrateRoomRuntimeWindow(roomDocument, artifact);
-  const deepLinks = buildDeepLinks(activeProject, currentAssemblyDocument, latestRealSource);
+  const deepLinks = buildDeepLinks(activeProject, latestRealSource);
   const recentSources = buildRecentSources(projectDocuments, latestRealSource);
   const canonicalView = buildRoomCanonicalViewModel({
     project: activeProject,

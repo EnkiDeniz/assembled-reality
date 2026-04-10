@@ -21,10 +21,8 @@ export async function GET(request) {
     );
   } catch {
     if (projectKey) {
-      const url = new URL("/workspace/phase1", origin);
+      const url = new URL("/workspace", origin);
       url.searchParams.set("project", projectKey);
-      url.searchParams.set("mode", "assemble");
-      url.searchParams.set("phase", "receipts");
       url.searchParams.set("error", "getreceipts-config");
       return NextResponse.redirect(url);
     }

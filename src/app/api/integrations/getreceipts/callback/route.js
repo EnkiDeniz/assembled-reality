@@ -6,13 +6,9 @@ import {
 } from "@/lib/getreceipts";
 
 function buildWorkspaceReturnUrl(origin, payload = null) {
-  const url = new URL("/workspace/phase1", origin);
+  const url = new URL("/workspace", origin);
   if (payload?.projectKey) {
     url.searchParams.set("project", payload.projectKey);
-  }
-  if (payload?.returnTo === "workspace-receipts") {
-    url.searchParams.set("mode", "assemble");
-    url.searchParams.set("phase", "receipts");
   }
   return url;
 }
