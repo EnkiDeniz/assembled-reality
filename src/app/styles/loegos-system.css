@@ -2063,6 +2063,16 @@
   background: var(--loegos-surface-2);
 }
 
+.phase2-receipt-kit {
+  margin-top: 8px;
+  border: 1px solid var(--loegos-line);
+  border-radius: 10px;
+  background: var(--loegos-surface-2);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
 .phase2-ratio-wrap {
   display: flex;
   align-items: center;

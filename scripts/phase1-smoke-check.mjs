@@ -73,6 +73,10 @@ async function main() {
   assert.match(launchShell, /phase2-room-surface/);
   assert.match(launchShell, /What is still unknown\?/);
   assert.match(launchShell, /phase2-seven-segment/);
+  assert.match(launchShell, /phase2-receipt-kit/);
+  assert.match(launchShell, /phase2-receipt-paste-input/);
+  assert.match(launchShell, /phase2-receipt-paste-submit/);
+  assert.match(launchShell, /phase2-receipt-result/);
   assert.match(launchShell, /phase2-box-collapse-toggle/);
   assert.match(launchShell, /phase2-evidence-story-ratio/);
   assert.match(launchShell, /phase2-settings-panel/);

@@ -84,6 +84,11 @@ test("phase2 workspace shell preserves intake/player and proposal gate", async (
   await page.getByTestId("phase2-chat-input").fill("give me a better root");
   await page.getByTestId("phase2-chat-send").click();
   await expect(page.getByTestId("phase2-ledger-panel")).toContainText("proposal_accepted");
+  await expect(page.getByTestId("phase2-receipt-kit")).toBeVisible();
+  await page.getByTestId("phase2-receipt-paste-input").fill("$780000 pre-approval");
+  await page.getByTestId("phase2-receipt-paste-submit").click();
+  await expect(page.getByTestId("phase2-receipt-result")).toContainText("receipt_result: paste");
+  await expect(page.getByTestId("phase2-ledger-panel")).toContainText("receipt_kit_completed");
   await page.getByTestId("phase2-seven-segment").first().click();
   await expect(page.getByTestId("phase2-seven-segment-clause")).toContainText("DIR aim");
   await page.getByTestId("phase2-box-collapse-toggle").click();

@@ -311,6 +311,68 @@ function mapSegmentDomainToRegion(domain = "") {
   return "";
 }
 
+function toWitnessRef(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 48) || "receipt_value";
+}
+
+function parseNumberCandidate(input = "") {
+  const normalized = String(input || "").replace(/,/g, "");
+  const match = normalized.match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const value = Number(match[0]);
+  return Number.isFinite(value) ? value : null;
+}
+
+function derivePredictionResult(expected = "", actual = "") {
+  const expectedText = String(expected || "").trim();
+  const actualText = String(actual || "").trim();
+  if (!expectedText || !actualText) return "surprised";
+  const actualNumber = parseNumberCandidate(actualText);
+  const rangeMatch = expectedText.match(/(-?\d+(\.\d+)?)\s*[-to]+\s*(-?\d+(\.\d+)?)/i);
+  if (rangeMatch && actualNumber !== null) {
+    const low = Number(rangeMatch[1]);
+    const high = Number(rangeMatch[3]);
+    if (Number.isFinite(low) && Number.isFinite(high)) {
+      if (actualNumber >= Math.min(low, high) && actualNumber <= Math.max(low, high)) return "matched";
+      return actualNumber < Math.min(low, high) || actualNumber > Math.max(low, high)
+        ? "surprised"
+        : "contradicted";
+    }
+  }
+  const gteMatch = expectedText.match(/>=\s*(-?\d+(\.\d+)?)/);
+  if (gteMatch && actualNumber !== null) {
+    return actualNumber >= Number(gteMatch[1]) ? "matched" : "contradicted";
+  }
+  const lteMatch = expectedText.match(/<=\s*(-?\d+(\.\d+)?)/);
+  if (lteMatch && actualNumber !== null) {
+    return actualNumber <= Number(lteMatch[1]) ? "matched" : "contradicted";
+  }
+  return actualText.toLowerCase().includes(expectedText.toLowerCase().slice(0, 20))
+    ? "matched"
+    : "surprised";
+}
+
+function buildReceiptKitClause(kit, completedValue, completionKind) {
+  const need = String(kit?.need || "missing witness").trim();
+  const witnessRef = toWitnessRef(need);
+  const safeValue = String(completedValue || "").replace(/"/g, "'");
+  if (completionKind === "draft_message") {
+    return `MOV move ${witnessRef} via manual`;
+  }
+  if (completionKind === "link") {
+    return `GND witness @${witnessRef} from "${safeValue || "external_link"}" as score`;
+  }
+  if (completionKind === "upload") {
+    return `GND witness @${witnessRef} from "${safeValue || "uploaded_file"}" with hash_pending`;
+  }
+  return `GND witness @${witnessRef} from "user_return" as score "${safeValue || "provided"}"`;
+}
+
 function SevenSegment({
   segment,
   index,
@@ -344,6 +406,178 @@ function SevenSegment({
         </span>
       ) : null}
     </span>
+  );
+}
+
+function ReceiptKitCard({ messageIndex, kit, onComplete }) {
+  const [value, setValue] = useState("");
+  const [compareActual, setCompareActual] = useState("");
+  const [uploadName, setUploadName] = useState("");
+  const [checkItems, setCheckItems] = useState(() =>
+    Array.isArray(kit?.artifact?.config?.items)
+      ? kit.artifact.config.items.map((item) => ({ text: String(item || "").trim(), done: false }))
+      : [],
+  );
+  const type = String(kit?.artifact?.type || "paste").trim();
+  const cfg = kit?.artifact?.config || {};
+
+  return (
+    <div className="phase2-receipt-kit" data-testid="phase2-receipt-kit">
+      <div className="phase2-card__title">Receipt Kit</div>
+      <div className="phase2-card__line">Need: {kit?.need}</div>
+      <div className="phase2-card__meta">Why: {kit?.why}</div>
+      <div className="phase2-card__meta">Fastest: {kit?.fastestPath}</div>
+      {type === "paste" ? (
+        <div className="phase2-stack-gap">
+          <input
+            className="terminal-input"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder={cfg.placeholder || "Paste value"}
+            data-testid="phase2-receipt-paste-input"
+          />
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={() => onComplete(messageIndex, kit, "paste", value)}
+            data-testid="phase2-receipt-paste-submit"
+            disabled={!String(value).trim()}
+          >
+            Attach return
+          </button>
+        </div>
+      ) : null}
+      {type === "compare" ? (
+        <div className="phase2-stack-gap">
+          <div className="phase2-card__meta">Expected: {cfg.expected || kit?.prediction?.expected}</div>
+          <input
+            className="terminal-input"
+            value={compareActual}
+            onChange={(event) => setCompareActual(event.target.value)}
+            placeholder={cfg.label || "Paste actual result"}
+            data-testid="phase2-receipt-compare-input"
+          />
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={() => onComplete(messageIndex, kit, "compare", compareActual)}
+            data-testid="phase2-receipt-compare-submit"
+            disabled={!String(compareActual).trim()}
+          >
+            Compare expected vs actual
+          </button>
+        </div>
+      ) : null}
+      {type === "upload" ? (
+        <div className="phase2-stack-gap">
+          <input
+            type="file"
+            data-testid="phase2-receipt-upload-input"
+            onChange={(event) => {
+              const file = event?.target?.files?.[0];
+              if (!file) return;
+              setUploadName(file.name);
+            }}
+          />
+          <button
+            type="button"
+            className="terminal-button"
+            disabled={!uploadName}
+            onClick={() => onComplete(messageIndex, kit, "upload", uploadName)}
+            data-testid="phase2-receipt-upload-submit"
+          >
+            Log uploaded receipt
+          </button>
+        </div>
+      ) : null}
+      {type === "link" ? (
+        <div className="phase2-stack-gap">
+          <a className="phase2-link" href={cfg.url || "#"} target="_blank" rel="noreferrer">
+            {cfg.label || "Open link"}
+          </a>
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={() => onComplete(messageIndex, kit, "link", cfg.url || cfg.label || "link_checked")}
+            data-testid="phase2-receipt-link-done"
+          >
+            Mark link checked
+          </button>
+        </div>
+      ) : null}
+      {type === "draft_message" ? (
+        <div className="phase2-stack-gap">
+          <textarea
+            className="terminal-input"
+            rows={4}
+            value={String(cfg.body || "")}
+            readOnly
+            data-testid="phase2-receipt-draft-body"
+          />
+          <div className="phase2-row">
+            <button
+              type="button"
+              className="terminal-button"
+              onClick={() => navigator?.clipboard?.writeText(String(cfg.body || ""))}
+              data-testid="phase2-receipt-draft-copy"
+            >
+              Copy message
+            </button>
+            <button
+              type="button"
+              className="terminal-button"
+              onClick={() => onComplete(messageIndex, kit, "draft_message", cfg.subject || "message_sent")}
+              data-testid="phase2-receipt-draft-done"
+            >
+              Mark sent
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {type === "checklist" ? (
+        <div className="phase2-stack-gap">
+          {checkItems.map((item, index) => (
+            <label key={`check-${index}`} className="phase2-settings-checkbox">
+              <input
+                type="checkbox"
+                checked={Boolean(item.done)}
+                onChange={(event) =>
+                  setCheckItems((current) =>
+                    current.map((entry, entryIndex) =>
+                      entryIndex === index ? { ...entry, done: event.target.checked } : entry,
+                    ),
+                  )
+                }
+              />
+              <span>{item.text}</span>
+            </label>
+          ))}
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={() =>
+              onComplete(
+                messageIndex,
+                kit,
+                "checklist",
+                checkItems
+                  .filter((entry) => entry.done)
+                  .map((entry) => entry.text)
+                  .join("; "),
+              )
+            }
+            data-testid="phase2-receipt-checklist-done"
+          >
+            Log checked items
+          </button>
+        </div>
+      ) : null}
+      <div className="phase2-card__meta">Enough: {kit?.enough}</div>
+      <div className="phase2-card__meta">
+        Prediction: {kit?.prediction?.expected} ({kit?.prediction?.direction}, {kit?.prediction?.timebound})
+      </div>
+      <div className="phase2-card__meta">Surprise condition: {kit?.prediction?.surprise}</div>
+    </div>
   );
 }
 
@@ -1159,6 +1393,51 @@ function MirrorView({
     }
   }
 
+  function handleReceiptKitComplete(messageIndex, kit, completionKind, completedValue) {
+    const value = String(completedValue || "").trim();
+    if (!value && completionKind !== "checklist") {
+      onStatus("Receipt kit needs a concrete value before completion.");
+      return;
+    }
+    const clause = buildReceiptKitClause(kit, value, completionKind);
+    const currentSource = String(fileEntry.source || "").trim();
+    const nextSource = `${currentSource}\n${clause}\n`;
+    const predictionResult =
+      completionKind === "compare"
+        ? derivePredictionResult(kit?.prediction?.expected || kit?.artifact?.config?.expected, value)
+        : null;
+    onSourceUpdate(nextSource, {
+      kind: "receipt_kit_completed",
+      detail: `Receipt kit completed via ${completionKind}`,
+      metadata: {
+        need: kit?.need || "",
+        completionKind,
+        value,
+        predictionExpected: kit?.prediction?.expected || "",
+        predictionResult,
+      },
+    });
+    setMessages((current) =>
+      current.map((message, index) => {
+        if (index !== messageIndex || message.role !== "seven") return message;
+        return {
+          ...message,
+          receiptKitStatus: {
+            completed: true,
+            completionKind,
+            value,
+            predictionResult: predictionResult || "",
+          },
+        };
+      }),
+    );
+    if (predictionResult) {
+      onStatus(`Receipt logged. Prediction result: ${predictionResult}.`);
+      return;
+    }
+    onStatus("Receipt logged and attached to the box.");
+  }
+
   function handleAttestOverride() {
     const rationale = String(attestRationale || "").trim();
     if (!rationale) {
@@ -1220,6 +1499,21 @@ function MirrorView({
                       <div style={{ color: message.gate?.accepted ? TOKENS.success : TOKENS.error }}>
                         {message.gate?.accepted ? "accepted" : `rejected (${message.gate?.reason})`}
                       </div>
+                      {message?.proposal?.receiptKit ? (
+                        <ReceiptKitCard
+                          messageIndex={index}
+                          kit={message.proposal.receiptKit}
+                          onComplete={handleReceiptKitComplete}
+                        />
+                      ) : null}
+                      {message?.receiptKitStatus?.completed ? (
+                        <div className="phase2-card__meta" data-testid="phase2-receipt-result">
+                          receipt_result: {message.receiptKitStatus.completionKind}
+                          {message.receiptKitStatus.predictionResult
+                            ? ` (${message.receiptKitStatus.predictionResult})`
+                            : ""}
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>

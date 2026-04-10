@@ -24,6 +24,68 @@ function normalizeSegmentsFromCandidates(candidates = []) {
     .filter(Boolean);
 }
 
+const RECEIPT_TYPES = new Set([
+  "upload",
+  "paste",
+  "draft_message",
+  "link",
+  "checklist",
+  "compare",
+]);
+
+function normalizeReceiptKit(rawKit = null, fallback = {}) {
+  const type = String(rawKit?.artifact?.type || fallback?.artifact?.type || "paste").trim();
+  const normalizedType = RECEIPT_TYPES.has(type) ? type : "paste";
+  const config =
+    rawKit?.artifact?.config && typeof rawKit.artifact.config === "object"
+      ? rawKit.artifact.config
+      : fallback?.artifact?.config && typeof fallback.artifact.config === "object"
+        ? fallback.artifact.config
+        : {};
+  const base = {
+    need: String(rawKit?.need || fallback?.need || "Missing witness").trim(),
+    why: String(rawKit?.why || fallback?.why || "Needed to reduce uncertainty in this box").trim(),
+    fastestPath: String(rawKit?.fastestPath || fallback?.fastestPath || "Use the suggested artifact below").trim(),
+    artifact: {
+      type: normalizedType,
+      config,
+    },
+    enough: String(rawKit?.enough || fallback?.enough || "One concrete, verifiable return").trim(),
+    prediction: {
+      expected: String(rawKit?.prediction?.expected || fallback?.prediction?.expected || "One return with provenance").trim(),
+      direction: String(rawKit?.prediction?.direction || fallback?.prediction?.direction || "narrows").trim(),
+      timebound: String(rawKit?.prediction?.timebound || fallback?.prediction?.timebound || "within this loop").trim(),
+      surprise: String(rawKit?.prediction?.surprise || fallback?.prediction?.surprise || "Return differs from expectation").trim(),
+    },
+  };
+  return base;
+}
+
+function buildFallbackReceiptKit({ question = "", segments = [] } = {}) {
+  const firstSegment = segments[0] || null;
+  const firstText = String(firstSegment?.text || question || "").trim();
+  const needLabel = firstText || "Missing grounding witness";
+  return normalizeReceiptKit(null, {
+    need: needLabel.slice(0, 120),
+    why: "This box needs one concrete return before closure.",
+    fastestPath: "Paste the smallest verifiable value you can get now.",
+    artifact: {
+      type: "paste",
+      config: {
+        label: "Paste one concrete return",
+        placeholder: "e.g. lender pre-approval, offer number, measured value",
+      },
+    },
+    enough: "One value with source context.",
+    prediction: {
+      expected: "Reality likely narrows this decision range.",
+      direction: "narrows",
+      timebound: "this turn",
+      surprise: "Return contradicts the active story.",
+    },
+  });
+}
+
 function buildFallbackProposal(answer = "") {
   const normalized = toIdentifier(answer || "clarify_next_step");
   return {
@@ -37,20 +99,42 @@ function buildFallbackProposal(answer = "") {
       },
     ],
     source: "fallback",
+    receiptKit: buildFallbackReceiptKit({
+      question: answer,
+      segments: [
+        {
+          text: String(answer || "Seven suggested a refinement.").trim(),
+        },
+      ],
+    }),
   };
 }
 
-export function mapSevenProposalResponse(payload = null) {
+export function mapSevenProposalResponse(payload = null, context = {}) {
   const instrumentResult = payload?.instrumentResult || null;
   const segments = normalizeSegmentsFromCandidates(instrumentResult?.candidates || []);
+  const providedKit = payload?.receiptKit || instrumentResult?.receiptKit || null;
   if (segments.length > 0) {
+    const fallbackKit = buildFallbackReceiptKit({
+      question: context?.question || payload?.answer || "",
+      segments,
+    });
     return {
       summary: String(instrumentResult?.summary || payload?.answer || "").trim(),
       segments,
       source: "instrument_candidates",
+      receiptKit: normalizeReceiptKit(providedKit, fallbackKit),
     };
   }
-  return buildFallbackProposal(payload?.answer || "");
+  const fallback = buildFallbackProposal(payload?.answer || "");
+  const fallbackKit = buildFallbackReceiptKit({
+    question: context?.question || payload?.answer || "",
+    segments: fallback.segments || [],
+  });
+  return {
+    ...fallback,
+    receiptKit: normalizeReceiptKit(providedKit, fallbackKit),
+  };
 }
 
 export async function fetchSevenProposal({
@@ -91,5 +175,5 @@ export async function fetchSevenProposal({
     );
   }
 
-  return mapSevenProposalResponse(payload);
+  return mapSevenProposalResponse(payload, { question });
 }

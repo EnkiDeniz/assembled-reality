@@ -29,6 +29,9 @@ test("maps Seven root-suggest response into compiler-gated proposal clauses", ()
   assert.equal(proposal.source, "instrument_candidates");
   assert.equal(proposal.segments.length, 1);
   assert.match(proposal.segments[0].suggestedClause, /^DIR aim /);
+  assert.ok(proposal.receiptKit);
+  assert.match(proposal.receiptKit.need, /stabilize source truth|Try a tighter root/i);
+  assert.equal(typeof proposal.receiptKit.prediction.expected, "string");
   assert.equal(gate.accepted, true);
   assert.match(gate.nextSource, /DIR aim stabilize_source_truth/);
 });

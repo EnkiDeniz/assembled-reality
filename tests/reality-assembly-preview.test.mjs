@@ -64,6 +64,10 @@ test("launch shell still exposes protected intake and player adapters", async ()
   assert.match(shell, /What is next lawful move\?/);
   assert.match(shell, /data-testid="phase2-seven-segment"/);
   assert.match(shell, /data-testid="phase2-seven-segment-clause"/);
+  assert.match(shell, /data-testid="phase2-receipt-kit"/);
+  assert.match(shell, /data-testid="phase2-receipt-paste-input"/);
+  assert.match(shell, /data-testid="phase2-receipt-paste-submit"/);
+  assert.match(shell, /data-testid="phase2-receipt-result"/);
   assert.match(shell, /data-testid="phase2-box-collapse-toggle"/);
   assert.match(shell, /data-testid="phase2-evidence-story-ratio"/);
   assert.match(shell, /data-testid="phase2-settings-panel"/);
