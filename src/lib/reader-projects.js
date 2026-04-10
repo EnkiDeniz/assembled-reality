@@ -948,29 +948,32 @@ export async function attachDocumentToProjectForUser(
       return;
     }
 
-    const existingMembership = await readerProjectDocumentModel.findFirst({
+    const count = await readerProjectDocumentModel.count({
       where: {
         projectId: project.id,
-        documentKey,
       },
     });
 
-    if (!existingMembership) {
-      const count = await readerProjectDocumentModel.count({
-        where: {
-          projectId: project.id,
-        },
-      });
-
-      await readerProjectDocumentModel.create({
-        data: {
+    await readerProjectDocumentModel.upsert({
+      where: {
+        projectId_documentKey: {
           projectId: project.id,
           documentKey,
-          role,
-          position: count,
         },
-      });
-    }
+      },
+      create: {
+        projectId: project.id,
+        documentKey,
+        role,
+        position: count,
+      },
+      update:
+        role === "ASSEMBLY"
+          ? {
+              role: "ASSEMBLY",
+            }
+          : {},
+    });
 
     const normalizedAppendEvents = Array.isArray(appendEvents) ? appendEvents.filter(Boolean) : [];
     const nextProjectData = {};
