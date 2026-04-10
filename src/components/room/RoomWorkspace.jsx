@@ -124,16 +124,63 @@ function getSegmentTone(domain = "") {
   };
 }
 
-function isActiveProposalMessage(view = null, message = null) {
-  const activeMessageId = normalizeText(view?.proposalWake?.assistantMessageId);
-  const activeProposalId = normalizeText(view?.proposalWake?.proposalId);
-  const messageId = normalizeText(message?.id);
-  const proposalId = normalizeText(message?.roomPayload?.proposalId);
+function normalizePreviewStatus(value = "") {
+  const normalized = normalizeText(value).toLowerCase();
+  if (["blocked", "superseded", "active", "applied"].includes(normalized)) {
+    return normalized;
+  }
+  return "none";
+}
 
-  return Boolean(
-    (activeMessageId && activeMessageId === messageId) ||
-      (activeProposalId && proposalId && activeProposalId === proposalId),
-  );
+function getPreviewStatusCopy(status = "none") {
+  const normalized = normalizePreviewStatus(status);
+  if (normalized === "active") {
+    return {
+      label: "Preview",
+      detail: "Visible now. Not canonical until applied.",
+      tone: "brand",
+    };
+  }
+  if (normalized === "blocked") {
+    return {
+      label: "Blocked",
+      detail: "Visible, but not lawful to apply.",
+      tone: "flagged",
+    };
+  }
+  if (normalized === "superseded") {
+    return {
+      label: "Earlier Preview",
+      detail: "Kept in history. No longer the active preview.",
+      tone: "neutral",
+    };
+  }
+  if (normalized === "applied") {
+    return {
+      label: "Applied",
+      detail: "This preview already changed the box canon.",
+      tone: "grounded",
+    };
+  }
+  return {
+    label: "Conversation",
+    detail: "",
+    tone: "neutral",
+  };
+}
+
+function getPreviewStatusClass(status = "none") {
+  const normalized = normalizePreviewStatus(status);
+  if (normalized === "active") return styles.previewStatusActive;
+  if (normalized === "blocked") return styles.previewStatusBlocked;
+  if (normalized === "superseded") return styles.previewStatusSuperseded;
+  if (normalized === "applied") return styles.previewStatusApplied;
+  return "";
+}
+
+function isActivePreviewMessage(view = null, message = null) {
+  const activeMessageId = normalizeText(view?.activePreview?.assistantMessageId);
+  return Boolean(activeMessageId && activeMessageId === normalizeText(message?.id));
 }
 
 function Kicker({ children, tone = "neutral", className = "" }) {
@@ -1008,31 +1055,42 @@ function ProposalSegments({ segments, onHighlight }) {
   );
 }
 
-function ProposalFooter({ roomPayload, onApply, busy, activeAcceptedProposal = false }) {
+function ProposalFooter({ roomPayload, previewStatus, onApply, busy }) {
   const gatePreview = roomPayload?.gatePreview || null;
   const diagnostics = Array.isArray(gatePreview?.diagnostics) ? gatePreview.diagnostics : [];
+  const status = normalizePreviewStatus(previewStatus);
   const accepted = gatePreview?.accepted !== false;
 
   if (!gatePreview) return null;
-  if (accepted && !activeAcceptedProposal) return null;
+
+  let statusTitle = "Ready";
+  let body =
+    gatePreview?.nextBestAction || "Apply this preview to make it canonical.";
+
+  if (status === "blocked" || !accepted) {
+    statusTitle = "Blocked";
+    body = gatePreview?.reason || "This preview is not lawful yet.";
+  } else if (status === "applied") {
+    statusTitle = "Applied";
+    body = "This preview already changed the box canon.";
+  } else if (status === "superseded") {
+    statusTitle = "Superseded";
+    body = "A newer preview is now active in this conversation.";
+  }
 
   return (
     <div className={styles.proposalFooter}>
       <div
         className={`${styles.proposalStatus} ${accepted ? styles.proposalStatusAccepted : styles.proposalStatusRejected}`}
       >
-        <span>{accepted ? "Ready" : "Blocked"}</span>
-        <p>
-          {accepted
-            ? gatePreview?.nextBestAction || "Apply this proposal to make it canonical."
-            : gatePreview?.reason || "This proposal is not lawful yet."}
-        </p>
+        <span>{statusTitle}</span>
+        <p>{body}</p>
         {diagnostics.length ? (
           <small>{diagnostics.map((item) => item.message).join(" • ")}</small>
         ) : null}
       </div>
 
-      {accepted && Array.isArray(roomPayload?.segments) && roomPayload.segments.length ? (
+      {accepted && status === "active" && Array.isArray(roomPayload?.segments) && roomPayload.segments.length ? (
         <button type="button" className={styles.applyButton} onClick={onApply} disabled={busy}>
           {busy ? "Applying..." : "Apply to Room"}
         </button>
@@ -1055,16 +1113,16 @@ function ThreadMessage({
   const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
   const paragraphs = splitParagraphs(message?.content || "");
   const isAssistant = message?.role === "assistant";
-  const activeAcceptedProposal = isAssistant && isActiveProposalMessage(view, message);
+  const previewStatus = normalizePreviewStatus(message?.previewStatus);
+  const previewCopy = getPreviewStatusCopy(previewStatus);
+  const activeAcceptedProposal = isAssistant && isActivePreviewMessage(view, message);
   const proposalMessage = isAssistant && hasProposalContent(roomPayload);
-  const [proposalOpen, setProposalOpen] = useState(false);
-  const proposalDisclosureLabel =
-    roomPayload?.gatePreview?.accepted === false ? "Inspect blocked proposal" : "Inspect proposal";
+  const showReceiptKit = Boolean(receiptKit && ["active", "applied"].includes(previewStatus));
 
   return (
     <article className={`${styles.messageRow} ${isAssistant ? styles.messageRowAssistant : styles.messageRowUser}`}>
       <div
-        className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser} ${activeAcceptedProposal && proposalOpen ? styles.messageCardPreview : ""}`}
+        className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser} ${activeAcceptedProposal ? styles.messageCardPreview : ""} ${getPreviewStatusClass(previewStatus)}`}
       >
         <div className={styles.messageMeta}>
           <span>{isAssistant ? "Seven" : "You"}</span>
@@ -1080,36 +1138,25 @@ function ThreadMessage({
         </div>
 
         {proposalMessage ? (
-          <div className={styles.proposalDisclosure}>
-            <button
-              type="button"
-              className={styles.proposalDisclosureButton}
-              onClick={() => setProposalOpen((current) => !current)}
-            >
-              {proposalOpen ? "Hide proposal" : proposalDisclosureLabel}
-            </button>
-            {proposalOpen ? (
-              <div className={styles.proposalDisclosurePanel}>
-                <div className={styles.messagePreviewMeta}>
-                  <span>Structure Waking</span>
-                  <small>Preview Only</small>
-                </div>
-                {segments.length ? <ProposalSegments segments={segments} onHighlight={onHighlight} /> : null}
-                <ProposalFooter
-                  roomPayload={roomPayload}
-                  onApply={() => onApplyProposal(message)}
-                  busy={applying}
-                  activeAcceptedProposal={activeAcceptedProposal}
-                />
-                {receiptKit ? (
-                  <ReceiptKitCard
-                    receiptKit={receiptKit}
-                    view={view}
-                    onComplete={onCompleteReceiptKit}
-                    busy={busyReceiptKitId === receiptKit.id}
-                  />
-                ) : null}
-              </div>
+          <div className={styles.previewBlock}>
+            <div className={styles.messagePreviewMeta}>
+              <span>{previewCopy.label}</span>
+              <small>{previewCopy.detail || "Visible in this turn."}</small>
+            </div>
+            {segments.length ? <ProposalSegments segments={segments} onHighlight={onHighlight} /> : null}
+            <ProposalFooter
+              roomPayload={roomPayload}
+              previewStatus={previewStatus}
+              onApply={() => onApplyProposal(message)}
+              busy={applying}
+            />
+            {showReceiptKit ? (
+              <ReceiptKitCard
+                receiptKit={receiptKit}
+                view={view}
+                onComplete={onCompleteReceiptKit}
+                busy={busyReceiptKitId === receiptKit.id}
+              />
             ) : null}
           </div>
         ) : null}
@@ -1245,6 +1292,29 @@ function RoomSessionList({
   );
 }
 
+function ActivePreviewBanner({ activePreview }) {
+  if (!activePreview) return null;
+
+  const summary =
+    normalizeText(activePreview?.assistantText) ||
+    normalizeText(activePreview?.segments?.[0]?.text) ||
+    "A preview is live in this conversation.";
+
+  return (
+    <section className={styles.previewBanner}>
+      <div className={styles.previewBannerCopy}>
+        <Kicker tone="brand">Preview</Kicker>
+        <strong>{summary}</strong>
+        <p>{normalizeText(activePreview?.nextBestAction) || "Visible now. Not canonical until applied."}</p>
+      </div>
+      <div className={styles.previewBannerMeta}>
+        <span>Conversation only</span>
+        <span>Box canon unchanged</span>
+      </div>
+    </section>
+  );
+}
+
 function Composer({
   value,
   onChange,
@@ -1361,6 +1431,85 @@ function LoadingMessage() {
   );
 }
 
+function AuthorityPanel({ authorityContext }) {
+  if (!authorityContext) return null;
+
+  const sourceTitles = (Array.isArray(authorityContext?.sources) ? authorityContext.sources : [])
+    .map((source) => normalizeText(source?.title))
+    .filter(Boolean)
+    .slice(0, 3);
+  const diagnostics = (Array.isArray(authorityContext?.diagnostics) ? authorityContext.diagnostics : [])
+    .map((diagnostic) => normalizeText(diagnostic?.message))
+    .filter(Boolean)
+    .slice(0, 3);
+  const artifact = authorityContext?.artifact || {};
+  const runtime = authorityContext?.runtime || {};
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="neutral">Authority</Kicker>
+          <strong>What is box truth right now</strong>
+        </div>
+      </div>
+
+      <div className={styles.authorityGrid}>
+        <div className={styles.authorityBlock}>
+          <span>Box</span>
+          <strong>{authorityContext?.project?.title || "Untitled Box"}</strong>
+          {normalizeText(authorityContext?.project?.subtitle) ? (
+            <p>{authorityContext.project.subtitle}</p>
+          ) : null}
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Conversation</span>
+          <strong>{authorityContext?.session?.title || "Conversation"}</strong>
+          <p>Canon stays box-level across conversations.</p>
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Artifact</span>
+          <strong>
+            {normalizeText(artifact?.compileState) || "unknown"} • {Number(artifact?.clauseCount) || 0} clauses
+          </strong>
+          <p>
+            Runtime {normalizeText(runtime?.state) || "open"}
+            {normalizeText(runtime?.nextBestAction) ? ` • ${runtime.nextBestAction}` : ""}
+          </p>
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Recent sources</span>
+          {sourceTitles.length ? (
+            <ul className={styles.authorityList}>
+              {sourceTitles.map((title) => (
+                <li key={title}>{title}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No recent source witness in view yet.</p>
+          )}
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Diagnostics</span>
+          {diagnostics.length ? (
+            <ul className={styles.authorityList}>
+              {diagnostics.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No current diagnostics.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OverlaySurface({
   mode,
   view,
@@ -1436,6 +1585,7 @@ function OverlaySurface({
                 busy={busy}
               />
             ) : null}
+            <AuthorityPanel authorityContext={view?.authorityContext} />
             <SessionControls onClose={onClose} />
 
             <div className={styles.overlayMeta}>
@@ -1825,6 +1975,8 @@ export default function RoomWorkspace({ initialView }) {
               onToggle={() => setMirrorCollapsed((current) => !current)}
             />
           ) : null}
+
+          {view?.activePreview ? <ActivePreviewBanner activePreview={view.activePreview} /> : null}
 
           <div
             ref={threadRef}

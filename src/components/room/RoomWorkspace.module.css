@@ -1702,48 +1702,112 @@
   font-size: inherit;
 }
 
-.proposalDisclosure {
+.previewBlock {
   margin-top: 12px;
-}
-
-.proposalDisclosureButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--room-soft);
-  font-family: var(--room-font-mono);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  transition:
-    border-color 0.25s var(--room-ease),
-    color 0.25s var(--room-ease),
-    background 0.25s var(--room-ease);
-}
-
-.proposalDisclosureButton:hover {
-  border-color: rgba(94, 167, 255, 0.14);
-  color: var(--room-blue);
-}
-
-.proposalDisclosureButton:focus-visible {
-  outline: none;
-  border-color: rgba(94, 167, 255, 0.22);
-  box-shadow: 0 0 0 1px rgba(94, 167, 255, 0.18);
-}
-
-.proposalDisclosurePanel {
-  margin-top: 10px;
   padding: 10px 12px 12px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.018);
+}
+
+.previewStatusActive {
+  border-color: rgba(94, 167, 255, 0.16);
+}
+
+.previewStatusBlocked {
+  border-color: rgba(255, 127, 127, 0.16);
+}
+
+.previewStatusSuperseded {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.previewStatusApplied {
+  border-color: rgba(127, 217, 160, 0.16);
+}
+
+.previewBanner {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 34%),
+    rgba(19, 21, 25, 0.92);
+  display: grid;
+  gap: 10px;
+}
+
+.previewBannerCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.previewBannerCopy strong {
+  font-size: 0.98rem;
+  line-height: 1.45;
+  font-weight: 520;
+  color: var(--room-white);
+}
+
+.previewBannerCopy p {
+  color: var(--room-soft);
+  line-height: 1.5;
+}
+
+.previewBannerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-family: var(--room-font-mono);
+  font-size: 0.7rem;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--room-meta);
+}
+
+.authorityGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.authorityBlock {
+  display: grid;
+  gap: 6px;
+  padding: 11px 12px;
+  border: 1px solid var(--room-line);
+  border-radius: 8px;
+  background: var(--room-surface);
+}
+
+.authorityBlock > span {
+  font-family: var(--room-font-mono);
+  font-size: 0.76rem;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--room-meta);
+}
+
+.authorityBlock strong {
+  font-size: 0.96rem;
+  line-height: 1.45;
+  font-weight: 520;
+  color: var(--room-white);
+}
+
+.authorityBlock p {
+  color: var(--room-soft);
+  line-height: 1.5;
+}
+
+.authorityList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 16px;
+  color: var(--room-soft);
+  line-height: 1.45;
 }
 
 .segmentFlow {

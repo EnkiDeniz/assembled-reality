@@ -111,7 +111,7 @@ function buildProjectList(projects = []) {
   }));
 }
 
-function buildEmptyRoomView({ readerData = null, projects = [], resetAt = null } = {}) {
+function buildEmptyRoomView({ readerData: _readerData = null, projects = [], resetAt = null } = {}) {
   return {
     project: null,
     projects: buildProjectList(projects),
@@ -159,7 +159,7 @@ function buildEmptyRoomView({ readerData = null, projects = [], resetAt = null }
       returns: [],
     },
     pendingMove: null,
-    proposalWake: null,
+    activePreview: null,
     recentReturns: [],
     recentSources: [],
     receiptSummary: {
@@ -386,7 +386,7 @@ export async function buildRoomWorkspaceViewForUser(userId, { projectKey = "", s
     projects: buildProjectList(projects),
     session: resolvedSession,
     sessions: resolvedSessions,
-    messages,
+    messages: canonicalView?.messages || messages,
     authorityContext,
     resetAt: resetState.resetAt,
     ...canonicalView,

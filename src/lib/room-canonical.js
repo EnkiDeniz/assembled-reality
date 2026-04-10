@@ -16,8 +16,8 @@ import {
   extractClausesByHead,
   getClauseKeyword,
 } from "../../LoegosCLI/UX/lib/artifact-view-model.mjs";
-import { getRoomFieldStateTone } from "@/lib/room";
-import { auditRoomProposalSemantics, hasCanonicalProposalSegments } from "@/lib/room-turn-policy.mjs";
+import { getRoomFieldStateTone } from "./room.js";
+import { auditRoomProposalSemantics, hasCanonicalProposalSegments } from "./room-turn-policy.mjs";
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -364,7 +364,7 @@ function buildPendingMove(moves = [], artifact = null, runtimeWindow = null) {
   return moves.at(-1) || null;
 }
 
-function buildProposalWakeSectionItems(segments = [], mirrorRegion = "") {
+function buildPreviewSectionItems(segments = [], mirrorRegion = "") {
   return segments
     .filter((segment) => normalizeText(segment?.mirrorRegion).toLowerCase() === mirrorRegion)
     .map((segment, index) => ({
@@ -390,42 +390,103 @@ function isProposalAlreadyApplied(events = [], messageId = "", proposalId = "") 
   });
 }
 
-export function buildProposalWakeViewModel(messages = [], runtimeWindow = null) {
-  const events = Array.isArray(runtimeWindow?.events) ? runtimeWindow.events : [];
-  for (const message of [...(Array.isArray(messages) ? messages : [])].reverse()) {
-    if (normalizeText(message?.role).toLowerCase() !== "assistant") continue;
-    const roomPayload = message?.roomPayload || null;
-    if (normalizeText(roomPayload?.turnMode).toLowerCase() === "conversation") continue;
-    if (!roomPayload?.gatePreview?.accepted) continue;
-    const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
-    if (!segments.length) continue;
-    if (isProposalAlreadyApplied(events, message?.id, roomPayload?.proposalId)) continue;
-
-    const aim = buildProposalWakeSectionItems(segments, "aim")[0] || null;
-    return {
-      proposalId: normalizeText(roomPayload?.proposalId),
-      assistantMessageId: normalizeText(message?.id),
-      assistantText: normalizeLongText(message?.content),
-      nextBestAction: normalizeText(roomPayload?.gatePreview?.nextBestAction),
-      receiptKit: roomPayload?.receiptKit || null,
-      segments: segments.map((segment) => ({
-        id: segment.id,
-        text: normalizeLongText(segment?.text),
-        domain: normalizeText(segment?.domain).toLowerCase() || "other",
-        mirrorRegion: normalizeText(segment?.mirrorRegion).toLowerCase(),
-        suggestedClause: normalizeLongText(segment?.suggestedClause),
-      })),
-      sections: {
-        aim,
-        evidence: buildProposalWakeSectionItems(segments, "evidence"),
-        story: buildProposalWakeSectionItems(segments, "story"),
-        moves: buildProposalWakeSectionItems(segments, "moves"),
-        returns: buildProposalWakeSectionItems(segments, "returns"),
-      },
-    };
+function isProposalPreviewPayload(roomPayload = null) {
+  if (!roomPayload || normalizeText(roomPayload?.turnMode).toLowerCase() === "conversation") {
+    return false;
   }
 
-  return null;
+  const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
+  return Boolean(segments.length || roomPayload?.receiptKit);
+}
+
+function buildPreviewFromMessage(message = null, { status = "none" } = {}) {
+  const roomPayload = message?.roomPayload || null;
+  const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
+  const previewId =
+    normalizeText(roomPayload?.proposalId) || normalizeText(message?.id)
+      ? `preview:${normalizeText(roomPayload?.proposalId) || normalizeText(message?.id)}`
+      : "";
+  const normalizedSegments = segments.map((segment) => ({
+    id: segment.id,
+    text: normalizeLongText(segment?.text),
+    domain: normalizeText(segment?.domain).toLowerCase() || "other",
+    mirrorRegion: normalizeText(segment?.mirrorRegion).toLowerCase(),
+    suggestedClause: normalizeLongText(segment?.suggestedClause),
+  }));
+
+  return {
+    previewId,
+    proposalId: normalizeText(roomPayload?.proposalId),
+    assistantMessageId: normalizeText(message?.id),
+    status,
+    sourceLayer: "assistant_turn",
+    assistantText: normalizeLongText(message?.content),
+    gatePreview: roomPayload?.gatePreview || null,
+    receiptKit: roomPayload?.receiptKit || null,
+    nextBestAction: normalizeText(roomPayload?.gatePreview?.nextBestAction),
+    segments: normalizedSegments,
+    sections: {
+      aim: buildPreviewSectionItems(normalizedSegments, "aim")[0] || null,
+      evidence: buildPreviewSectionItems(normalizedSegments, "evidence"),
+      story: buildPreviewSectionItems(normalizedSegments, "story"),
+      moves: buildPreviewSectionItems(normalizedSegments, "moves"),
+      returns: buildPreviewSectionItems(normalizedSegments, "returns"),
+    },
+  };
+}
+
+export function buildRoomPreviewState(messages = [], runtimeWindow = null) {
+  const events = Array.isArray(runtimeWindow?.events) ? runtimeWindow.events : [];
+  const normalizedMessages = Array.isArray(messages) ? messages : [];
+  let latestAcceptedMessage = null;
+
+  for (const message of [...normalizedMessages].reverse()) {
+    if (normalizeText(message?.role).toLowerCase() !== "assistant") continue;
+    const roomPayload = message?.roomPayload || null;
+    if (!isProposalPreviewPayload(roomPayload)) continue;
+    if (!roomPayload?.gatePreview?.accepted) continue;
+    if (!hasCanonicalProposalSegments(roomPayload)) continue;
+    latestAcceptedMessage = message;
+    break;
+  }
+
+  const activePreviewMessage =
+    latestAcceptedMessage &&
+    !isProposalAlreadyApplied(events, latestAcceptedMessage?.id, latestAcceptedMessage?.roomPayload?.proposalId)
+      ? latestAcceptedMessage
+      : null;
+
+  const annotatedMessages = normalizedMessages.map((message) => {
+    const role = normalizeText(message?.role).toLowerCase();
+    const roomPayload = message?.roomPayload || null;
+    let previewStatus = "none";
+
+    if (role === "assistant" && isProposalPreviewPayload(roomPayload)) {
+      if (roomPayload?.gatePreview?.accepted === false) {
+        previewStatus = "blocked";
+      } else if (hasCanonicalProposalSegments(roomPayload)) {
+        if (isProposalAlreadyApplied(events, message?.id, roomPayload?.proposalId)) {
+          previewStatus = "applied";
+        } else if (activePreviewMessage?.id === message?.id) {
+          previewStatus = "active";
+        } else {
+          previewStatus = "superseded";
+        }
+      }
+    }
+
+    return {
+      ...message,
+      previewStatus,
+    };
+  });
+
+  return {
+    activePreview: activePreviewMessage
+      ? buildPreviewFromMessage(activePreviewMessage, { status: "active" })
+      : null,
+    messages: annotatedMessages,
+  };
 }
 
 function buildFieldStateLabel(artifact = null, runtimeWindow = null) {
@@ -499,7 +560,7 @@ export function buildRoomCanonicalViewModel({
   const pane = derivePaneInteractionContract(artifact, runtimeWindow);
   const stateChip = deriveStateChipModel(artifact, runtimeWindow);
   const hasStructure = !isPristineRoomArtifact(artifact) && (artifact?.ast?.length || 0) > 1;
-  const proposalWake = buildProposalWakeViewModel(messages, runtimeWindow);
+  const previewState = buildRoomPreviewState(messages, runtimeWindow);
 
   return {
     roomDocument: roomDocument
@@ -533,7 +594,8 @@ export function buildRoomCanonicalViewModel({
       returns,
     },
     pendingMove: buildPendingMove(moves, artifact, runtimeWindow),
-    proposalWake,
+    activePreview: previewState.activePreview,
+    messages: previewState.messages,
     recentReturns: returns.slice(0, 5),
     recentSources: Array.isArray(recentSources) ? recentSources : [],
     receiptSummary: {

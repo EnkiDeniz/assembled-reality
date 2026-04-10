@@ -33,6 +33,7 @@ test("workspace route and room api surface are wired for canonical room-first en
   assert.match(roomServer, /ensureRoomAssemblyDocumentForProject/);
   assert.match(roomServer, /ensureRoomSessionForProject/);
   assert.match(roomServer, /authorityContext/);
+  assert.match(roomServer, /activePreview/);
   assert.match(roomDocuments, /hiddenFromProjectHome:\s*true/);
   assert.match(roomDocuments, /roomDocument:\s*true/);
   assert.match(roomSessions, /ensureCompilerFirstWorkspaceResetForUser/);
@@ -50,7 +51,7 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomCanonical, /buildEchoFieldModel/);
   assert.match(roomCanonical, /derivePaneInteractionContract/);
   assert.match(roomCanonical, /createWindowState/);
-  assert.match(roomCanonical, /buildProposalWakeViewModel/);
+  assert.match(roomCanonical, /buildRoomPreviewState/);
   assert.match(roomCanonical, /proposal_applied/);
 
   assert.match(roomState, /buildInitialRoomAssemblySource/);
@@ -59,10 +60,13 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomState, /isRoomAssemblyDocument/);
   assert.match(roomState, /deriveMirrorRegionFromDomain/);
 
-  assert.match(roomUi, /Structure Waking/);
+  assert.match(roomUi, /Preview/);
   assert.match(roomUi, /Apply to Room/);
-  assert.match(roomUi, /Inspect proposal/);
-  assert.match(roomUi, /Inspect blocked proposal/);
+  assert.match(roomUi, /previewStatus/);
+  assert.match(roomUi, /AuthorityPanel/);
+  assert.match(roomUi, /Box canon unchanged/);
+  assert.doesNotMatch(roomUi, /Inspect proposal/);
+  assert.doesNotMatch(roomUi, /Structure Waking/);
   assert.match(roomUi, /apply_proposal_preview/);
   assert.match(roomUi, /complete_receipt_kit/);
   assert.match(roomUi, /mirrorRegion/);
