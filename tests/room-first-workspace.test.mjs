@@ -19,6 +19,8 @@ test("workspace route and room api surface are wired for canonical room-first en
   assert.match(roomRoute, /buildRoomWorkspaceViewForUser/);
   assert.match(roomTurnRoute, /runRoomProposalGate/);
   assert.match(roomTurnRoute, /gatePreview/);
+  assert.match(roomTurnRoute, /classifyRoomTurnMode/);
+  assert.match(roomTurnRoute, /buildSafeFallbackTurn/);
   assert.match(roomApplyRoute, /apply_proposal_preview/);
   assert.match(roomApplyRoute, /complete_receipt_kit/);
   assert.match(roomServer, /ensureRoomAssemblyDocumentForProject/);
@@ -48,6 +50,8 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
 
   assert.match(roomUi, /Structure Waking/);
   assert.match(roomUi, /Apply to Room/);
+  assert.match(roomUi, /Inspect proposal/);
+  assert.match(roomUi, /Inspect blocked proposal/);
   assert.match(roomUi, /apply_proposal_preview/);
   assert.match(roomUi, /complete_receipt_kit/);
   assert.match(roomUi, /mirrorRegion/);
@@ -63,11 +67,16 @@ test("strict ping rule, mirror regions, and receipt artifact support remain enco
   const roomCanonical = await read("src/lib/room-canonical.js");
   const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomState = await read("src/lib/room.js");
+  const roomPolicy = await read("src/lib/room-turn-policy.mjs");
 
   assert.match(roomCanonical, /ping_requires_test/);
+  assert.match(roomCanonical, /semantic_reject/);
   assert.match(roomTurnRoute, /Never propose MOV without also proposing TST/);
+  assert.match(roomTurnRoute, /Turn mode is conversation/);
   assert.match(roomTurnRoute, /mirrorRegion/);
   assert.match(roomTurnRoute, /aim\|evidence\|story\|moves\|returns/);
+  assert.match(roomPolicy, /classifyRoomTurnMode/);
+  assert.match(roomPolicy, /Conversation-only clarification is not a lawful move or test/);
   assert.match(roomState, /"upload"/);
   assert.match(roomState, /"paste"/);
   assert.match(roomState, /"link"/);

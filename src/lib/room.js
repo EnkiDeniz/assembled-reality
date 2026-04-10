@@ -2,6 +2,7 @@ export const ROOM_METADATA_VERSION = 2;
 export const ROOM_THREAD_PREFIX = "room:";
 export const ROOM_PAYLOAD_KIND = "room_payload";
 export const ROOM_LEGACY_SEED_MODE = "comments-only";
+export const ROOM_TURN_MODES = new Set(["conversation", "proposal"]);
 
 const ROOM_FIELD_TONES = new Set([
   "new",
@@ -185,7 +186,8 @@ export function summarizeGateDiagnostics(diagnostics = []) {
 }
 
 export function normalizeRoomGatePreview(value = null) {
-  const nextValue = value && typeof value === "object" ? value : {};
+  const nextValue = value && typeof value === "object" ? value : null;
+  if (!nextValue) return null;
   const artifactSummary =
     nextValue.artifactSummary && typeof nextValue.artifactSummary === "object"
       ? {
@@ -219,6 +221,17 @@ export function normalizeRoomGatePreview(value = null) {
 
 export function normalizeRoomTurnResult(value = null) {
   const nextValue = value && typeof value === "object" ? value : {};
+  const segments = (Array.isArray(nextValue.segments) ? nextValue.segments : [])
+    .map((segment, index) => normalizeRoomProposalSegment(segment, index))
+    .filter(Boolean)
+    .slice(0, 12);
+  const receiptKit = normalizeReceiptKit(nextValue.receiptKit);
+  const normalizedTurnMode = normalizeText(nextValue.turnMode).toLowerCase();
+  const turnMode = ROOM_TURN_MODES.has(normalizedTurnMode)
+    ? normalizedTurnMode
+    : segments.length || receiptKit
+      ? "proposal"
+      : "conversation";
 
   return {
     assistantText:
@@ -226,11 +239,9 @@ export function normalizeRoomTurnResult(value = null) {
       normalizeLongText(nextValue.reply) ||
       "I have a lawful next move for the room. Inspect it before you apply anything.",
     proposalId: normalizeText(nextValue.proposalId) || makeRoomId("proposal"),
-    segments: (Array.isArray(nextValue.segments) ? nextValue.segments : [])
-      .map((segment, index) => normalizeRoomProposalSegment(segment, index))
-      .filter(Boolean)
-      .slice(0, 12),
-    receiptKit: normalizeReceiptKit(nextValue.receiptKit),
+    turnMode,
+    segments,
+    receiptKit,
     gatePreview: normalizeRoomGatePreview(nextValue.gatePreview),
   };
 }

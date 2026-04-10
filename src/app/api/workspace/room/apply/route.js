@@ -13,6 +13,7 @@ import {
   extractRoomPayloadFromCitations,
   normalizeReceiptKit,
 } from "@/lib/room";
+import { buildRoomSemanticContext, hasCanonicalProposalSegments } from "@/lib/room-turn-policy.mjs";
 import {
   applyArtifactToRuntimeWindow,
   compileRoomSource,
@@ -286,15 +287,29 @@ export async function POST(request) {
     }
 
     const roomPayload = extractRoomPayloadFromCitations(assistantMessage.citations);
-    if (!roomPayload) {
+    if (!roomPayload || normalizeText(roomPayload?.turnMode).toLowerCase() !== "proposal") {
       return NextResponse.json({ ok: false, error: "That message has no Room proposal." }, { status: 400 });
     }
+    if (!hasCanonicalProposalSegments(roomPayload)) {
+      return NextResponse.json({ ok: false, error: "That message has no Room proposal." }, { status: 400 });
+    }
+
+    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, {
+      projectKey: project.projectKey,
+    });
 
     const gate = runRoomProposalGate({
       currentSource,
       proposal: roomPayload,
       filename: `${roomDocument?.documentKey || "room"}.loe`,
       runtimeWindow: currentWindow,
+      semanticContext: buildRoomSemanticContext({
+        currentSource,
+        recentSources: viewBefore?.recentSources,
+        latestUserMessage: thread?.messages?.findLast?.(
+          (message) => String(message?.role || "").toUpperCase() === "USER",
+        )?.content,
+      }),
     });
 
     if (!gate.accepted) {
@@ -370,11 +385,22 @@ export async function POST(request) {
       actual,
     });
 
+    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, {
+      projectKey: project.projectKey,
+    });
     const gate = runRoomProposalGate({
       currentSource,
       proposal: proposalBundle.proposal,
       filename: `${roomDocument?.documentKey || "room"}.loe`,
       runtimeWindow: currentWindow,
+      semanticContext: buildRoomSemanticContext({
+        currentSource,
+        recentSources: viewBefore?.recentSources,
+        latestUserMessage:
+          mode === "return"
+            ? actual
+            : normalizeText(completion?.moveText) || normalizeText(completion?.messageDraft),
+      }),
     });
 
     if (!gate.accepted) {
@@ -384,9 +410,6 @@ export async function POST(request) {
       );
     }
 
-    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, {
-      projectKey: project.projectKey,
-    });
     let draft = null;
 
     if (mode === "return") {

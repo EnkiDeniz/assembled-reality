@@ -70,9 +70,11 @@ function splitParagraphs(text = "") {
 }
 
 function hasProposalContent(roomPayload = null) {
+  const turnMode = normalizeText(roomPayload?.turnMode).toLowerCase();
+  const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
+  const isProposalTurn = turnMode ? turnMode === "proposal" : segments.length > 0 || Boolean(roomPayload?.receiptKit);
   return Boolean(
-    (Array.isArray(roomPayload?.segments) && roomPayload.segments.length > 0) ||
-      roomPayload?.receiptKit,
+    isProposalTurn && (segments.length > 0 || roomPayload?.receiptKit),
   );
 }
 
@@ -105,12 +107,6 @@ function getSegmentTone(domain = "") {
     shapeRole,
     toneClass: getToneClass(shapeRole.tone),
   };
-}
-
-function shouldShowMessageLead(content = "", segments = []) {
-  const normalizedContent = normalizeText(content);
-  if (!normalizedContent) return false;
-  return !segments.some((segment) => normalizeText(segment?.text) === normalizedContent);
 }
 
 function isActiveProposalMessage(view = null, message = null) {
@@ -996,7 +992,7 @@ function ProposalFooter({ roomPayload, onApply, busy, activeAcceptedProposal = f
   const diagnostics = Array.isArray(gatePreview?.diagnostics) ? gatePreview.diagnostics : [];
   const accepted = gatePreview?.accepted !== false;
 
-  if (!gatePreview && !hasProposalContent(roomPayload)) return null;
+  if (!gatePreview) return null;
   if (accepted && !activeAcceptedProposal) return null;
 
   return (
@@ -1039,11 +1035,15 @@ function ThreadMessage({
   const paragraphs = splitParagraphs(message?.content || "");
   const isAssistant = message?.role === "assistant";
   const activeAcceptedProposal = isAssistant && isActiveProposalMessage(view, message);
+  const proposalMessage = isAssistant && hasProposalContent(roomPayload);
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const proposalDisclosureLabel =
+    roomPayload?.gatePreview?.accepted === false ? "Inspect blocked proposal" : "Inspect proposal";
 
   return (
     <article className={`${styles.messageRow} ${isAssistant ? styles.messageRowAssistant : styles.messageRowUser}`}>
       <div
-        className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser} ${activeAcceptedProposal ? styles.messageCardPreview : ""}`}
+        className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser} ${activeAcceptedProposal && proposalOpen ? styles.messageCardPreview : ""}`}
       >
         <div className={styles.messageMeta}>
           <span>{isAssistant ? "Seven" : "You"}</span>
@@ -1051,43 +1051,46 @@ function ThreadMessage({
         </div>
 
         <div className={styles.messageBody}>
-          {activeAcceptedProposal ? (
-            <div className={styles.messagePreviewMeta}>
-              <span>Structure Waking</span>
-              <small>Preview Only</small>
-            </div>
-          ) : null}
-
-          {isAssistant && segments.length ? (
-            <>
-              {shouldShowMessageLead(message?.content, segments) ? (
-                <p className={styles.messageLead}>{message.content}</p>
-              ) : null}
-              <ProposalSegments segments={segments} onHighlight={onHighlight} />
-            </>
-          ) : paragraphs.length ? (
+          {paragraphs.length ? (
             paragraphs.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)
           ) : (
             <p>{message?.content}</p>
           )}
         </div>
 
-        {isAssistant && roomPayload ? (
-          <ProposalFooter
-            roomPayload={roomPayload}
-            onApply={() => onApplyProposal(message)}
-            busy={applying}
-            activeAcceptedProposal={activeAcceptedProposal}
-          />
-        ) : null}
-
-        {receiptKit ? (
-          <ReceiptKitCard
-            receiptKit={receiptKit}
-            view={view}
-            onComplete={onCompleteReceiptKit}
-            busy={busyReceiptKitId === receiptKit.id}
-          />
+        {proposalMessage ? (
+          <div className={styles.proposalDisclosure}>
+            <button
+              type="button"
+              className={styles.proposalDisclosureButton}
+              onClick={() => setProposalOpen((current) => !current)}
+            >
+              {proposalOpen ? "Hide proposal" : proposalDisclosureLabel}
+            </button>
+            {proposalOpen ? (
+              <div className={styles.proposalDisclosurePanel}>
+                <div className={styles.messagePreviewMeta}>
+                  <span>Structure Waking</span>
+                  <small>Preview Only</small>
+                </div>
+                {segments.length ? <ProposalSegments segments={segments} onHighlight={onHighlight} /> : null}
+                <ProposalFooter
+                  roomPayload={roomPayload}
+                  onApply={() => onApplyProposal(message)}
+                  busy={applying}
+                  activeAcceptedProposal={activeAcceptedProposal}
+                />
+                {receiptKit ? (
+                  <ReceiptKitCard
+                    receiptKit={receiptKit}
+                    view={view}
+                    onComplete={onCompleteReceiptKit}
+                    busy={busyReceiptKitId === receiptKit.id}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </article>

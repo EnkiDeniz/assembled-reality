@@ -1664,6 +1664,50 @@
   font-size: inherit;
 }
 
+.proposalDisclosure {
+  margin-top: 12px;
+}
+
+.proposalDisclosureButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--room-soft);
+  font-family: var(--room-font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.25s var(--room-ease),
+    color 0.25s var(--room-ease),
+    background 0.25s var(--room-ease);
+}
+
+.proposalDisclosureButton:hover {
+  border-color: rgba(94, 167, 255, 0.14);
+  color: var(--room-blue);
+}
+
+.proposalDisclosureButton:focus-visible {
+  outline: none;
+  border-color: rgba(94, 167, 255, 0.22);
+  box-shadow: 0 0 0 1px rgba(94, 167, 255, 0.18);
+}
+
+.proposalDisclosurePanel {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
 .segmentFlow {
   gap: 10px;
 }

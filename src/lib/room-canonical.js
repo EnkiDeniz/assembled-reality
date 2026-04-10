@@ -17,6 +17,7 @@ import {
   getClauseKeyword,
 } from "../../LoegosCLI/UX/lib/artifact-view-model.mjs";
 import { getRoomFieldStateTone } from "@/lib/room";
+import { auditRoomProposalSemantics, hasCanonicalProposalSegments } from "@/lib/room-turn-policy.mjs";
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -153,42 +154,67 @@ export function runRoomProposalGate({
   proposal = null,
   filename = "room.loe",
   runtimeWindow = null,
+  semanticContext = null,
 } = {}) {
+  const currentArtifact = compileRoomSource({ source: currentSource, filename });
+  const semanticAudit = hasCanonicalProposalSegments(proposal)
+    ? auditRoomProposalSemantics({ proposal, context: semanticContext })
+    : { accepted: true, reason: "", diagnostics: [] };
+
+  if (!semanticAudit.accepted) {
+    const rejectedGate = {
+      accepted: false,
+      reason: semanticAudit.reason || "semantic_reject",
+      diagnostics: semanticAudit.diagnostics,
+      artifact: currentArtifact,
+      nextSource: currentSource,
+    };
+
+    return {
+      ...rejectedGate,
+      gatePreview: buildRoomGatePreview(rejectedGate, runtimeWindow),
+    };
+  }
+
   const gate = applySevenProposalGate({
     currentSource,
     proposal,
     filename,
   });
+  const gateWithSemanticDiagnostics = semanticAudit.diagnostics.length
+    ? {
+        ...gate,
+        diagnostics: [
+          ...(Array.isArray(gate.diagnostics) ? gate.diagnostics : []),
+          ...semanticAudit.diagnostics,
+        ],
+      }
+    : gate;
 
-  if (gate.accepted && hasStrictPingViolation(gate.artifact)) {
+  if (gateWithSemanticDiagnostics.accepted && hasStrictPingViolation(gateWithSemanticDiagnostics.artifact)) {
+    const diagnostics = [
+      ...(Array.isArray(gateWithSemanticDiagnostics.diagnostics)
+        ? gateWithSemanticDiagnostics.diagnostics
+        : []),
+      {
+        code: "RM001",
+        severity: "error",
+        message: "Ping requires both MOV and TST clauses.",
+        span: { line: 1, startCol: 1, endCol: 1 },
+      },
+    ];
     return {
-      ...gate,
+      ...gateWithSemanticDiagnostics,
       accepted: false,
       reason: "ping_requires_test",
-      diagnostics: [
-        ...(Array.isArray(gate.diagnostics) ? gate.diagnostics : []),
-        {
-          code: "RM001",
-          severity: "error",
-          message: "Ping requires both MOV and TST clauses.",
-          span: { line: 1, startCol: 1, endCol: 1 },
-        },
-      ],
+      diagnostics,
       nextSource: currentSource,
       gatePreview: buildRoomGatePreview(
         {
-          ...gate,
+          ...gateWithSemanticDiagnostics,
           accepted: false,
           reason: "ping_requires_test",
-          diagnostics: [
-            ...(Array.isArray(gate.diagnostics) ? gate.diagnostics : []),
-            {
-              code: "RM001",
-              severity: "error",
-              message: "Ping requires both MOV and TST clauses.",
-              span: { line: 1, startCol: 1, endCol: 1 },
-            },
-          ],
+          diagnostics,
         },
         runtimeWindow,
       ),
@@ -196,8 +222,8 @@ export function runRoomProposalGate({
   }
 
   return {
-    ...gate,
-    gatePreview: buildRoomGatePreview(gate, runtimeWindow),
+    ...gateWithSemanticDiagnostics,
+    gatePreview: buildRoomGatePreview(gateWithSemanticDiagnostics, runtimeWindow),
   };
 }
 
@@ -369,6 +395,7 @@ export function buildProposalWakeViewModel(messages = [], runtimeWindow = null) 
   for (const message of [...(Array.isArray(messages) ? messages : [])].reverse()) {
     if (normalizeText(message?.role).toLowerCase() !== "assistant") continue;
     const roomPayload = message?.roomPayload || null;
+    if (normalizeText(roomPayload?.turnMode).toLowerCase() === "conversation") continue;
     if (!roomPayload?.gatePreview?.accepted) continue;
     const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
     if (!segments.length) continue;

@@ -6,13 +6,23 @@ import {
   buildRoomPayloadCitations,
   buildRoomThreadKey,
   makeRoomId,
-  normalizeReceiptKit,
   normalizeRoomTurnResult,
 } from "@/lib/room";
 import { buildRoomWorkspaceViewForUser } from "@/lib/room-server";
 import { getRequiredSession } from "@/lib/server-session";
 import { ensureRoomAssemblyDocumentForProject, getRoomAssemblySource } from "@/lib/room-documents";
-import { createOrHydrateRoomRuntimeWindow, runRoomProposalGate } from "@/lib/room-canonical";
+import {
+  compileRoomSource,
+  createOrHydrateRoomRuntimeWindow,
+  runRoomProposalGate,
+} from "@/lib/room-canonical";
+import {
+  buildRoomSemanticContext,
+  buildSafeFallbackTurn,
+  classifyRoomTurnMode,
+  coerceConversationTurn,
+  hasCanonicalProposalSegments,
+} from "@/lib/room-turn-policy.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,26 +81,15 @@ function parseJsonObject(text = "") {
   }
 }
 
-function countWords(text = "") {
-  const normalized = normalizeText(text);
-  return normalized ? normalized.split(/\s+/).length : 0;
-}
-
-function makeAimCandidate(message = "") {
-  const firstSentence = normalizeText(String(message || "").split(/[\n.?!]/)[0] || "");
-  if (!firstSentence) return "";
-  if (countWords(firstSentence) <= 10) return firstSentence;
-  return clipText(firstSentence, 80);
-}
-
-function buildRoomSystemPrompt() {
+function buildRoomSystemPrompt(turnMode = "conversation") {
   return [
     `You are Seven inside ${PRODUCT_NAME}.`,
     "You are responding inside the Room. Conversation comes first. Structure appears only as lawful clause proposals.",
     "Return strict JSON only. No markdown fences. No prose outside the JSON object.",
     "Use this exact top-level shape:",
-    "{\"assistantText\":\"...\",\"segments\":[{\"text\":\"...\",\"domain\":\"aim|witness|story|move|test|return|other\",\"mirrorRegion\":\"aim|evidence|story|moves|returns\",\"suggestedClause\":\"DIR aim \\\"...\\\"\",\"intent\":\"declare|ground|interpret|move|test|observe|compare|capture|clarify\"}],\"receiptKit\":null}",
+    "{\"assistantText\":\"...\",\"turnMode\":\"conversation|proposal\",\"segments\":[{\"text\":\"...\",\"domain\":\"aim|witness|story|move|test|return|other\",\"mirrorRegion\":\"aim|evidence|story|moves|returns\",\"suggestedClause\":\"DIR aim \\\"...\\\"\",\"intent\":\"declare|ground|interpret|move|test|observe|compare|capture|clarify\"}],\"receiptKit\":null}",
     "assistantText must stay plain-language and calm.",
+    "segments[].text must be user-facing preview language, never internal planning notes or hidden reasoning.",
     "Seven proposes. It never mutates canonical state.",
     "Only propose lawful clauses from this set:",
     'DIR aim "<text>"',
@@ -100,8 +99,12 @@ function buildRoomSystemPrompt() {
     'TST test "<text>"',
     'RTN observe|confirm|contradict "<text>" via user|third_party|lender_portal|service|system as text|score|bool|date|count',
     "Never propose MOV without also proposing TST in the same response unless both already exist in source.",
-    "Keep witness separate from story. Clear firsthand user observations may become GND witness. Interpretation and hypotheses stay INT story.",
+    "Keep witness separate from story. Desire, intention, hope, and aspiration are never GND witness. Interpretation and hypotheses stay INT story.",
+    "In-conversation clarification is not MOV/TST. Only propose MOV/TST when the user should do something outside this conversation.",
     "At most one Receipt Kit. Use it only when a concrete proof action is helpful.",
+    turnMode === "conversation"
+      ? 'Turn mode is conversation. Return {"turnMode":"conversation"} with assistantText only. segments must be [] and receiptKit must be null.'
+      : 'Turn mode is proposal. Return {"turnMode":"proposal"} only if the user has earned canonical structure. If structure is not earned, fall back to plain assistantText with empty segments.',
   ].join(" ");
 }
 
@@ -110,6 +113,7 @@ function buildRoomUserPrompt({
   view = null,
   roomSource = "",
   turnNumber = 1,
+  turnMode = "conversation",
 } = {}) {
   const messages = Array.isArray(view?.messages) ? view.messages : [];
   const recentThread = messages
@@ -122,6 +126,7 @@ function buildRoomUserPrompt({
 
   return [
     `Turn number: ${turnNumber}`,
+    `Turn mode: ${turnMode}`,
     `Box: ${normalizeText(view?.project?.title) || "Untitled Box"}`,
     view?.project?.subtitle ? `Box note: ${normalizeText(view.project.subtitle)}` : "",
     `Canonical Room source:\n${roomSource || "GND box @room_default"}`,
@@ -145,121 +150,6 @@ function buildRoomUserPrompt({
   ]
     .filter(Boolean)
     .join("\n\n");
-}
-
-function shouldGroundAsWitness(message = "") {
-  return /\b(i|we)\b/i.test(message) || /\bmy\b/i.test(message) || /\bnoticed|saw|found|got|received|measured|wrote|have\b/i.test(message);
-}
-
-function suggestsReturn(message = "") {
-  return /\b(came back|came through|returned|it changed|it stopped|it now|result|output changed|confirmed|contradicted|worked|didn't work)\b/i.test(
-    message,
-  );
-}
-
-function suggestsDraftMessage(message = "") {
-  return /\b(email|message|text|send|reach out|write to|follow up)\b/i.test(message);
-}
-
-function suggestsCompare(message = "") {
-  return /\b(compare|difference|different|before|after|changed|match|mismatch)\b/i.test(message);
-}
-
-function buildFallbackTurn(message = "", view = null) {
-  const currentAim = normalizeText(view?.mirror?.aim?.text);
-  const aimCandidate = currentAim || makeAimCandidate(message);
-  const turnNumber = (Array.isArray(view?.messages) ? view.messages.length : 0) + 1;
-  const witnessRef = `user_turn_${turnNumber}`;
-  const moveText = suggestsDraftMessage(message)
-    ? "Send one concrete message that asks reality to answer plainly."
-    : "Rerun one concrete example with the screenshot explicitly labeled static.";
-  const testText = suggestsDraftMessage(message)
-    ? "A reply arrives and changes what the room should do next."
-    : "The output changes when the screenshot is labeled static.";
-  const assistantText = suggestsReturn(message)
-    ? "That sounds like a real return, not just more story. I turned it into a proposed observation so you can apply it cleanly."
-    : "I pulled out a lawful next shape for the room. Read it first, then apply only what feels true.";
-
-  const segments = [];
-  if (!currentAim && aimCandidate) {
-    segments.push({
-      text: aimCandidate,
-      domain: "aim",
-      mirrorRegion: "aim",
-      suggestedClause: `DIR aim "${aimCandidate.replace(/"/g, '\\"')}"`,
-      intent: "declare",
-    });
-  }
-  if (shouldGroundAsWitness(message) && !suggestsReturn(message)) {
-    segments.push({
-      text: clipText(message, 160),
-      domain: "witness",
-      mirrorRegion: "evidence",
-      suggestedClause: `GND witness @${witnessRef} from "user_stated" with v_turn_${turnNumber}`,
-      intent: "ground",
-    });
-  } else if (normalizeLongText(message)) {
-    segments.push({
-      text: clipText(message, 160),
-      domain: "story",
-      mirrorRegion: "story",
-      suggestedClause: `INT story "${clipText(message, 160).replace(/"/g, '\\"')}"`,
-      intent: "interpret",
-    });
-  }
-
-  if (suggestsReturn(message)) {
-    segments.push({
-      text: clipText(message, 180),
-      domain: "return",
-      mirrorRegion: "returns",
-      suggestedClause: `RTN observe "${clipText(message, 180).replace(/"/g, '\\"')}" via user as text`,
-      intent: "observe",
-    });
-  } else {
-    segments.push(
-      {
-        text: moveText,
-        domain: "move",
-        mirrorRegion: "moves",
-        suggestedClause: `MOV move "${moveText.replace(/"/g, '\\"')}" via manual`,
-        intent: "move",
-      },
-      {
-        text: testText,
-        domain: "test",
-        mirrorRegion: "moves",
-        suggestedClause: `TST test "${testText.replace(/"/g, '\\"')}"`,
-        intent: "test",
-      },
-    );
-  }
-
-  const receiptKit = suggestsReturn(message)
-    ? null
-    : normalizeReceiptKit({
-        need: "Capture the return that comes back from this test.",
-        why: "The room only changes when predicted and actual are held side by side.",
-        fastestPath: suggestsDraftMessage(message) ? "Draft the message and send it." : "Paste what changes after the rerun.",
-        enough: "One concrete return is enough to change the next move.",
-        artifact: {
-          type: suggestsCompare(message) ? "compare" : suggestsDraftMessage(message) ? "draft_message" : "paste",
-          config: {},
-        },
-        prediction: {
-          expected: testText,
-          direction: "narrows",
-          timebound: "This turn or the next real contact.",
-          surprise: "If reality answers differently, record that directly.",
-        },
-      });
-
-  return normalizeRoomTurnResult({
-    assistantText,
-    proposalId: makeRoomId("proposal"),
-    segments,
-    receiptKit,
-  });
 }
 
 async function persistRoomTurn(userId, projectKey, message, turn, provider) {
@@ -301,34 +191,57 @@ export async function POST(request) {
   const resolvedProjectKey = view?.project?.projectKey || projectKey;
   const roomDocument = await ensureRoomAssemblyDocumentForProject(session.user.id, resolvedProjectKey);
   const roomSource = getRoomAssemblySource(roomDocument);
-  const currentArtifactWindow = createOrHydrateRoomRuntimeWindow(
-    roomDocument,
-    runRoomProposalGate({
-      currentSource: roomSource,
-      proposal: { segments: [] },
-      filename: `${roomDocument?.documentKey || "room"}.loe`,
-    }).artifact,
-  );
+  const currentArtifact = compileRoomSource({
+    source: roomSource,
+    filename: `${roomDocument?.documentKey || "room"}.loe`,
+  });
+  const currentArtifactWindow = createOrHydrateRoomRuntimeWindow(roomDocument, currentArtifact);
   const turnNumber = (Array.isArray(view?.messages) ? view.messages.length : 0) + 1;
+  const turnMode = classifyRoomTurnMode({ message, view });
+  const semanticContext = buildRoomSemanticContext({
+    currentSource: roomSource,
+    recentSources: view?.recentSources,
+    latestUserMessage: message,
+  });
 
   async function finalizeTurn(nextTurn, provider) {
-    const gate = runRoomProposalGate({
-      currentSource: roomSource,
-      proposal: nextTurn,
-      filename: `${roomDocument?.documentKey || "room"}.loe`,
-      runtimeWindow: currentArtifactWindow,
-    });
     const normalizedTurn = normalizeRoomTurnResult({
       ...nextTurn,
+      proposalId: normalizeText(nextTurn?.proposalId) || makeRoomId("proposal"),
+      turnMode,
+    });
+
+    if (turnMode === "conversation" || !hasCanonicalProposalSegments(normalizedTurn)) {
+      return NextResponse.json(
+        await persistRoomTurn(
+          session.user.id,
+          resolvedProjectKey,
+          message,
+          normalizeRoomTurnResult(coerceConversationTurn(normalizedTurn)),
+          provider,
+        ),
+      );
+    }
+
+    const gate = runRoomProposalGate({
+      currentSource: roomSource,
+      proposal: normalizedTurn,
+      filename: `${roomDocument?.documentKey || "room"}.loe`,
+      runtimeWindow: currentArtifactWindow,
+      semanticContext,
+    });
+    const gatedTurn = normalizeRoomTurnResult({
+      ...normalizedTurn,
+      turnMode: "proposal",
       gatePreview: gate.gatePreview,
     });
     return NextResponse.json(
-      await persistRoomTurn(session.user.id, resolvedProjectKey, message, normalizedTurn, provider),
+      await persistRoomTurn(session.user.id, resolvedProjectKey, message, gatedTurn, provider),
     );
   }
 
   if (!appEnv.openai.enabled) {
-    return finalizeTurn(buildFallbackTurn(message, view), "fallback");
+    return finalizeTurn(buildSafeFallbackTurn(), "fallback");
   }
 
   try {
@@ -343,7 +256,7 @@ export async function POST(request) {
         input: [
           {
             role: "system",
-            content: [{ type: "input_text", text: buildRoomSystemPrompt() }],
+            content: [{ type: "input_text", text: buildRoomSystemPrompt(turnMode) }],
           },
           {
             role: "user",
@@ -355,6 +268,7 @@ export async function POST(request) {
                   view,
                   roomSource,
                   turnNumber,
+                  turnMode,
                 }),
               },
             ],
@@ -364,33 +278,34 @@ export async function POST(request) {
     });
 
     const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      console.error("Room turn request failed.", {
-        status: response.status,
-        detail: payload?.error?.message || payload?.error?.type || payload?.error?.code || "",
+      if (!response.ok) {
+        console.error("Room turn request failed.", {
+          status: response.status,
+          detail: payload?.error?.message || payload?.error?.type || payload?.error?.code || "",
+        });
+        return finalizeTurn(buildSafeFallbackTurn(), "fallback");
+      }
+
+      const parsed = parseJsonObject(extractMessageText(payload));
+      if (!parsed) {
+        return finalizeTurn(buildSafeFallbackTurn(), "fallback");
+      }
+
+      const normalizedTurn = normalizeRoomTurnResult({
+        ...parsed,
+        proposalId: makeRoomId("proposal"),
+        turnMode,
       });
-      return finalizeTurn(buildFallbackTurn(message, view), "fallback");
-    }
 
-    const parsed = parseJsonObject(extractMessageText(payload));
-    if (!parsed) {
-      return finalizeTurn(buildFallbackTurn(message, view), "fallback");
-    }
+      if (!normalizedTurn.assistantText) {
+        return finalizeTurn(buildSafeFallbackTurn(), "fallback");
+      }
 
-    const normalizedTurn = normalizeRoomTurnResult({
-      ...parsed,
-      proposalId: makeRoomId("proposal"),
-    });
-
-    if (!normalizedTurn.assistantText || normalizedTurn.segments.length === 0) {
-      return finalizeTurn(buildFallbackTurn(message, view), "fallback");
-    }
-
-    return finalizeTurn(normalizedTurn, "openai");
+      return finalizeTurn(normalizedTurn, "openai");
   } catch (error) {
     console.error("Room turn request crashed.", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return finalizeTurn(buildFallbackTurn(message, view), "fallback");
+    return finalizeTurn(buildSafeFallbackTurn(), "fallback");
   }
 }
