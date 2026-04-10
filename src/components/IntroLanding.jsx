@@ -10,7 +10,6 @@ import {
 } from "@/components/LoegosSystem";
 import PublicFooterLinks from "@/components/PublicFooterLinks";
 import {
-  ACTION_LINE,
   BOUNDARY_LINE,
   BRAND_TRUTH,
   PRODUCT_MARK,
@@ -58,78 +57,56 @@ function ProposalPeekLink() {
   );
 }
 
-const PRODUCT_STACK = [
+const PRODUCT_LAW =
+  "Only returned evidence clears fog; mapped regions can become stale without renewed echoes.";
+
+const INSTRUMENT_PANES = [
   {
-    title: "Lœgos",
-    body: "The language that structures the exchange.",
+    title: "Ping",
+    body: "State the aim and send a move/test pair into reality.",
+    detail: "mov + tst",
   },
   {
-    title: "Box",
-    body: "The IDE and runtime where authored work lives.",
+    title: "Listen",
+    body: "Hold awaiting as active listening, not missing progress.",
+    detail: "awaiting",
   },
   {
-    title: "Seven",
-    body: "The inference agent that parses, flags, and preflights.",
+    title: "Echoes",
+    body: "Read returns by provenance so wall and imagination stay separate.",
+    detail: "rtn + provenance",
   },
   {
-    title: "Receipt",
-    body: "The compiled artifact that carries what survived.",
+    title: "Field",
+    body: "See mapped, fog, fractured, and stale regions in one surface.",
+    detail: "state + freshness",
   },
 ];
 
-const SHAPE_ROOMS = [
-  {
-    title: "△ Aim",
-    body: "Declare what matters. Name the direction. Sharpen the claim.",
-    detail: "declare · name · sharpen",
-  },
-  {
-    title: "□ Reality",
-    body: "Capture what the world gives back and what can be pointed at.",
-    detail: "capture · listen · inspect",
-  },
-  {
-    title: "œ Weld",
-    body: "Stage the comparison, rewrite the object, and test convergence.",
-    detail: "stage · rewrite · operate",
-  },
-  {
-    title: "𒐛 Seal",
-    body: "Commit what survived and let the receipt travel as proof.",
-    detail: "review · seal · share",
-  },
-];
+const HERO_SEQUENCE = ["Send a ping.", "Wait in listening mode.", "Receive echoes.", "Navigate the field."];
 
-const HERO_SEQUENCE = [
-  "Declare an aim.",
-  "Capture what reality returns.",
-  "Let Seven infer.",
-  "Seal what survived.",
+const FOUR_QUESTIONS = [
+  "Did I ping?",
+  "Am I waiting?",
+  "What came back, from where?",
+  "How clear is this region?",
 ];
 
 function EntrySystemPanel() {
   return (
     <div className="loegos-entry__panel">
       <div className="loegos-entry__panel-copy">
-        <span className="loegos-kicker">How it works</span>
-        <h2 className="loegos-entry__panel-title">Write the block. Let the box check it.</h2>
+        <span className="loegos-kicker">Product law</span>
+        <h2 className="loegos-entry__panel-title">The Echo Instrument</h2>
         <p className="loegos-entry__panel-body">
-          Lœgos gives the exchange a grammar. Seven infers what is missing or mislabeled. Box
-          keeps the runtime state. Seal commits the receipt when the work is ready to travel.
+          Lakin gives you one navigable field compiled from returns. This surface is not a document
+          manager. It is a sensing instrument for decision structure.
         </p>
-      </div>
-
-      <div className="loegos-entry__stack">
-        {PRODUCT_STACK.map((item) => (
-          <div key={item.title} className="loegos-entry__stack-item">
-            <span className="loegos-entry__stack-title">{item.title}</span>
-            <span className="loegos-entry__stack-body">{item.body}</span>
-          </div>
-        ))}
+        <p className="loegos-entry__panel-body">{PRODUCT_LAW}</p>
       </div>
 
       <div className="loegos-entry__rooms">
-        {SHAPE_ROOMS.map((room) => (
+        {INSTRUMENT_PANES.map((room) => (
           <div key={room.title} className="loegos-entry__room">
             <span className="loegos-entry__room-title">{room.title}</span>
             <span className="loegos-entry__room-copy">{room.body}</span>
@@ -140,16 +117,18 @@ function EntrySystemPanel() {
 
       <div className="loegos-entry__system-row">
         <div className="loegos-entry__system-card">
-          <span className="loegos-entry__room-title">Build state</span>
+          <span className="loegos-entry__room-title">Runtime state</span>
           <SettlementHex stageCount={4} label="4 / 7" />
-          <SevenGradient level={4} label="Resolution process" />
+          <SevenGradient level={4} label="Field resolution" />
         </div>
         <div className="loegos-entry__system-card">
-          <span className="loegos-entry__room-title">Runtime signals</span>
+          <span className="loegos-entry__room-title">One glance checks</span>
           <div className="loegos-entry__signal-row">
-            <SignalChip tone="clear">Verified</SignalChip>
-            <SignalChip tone="active">Partial</SignalChip>
-            <SignalChip tone="neutral">Unknown</SignalChip>
+            {FOUR_QUESTIONS.map((question) => (
+              <SignalChip key={question} tone="neutral">
+                {question}
+              </SignalChip>
+            ))}
           </div>
         </div>
       </div>
@@ -174,7 +153,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace/phase1?mode=listen",
+        callbackUrl: "/workspace/phase1",
       });
 
       if (result?.error) {
@@ -198,7 +177,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       <div className="intro-auth">
         <div className="terminal-actions">
           <Link
-            href="/workspace/phase1?mode=listen"
+            href="/workspace/phase1"
             className="terminal-link is-primary"
             onClick={() => onEnter?.()}
           >
@@ -218,7 +197,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
           disabled={!authCapabilities.appleEnabled}
           onClick={() => {
             onEnter?.();
-            void signIn("apple", { callbackUrl: "/workspace/phase1?mode=listen" });
+            void signIn("apple", { callbackUrl: "/workspace/phase1" });
           }}
         >
           Continue with Apple
@@ -296,10 +275,10 @@ export default function IntroLanding({
   }
   const returning = stage === "auth";
   const authKicker = returning ? "Return to the box" : "Enter the box";
-  const authTitle = returning ? "Resume the current runtime." : "Open the runtime.";
+  const authTitle = returning ? "Resume your active field." : "Open your first field.";
   const authBody = returning
-    ? "Signed-in readers re-enter the active box and continue from the room that already has live work."
-    : "Identity is the threshold, not the product. The work begins once you are inside the box with sources, blocks, diagnostics, and receipts.";
+    ? "Signed-in readers re-enter the active box with current signals, stale surfaces, and open listening loops."
+    : "Identity opens the instrument. Inside, you will send pings, hold awaiting as listening, and inspect return provenance before sealing.";
 
   return (
     <main className="loegos-entry">
@@ -317,11 +296,15 @@ export default function IntroLanding({
           <div className="loegos-entry__copy">
             <span className="loegos-kicker">Category</span>
             <h1 className="loegos-display">{BRAND_TRUTH}</h1>
-            <p className="loegos-entry__lede">{ACTION_LINE}</p>
+            <p className="loegos-entry__lede">
+              Lakin is an echo instrument for decisions. You send pings into reality, listen for
+              what comes back, and navigate only what has returned signal.
+            </p>
             <div className="loegos-entry__support">
               <p className="loegos-entry__lede loegos-entry__lede--support">
-                Declare what you intend. Capture what reality gives back. Let Seven infer what is
-                missing or misread. Seal what survived as a receipt.
+                The field stays honest: mapped where returns are strong, fog where they are not,
+                fractured where contradictions land, and stale where old surfaces need renewed
+                echoes.
               </p>
               <div className="loegos-entry__boundary">
                 {BOUNDARY_LINE.split(". ")
@@ -348,8 +331,8 @@ export default function IntroLanding({
               <h2 className="loegos-entry__panel-title">{authTitle}</h2>
               <p className="loegos-entry__panel-body">{authBody}</p>
               <div className="loegos-entry__auth-notes">
-                <span>Desktop: write, infer, interpret, seal.</span>
-                <span>Mobile: capture, listen, append reality.</span>
+                <span>Inside the box: Ping, Listen, Echoes, Field.</span>
+                <span>Seven processes signals; it never fabricates returns.</span>
               </div>
             </div>
             <div className={`intro-auth-inline ${returning ? "intro-auth-inline--stacked" : ""}`}>

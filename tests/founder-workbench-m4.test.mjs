@@ -27,8 +27,8 @@ test("auth and read/library routes target launch shell semantics", async () => {
   const readPage = await read("src/app/read/page.jsx");
   const libraryPage = await read("src/app/library/page.jsx");
 
-  assert.match(introLanding, /\/workspace\/phase1\?mode=listen/);
-  assert.match(authTerminal, /\/workspace\/phase1\?mode=listen/);
+  assert.match(introLanding, /\/workspace\/phase1/);
+  assert.match(authTerminal, /\/workspace\/phase1/);
   assert.match(readPage, /redirect\("\/workspace\/phase1"\)/);
   assert.match(libraryPage, /redirect\("\/workspace\/phase1"\)/);
 });

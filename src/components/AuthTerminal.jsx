@@ -21,7 +21,7 @@ export default function AuthTerminal({ authCapabilities }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace/phase1?mode=listen",
+        callbackUrl: "/workspace/phase1",
       });
 
       if (result?.error) {
@@ -55,7 +55,7 @@ export default function AuthTerminal({ authCapabilities }) {
               type="button"
               className="terminal-button is-primary"
               disabled={!authCapabilities.appleEnabled}
-              onClick={() => signIn("apple", { callbackUrl: "/workspace/phase1?mode=listen" })}
+              onClick={() => signIn("apple", { callbackUrl: "/workspace/phase1" })}
             >
               Continue with Apple
             </button>

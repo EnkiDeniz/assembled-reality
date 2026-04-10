@@ -62,6 +62,14 @@ async function main() {
   assert.match(launchShell, /phase2-pane-listen/);
   assert.match(launchShell, /phase2-pane-echoes/);
   assert.match(launchShell, /phase2-pane-field/);
+  assert.match(launchShell, /phase2-range-switch/);
+  assert.match(launchShell, /phase2-range-label/);
+  assert.match(launchShell, /Level 1 - Single Box/);
+  assert.match(launchShell, /Level 4 - Shared Field/);
+  assert.match(launchShell, /phase2-range-track/);
+  assert.match(launchShell, /phase2-range-hotkeys-hint/);
+  assert.match(launchShell, /getRangeStorageKey/);
+  assert.match(launchShell, /shared_signals:/);
 
   assert.match(intakeAdapter, /\/api\/workspace\/folder/);
   assert.match(intakeAdapter, /\/api\/workspace\/paste/);
@@ -69,8 +77,8 @@ async function main() {
   assert.match(voiceAdapter, /\/api\/seven\/audio/);
   assert.match(voiceAdapter, /\/api\/reader\/listening-session/);
 
-  assert.match(authTerminal, /\/workspace\/phase1\?mode=listen/);
-  assert.match(introLanding, /\/workspace\/phase1\?mode=listen/);
+  assert.match(authTerminal, /\/workspace\/phase1/);
+  assert.match(introLanding, /\/workspace\/phase1/);
   assert.match(readPage, /redirect\("\/workspace\/phase1"\)/);
   assert.match(libraryPage, /redirect\("\/workspace\/phase1"\)/);
   assert.match(connectRoute, /new URL\("\/workspace\/phase1", origin\)/);
