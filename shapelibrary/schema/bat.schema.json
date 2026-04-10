@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OperatorReadBAT",
+  "type": "object",
+  "required": [
+    "wallLine",
+    "whatToPingNow",
+    "whatWouldCountAsRealReturn",
+    "howThisReadCouldBeWrong",
+    "toneClass",
+    "closureLanguageAllowed"
+  ],
+  "properties": {
+    "wallLine": { "type": "string", "minLength": 1, "maxLength": 220 },
+    "whatToPingNow": { "type": "string", "minLength": 1, "maxLength": 220 },
+    "whatWouldCountAsRealReturn": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "howThisReadCouldBeWrong": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "toneClass": { "type": "string", "enum": ["pathology", "gate", "topology", "behavioral"] },
+    "closureLanguageAllowed": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

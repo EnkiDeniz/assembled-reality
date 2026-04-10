@@ -6,6 +6,7 @@ import {
   getMaturationModel,
   runMaturationGate,
 } from "./assembly-path.js";
+import { buildOperatorRead } from "./bat.js";
 
 const MATCH_THRESHOLD = 0.4;
 
@@ -329,7 +330,7 @@ function buildNotSealableYet(ir, granularity, assemblyClass, intentCheck, matura
     validWhen: "stage_specific_observation_logged",
     disconfirmation: "If the next stage witness contradicts the current class, reclassify the assembly path.",
   };
-  return {
+  const value = {
     runId: ir.runId,
     status: "not_sealable_yet",
     granularity,
@@ -349,6 +350,21 @@ function buildNotSealableYet(ir, granularity, assemblyClass, intentCheck, matura
       nonImportableProperties: maturationModel.nonImportable,
       gate: maturationGate,
     },
+  };
+  return {
+    ...value,
+    operatorRead: buildOperatorRead({
+      status: value.status,
+      assemblyClass: value.assemblyClass,
+      gatePassed: true,
+      maturationGatePassed: false,
+      requiredReceipts: value.requiredReceipts,
+      mainGap: value.mainGap,
+      nextLawfulMove: value.nextLawfulMove,
+      receiptCondition: value.receiptCondition,
+      possibleDisconfirmation: value.possibleDisconfirmation,
+      falsifier: ir?.falsifier || "",
+    }),
   };
 }
 
@@ -433,6 +449,19 @@ export function analyzeCanonicalIR(ir, { library, features = {} } = {}) {
     ...(crossDomain ? { crossDomain } : {}),
     ...(isMythDerived ? { isMythDerived: true } : {}),
   };
+  value.operatorRead = buildOperatorRead({
+    status: "",
+    resultType: value.resultType,
+    assemblyClass: value.assemblyClass,
+    gatePassed: gate.passed,
+    maturationGatePassed: maturationGate.passed,
+    requiredReceipts: value.requiredReceipts,
+    mainGap: value.mainGap || "",
+    nextLawfulMove: value.nextLawfulMove || "",
+    receiptCondition: value.receiptCondition || null,
+    possibleDisconfirmation: value.possibleDisconfirmation || "",
+    falsifier: ir?.falsifier || "",
+  });
 
   return { ok: true, value };
 }

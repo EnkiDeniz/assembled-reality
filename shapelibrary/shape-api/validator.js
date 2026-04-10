@@ -16,6 +16,7 @@ const validators = {
   analyzeResult: ajv.compile(readJson("analyze-result.schema.json")),
   evaluateResult: ajv.compile(readJson("evaluate-result.schema.json")),
   promote: ajv.compile(readJson("promote.schema.json")),
+  bat: ajv.compile(readJson("bat.schema.json")),
 };
 
 export function validateIR(ir) {
@@ -65,4 +66,8 @@ export function assertAnalyzeResultShape(result) {
 
 export function assertEvaluateResultShape(result) {
   return validators.evaluateResult(result);
+}
+
+export function assertBatShape(result) {
+  return validators.bat(result);
 }

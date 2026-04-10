@@ -6,6 +6,7 @@ import {
   validatePromote,
   assertAnalyzeResultShape,
   assertEvaluateResultShape,
+  assertBatShape,
 } from "../shape-api/validator.js";
 
 test("canonical IR validates", () => {
@@ -48,7 +49,15 @@ test("analyze/evaluate schema validators accept expected structure", () => {
     requiredReceipts: ["runtime_observation"],
     confidence: 0.7,
     confidenceSource: "heuristic",
-    candidateId: "c1"
+    candidateId: "c1",
+    operatorRead: {
+      wallLine: "A likely structural wall is present.",
+      whatToPingNow: "Run one bounded test and observe one concrete return.",
+      whatWouldCountAsRealReturn: "A runtime observation that confirms or disconfirms the read.",
+      howThisReadCouldBeWrong: "If the next return does not shift expected signal, this read is likely wrong.",
+      toneClass: "pathology",
+      closureLanguageAllowed: false,
+    },
   });
   assert.equal(analyzeOk, true);
 
@@ -61,6 +70,16 @@ test("analyze/evaluate schema validators accept expected structure", () => {
     episodes: []
   });
   assert.equal(evaluateOk, true);
+
+  const batOk = assertBatShape({
+    wallLine: "A likely structural wall is present.",
+    whatToPingNow: "Run one bounded test and observe one concrete return.",
+    whatWouldCountAsRealReturn: "A runtime observation that confirms or disconfirms the read.",
+    howThisReadCouldBeWrong: "If the next return does not shift expected signal, this read is likely wrong.",
+    toneClass: "pathology",
+    closureLanguageAllowed: false,
+  });
+  assert.equal(batOk, true);
 });
 
 test("standard mode requires non-empty observables", () => {

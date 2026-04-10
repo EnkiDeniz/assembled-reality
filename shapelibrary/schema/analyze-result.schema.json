@@ -15,7 +15,8 @@
         "discriminatingTest",
         "requiredReceipts",
         "confidence",
-        "confidenceSource"
+        "confidenceSource",
+        "operatorRead"
       ],
       "properties": {
         "runId": { "type": "string" },
@@ -76,6 +77,25 @@
             "nonImportableProperties": { "type": "array", "items": { "type": "string" } },
             "gate": { "type": "object" }
           }
+        },
+        "operatorRead": {
+          "type": "object",
+          "required": [
+            "wallLine",
+            "whatToPingNow",
+            "whatWouldCountAsRealReturn",
+            "howThisReadCouldBeWrong",
+            "toneClass",
+            "closureLanguageAllowed"
+          ],
+          "properties": {
+            "wallLine": { "type": "string", "minLength": 1, "maxLength": 220 },
+            "whatToPingNow": { "type": "string", "minLength": 1, "maxLength": 220 },
+            "whatWouldCountAsRealReturn": { "type": "string", "minLength": 1, "maxLength": 240 },
+            "howThisReadCouldBeWrong": { "type": "string", "minLength": 1, "maxLength": 240 },
+            "toneClass": { "type": "string", "enum": ["pathology", "gate", "topology", "behavioral"] },
+            "closureLanguageAllowed": { "type": "boolean" }
+          }
         }
       }
     },
@@ -91,7 +111,8 @@
         "nextLawfulMove",
         "receiptCondition",
         "possibleDisconfirmation",
-        "requiredReceipts"
+        "requiredReceipts",
+        "operatorRead"
       ],
       "properties": {
         "runId": { "type": "string" },
@@ -115,7 +136,26 @@
         },
         "possibleDisconfirmation": { "type": "string" },
         "requiredReceipts": { "type": "array", "items": { "type": "string" } },
-        "maturation": { "type": "object" }
+        "maturation": { "type": "object" },
+        "operatorRead": {
+          "type": "object",
+          "required": [
+            "wallLine",
+            "whatToPingNow",
+            "whatWouldCountAsRealReturn",
+            "howThisReadCouldBeWrong",
+            "toneClass",
+            "closureLanguageAllowed"
+          ],
+          "properties": {
+            "wallLine": { "type": "string", "minLength": 1, "maxLength": 220 },
+            "whatToPingNow": { "type": "string", "minLength": 1, "maxLength": 220 },
+            "whatWouldCountAsRealReturn": { "type": "string", "minLength": 1, "maxLength": 240 },
+            "howThisReadCouldBeWrong": { "type": "string", "minLength": 1, "maxLength": 240 },
+            "toneClass": { "type": "string", "enum": ["pathology", "gate", "topology", "behavioral"] },
+            "closureLanguageAllowed": { "type": "boolean" }
+          }
+        }
       }
     }
   ]

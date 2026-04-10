@@ -18,6 +18,7 @@ import {
   inferAssemblyClass,
   runMaturationGate,
 } from "../shape-core/assembly-path.js";
+import { buildOperatorRead, validateOperatorRead } from "../shape-core/bat.js";
 
 test("analyze fidelity: matchBasis and nearMiss when enableV01Fidelity", () => {
   const ir = normalizeToCanonicalIR({
@@ -249,4 +250,27 @@ test("read-order precheck returns not_sealable_yet without candidate naming", ()
   assert.equal(r.value.resultType, undefined);
   assert.equal(r.value.shapeIds, undefined);
   assert.ok(Array.isArray(r.value.maturationBlockers));
+  assert.equal(r.value.operatorRead?.closureLanguageAllowed, false);
+  assert.equal(typeof r.value.operatorRead?.whatToPingNow, "string");
+});
+
+test("bat operator read validates and enforces one bounded move", () => {
+  const operatorRead = buildOperatorRead({
+    status: "candidate_primitive",
+    assemblyClass: "path_dependent",
+    gatePassed: true,
+    maturationGatePassed: true,
+    requiredReceipts: ["stage_transition_proof"],
+    nextLawfulMove: "Map the sequence and then run three strategy tracks.",
+    receiptCondition: {
+      receiptType: "stage_transition_proof",
+      validWhen: "ordered_sequence_confirmed && before_after_metric_shift",
+    },
+    possibleDisconfirmation: "If order changes do not affect outcomes, reclassify.",
+    falsifier: "reverse order and compare cycle time",
+  });
+  const validated = validateOperatorRead(operatorRead);
+  assert.equal(validated.ok, true);
+  assert.equal(operatorRead.closureLanguageAllowed, false);
+  assert.ok(!/\bthen\b/i.test(operatorRead.whatToPingNow));
 });
