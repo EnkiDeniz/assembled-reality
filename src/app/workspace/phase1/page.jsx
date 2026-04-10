@@ -40,17 +40,56 @@ function buildSourceDocumentHints(documents = [], take = 4) {
     }));
 }
 
+function buildMigrationNotice({
+  deprecated = "",
+  connected = "",
+  error = "",
+  mode = "",
+} = {}) {
+  const normalizedDeprecated = String(deprecated || "").trim().toLowerCase();
+  if (normalizedDeprecated === "legacy-workspace") {
+    return "Legacy workspace is now frozen. You are on the launch shell.";
+  }
+
+  const normalizedConnected = String(connected || "").trim().toLowerCase();
+  if (normalizedConnected === "getreceipts") {
+    return "GetReceipts is connected. Continue in the launch shell.";
+  }
+
+  const normalizedError = String(error || "").trim();
+  if (normalizedError) {
+    return `Integration notice: ${normalizedError}`;
+  }
+
+  const normalizedMode = String(mode || "").trim().toLowerCase();
+  if (normalizedMode === "listen" || normalizedMode === "assemble") {
+    return `Mode '${normalizedMode}' now resolves into the launch shell experience.`;
+  }
+  return "";
+}
+
 export default async function WorkspacePhase1Page({ searchParams }) {
   await headers();
   const resolvedSearchParams = await searchParams;
   const demoMode = String(resolvedSearchParams?.phase2demo || "").trim() === "1";
   const requestedDocumentKey = String(resolvedSearchParams?.document || "").trim();
   const requestedProjectKey = String(resolvedSearchParams?.project || "").trim();
+  const requestedMode = String(resolvedSearchParams?.mode || "").trim();
+  const requestedConnected = String(resolvedSearchParams?.connected || "").trim();
+  const requestedError = String(resolvedSearchParams?.error || "").trim();
+  const requestedDeprecated = String(resolvedSearchParams?.deprecated || "").trim();
+  const migrationNotice = buildMigrationNotice({
+    deprecated: requestedDeprecated,
+    connected: requestedConnected,
+    error: requestedError,
+    mode: requestedMode,
+  });
   if (demoMode) {
     const demoBootstrap = {
       projectKey: requestedProjectKey || "demo_project",
       documentKey: requestedDocumentKey || "demo_document",
       documentTitle: "Phase 2 Demo Witness",
+      migrationNotice,
       sourceDocuments: [
         {
           title: "Demo source",
@@ -84,6 +123,7 @@ export default async function WorkspacePhase1Page({ searchParams }) {
     projectKey: requestedProjectKey || String(initialDocument?.projectKey || "").trim(),
     documentKey: String(initialDocument?.documentKey || "").trim(),
     documentTitle: String(initialDocument?.title || "Workspace witness").trim(),
+    migrationNotice,
     sourceDocuments: buildSourceDocumentHints(documents || []),
     files: fallbackSource
       ? [

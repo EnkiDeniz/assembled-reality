@@ -174,7 +174,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/workspace?mode=listen",
+        callbackUrl: "/workspace/phase1?mode=listen",
       });
 
       if (result?.error) {
@@ -198,7 +198,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       <div className="intro-auth">
         <div className="terminal-actions">
           <Link
-            href="/workspace?mode=listen"
+            href="/workspace/phase1?mode=listen"
             className="terminal-link is-primary"
             onClick={() => onEnter?.()}
           >
@@ -218,7 +218,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
           disabled={!authCapabilities.appleEnabled}
           onClick={() => {
             onEnter?.();
-            void signIn("apple", { callbackUrl: "/workspace?mode=listen" });
+            void signIn("apple", { callbackUrl: "/workspace/phase1?mode=listen" });
           }}
         >
           Continue with Apple

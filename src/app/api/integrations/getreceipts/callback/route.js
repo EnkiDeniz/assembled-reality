@@ -6,7 +6,7 @@ import {
 } from "@/lib/getreceipts";
 
 function buildWorkspaceReturnUrl(origin, payload = null) {
-  const url = new URL("/workspace", origin);
+  const url = new URL("/workspace/phase1", origin);
   if (payload?.projectKey) {
     url.searchParams.set("project", payload.projectKey);
   }

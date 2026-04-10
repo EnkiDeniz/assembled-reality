@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { compileSource } from "../packages/compiler/src/index.mjs";
-import { buildBoxSectionsFromArtifact, splitDiagnostics } from "./lib/artifact-view-model.mjs";
+import {
+  buildBoxSectionsFromArtifact,
+  deriveDistantEchoSignal,
+  buildEchoFieldModel,
+  splitDiagnostics,
+} from "./lib/artifact-view-model.mjs";
 import { applySevenProposalGate } from "./lib/proposal-gate.mjs";
 import { fetchSevenProposal } from "./lib/seven-proposal-client.mjs";
 import { importSourceLink, pasteSource, uploadSources } from "./lib/intake-adapter.mjs";
@@ -48,6 +53,29 @@ const BADGE_COLORS = {
   open: TOKENS.muted,
 };
 
+const FIELD_COLORS = {
+  mapped: {
+    accent: TOKENS.success,
+    bg: "rgba(58,143,92,0.08)",
+    border: "rgba(58,143,92,0.24)",
+  },
+  fog: {
+    accent: TOKENS.warn,
+    bg: "rgba(176,138,26,0.08)",
+    border: "rgba(176,138,26,0.24)",
+  },
+  fractured: {
+    accent: TOKENS.error,
+    bg: "rgba(192,57,43,0.08)",
+    border: "rgba(192,57,43,0.24)",
+  },
+  awaiting: {
+    accent: TOKENS.accent,
+    bg: "rgba(59,125,216,0.08)",
+    border: "rgba(59,125,216,0.24)",
+  },
+};
+
 function toIdentifier(value = "") {
   return String(value || "")
     .trim()
@@ -82,7 +110,7 @@ function buildImportedWitnessClause({ kind = "source", documentKey = "", label =
   ].join("\n");
 }
 
-function applyArtifactToRuntimeWindow(previousWindow, artifact, eventMeta = null) {
+function applyArtifactToRuntimeWindow(previousWindow, artifact, eventMeta = null, previousArtifact = null) {
   let nextWindow = {
     ...(previousWindow || {}),
     state: artifact.mergedWindowState,
@@ -101,6 +129,19 @@ function applyArtifactToRuntimeWindow(previousWindow, artifact, eventMeta = null
       detail: eventMeta.detail || "",
       compilationId: artifact.compilationId,
       metadata: eventMeta.metadata || null,
+    });
+  }
+
+  const distantEcho = deriveDistantEchoSignal(previousArtifact, artifact);
+  if (distantEcho) {
+    nextWindow = appendEvent(nextWindow, {
+      kind: "distant_echo_arrived",
+      detail: `Field ${distantEcho.previousFieldState} -> ${distantEcho.nextFieldState} via ${distantEcho.returnProvenance}`,
+      compilationId: artifact.compilationId,
+      metadata: {
+        chainSummary: distantEcho.chainSummary,
+        returnDelta: distantEcho.returnDelta,
+      },
     });
   }
 
@@ -130,7 +171,7 @@ function buildRuntimeRecord(artifact, filename, previousWindow = null) {
       filePath: filename,
       compileResult: artifact,
     });
-  return applyArtifactToRuntimeWindow(baseWindow, artifact);
+  return applyArtifactToRuntimeWindow(baseWindow, artifact, null, null);
 }
 
 function buildInitialFiles(bootstrap = {}) {
@@ -232,6 +273,69 @@ function SectionCard({ title, items = [], accent = TOKENS.accent }) {
       ) : (
         <div style={{ color: TOKENS.muted, fontSize: 12 }}>No entries yet.</div>
       )}
+    </section>
+  );
+}
+
+function EchoLegibilityPanel({ model }) {
+  const fieldColors = FIELD_COLORS[model.fieldState] || FIELD_COLORS.fog;
+  const echoRatioPercent = `${Math.round((Number(model.echoRatio) || 0) * 100)}%`;
+  const pingLabel = model.pingSent ? "sent" : "not_sent";
+  const waitingLabel = model.waiting ? "listening" : "no_pending_wait";
+  const fogDensityLabel = String(model.fogDensity || "thick").toLowerCase();
+
+  return (
+    <section
+      data-testid="phase2-echo-legibility"
+      style={{
+        border: `1px solid ${fieldColors.border}`,
+        background: fieldColors.bg,
+        borderRadius: 10,
+        padding: 10,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: TOKENS.mono,
+          fontSize: 11,
+          color: fieldColors.accent,
+          marginBottom: 8,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        Echo Legibility
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>field_state</div>
+          <div data-testid="phase2-field-state" style={{ color: fieldColors.accent }}>
+            {model.fieldState}
+          </div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>ping</div>
+          <div data-testid="phase2-ping-state">{pingLabel}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>waiting</div>
+          <div data-testid="phase2-waiting-state">{waitingLabel}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>return_provenance</div>
+          <div data-testid="phase2-return-provenance">{model.returnProvenance}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>echo_to_story</div>
+          <div data-testid="phase2-echo-ratio">
+            {model.echoCount}:{model.storyCount} ({echoRatioPercent})
+          </div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>fog_density</div>
+          <div data-testid="phase2-fog-density">{fogDensityLabel}</div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -498,8 +602,10 @@ function VoicePlayerPanel({ sourceText = "", documentKey = "", onStatus }) {
 
 function EditorView({ files, activeFile, onSelectFile, parityOk }) {
   const artifact = files[activeFile]?.artifact || null;
+  const runtimeRecord = files[activeFile]?.runtimeWindow || null;
   const diagnostics = splitDiagnostics(artifact?.diagnostics || []);
   const badgeColor = BADGE_COLORS[artifact?.mergedWindowState] || TOKENS.muted;
+  const echoFieldModel = buildEchoFieldModel(artifact, runtimeRecord);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", height: "100%" }}>
@@ -533,6 +639,10 @@ function EditorView({ files, activeFile, onSelectFile, parityOk }) {
           style={{ marginBottom: 8, color: parityOk ? TOKENS.success : TOKENS.error, fontSize: 12 }}
         >
           parity: {parityOk ? "ok" : "mismatch"}
+        </div>
+        <div data-testid="phase2-editor-field-state" style={{ marginBottom: 8, color: TOKENS.muted, fontSize: 12 }}>
+          field_state: {echoFieldModel.fieldState} | fog: {echoFieldModel.fogDensity} | echo/story:{" "}
+          {echoFieldModel.echoCount}:{echoFieldModel.storyCount}
         </div>
         <div style={{ fontFamily: TOKENS.mono, fontSize: 12, lineHeight: 1.7, marginBottom: 12 }}>
           {(artifact?.tokenizedLines || []).map((line) => (
@@ -587,6 +697,7 @@ function MirrorView({
 
   const badgeColor = BADGE_COLORS[runtimeRecord.state] || TOKENS.muted;
   const warnings = splitDiagnostics(artifact.diagnostics).warnings;
+  const echoFieldModel = buildEchoFieldModel(artifact, runtimeRecord);
 
   async function handleSend() {
     const text = String(input || "").trim();
@@ -694,6 +805,9 @@ function MirrorView({
               Open Shape Library Operator Surface
             </a>
           </div>
+          <div style={{ marginTop: 10 }}>
+            <EchoLegibilityPanel model={echoFieldModel} />
+          </div>
         </section>
 
         <section style={{ border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 10, background: TOKENS.card }}>
@@ -741,7 +855,28 @@ function MirrorView({
                 .reverse()
                 .map((event) => (
                   <div key={event.id} style={{ marginBottom: 4 }}>
-                    {event.kind} - {event.detail || "updated"}
+                    {event.kind === "distant_echo_arrived" ? (
+                      <div
+                        data-testid="phase2-distant-echo-event"
+                        style={{
+                          border: `1px solid ${TOKENS.accent}`,
+                          borderRadius: 8,
+                          padding: "4px 6px",
+                          background: "rgba(59,125,216,0.08)",
+                        }}
+                      >
+                        <strong>Ripple:</strong> {event.detail || "Distant echo arrived"}
+                        {String(event?.metadata?.chainSummary || "").trim() ? (
+                          <div style={{ color: TOKENS.muted }}>
+                            chain: {event.metadata.chainSummary}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div>
+                        {event.kind} - {event.detail || "updated"}
+                      </div>
+                    )}
                   </div>
                 ))
             )}
@@ -822,7 +957,7 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
       ? persistedState.activeFile
       : Object.keys(initialSources)[0] || "",
   );
-  const [statusMessage, setStatusMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState(String(bootstrap?.migrationNotice || "").trim());
   const [sources, setSources] = useState(initialSources);
 
   const resolvedActiveFile = sources[activeFile]
@@ -839,6 +974,7 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
         buildRuntimeRecord(entry.artifact, entry.filename, entry.runtimeWindow),
         artifact,
         eventMeta,
+        entry.artifact,
       );
       const next = {
         ...current,

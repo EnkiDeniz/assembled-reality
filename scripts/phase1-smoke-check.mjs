@@ -7,215 +7,68 @@ async function read(path) {
 
 async function main() {
   const [
-    schema,
-    operateRoute,
-    operateOverridesRoute,
-    receiptRoute,
-    workspaceAiRoute,
     workspacePage,
-    workspacePageData,
-    workspaceV1Page,
-    workspaceShell,
-    workspaceStarter,
-    realityAssemblyShell,
-    realityAssemblyDialog,
-    founderShell,
-    founderInfoPanel,
-    loegosRenderer,
-    loegosExplainPanel,
-    founderRendererUtils,
-    operateOverlay,
-    overlayRail,
-    receiptSealController,
-    operateOverlayController,
-    workbench,
-    seedSurface,
+    workspacePhase1Page,
+    launchShell,
+    intakeAdapter,
+    voiceAdapter,
+    authTerminal,
+    introLanding,
+    readPage,
+    libraryPage,
+    connectRoute,
+    callbackRoute,
+    shapeLibraryPage,
+    shapeLibraryApiRoute,
     packageJson,
-    localE2eRunner,
-    playwrightConfig,
-    playwrightCiConfig,
-    e2eSmoke,
-    receiptSealDialog,
-    diagnosticsRail,
-    proofRunbook,
-    founderWowRunbook,
   ] = await Promise.all([
-    read("prisma/schema.prisma"),
-    read("src/app/api/workspace/operate/route.js"),
-    read("src/app/api/workspace/operate/overrides/route.js"),
-    read("src/app/api/workspace/receipt/route.js"),
-    read("src/app/api/workspace/ai/route.js"),
     read("src/app/workspace/page.jsx"),
-    read("src/lib/workspace-page-data.js"),
-    read("src/app/workspace/v1/page.jsx"),
-    read("src/components/WorkspaceShell.jsx"),
-    read("src/components/WorkspaceStarter.jsx"),
-    read("src/components/reality-assembly/RealityAssemblyShell.jsx"),
-    read("src/components/reality-assembly/RealityAssemblyAddSourceDialog.jsx"),
-    read("src/components/founder/FounderShell.jsx"),
-    read("src/components/founder/FounderInfoPanel.jsx"),
-    read("src/components/founder/LoegosRenderer.jsx"),
-    read("src/components/founder/LoegosExplainPanel.jsx"),
-    read("src/lib/founder-renderer.js"),
-    read("src/lib/operate-overlay.js"),
-    read("src/components/WorkspaceOperateOverlayRail.jsx"),
-    read("src/components/workspace/useReceiptSealController.js"),
-    read("src/components/workspace/useOperateOverlayController.js"),
-    read("src/components/workspace/WorkspaceDocumentWorkbench.jsx"),
-    read("src/components/SeedSurface.jsx"),
+    read("src/app/workspace/phase1/page.jsx"),
+    read("LoegosCLI/UX/loegos-phase1-shell.jsx"),
+    read("LoegosCLI/UX/lib/intake-adapter.mjs"),
+    read("LoegosCLI/UX/lib/voice-player-adapter.mjs"),
+    read("src/components/AuthTerminal.jsx"),
+    read("src/components/IntroLanding.jsx"),
+    read("src/app/read/page.jsx"),
+    read("src/app/library/page.jsx"),
+    read("src/app/connect/getreceipts/route.js"),
+    read("src/app/api/integrations/getreceipts/callback/route.js"),
+    read("src/app/shapelibrary/page.jsx"),
+    read("src/app/api/shapelibrary/analyze/route.js"),
     read("package.json"),
-    read("scripts/run-phase1-e2e-local.mjs"),
-    read("playwright.config.mjs"),
-    read("playwright.ci.config.mjs"),
-    read("tests/e2e/phase1-inline-operate.spec.mjs"),
-    read("src/components/ReceiptSealDialog.jsx"),
-    read("src/components/WorkspaceDiagnosticsRail.jsx"),
-    read("docs/LoegosSeed/pivot-history/solution/Phase 1 Proof Runbook/Phase 1 Proof Runbook.md"),
-    read("docs/LoegosSeed/pivot-history/solution/Founder Wow Proof Session/Founder Wow Proof Session.md"),
   ]);
 
-  assert.match(schema, /model\s+ReaderOperateRun\s+\{/);
-  assert.match(schema, /model\s+ReaderAttestedOverride\s+\{/);
-  assert.match(schema, /sourceFingerprint\s+String/);
-  assert.match(schema, /excerptSnapshot\s+String/);
+  assert.match(workspacePage, /deprecated/);
+  assert.match(workspacePage, /redirect\(query \? `\/workspace\/phase1\?\$\{query\}` : "\/workspace\/phase1"\)/);
+  assert.match(workspacePhase1Page, /buildMigrationNotice/);
+  assert.match(workspacePhase1Page, /migrationNotice/);
+  assert.doesNotMatch(workspacePhase1Page, /workspace-v1/);
 
-  assert.match(operateRoute, /mode:\s*"overlay"/);
-  assert.match(operateRoute, /createReaderOperateRunForUser/);
-  assert.match(operateRoute, /buildOperateSourceFingerprint/);
-  assert.match(operateRoute, /findings:/);
-  assert.match(operateRoute, /coverage:/);
+  assert.match(launchShell, /Loegos Phase 2/);
+  assert.match(launchShell, /<MirrorView/);
+  assert.match(launchShell, /<EditorView/);
+  assert.match(launchShell, /migrationNotice/);
 
-  assert.match(operateOverridesRoute, /upsertReaderAttestedOverrideForUser/);
-  assert.match(operateOverridesRoute, /deleteReaderAttestedOverrideForUser/);
+  assert.match(intakeAdapter, /\/api\/workspace\/folder/);
+  assert.match(intakeAdapter, /\/api\/workspace\/paste/);
+  assert.match(intakeAdapter, /\/api\/workspace\/link/);
+  assert.match(voiceAdapter, /\/api\/seven\/audio/);
+  assert.match(voiceAdapter, /\/api\/reader\/listening-session/);
 
-  assert.match(receiptRoute, /overrideAcknowledged/);
-  assert.match(receiptRoute, /requiresOverrideAcknowledgement/);
-  assert.match(receiptRoute, /operateRunId/);
+  assert.match(authTerminal, /\/workspace\/phase1\?mode=listen/);
+  assert.match(introLanding, /\/workspace\/phase1\?mode=listen/);
+  assert.match(readPage, /redirect\("\/workspace\/phase1"\)/);
+  assert.match(libraryPage, /redirect\("\/workspace\/phase1"\)/);
+  assert.match(connectRoute, /new URL\("\/workspace\/phase1", origin\)/);
+  assert.match(callbackRoute, /new URL\("\/workspace\/phase1", origin\)/);
+  assert.match(callbackRoute, /connected", "getreceipts"/);
 
-  assert.match(workspaceAiRoute, /unavailable:\s*true/);
-  assert.doesNotMatch(workspaceAiRoute, /fallbackBlocks/);
-  assert.match(workspacePage, /WorkspaceShell/);
-  assert.match(workspacePageData, /defaultStarterEntry/);
-  assert.match(workspacePageData, /"start"/);
-  assert.match(workspaceV1Page, /RealityAssemblyShell/);
-  assert.match(workspaceV1Page, /loadWorkspacePageData/);
-
-  assert.match(operateOverlay, /Local evidence did not survive validation/);
-  assert.match(operateOverlay, /displaySignal/);
-  assert.match(operateOverlay, /attestedCount/);
-  assert.match(operateOverlay, /buildOperateOverlayCoverage/);
-  assert.match(operateOverlay, /pickPreferredOperateFindingId/);
-  assert.match(operateOverlay, /documentOrder/);
-
-  assert.match(workspaceShell, /useOperateOverlayController/);
-  assert.match(workspaceShell, /useReceiptSealController/);
-  assert.match(workspaceShell, /WorkspaceDocumentWorkbench/);
-  assert.match(workspaceShell, /WorkspaceStarter/);
-  assert.match(workspaceShell, /starterScopedProjectKey/);
-  assert.match(workspaceShell, /showStarterSourceSurface/);
-  assert.match(workspaceShell, /starterSeedEntrySourceKey/);
-  assert.match(workspaceShell, /openStarterSourceIntake/);
-  assert.match(workspaceShell, /openStarterImportedSource/);
-  assert.match(workspaceShell, /openStarterSeedFlow/);
-  assert.match(workspaceShell, /returnToStarterSourceView/);
-  assert.match(workspaceShell, /workspace-source-view/);
-  assert.match(workspaceShell, /workspace-source-intake/);
-  assert.match(workspaceShell, /workspace-source-next-shape-seed/);
-  assert.match(workspaceShell, /workspace-source-open-box/);
-  assert.match(workspaceShell, /FounderShell/);
-  assert.match(workspaceShell, /pendingInlineOperateSeedOpen/);
-  assert.match(workspaceShell, /Switching to the live seed so inline Operate can reveal findings/);
-  assert.match(workspaceShell, /DesktopSessionActions/);
-  assert.match(workspaceShell, /workspace-account-link/);
-  assert.match(workspaceShell, /Current seed is empty\./);
-  assert.match(workspaceStarter, /workspace-starter-add-source/);
-  assert.match(workspaceStarter, /workspace-starter-open-box/);
-  assert.match(workspaceStarter, /workspace-starter-start-fresh/);
-  assert.match(workspaceStarter, /workspace-starter-account-link/);
-  assert.match(founderShell, /founder-shell/);
-  assert.match(founderShell, /LoegosRenderer/);
-  assert.match(founderShell, /LoegosExplainPanel/);
-  assert.match(founderShell, /Open box/);
-  assert.match(founderShell, /Ask Seven/);
-  assert.match(founderShell, /founder-shell-open-full-workspace/);
-  assert.match(founderShell, /founder-shell-assistant-toggle/);
-  assert.match(founderShell, /FounderWorkbenchTree/);
-  assert.match(founderInfoPanel, /FounderInfoPanel/);
-  assert.match(loegosRenderer, /Workbench/);
-  assert.match(loegosRenderer, /loegos-learner-toggle/);
-  assert.match(loegosRenderer, /loegos-block__stage/);
-  assert.match(founderRendererUtils, /Stale override/);
-  assert.match(founderRendererUtils, /Contradicted/);
-  assert.match(workspaceShell, /founderPlaybackSurface/);
-  assert.match(workspaceShell, /handleFounderPlaybackSourceSelect/);
-  assert.match(workspaceShell, /workspace-founder-compile-witness/);
-  assert.match(workspaceShell, /workspace-founder-run-operate/);
-  assert.match(workspaceShell, /workspace-box-view/);
-  assert.match(workspaceShell, /workspace-witness-view/);
-  assert.match(workspaceShell, /workspace-receipt-view/);
-  assert.match(workspaceShell, /compiledFromDocumentKey/);
-  assert.match(workspaceShell, /workspace-founder-seal-latest/);
-  assert.match(realityAssemblyShell, /reality-assembly-shell/);
-  assert.match(realityAssemblyShell, /\/api\/reader\/listening-session/);
-  assert.match(realityAssemblyShell, /\/api\/workspace\/seed/);
-  assert.match(realityAssemblyShell, /Compile to Lœgos/);
-  assert.match(realityAssemblyShell, /selectionActionAddLabel="Advance"/);
-  assert.match(realityAssemblyShell, /view: VIEW_KEYS\.compare/);
-  assert.match(realityAssemblyDialog, /ra-add-source-upload/);
-  assert.match(realityAssemblyDialog, /ra-add-source-paste/);
-  assert.match(realityAssemblyDialog, /ra-add-source-link/);
-  assert.match(loegosExplainPanel, /Lœgos read/);
-  assert.match(loegosExplainPanel, /workspace-attest-block-input/);
-  assert.match(loegosExplainPanel, /workspace-attest-block-submit/);
-  assert.match(founderRendererUtils, /buildFounderSeedState/);
-  assert.match(founderRendererUtils, /buildLoegosBlockView/);
-
-  assert.match(overlayRail, /Operate is partial/);
-  assert.match(overlayRail, /attested/);
-  assert.match(overlayRail, /coverage/);
-  assert.match(overlayRail, /workspace-attest-block-submit/);
-
-  assert.match(receiptSealController, /runReceiptSealAudit/);
-  assert.match(receiptSealController, /performSealReceiptDraft/);
-  assert.match(operateOverlayController, /runInlineOperate/);
-  assert.match(operateOverlayController, /createAttestedOverride/);
-  assert.match(operateOverlayController, /latestAppliedRequestIdRef/);
-  assert.match(operateOverlayController, /beginOperateOverlayRequest/);
-  assert.match(workbench, /workspace-document-workbench/);
-  assert.match(workbench, /workspace-finding-inspect/);
-  assert.match(workbench, /workspace-selected-finding-evidence-preview/);
-  assert.match(seedSurface, /workspace-shape-seed-guide/);
-  assert.match(seedSurface, /workspace-shape-seed-back-to-source/);
-  assert.match(receiptSealDialog, /receipt-seal-blocked-reason/);
-  assert.match(receiptSealDialog, /data-draft-id/);
-  assert.match(diagnosticsRail, /workspace-latest-receipt-status/);
-  assert.match(diagnosticsRail, /workspace-shell-state-callout/);
-  assert.match(diagnosticsRail, /Compiler state follows the live seed\./);
+  assert.match(shapeLibraryPage, /shapelibrary/i);
+  assert.match(shapeLibraryApiRoute, /NextResponse\.json/);
 
   assert.match(packageJson, /"test:e2e": "npm run test:e2e:local"/);
   assert.match(packageJson, /"test:e2e:local": "node scripts\/run-phase1-e2e-local\.mjs"/);
   assert.match(packageJson, /"test:e2e:ci": "playwright test --config=playwright.ci.config.mjs"/);
-  assert.match(localE2eRunner, /OPENAI_API_KEY is required for the proof loop/);
-  assert.match(localE2eRunner, /playwright\.config\.mjs/);
-  assert.match(playwrightConfig, /tests\/e2e/);
-  assert.doesNotMatch(playwrightConfig, /webServer:/);
-  assert.match(playwrightCiConfig, /npm run dev -- --port/);
-  assert.match(e2eSmoke, /dev-guardian/);
-  assert.doesNotMatch(e2eSmoke, /test\.skip/);
-  assert.match(e2eSmoke, /test\.beforeAll/);
-  assert.match(e2eSmoke, /await expect\(starter\)\.toBeVisible/);
-  assert.match(e2eSmoke, /workspace-starter-open-box/);
-  assert.match(e2eSmoke, /workspace-starter-account-link/);
-  assert.match(e2eSmoke, /receipt-override-acknowledgement/);
-  assert.match(e2eSmoke, /workspace-proof-metadata/);
-  assert.match(e2eSmoke, /workspace-latest-receipt-status/);
-  assert.match(e2eSmoke, /Acknowledge the attested overrides/);
-  assert.match(proofRunbook, /Founder Wow Proof Session/);
-  assert.match(proofRunbook, /source view/i);
-  assert.match(founderWowRunbook, /Founder Wow Proof/);
-  assert.match(founderWowRunbook, /problem-statement-editor-first\.md/);
-  assert.match(founderWowRunbook, /AR Version 2 Build Plan\.md/);
-  assert.match(founderWowRunbook, /Next: Shape seed/);
 
   console.log("phase1-smoke-check: ok");
 }
