@@ -1184,6 +1184,7 @@ function MirrorView({
   const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState([]);
   const [attestRationale, setAttestRationale] = useState("");
+  const [supportOpen, setSupportOpen] = useState(false);
   const rangeStorageKey = getRangeStorageKey(projectKey, documentKey);
 
   useEffect(() => {
@@ -1456,7 +1457,7 @@ function MirrorView({
   }
 
   return (
-    <div className="phase2-mirror-layout">
+    <div className={`phase2-mirror-layout ${supportOpen ? "is-tools-open" : "is-chat-first"}`}>
       <div>
         <section data-testid="phase2-room-surface" className="phase2-card phase2-block-gap">
           <div className="phase2-box-head">
@@ -1536,74 +1537,17 @@ function MirrorView({
             {statusMessage ? <div className="phase2-card__meta">{statusMessage}</div> : null}
           </div>
         </section>
-
-        <section data-testid="phase2-product-law" className="phase2-card phase2-block-gap">
-          <div className="phase2-card__title" style={{ color: TOKENS.accent }}>
-            Product Law
-          </div>
-          <div className="phase2-card__line">
-            Only returned evidence clears fog; mapped regions can become stale without renewed echoes.
-          </div>
-        </section>
-        {shouldShowCompass ? (
-          <section data-testid="phase2-four-pane-instrument" className="phase2-card phase2-block-gap">
-            <div className="phase2-instrument-head">
-              <span>Compass (ambient)</span>
-              <span data-testid="phase2-range-label" className="phase2-card__meta">
-                {activeRange.label}
-              </span>
-            </div>
-            <div className="phase2-range-switch-wrap">
-              <div className="phase2-four-pane-grid">
-                <PaneCard title="△ Ping" testId="phase2-pane-ping" accent={TOKENS.warn} lines={pingLines} />
-                <PaneCard title="◻ Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
-                <PaneCard title="○ Listen" testId="phase2-pane-listen" accent={TOKENS.warn} lines={listenLines} />
-                <PaneCard title="7 Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
-              </div>
-              <button
-                type="button"
-                data-testid="phase2-range-switch"
-                onClick={cycleRange}
-                className="phase2-range-switch"
-                style={{ boxShadow: rangePulse ? "0 0 0 6px color-mix(in srgb, var(--loegos-brand) 25%, transparent)" : "none" }}
-                title="Switch range level"
-              >
-                ⊙
-              </button>
-            </div>
-            <div data-testid="phase2-range-track" className="phase2-range-track">
-              {RANGE_LEVELS.map((level, index) => {
-                const isActive = index === rangeIndex;
-                return (
-                  <div key={level.key} className={`phase2-range-track__item ${isActive ? "is-active" : ""}`}>
-                    L{index + 1}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="phase2-card__meta" data-testid="phase2-range-hint">
-              {"Center switch rotates range: box -> domain -> full field -> shared field."}
-            </div>
-            <div className="phase2-card__meta phase2-hotkeys-hint" data-testid="phase2-range-hotkeys-hint">
-              Hotkeys: 1=box, 2=domain, 3=full field, 4=shared field.
-            </div>
-          </section>
-        ) : (
-          <section className="phase2-card phase2-block-gap" data-testid="phase2-compass-lock">
-            <div className="phase2-card__title">Compass locked</div>
-            <div className="phase2-card__line">
-              {"Unlock after first full ping->return loop, 3+ boxes, or enable manually."}
-            </div>
-            <button
-              type="button"
-              className="terminal-button"
-              data-testid="phase2-compass-enable"
-              onClick={() => setCompassEnabled(true)}
-            >
-              Enable compass now
-            </button>
-          </section>
-        )}
+        <div className="phase2-row phase2-block-gap">
+          <button
+            type="button"
+            className="terminal-button"
+            data-testid="phase2-room-tools-toggle"
+            onClick={() => setSupportOpen((current) => !current)}
+          >
+            {supportOpen ? "Hide tools" : "Show tools"}
+          </button>
+          <div className="phase2-card__meta">Chat-first mode keeps conversation primary.</div>
+        </div>
         <section className="phase2-card phase2-block-gap">
           <div className="phase2-box-head">
             <strong>Box Mirror</strong>
@@ -1687,6 +1631,75 @@ function MirrorView({
             <div className="phase2-card__meta">Collapsed for focus. Expand to inspect full structure, advisory, and legibility.</div>
           )}
         </section>
+        {supportOpen ? (
+          <>
+        <section data-testid="phase2-product-law" className="phase2-card phase2-block-gap">
+          <div className="phase2-card__title" style={{ color: TOKENS.accent }}>
+            Product Law
+          </div>
+          <div className="phase2-card__line">
+            Only returned evidence clears fog; mapped regions can become stale without renewed echoes.
+          </div>
+        </section>
+        {shouldShowCompass ? (
+          <section data-testid="phase2-four-pane-instrument" className="phase2-card phase2-block-gap">
+            <div className="phase2-instrument-head">
+              <span>Compass (ambient)</span>
+              <span data-testid="phase2-range-label" className="phase2-card__meta">
+                {activeRange.label}
+              </span>
+            </div>
+            <div className="phase2-range-switch-wrap">
+              <div className="phase2-four-pane-grid">
+                <PaneCard title="△ Ping" testId="phase2-pane-ping" accent={TOKENS.warn} lines={pingLines} />
+                <PaneCard title="◻ Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
+                <PaneCard title="○ Listen" testId="phase2-pane-listen" accent={TOKENS.warn} lines={listenLines} />
+                <PaneCard title="7 Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
+              </div>
+              <button
+                type="button"
+                data-testid="phase2-range-switch"
+                onClick={cycleRange}
+                className="phase2-range-switch"
+                style={{ boxShadow: rangePulse ? "0 0 0 6px color-mix(in srgb, var(--loegos-brand) 25%, transparent)" : "none" }}
+                title="Switch range level"
+              >
+                ⊙
+              </button>
+            </div>
+            <div data-testid="phase2-range-track" className="phase2-range-track">
+              {RANGE_LEVELS.map((level, index) => {
+                const isActive = index === rangeIndex;
+                return (
+                  <div key={level.key} className={`phase2-range-track__item ${isActive ? "is-active" : ""}`}>
+                    L{index + 1}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="phase2-card__meta" data-testid="phase2-range-hint">
+              {"Center switch rotates range: box -> domain -> full field -> shared field."}
+            </div>
+            <div className="phase2-card__meta phase2-hotkeys-hint" data-testid="phase2-range-hotkeys-hint">
+              Hotkeys: 1=box, 2=domain, 3=full field, 4=shared field.
+            </div>
+          </section>
+        ) : (
+          <section className="phase2-card phase2-block-gap" data-testid="phase2-compass-lock">
+            <div className="phase2-card__title">Compass locked</div>
+            <div className="phase2-card__line">
+              {"Unlock after first full ping->return loop, 3+ boxes, or enable manually."}
+            </div>
+            <button
+              type="button"
+              className="terminal-button"
+              data-testid="phase2-compass-enable"
+              onClick={() => setCompassEnabled(true)}
+            >
+              Enable compass now
+            </button>
+          </section>
+        )}
         <section className="phase2-card phase2-block-gap" data-testid="phase2-instrument-drawer">
           <div className="phase2-box-head">
             <div className="phase2-card__title">Instrument drawer</div>
@@ -1784,8 +1797,11 @@ function MirrorView({
             </div>
           )}
         </section>
+          </>
+        ) : null}
       </div>
 
+      {supportOpen ? (
       <div className="phase2-side-column">
         <SettingsProfileHelpPanel
           projectKey={projectKey}
@@ -1811,6 +1827,7 @@ function MirrorView({
           onStatus={onStatus}
         />
       </div>
+      ) : null}
     </div>
   );
 }

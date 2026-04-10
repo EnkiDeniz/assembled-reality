@@ -1907,6 +1907,10 @@
   padding: 12px;
 }
 
+.phase2-mirror-layout.is-chat-first {
+  grid-template-columns: 1fr;
+}
+
 .phase2-side-column {
   display: grid;
   gap: 10px;

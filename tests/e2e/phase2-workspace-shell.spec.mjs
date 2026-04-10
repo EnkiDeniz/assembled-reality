@@ -76,6 +76,7 @@ test("phase2 workspace shell preserves intake/player and proposal gate", async (
 
   await page.goto("/workspace/phase1?phase2demo=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("phase2-shell-root")).toBeVisible();
+  await page.getByTestId("phase2-room-tools-toggle").click();
 
   await page.getByTestId("phase2-intake-paste-input").fill("Phase 2 source from paste");
   await page.getByTestId("phase2-intake-paste-submit").click();
@@ -123,6 +124,7 @@ test("phase2 workspace shell preserves intake/player and proposal gate", async (
   await page.keyboard.press("4");
   await expect(page.getByTestId("phase2-range-label")).toContainText("Level 4 - Shared Field");
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByTestId("phase2-room-tools-toggle").click();
   await page.getByTestId("phase2-compass-enable").click();
   await expect(page.getByTestId("phase2-range-label")).toContainText("Level 4 - Shared Field");
 
