@@ -41,3 +41,14 @@ test("integration callback lands on the room", async () => {
   assert.match(callbackRoute, /new URL\("\/workspace", origin\)/);
   assert.match(callbackRoute, /url\.searchParams\.set\("connected", "getreceipts"\)/);
 });
+
+test("account shell exposes the shared top-bar control menu", async () => {
+  const accountShell = await read("src/components/AccountShell.jsx");
+  const controlMenu = await read("src/components/GlobalControlMenu.jsx");
+
+  assert.match(accountShell, /<GlobalControlMenu/);
+  assert.match(controlMenu, /href: "\/workspace"/);
+  assert.match(controlMenu, /href: "\/account"/);
+  assert.match(controlMenu, /href: "\/intro"/);
+  assert.match(controlMenu, /signOut\(\{ callbackUrl: "\/" \}\)/);
+});

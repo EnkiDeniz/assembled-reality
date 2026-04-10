@@ -1,0 +1,151 @@
+.trigger {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(14, 15, 17, 0.88);
+  color: rgba(228, 228, 232, 0.78);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.18);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.trigger:hover,
+.trigger:focus-visible {
+  border-color: rgba(94, 167, 255, 0.22);
+  background: rgba(18, 21, 26, 0.94);
+  color: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 66px 20px 20px;
+  background: rgba(5, 7, 9, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.panel {
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%),
+    rgba(18, 20, 24, 0.96);
+  box-shadow: 0 28px 44px rgba(0, 0, 0, 0.28);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.copy strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1rem;
+  font-weight: 520;
+  color: rgba(240, 242, 244, 0.96);
+}
+
+.copy p {
+  margin-top: 6px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(228, 228, 232, 0.62);
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(94, 167, 255, 0.88);
+}
+
+.closeButton,
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(240, 242, 244, 0.82);
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.closeButton {
+  min-width: 40px;
+  padding: 0;
+}
+
+.actions {
+  display: grid;
+  gap: 10px;
+}
+
+.actionActive {
+  border-color: rgba(94, 167, 255, 0.22);
+  background: rgba(94, 167, 255, 0.12);
+  color: rgba(162, 204, 255, 0.94);
+}
+
+.closeButton:hover,
+.closeButton:focus-visible,
+.action:hover,
+.action:focus-visible {
+  border-color: rgba(94, 167, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.94);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .trigger {
+    top: 12px;
+    right: 14px;
+  }
+
+  .backdrop {
+    padding: 60px 14px 14px;
+  }
+
+  .panel {
+    width: min(100%, 340px);
+  }
+}

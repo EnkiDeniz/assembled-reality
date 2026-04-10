@@ -9,6 +9,7 @@ import {
 import { formatVoiceLabel } from "@/lib/listening";
 import AccountProfileForm from "@/components/AccountProfileForm";
 import SignOutButton from "@/components/SignOutButton";
+import GlobalControlMenu from "@/components/GlobalControlMenu";
 
 function formatStatus(value) {
   return String(value || "disconnected")
@@ -46,6 +47,10 @@ export default function AccountShell({
 
   return (
     <main className="loegos-account">
+      <GlobalControlMenu
+        title="Control Surface"
+        subtitle="Jump back into the Room, revisit account controls, or leave cleanly."
+      />
       <section className="loegos-account__shell">
         <section className="loegos-account__panel">
           <div className="loegos-account__masthead">
