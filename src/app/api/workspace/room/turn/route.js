@@ -111,7 +111,9 @@ const ROOM_TURN_RESPONSE_SCHEMA = {
                 },
                 config: {
                   type: "object",
-                  additionalProperties: true,
+                  additionalProperties: false,
+                  properties: {},
+                  required: [],
                 },
               },
               required: ["type", "config"],
