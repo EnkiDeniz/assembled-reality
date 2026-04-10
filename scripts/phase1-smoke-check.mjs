@@ -55,6 +55,13 @@ async function main() {
   assert.match(launchShell, /How clear is this region\?/);
   assert.match(launchShell, /distant_echo_arrived/);
   assert.match(launchShell, /phase2-ripple-toggle/);
+  assert.match(launchShell, /phase2-product-law/);
+  assert.match(launchShell, /Only returned evidence clears fog; mapped regions can become stale without renewed echoes\./);
+  assert.match(launchShell, /phase2-four-pane-instrument/);
+  assert.match(launchShell, /phase2-pane-ping/);
+  assert.match(launchShell, /phase2-pane-listen/);
+  assert.match(launchShell, /phase2-pane-echoes/);
+  assert.match(launchShell, /phase2-pane-field/);
 
   assert.match(intakeAdapter, /\/api\/workspace\/folder/);
   assert.match(intakeAdapter, /\/api\/workspace\/paste/);

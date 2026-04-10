@@ -350,6 +350,65 @@ function EchoLegibilityPanel({ model }) {
   );
 }
 
+function extractClausesByHead(artifact = null, head = "") {
+  const clauses = Array.isArray(artifact?.ast) ? artifact.ast : [];
+  return clauses.filter((clause) => clause.head === head);
+}
+
+function clauseSummary(clause = null) {
+  if (!clause) return "";
+  const head = String(clause?.head || "").trim();
+  const verb = String(clause?.verb || "").trim();
+  const positional = Array.isArray(clause?.positional) ? clause.positional : [];
+  const text = positional.map((token) => String(token?.value || token?.raw || "").trim()).join(" ").trim();
+  return `${head} ${verb} ${text}`.trim();
+}
+
+function deriveFreshnessState(updatedAt = "") {
+  const timestamp = Date.parse(String(updatedAt || "").trim());
+  if (!Number.isFinite(timestamp)) return "unknown";
+  const ageMs = Date.now() - timestamp;
+  if (ageMs <= 5 * 60 * 1000) return "fresh";
+  if (ageMs <= 60 * 60 * 1000) return "aging";
+  return "stale";
+}
+
+function PaneCard({ title, testId, accent = TOKENS.accent, lines = [] }) {
+  return (
+    <section
+      data-testid={testId}
+      style={{
+        border: `1px solid ${TOKENS.border}`,
+        borderRadius: 10,
+        padding: 10,
+        background: TOKENS.card,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: TOKENS.mono,
+          fontSize: 11,
+          color: accent,
+          marginBottom: 8,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        {title}
+      </div>
+      {lines.length ? (
+        lines.map((line) => (
+          <div key={`${title}-${line}`} style={{ fontSize: 12, color: TOKENS.text, marginBottom: 4 }}>
+            {line}
+          </div>
+        ))
+      ) : (
+        <div style={{ fontSize: 12, color: TOKENS.muted }}>No signal yet.</div>
+      )}
+    </section>
+  );
+}
+
 function IntakePanel({ projectKey, onStatus, onImported }) {
   const fileInputRef = useRef(null);
   const [pasteText, setPasteText] = useState("");
@@ -709,6 +768,38 @@ function MirrorView({
   const badgeColor = BADGE_COLORS[runtimeRecord.state] || TOKENS.muted;
   const warnings = splitDiagnostics(artifact.diagnostics).warnings;
   const echoFieldModel = buildEchoFieldModel(artifact, runtimeRecord);
+  const moveClauses = extractClausesByHead(artifact, "MOV");
+  const testClauses = extractClausesByHead(artifact, "TST");
+  const returnClauses = extractClausesByHead(artifact, "RTN");
+  const freshness = deriveFreshnessState(runtimeRecord?.updatedAt);
+  const latestMove = moveClauses.at(-1) || null;
+  const latestTest = testClauses.at(-1) || null;
+  const latestReturn = returnClauses.at(-1) || null;
+
+  const pingLines = [
+    `status: ${echoFieldModel.pingSent ? "sent" : "not_sent"}`,
+    latestMove ? `latest_move: ${clauseSummary(latestMove)}` : "latest_move: none",
+    latestTest ? `latest_test: ${clauseSummary(latestTest)}` : "latest_test: none",
+  ];
+  const listenLines = [
+    `mode: ${echoFieldModel.waiting ? "listening" : "not_waiting"}`,
+    `awaiting_state: ${artifact.runtimeState || "open"}`,
+    `pending_question: ${
+      latestTest
+        ? clauseSummary(latestTest)
+        : "define a test to start an active listen loop"
+    }`,
+  ];
+  const echoLines = [
+    `returns: ${returnClauses.length}`,
+    `provenance: ${echoFieldModel.returnProvenance}`,
+    latestReturn ? `latest_echo: ${clauseSummary(latestReturn)}` : "latest_echo: none",
+  ];
+  const fieldLines = [
+    `field_state: ${echoFieldModel.fieldState}`,
+    `fog_density: ${echoFieldModel.fogDensity}`,
+    `freshness: ${freshness} (mapped surfaces degrade without renewed echoes)`,
+  ];
 
   async function handleSend() {
     const text = String(input || "").trim();
@@ -763,6 +854,43 @@ function MirrorView({
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 12, padding: 12 }}>
       <div>
+        <section
+          data-testid="phase2-product-law"
+          style={{
+            border: `1px solid ${TOKENS.border}`,
+            borderRadius: 10,
+            padding: 10,
+            background: TOKENS.card,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.accent, marginBottom: 4 }}>
+            Product Law
+          </div>
+          <div style={{ fontSize: 13, color: TOKENS.text }}>
+            Only returned evidence clears fog; mapped regions can become stale without renewed echoes.
+          </div>
+        </section>
+        <section
+          data-testid="phase2-four-pane-instrument"
+          style={{
+            border: `1px solid ${TOKENS.border}`,
+            background: TOKENS.card,
+            borderRadius: 10,
+            padding: 10,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.accent, marginBottom: 8 }}>
+            Echo Instrument
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <PaneCard title="Ping" testId="phase2-pane-ping" accent={TOKENS.accent} lines={pingLines} />
+            <PaneCard title="Listen" testId="phase2-pane-listen" accent={TOKENS.accent} lines={listenLines} />
+            <PaneCard title="Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
+            <PaneCard title="Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
+          </div>
+        </section>
         <section
           style={{
             border: `1px solid ${TOKENS.border}`,

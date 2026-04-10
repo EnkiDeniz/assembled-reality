@@ -35,6 +35,13 @@ test("launch shell still exposes protected intake and player adapters", async ()
   assert.match(shell, /distant_echo_arrived/);
   assert.match(shell, /data-testid="phase2-distant-echo-event"/);
   assert.match(shell, /data-testid="phase2-ripple-toggle"/);
+  assert.match(shell, /data-testid="phase2-product-law"/);
+  assert.match(shell, /Only returned evidence clears fog; mapped regions can become stale without renewed echoes\./);
+  assert.match(shell, /data-testid="phase2-four-pane-instrument"/);
+  assert.match(shell, /testId="phase2-pane-ping"/);
+  assert.match(shell, /testId="phase2-pane-listen"/);
+  assert.match(shell, /testId="phase2-pane-echoes"/);
+  assert.match(shell, /testId="phase2-pane-field"/);
   assert.match(shell, /Did I ping\?/);
   assert.match(shell, /Am I waiting\?/);
   assert.match(shell, /What came back, from where\?/);
