@@ -24,22 +24,22 @@ import {
 } from "../packages/runtime/src/index.mjs";
 
 const TOKENS = {
-  bg: "#FAFAF8",
-  bgDark: "#0f1218",
-  card: "#ffffff",
-  cardDark: "#151a22",
-  text: "#1f2530",
-  textDark: "#eef3fb",
-  muted: "#6f7a8c",
-  border: "rgba(26,30,38,0.12)",
-  borderDark: "rgba(238,243,251,0.14)",
-  accent: "#3b7dd8",
-  error: "#c0392b",
-  warn: "#b08a1a",
-  success: "#3a8f5c",
-  attested: "#7b5ea7",
-  mono: "'SF Mono', SFMono-Regular, Menlo, Consolas, monospace",
-  sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+  bg: "var(--loegos-ground)",
+  bgDark: "var(--loegos-ground)",
+  card: "var(--loegos-surface-1)",
+  cardDark: "var(--loegos-surface-1)",
+  text: "var(--loegos-text-primary)",
+  textDark: "var(--loegos-text-primary)",
+  muted: "var(--loegos-text-secondary)",
+  border: "var(--loegos-line)",
+  borderDark: "var(--loegos-line)",
+  accent: "var(--loegos-brand)",
+  error: "var(--loegos-signal-alert)",
+  warn: "var(--loegos-signal-active)",
+  success: "var(--loegos-signal-clear)",
+  attested: "var(--loegos-brand-muted)",
+  mono: "var(--font-code)",
+  sans: "var(--font-ui)",
 };
 
 const BADGE_COLORS = {
@@ -56,25 +56,32 @@ const BADGE_COLORS = {
 const FIELD_COLORS = {
   mapped: {
     accent: TOKENS.success,
-    bg: "rgba(58,143,92,0.08)",
-    border: "rgba(58,143,92,0.24)",
+    bg: "var(--loegos-surface-2)",
+    border: "var(--loegos-line)",
   },
   fog: {
     accent: TOKENS.warn,
-    bg: "rgba(176,138,26,0.08)",
-    border: "rgba(176,138,26,0.24)",
+    bg: "var(--loegos-surface-2)",
+    border: "var(--loegos-line)",
   },
   fractured: {
     accent: TOKENS.error,
-    bg: "rgba(192,57,43,0.08)",
-    border: "rgba(192,57,43,0.24)",
+    bg: "var(--loegos-surface-2)",
+    border: "var(--loegos-line)",
   },
   awaiting: {
     accent: TOKENS.accent,
-    bg: "rgba(59,125,216,0.08)",
-    border: "rgba(59,125,216,0.24)",
+    bg: "var(--loegos-surface-2)",
+    border: "var(--loegos-line)",
   },
 };
+
+const RANGE_LEVELS = [
+  { key: "box", label: "Level 1 - Single Box" },
+  { key: "domain", label: "Level 2 - Domain" },
+  { key: "field", label: "Level 3 - Full Field" },
+  { key: "shared", label: "Level 4 - Shared Field" },
+];
 
 function toIdentifier(value = "") {
   return String(value || "")
@@ -87,6 +94,10 @@ function toIdentifier(value = "") {
 
 function getStorageKey(projectKey = "", documentKey = "") {
   return `loegos-phase2:${String(projectKey || "project").trim()}:${String(documentKey || "doc").trim()}`;
+}
+
+function getRangeStorageKey(projectKey = "", documentKey = "") {
+  return `loegos-phase2:range:${String(projectKey || "project").trim()}:${String(documentKey || "doc").trim()}`;
 }
 
 function buildDefaultSourceFromBootstrap(bootstrap = {}) {
@@ -129,6 +140,21 @@ function applyArtifactToRuntimeWindow(previousWindow, artifact, eventMeta = null
       detail: eventMeta.detail || "",
       compilationId: artifact.compilationId,
       metadata: eventMeta.metadata || null,
+    });
+  }
+
+  const previousReturnCount = extractClausesByHead(previousArtifact, "RTN").length;
+  const nextReturnCount = extractClausesByHead(artifact, "RTN").length;
+  if (nextReturnCount > previousReturnCount) {
+    const latestReturnClause = getLastReturnClause(artifact);
+    const via = getClauseKeyword(latestReturnClause, "via") || "unlabeled";
+    nextWindow = appendEvent(nextWindow, {
+      kind: "return_received",
+      detail: `Echo returned via ${via}`,
+      compilationId: artifact.compilationId,
+      metadata: {
+        provenance: via,
+      },
     });
   }
 
@@ -244,34 +270,18 @@ function readPersistedShellState(storageKey) {
 
 function SectionCard({ title, items = [], accent = TOKENS.accent }) {
   return (
-    <section
-      style={{
-        border: `1px solid ${TOKENS.border}`,
-        background: TOKENS.card,
-        borderRadius: 10,
-        padding: 10,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: TOKENS.mono,
-          fontSize: 11,
-          color: accent,
-          marginBottom: 8,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
+    <section className="phase2-card">
+      <div className="phase2-card__title" style={{ color: accent }}>
         {title}
       </div>
       {items.length ? (
         items.map((item) => (
-          <div key={`${title}-${item.line}-${item.text}`} style={{ fontSize: 13, color: TOKENS.text }}>
+          <div key={`${title}-${item.line}-${item.text}`} className="phase2-card__line">
             {item.text}
           </div>
         ))
       ) : (
-        <div style={{ color: TOKENS.muted, fontSize: 12 }}>No entries yet.</div>
+        <div className="phase2-card__empty">No entries yet.</div>
       )}
     </section>
   );
@@ -287,62 +297,47 @@ function EchoLegibilityPanel({ model }) {
   return (
     <section
       data-testid="phase2-echo-legibility"
-      style={{
-        border: `1px solid ${fieldColors.border}`,
-        background: fieldColors.bg,
-        borderRadius: 10,
-        padding: 10,
-      }}
+      className="phase2-card phase2-echo-legibility"
+      style={{ borderColor: fieldColors.border, background: fieldColors.bg }}
     >
-      <div
-        style={{
-          fontFamily: TOKENS.mono,
-          fontSize: 11,
-          color: fieldColors.accent,
-          marginBottom: 8,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
+      <div className="phase2-card__title" style={{ color: fieldColors.accent }}>
         Echo Field Legibility
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+      <div className="phase2-echo-legibility__grid">
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>Did I ping?</div>
+          <div className="phase2-echo-legibility__label">Did I ping?</div>
           <div data-testid="phase2-ping-question">{pingLabel}</div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>Am I waiting?</div>
+          <div className="phase2-echo-legibility__label">Am I waiting?</div>
           <div data-testid="phase2-waiting-question">{waitingLabel}</div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>
-            What came back, from where?
-          </div>
+          <div className="phase2-echo-legibility__label">What came back, from where?</div>
           <div data-testid="phase2-return-question">{model.returnProvenance}</div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>How clear is this region?</div>
+          <div className="phase2-echo-legibility__label">How clear is this region?</div>
           <div data-testid="phase2-fog-question">{fogDensityLabel}</div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>field_state</div>
+          <div className="phase2-echo-legibility__label">field_state</div>
           <div data-testid="phase2-field-state" style={{ color: fieldColors.accent }}>
             {model.fieldState}
           </div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>echo_to_story</div>
+          <div className="phase2-echo-legibility__label">echo_to_story</div>
           <div data-testid="phase2-echo-ratio">
             {model.echoCount}:{model.storyCount} ({echoRatioPercent})
           </div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>fog_density</div>
+          <div className="phase2-echo-legibility__label">fog_density</div>
           <div data-testid="phase2-fog-density">{fogDensityLabel}</div>
         </div>
         <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>return_provenance</div>
+          <div className="phase2-echo-legibility__label">return_provenance</div>
           <div data-testid="phase2-return-provenance">{model.returnProvenance}</div>
         </div>
       </div>
@@ -373,37 +368,105 @@ function deriveFreshnessState(updatedAt = "") {
   return "stale";
 }
 
+function getClauseKeyword(clause = null, key = "") {
+  return String(clause?.keywords?.[key]?.value || clause?.keywords?.[key]?.raw || "").trim();
+}
+
+function getLastReturnClause(artifact = null) {
+  const returns = extractClausesByHead(artifact, "RTN");
+  return returns.length ? returns[returns.length - 1] : null;
+}
+
+function deriveLatestQualifiedReturnAt(runtimeRecord = null) {
+  const events = Array.isArray(runtimeRecord?.events) ? runtimeRecord.events : [];
+  const matched = events
+    .filter((event) => event?.kind === "return_received")
+    .map((event) => event?.createdAt)
+    .filter(Boolean)
+    .pop();
+  return String(matched || "").trim();
+}
+
+function mapMergedStateForField(mergedState = "") {
+  const normalized = String(mergedState || "").trim().toLowerCase();
+  if (normalized === "shape_error" || normalized === "flagged") return "fractured";
+  if (normalized === "attested") return "fog";
+  if (normalized === "awaiting") return "awaiting";
+  if (normalized === "sealed") return "mapped";
+  return "fog";
+}
+
+function formatAgeLabel(timestamp = "") {
+  const value = Date.parse(String(timestamp || "").trim());
+  if (!Number.isFinite(value)) return "not_returned";
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - value) / 1000));
+  if (deltaSeconds < 60) return `${deltaSeconds}s`;
+  const deltaMinutes = Math.floor(deltaSeconds / 60);
+  if (deltaMinutes < 60) return `${deltaMinutes}m`;
+  const deltaHours = Math.floor(deltaMinutes / 60);
+  return `${deltaHours}h`;
+}
+
+function deriveDomainKeyForEntry(entry = null) {
+  const sections = buildBoxSectionsFromArtifact(entry?.artifact);
+  const aimKey = toIdentifier(sections.aim || "");
+  if (aimKey) {
+    const tokens = aimKey.split("_").filter(Boolean);
+    return tokens.slice(0, 2).join("_") || aimKey;
+  }
+  const filename = String(entry?.filename || "").trim().toLowerCase();
+  return toIdentifier(filename.replace(/\.loe$/, "").split(/[-_]/).slice(0, 2).join("_"));
+}
+
+function deriveEntrySignalProfile(entry = null) {
+  const sourceDocuments = Array.isArray(entry?.sourceDocuments) ? entry.sourceDocuments : [];
+  const events = Array.isArray(entry?.runtimeWindow?.events) ? entry.runtimeWindow.events : [];
+  const importedEvents = events.filter((event) => event?.kind === "intake_imported");
+  const linkedImports = importedEvents.filter(
+    (event) => String(event?.metadata?.kind || "").trim() === "link",
+  ).length;
+  const externalEvidenceSignals = sourceDocuments.length + linkedImports;
+  return {
+    domainKey: deriveDomainKeyForEntry(entry),
+    importedEventsCount: importedEvents.length,
+    sourceDocumentsCount: sourceDocuments.length,
+    externalEvidenceSignals,
+    sharedCandidate: externalEvidenceSignals > 0,
+  };
+}
+
+function buildScopedEntries({ files = {}, activeFile = "", levelKey = "box" }) {
+  const entries = Object.entries(files || {}).map(([filename, entry]) => ({ filename, ...entry }));
+  if (levelKey === "box") {
+    return entries.filter((entry) => entry.filename === activeFile);
+  }
+  if (levelKey === "domain") {
+    const activeEntry = entries.find((entry) => entry.filename === activeFile) || null;
+    const domainKey = deriveDomainKeyForEntry(activeEntry);
+    if (!domainKey) return activeEntry ? [activeEntry] : [];
+    const domainEntries = entries.filter((entry) => deriveDomainKeyForEntry(entry) === domainKey);
+    return domainEntries.length ? domainEntries : activeEntry ? [activeEntry] : [];
+  }
+  if (levelKey === "shared") {
+    return entries.filter((entry) => deriveEntrySignalProfile(entry).sharedCandidate);
+  }
+  return entries;
+}
+
 function PaneCard({ title, testId, accent = TOKENS.accent, lines = [] }) {
   return (
-    <section
-      data-testid={testId}
-      style={{
-        border: `1px solid ${TOKENS.border}`,
-        borderRadius: 10,
-        padding: 10,
-        background: TOKENS.card,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: TOKENS.mono,
-          fontSize: 11,
-          color: accent,
-          marginBottom: 8,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
+    <section data-testid={testId} className="phase2-card">
+      <div className="phase2-card__title" style={{ color: accent }}>
         {title}
       </div>
       {lines.length ? (
         lines.map((line) => (
-          <div key={`${title}-${line}`} style={{ fontSize: 12, color: TOKENS.text, marginBottom: 4 }}>
+          <div key={`${title}-${line}`} className="phase2-pane__line">
             {line}
           </div>
         ))
       ) : (
-        <div style={{ fontSize: 12, color: TOKENS.muted }}>No signal yet.</div>
+        <div className="phase2-pane__empty">No signal yet.</div>
       )}
     </section>
   );
@@ -477,42 +540,44 @@ function IntakePanel({ projectKey, onStatus, onImported }) {
   }
 
   return (
-    <section style={{ border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 10 }}>
-      <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.accent, marginBottom: 8 }}>
+    <section className="phase2-card">
+      <div className="phase2-card__title" style={{ color: TOKENS.accent }}>
         Content Intake (Protected)
       </div>
-      <div style={{ marginBottom: 8, color: TOKENS.muted, fontSize: 12 }}>
+      <div className="phase2-card__meta">
         project: {projectKey || "unscoped"}
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+      <div className="phase2-row">
         <input ref={fileInputRef} type="file" multiple onChange={handleUploadFiles} data-testid="phase2-intake-file-input" />
-        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={busy === "upload"}>
+        <button type="button" className="terminal-button" onClick={() => fileInputRef.current?.click()} disabled={busy === "upload"}>
           {busy === "upload" ? "Importing..." : "Choose files"}
         </button>
       </div>
-      <form onSubmit={handlePasteSubmit} style={{ marginBottom: 8 }}>
+      <form onSubmit={handlePasteSubmit} className="phase2-stack-gap">
         <textarea
           data-testid="phase2-intake-paste-input"
           value={pasteText}
           onChange={(event) => setPasteText(event.target.value)}
           placeholder="Paste source text"
           rows={3}
-          style={{ width: "100%" }}
+          className="terminal-input"
+          style={{ width: "100%", minHeight: 84 }}
         />
-        <button type="submit" disabled={!pasteText.trim() || busy === "paste"} data-testid="phase2-intake-paste-submit">
+        <button type="submit" className="terminal-button" disabled={!pasteText.trim() || busy === "paste"} data-testid="phase2-intake-paste-submit">
           {busy === "paste" ? "Saving..." : "Save pasted source"}
         </button>
       </form>
-      <form onSubmit={handleLinkSubmit}>
+      <form onSubmit={handleLinkSubmit} className="phase2-stack-gap">
         <input
           data-testid="phase2-intake-link-input"
           type="url"
           value={linkValue}
           onChange={(event) => setLinkValue(event.target.value)}
           placeholder="https://example.com"
-          style={{ width: "100%", marginBottom: 6 }}
+          className="terminal-input"
+          style={{ width: "100%" }}
         />
-        <button type="submit" disabled={!linkValue.trim() || busy === "link"} data-testid="phase2-intake-link-submit">
+        <button type="submit" className="terminal-button" disabled={!linkValue.trim() || busy === "link"} data-testid="phase2-intake-link-submit">
           {busy === "link" ? "Importing..." : "Import link"}
         </button>
       </form>
@@ -634,17 +699,18 @@ function VoicePlayerPanel({ sourceText = "", documentKey = "", onStatus }) {
   }
 
   return (
-    <section style={{ border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 10 }}>
-      <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.success, marginBottom: 8 }}>
+    <section className="phase2-card">
+      <div className="phase2-card__title" style={{ color: TOKENS.success }}>
         Voice Player (Protected)
       </div>
-      <div style={{ marginBottom: 6, color: TOKENS.muted, fontSize: 12 }}>
+      <div className="phase2-card__meta">
         document: {documentKey || "none"}
       </div>
-      <div style={{ display: "grid", gap: 6, marginBottom: 8 }}>
-        <input value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="provider" />
-        <input value={voiceId} onChange={(event) => setVoiceId(event.target.value)} placeholder="voice id (optional)" />
+      <div className="phase2-stack-gap">
+        <input className="terminal-input" value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="provider" />
+        <input className="terminal-input" value={voiceId} onChange={(event) => setVoiceId(event.target.value)} placeholder="voice id (optional)" />
         <input
+          className="terminal-input"
           type="number"
           min="0.75"
           max="2.5"
@@ -654,14 +720,14 @@ function VoicePlayerPanel({ sourceText = "", documentKey = "", onStatus }) {
           placeholder="rate"
         />
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={handlePlay} disabled={isPlaying} data-testid="phase2-voice-play">
+      <div className="phase2-row">
+        <button type="button" className="terminal-button" onClick={handlePlay} disabled={isPlaying} data-testid="phase2-voice-play">
           Play
         </button>
-        <button type="button" onClick={handlePause} disabled={!isPlaying} data-testid="phase2-voice-pause">
+        <button type="button" className="terminal-button" onClick={handlePause} disabled={!isPlaying} data-testid="phase2-voice-pause">
           Pause
         </button>
-        <button type="button" onClick={handleResumeSession} data-testid="phase2-voice-resume">
+        <button type="button" className="terminal-button" onClick={handleResumeSession} data-testid="phase2-voice-resume">
           Resume state
         </button>
       </div>
@@ -677,46 +743,39 @@ function EditorView({ files, activeFile, onSelectFile, parityOk }) {
   const echoFieldModel = buildEchoFieldModel(artifact, runtimeRecord);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", height: "100%" }}>
-      <aside style={{ borderRight: `1px solid ${TOKENS.borderDark}`, background: TOKENS.cardDark }}>
+    <div className="phase2-editor-layout">
+      <aside className="phase2-editor-sidebar">
         {Object.keys(files).map((name) => (
           <button
             key={name}
             type="button"
             onClick={() => onSelectFile(name)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              padding: "8px 10px",
-              background: name === activeFile ? "rgba(59,125,216,0.15)" : "transparent",
-              color: TOKENS.textDark,
-              border: "none",
-              borderLeft: `3px solid ${name === activeFile ? TOKENS.accent : "transparent"}`,
-            }}
+            className={`phase2-editor-file ${name === activeFile ? "is-active" : ""}`}
           >
             {name}
           </button>
         ))}
       </aside>
-      <main style={{ background: TOKENS.bgDark, color: TOKENS.textDark, padding: 12, overflow: "auto" }}>
-        <div style={{ marginBottom: 8, color: badgeColor, fontFamily: TOKENS.mono, fontSize: 11 }}>
+      <main className="phase2-editor-main">
+        <div className="phase2-editor-status" style={{ color: badgeColor }}>
           {artifact?.mergedWindowState || "open"} | {artifact?.compileState || "clean"} |{" "}
           {artifact?.runtimeState || "open"}
         </div>
         <div
           data-testid="phase2-parity-indicator"
-          style={{ marginBottom: 8, color: parityOk ? TOKENS.success : TOKENS.error, fontSize: 12 }}
+          className="phase2-editor-parity"
+          style={{ color: parityOk ? TOKENS.success : TOKENS.error }}
         >
           parity: {parityOk ? "ok" : "mismatch"}
         </div>
-        <div data-testid="phase2-editor-field-state" style={{ marginBottom: 8, color: TOKENS.muted, fontSize: 12 }}>
+        <div data-testid="phase2-editor-field-state" className="phase2-editor-field-state">
           field_state: {echoFieldModel.fieldState} | fog: {echoFieldModel.fogDensity} | echo/story:{" "}
           {echoFieldModel.echoCount}:{echoFieldModel.storyCount}
         </div>
-        <div style={{ fontFamily: TOKENS.mono, fontSize: 12, lineHeight: 1.7, marginBottom: 12 }}>
+        <div className="phase2-editor-tokenized">
           {(artifact?.tokenizedLines || []).map((line) => (
             <div key={`${line.line}-${line.raw}`}>
-              <span style={{ color: TOKENS.muted, marginRight: 8 }}>{line.line}</span>
+              <span className="phase2-editor-line-number">{line.line}</span>
               {(line.tokens || []).map((token, index) => (
                 <span
                   key={`${line.line}-${index}`}
@@ -748,6 +807,8 @@ function EditorView({ files, activeFile, onSelectFile, parityOk }) {
 }
 
 function MirrorView({
+  files,
+  activeFile,
   fileEntry,
   projectKey,
   documentKey,
@@ -761,44 +822,136 @@ function MirrorView({
   const sections = buildBoxSectionsFromArtifact(artifact);
   const [drillOpen, setDrillOpen] = useState(false);
   const [openRippleEventId, setOpenRippleEventId] = useState("");
+  const [rangeIndex, setRangeIndex] = useState(0);
+  const [rangePulse, setRangePulse] = useState(false);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState([]);
+  const rangeStorageKey = getRangeStorageKey(projectKey, documentKey);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = Number(window.localStorage.getItem(rangeStorageKey));
+      if (Number.isInteger(stored) && stored >= 0 && stored < RANGE_LEVELS.length) {
+        setRangeIndex(stored);
+      }
+    } catch {
+      // Ignore read failures.
+    }
+  }, [rangeStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(rangeStorageKey, String(rangeIndex));
+    } catch {
+      // Ignore write failures.
+    }
+  }, [rangeStorageKey, rangeIndex]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setRangePulse(false);
+    }, 260);
+    return () => window.clearTimeout(timeout);
+  }, [rangePulse]);
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      const key = String(event?.key || "");
+      const activeTag = String(event?.target?.tagName || "").toLowerCase();
+      const isTypingSurface =
+        activeTag === "input" ||
+        activeTag === "textarea" ||
+        Boolean(event?.target?.isContentEditable);
+      if (isTypingSurface || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!/^[1-4]$/.test(key)) return;
+      const nextIndex = Number(key) - 1;
+      if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= RANGE_LEVELS.length) return;
+      event.preventDefault();
+      setRangeIndex(nextIndex);
+      setRangePulse(true);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const activeRange = RANGE_LEVELS[rangeIndex] || RANGE_LEVELS[0];
+  const allEntries = Object.entries(files || {}).map(([filename, entry]) => ({ filename, ...entry }));
+  const scopedEntries = buildScopedEntries({
+    files,
+    activeFile,
+    levelKey: activeRange.key,
+  });
+  const effectiveEntries = scopedEntries.length > 0 ? scopedEntries : allEntries;
 
   const badgeColor = BADGE_COLORS[runtimeRecord.state] || TOKENS.muted;
   const warnings = splitDiagnostics(artifact.diagnostics).warnings;
   const echoFieldModel = buildEchoFieldModel(artifact, runtimeRecord);
-  const moveClauses = extractClausesByHead(artifact, "MOV");
-  const testClauses = extractClausesByHead(artifact, "TST");
-  const returnClauses = extractClausesByHead(artifact, "RTN");
-  const freshness = deriveFreshnessState(runtimeRecord?.updatedAt);
-  const latestMove = moveClauses.at(-1) || null;
-  const latestTest = testClauses.at(-1) || null;
-  const latestReturn = returnClauses.at(-1) || null;
+  const scopedMoveClauses = effectiveEntries.flatMap((entry) => extractClausesByHead(entry.artifact, "MOV"));
+  const scopedTestClauses = effectiveEntries.flatMap((entry) => extractClausesByHead(entry.artifact, "TST"));
+  const awaitingEntries = effectiveEntries.filter((entry) =>
+    buildEchoFieldModel(entry.artifact, entry.runtimeWindow).waiting,
+  );
+  const scopedReturnClauses = effectiveEntries.flatMap((entry) =>
+    extractClausesByHead(entry.artifact, "RTN").map((clause) => ({ clause, entry })),
+  );
+  const scopedEchoEvents = effectiveEntries.flatMap((entry) =>
+    (entry.runtimeWindow?.events || [])
+      .filter((event) => event.kind === "return_received" || event.kind === "distant_echo_arrived")
+      .map((event) => ({ event, entry })),
+  );
 
   const pingLines = [
-    `status: ${echoFieldModel.pingSent ? "sent" : "not_sent"}`,
-    latestMove ? `latest_move: ${clauseSummary(latestMove)}` : "latest_move: none",
-    latestTest ? `latest_test: ${clauseSummary(latestTest)}` : "latest_test: none",
+    `status: ${scopedMoveClauses.length > 0 && scopedTestClauses.length > 0 ? "sent" : "not_sent"}`,
+    `outstanding_pings: ${awaitingEntries.length}`,
+    scopedMoveClauses[scopedMoveClauses.length - 1]
+      ? `latest_move: ${clauseSummary(scopedMoveClauses[scopedMoveClauses.length - 1])}`
+      : "latest_move: none",
   ];
+
   const listenLines = [
-    `mode: ${echoFieldModel.waiting ? "listening" : "not_waiting"}`,
-    `awaiting_state: ${artifact.runtimeState || "open"}`,
-    `pending_question: ${
-      latestTest
-        ? clauseSummary(latestTest)
-        : "define a test to start an active listen loop"
-    }`,
+    awaitingEntries.length
+      ? `mode: listening (${awaitingEntries.length} awaiting)`
+      : "mode: not_waiting",
+    awaitingEntries[0]
+      ? `awaiting_box: ${awaitingEntries[0].filename}`
+      : "awaiting_box: none",
+    awaitingEntries[0]
+      ? `since_ping: ${formatAgeLabel(awaitingEntries[0]?.runtimeWindow?.updatedAt)}`
+      : "since_ping: n/a",
   ];
+
+  const lastScopedReturn = scopedReturnClauses[scopedReturnClauses.length - 1] || null;
+  const lastScopedReturnVia = getClauseKeyword(lastScopedReturn?.clause, "via") || "none";
+  const scopedRippleCount = scopedEchoEvents.filter(({ event }) => event.kind === "distant_echo_arrived").length;
   const echoLines = [
-    `returns: ${returnClauses.length}`,
-    `provenance: ${echoFieldModel.returnProvenance}`,
-    latestReturn ? `latest_echo: ${clauseSummary(latestReturn)}` : "latest_echo: none",
+    `returns: ${scopedReturnClauses.length}`,
+    `ripple_events: ${scopedRippleCount}`,
+    `provenance: ${lastScopedReturnVia}`,
+    lastScopedReturn ? `latest_echo: ${clauseSummary(lastScopedReturn.clause)}` : "latest_echo: none",
   ];
+
+  const mappedCount = effectiveEntries.filter(
+    (entry) => mapMergedStateForField(entry?.artifact?.mergedWindowState) === "mapped",
+  ).length;
+  const fracturedCount = effectiveEntries.filter(
+    (entry) => mapMergedStateForField(entry?.artifact?.mergedWindowState) === "fractured",
+  ).length;
+  const awaitingCount = awaitingEntries.length;
+  const freshness = deriveFreshnessState(deriveLatestQualifiedReturnAt(runtimeRecord) || runtimeRecord?.updatedAt);
+  const scopedSignalProfiles = effectiveEntries.map((entry) => deriveEntrySignalProfile(entry));
+  const sharedEvidenceCount = scopedSignalProfiles.reduce(
+    (total, profile) => total + profile.externalEvidenceSignals,
+    0,
+  );
+  const scopeCountLabel = `${effectiveEntries.length}${scopedEntries.length === 0 ? " (fallback)" : ""}`;
   const fieldLines = [
     `field_state: ${echoFieldModel.fieldState}`,
-    `fog_density: ${echoFieldModel.fogDensity}`,
-    `freshness: ${freshness} (mapped surfaces degrade without renewed echoes)`,
+    `mapped/fog/fractured/awaiting: ${mappedCount}/${Math.max(0, effectiveEntries.length - mappedCount - fracturedCount - awaitingCount)}/${fracturedCount}/${awaitingCount}`,
+    `freshness: ${freshness}`,
+    activeRange.key === "shared" ? `shared_signals: ${sharedEvidenceCount}` : `scope_boxes: ${scopeCountLabel}`,
   ];
 
   async function handleSend() {
@@ -851,109 +1004,124 @@ function MirrorView({
     }
   }
 
+  function cycleRange() {
+    setRangeIndex((current) => (current + 1) % RANGE_LEVELS.length);
+    setRangePulse(true);
+  }
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 12, padding: 12 }}>
+    <div className="phase2-mirror-layout">
       <div>
-        <section
-          data-testid="phase2-product-law"
-          style={{
-            border: `1px solid ${TOKENS.border}`,
-            borderRadius: 10,
-            padding: 10,
-            background: TOKENS.card,
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.accent, marginBottom: 4 }}>
+        <section data-testid="phase2-product-law" className="phase2-card phase2-block-gap">
+          <div className="phase2-card__title" style={{ color: TOKENS.accent }}>
             Product Law
           </div>
-          <div style={{ fontSize: 13, color: TOKENS.text }}>
+          <div className="phase2-card__line">
             Only returned evidence clears fog; mapped regions can become stale without renewed echoes.
           </div>
         </section>
-        <section
-          data-testid="phase2-four-pane-instrument"
-          style={{
-            border: `1px solid ${TOKENS.border}`,
-            background: TOKENS.card,
-            borderRadius: 10,
-            padding: 10,
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.accent, marginBottom: 8 }}>
-            Echo Instrument
+        <section data-testid="phase2-four-pane-instrument" className="phase2-card phase2-block-gap">
+          <div className="phase2-instrument-head">
+            <span>Echo Compass</span>
+            <span data-testid="phase2-range-label" className="phase2-card__meta">
+              {activeRange.label}
+            </span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <PaneCard title="Ping" testId="phase2-pane-ping" accent={TOKENS.accent} lines={pingLines} />
-            <PaneCard title="Listen" testId="phase2-pane-listen" accent={TOKENS.accent} lines={listenLines} />
-            <PaneCard title="Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
-            <PaneCard title="Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
+          <div className="phase2-range-switch-wrap">
+            <div className="phase2-four-pane-grid">
+              <PaneCard title="△ Ping" testId="phase2-pane-ping" accent={TOKENS.warn} lines={pingLines} />
+              <PaneCard title="◻ Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
+              <PaneCard title="○ Listen" testId="phase2-pane-listen" accent={TOKENS.warn} lines={listenLines} />
+              <PaneCard title="7 Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
+            </div>
+            <button
+              type="button"
+              data-testid="phase2-range-switch"
+              onClick={cycleRange}
+              className="phase2-range-switch"
+              style={{ boxShadow: rangePulse ? "0 0 0 6px color-mix(in srgb, var(--loegos-brand) 25%, transparent)" : "none" }}
+              title="Switch range level"
+            >
+              ⊙
+            </button>
+          </div>
+          <div data-testid="phase2-range-track" className="phase2-range-track">
+            {RANGE_LEVELS.map((level, index) => {
+              const isActive = index === rangeIndex;
+              return (
+                <div
+                  key={level.key}
+                  className={`phase2-range-track__item ${isActive ? "is-active" : ""}`}
+                >
+                  L{index + 1}
+                </div>
+              );
+            })}
+          </div>
+          <div className="phase2-card__meta" data-testid="phase2-range-hint">
+            {"Center switch rotates range: box -> domain -> full field -> shared field."}
+          </div>
+          <div className="phase2-card__meta phase2-hotkeys-hint" data-testid="phase2-range-hotkeys-hint">
+            Hotkeys: 1=box, 2=domain, 3=full field, 4=shared field.
           </div>
         </section>
-        <section
-          style={{
-            border: `1px solid ${TOKENS.border}`,
-            background: TOKENS.card,
-            borderRadius: 10,
-            padding: 10,
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <section className="phase2-card phase2-block-gap">
+          <div className="phase2-box-head">
             <strong>Box</strong>
             <button
               type="button"
               data-testid="phase2-state-badge"
               onClick={() => setDrillOpen((value) => !value)}
-              style={{ color: badgeColor, border: "none", background: "transparent", fontFamily: TOKENS.mono }}
+              className="phase2-state-badge"
+              style={{ color: badgeColor }}
             >
               {runtimeRecord.state}
             </button>
           </div>
           {drillOpen ? (
-            <div style={{ fontFamily: TOKENS.mono, fontSize: 11, color: TOKENS.muted, marginBottom: 8 }}>
+            <div className="phase2-card__meta">
               Compile: {artifact.compileState} | Runtime: {artifact.runtimeState} | Closure:{" "}
               {artifact.closureType || "none"}
             </div>
           ) : null}
           <div
             data-testid="phase2-parity-chip"
-            style={{ marginBottom: 8, color: parityOk ? TOKENS.success : TOKENS.error, fontSize: 12 }}
+            className="phase2-card__meta"
+            style={{ color: parityOk ? TOKENS.success : TOKENS.error }}
           >
             mirror/editor parity: {parityOk ? "ok" : "mismatch"}
           </div>
           <SectionCard title="Aim" items={sections.aim ? [{ text: sections.aim, line: 0 }] : []} accent={TOKENS.accent} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+          <div className="phase2-two-col">
             <SectionCard title="Evidence" items={sections.evidence} accent={TOKENS.success} />
             <SectionCard title="Story" items={sections.story} accent={TOKENS.warn} />
           </div>
-          <div style={{ marginTop: 8 }}>
+          <div>
             <SectionCard title="Action" items={sections.actions} accent={TOKENS.accent} />
           </div>
-          <div style={{ marginTop: 10, borderTop: `1px solid ${TOKENS.border}`, paddingTop: 8 }}>
-            <div style={{ fontFamily: TOKENS.mono, fontSize: 11, marginBottom: 4 }}>Shape Advisory (Mirror only)</div>
+          <div className="phase2-divider">
+            <div className="phase2-card__title">Shape Advisory (Mirror only)</div>
             {warnings.length ? (
-              <div style={{ color: TOKENS.warn, fontSize: 12 }}>{warnings[0].message}</div>
+              <div className="phase2-card__line" style={{ color: TOKENS.warn }}>{warnings[0].message}</div>
             ) : (
-              <div style={{ color: TOKENS.muted, fontSize: 12 }}>No advisory right now.</div>
+              <div className="phase2-card__empty">No advisory right now.</div>
             )}
           </div>
-          <div style={{ marginTop: 8 }}>
-            <a href="/shapelibrary" target="_blank" rel="noreferrer" style={{ color: TOKENS.accent, fontSize: 12 }}>
+          <div>
+            <a href="/shapelibrary" target="_blank" rel="noreferrer" className="phase2-link">
               Open Shape Library Operator Surface
             </a>
           </div>
-          <div style={{ marginTop: 10 }}>
+          <div>
             <EchoLegibilityPanel model={echoFieldModel} />
           </div>
         </section>
 
-        <section style={{ border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 10, background: TOKENS.card }}>
-          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, marginBottom: 6 }}>Chat Intake (Proposal Gate)</div>
-          <div style={{ maxHeight: 220, overflow: "auto", marginBottom: 8 }}>
+        <section className="phase2-card phase2-block-gap">
+          <div className="phase2-card__title">Chat Intake (Proposal Gate)</div>
+          <div className="phase2-scroll phase2-chat-scroll">
             {messages.map((message, index) => (
-              <div key={`message-${index}`} style={{ marginBottom: 6, fontSize: 13 }}>
+              <div key={`message-${index}`} className="phase2-chat-message">
                 {message.role === "human" ? (
                   <div>
                     <strong>You:</strong> {message.text}
@@ -975,17 +1143,18 @@ function MirrorView({
             onChange={(event) => setInput(event.target.value)}
             rows={3}
             placeholder="Type input for Seven"
-            style={{ width: "100%", marginBottom: 6 }}
+            className="terminal-input"
+            style={{ width: "100%", minHeight: 84 }}
           />
-          <button type="button" onClick={handleSend} data-testid="phase2-chat-send" disabled={pending}>
+          <button type="button" className="terminal-button" onClick={handleSend} data-testid="phase2-chat-send" disabled={pending}>
             {pending ? "Sending..." : "Send"}
           </button>
-          {statusMessage ? <div style={{ marginTop: 6, color: TOKENS.muted, fontSize: 12 }}>{statusMessage}</div> : null}
+          {statusMessage ? <div className="phase2-card__meta">{statusMessage}</div> : null}
         </section>
 
-        <section style={{ border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 10, background: TOKENS.card }}>
-          <div style={{ fontFamily: TOKENS.mono, fontSize: 11, marginBottom: 6 }}>Runtime Ledger Timeline</div>
-          <div data-testid="phase2-ledger-panel" style={{ maxHeight: 200, overflow: "auto", fontSize: 12 }}>
+        <section className="phase2-card phase2-block-gap">
+          <div className="phase2-card__title">Runtime Ledger Timeline</div>
+          <div data-testid="phase2-ledger-panel" className="phase2-scroll phase2-ledger-scroll">
             {(runtimeRecord?.events || []).length === 0 ? (
               <div style={{ color: TOKENS.muted }}>No events yet.</div>
             ) : (
@@ -993,7 +1162,7 @@ function MirrorView({
                 .slice()
                 .reverse()
                 .map((event) => (
-                  <div key={event.id} style={{ marginBottom: 4 }}>
+                  <div key={event.id} className="phase2-ledger-item">
                     {event.kind === "distant_echo_arrived" ? (
                       <div
                         data-testid="phase2-distant-echo-event"
@@ -1001,30 +1170,24 @@ function MirrorView({
                           border: `1px solid ${TOKENS.accent}`,
                           borderRadius: 8,
                           padding: "4px 6px",
-                          background: "rgba(59,125,216,0.08)",
+                          background: "var(--loegos-surface-2)",
                         }}
                       >
                         <strong>Ripple:</strong> {event.detail || "Distant echo arrived"}
-                        <div style={{ marginTop: 4 }}>
+                        <div className="phase2-block-gap-xs">
                           <button
                             type="button"
                             data-testid="phase2-ripple-toggle"
                             onClick={() =>
                               setOpenRippleEventId((current) => (current === event.id ? "" : event.id))
                             }
-                            style={{
-                              border: `1px solid ${TOKENS.border}`,
-                              background: "transparent",
-                              borderRadius: 6,
-                              fontSize: 11,
-                              padding: "2px 6px",
-                            }}
+                            className="terminal-button"
                           >
                             {openRippleEventId === event.id ? "Hide chain" : "View chain"}
                           </button>
                         </div>
                         {openRippleEventId === event.id && String(event?.metadata?.chainSummary || "").trim() ? (
-                          <div style={{ color: TOKENS.muted }}>
+                          <div className="phase2-card__meta">
                             chain: {event.metadata.chainSummary}
                           </div>
                         ) : null}
@@ -1038,13 +1201,13 @@ function MirrorView({
                 ))
             )}
             {(runtimeRecord?.receipts || []).length > 0 ? (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontFamily: TOKENS.mono, fontSize: 11 }}>Receipts</div>
+              <div className="phase2-block-gap-xs">
+                <div className="phase2-card__title">Receipts</div>
                 {(runtimeRecord.receipts || [])
                   .slice()
                   .reverse()
                   .map((receipt) => (
-                    <div key={receipt.id} style={{ marginBottom: 4 }}>
+                    <div key={receipt.id} className="phase2-ledger-item">
                       {receipt.kind} ({receipt.compilationId})
                     </div>
                   ))}
@@ -1054,7 +1217,7 @@ function MirrorView({
         </section>
       </div>
 
-      <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
+      <div className="phase2-side-column">
         <IntakePanel
           projectKey={projectKey}
           onStatus={onStatus}
@@ -1133,6 +1296,24 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
         eventMeta,
         entry.artifact,
       );
+      const nextSourceDocuments =
+        eventMeta?.kind === "intake_imported" && eventMeta?.metadata
+          ? (() => {
+              const currentDocs = Array.isArray(entry.sourceDocuments) ? entry.sourceDocuments : [];
+              const nextDoc = {
+                kind: String(eventMeta.metadata.kind || "source").trim(),
+                projectKey: String(eventMeta.metadata.projectKey || "").trim(),
+                documentKey: String(eventMeta.metadata.documentKey || "").trim(),
+                label: String(eventMeta.metadata.label || "").trim(),
+              };
+              const uniqueKey = `${nextDoc.kind}:${nextDoc.projectKey}:${nextDoc.documentKey}:${nextDoc.label}`;
+              const hasDoc = currentDocs.some((doc) => {
+                const docKey = `${String(doc?.kind || "").trim()}:${String(doc?.projectKey || "").trim()}:${String(doc?.documentKey || "").trim()}:${String(doc?.label || "").trim()}`;
+                return docKey === uniqueKey;
+              });
+              return hasDoc ? currentDocs : [...currentDocs, nextDoc];
+            })()
+          : entry.sourceDocuments;
       const next = {
         ...current,
         [fileKey]: {
@@ -1140,6 +1321,7 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
           source: nextSource,
           artifact,
           runtimeWindow,
+          sourceDocuments: nextSourceDocuments,
           lastProposal: eventMeta?.proposal
             ? {
                 accepted: Boolean(eventMeta?.proposalAccepted),
@@ -1167,7 +1349,7 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
 
   if (!activeEntry) {
     return (
-      <div style={{ padding: 20, fontFamily: TOKENS.sans }} data-testid="phase2-shell-root">
+      <div className="phase2-shell phase2-shell--loading" data-testid="phase2-shell-root">
         Loading Phase 2 shell...
       </div>
     );
@@ -1176,31 +1358,18 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
   return (
     <div
       data-testid="phase2-shell-root"
-      style={{
-        height: "100vh",
-        background: isEditor ? TOKENS.bgDark : TOKENS.bg,
-        color: isEditor ? TOKENS.textDark : TOKENS.text,
-        fontFamily: TOKENS.sans,
-      }}
+      className={`phase2-shell ${isEditor ? "is-editor" : "is-mirror"}`}
     >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 12px",
-          borderBottom: `1px solid ${isEditor ? TOKENS.borderDark : TOKENS.border}`,
-        }}
-      >
-        <strong style={{ letterSpacing: "0.08em", fontFamily: TOKENS.mono }}>Loegos Phase 2</strong>
-        <div style={{ color: isEditor ? TOKENS.muted : TOKENS.text, fontSize: 12 }}>
+      <header className="phase2-shell__header">
+        <strong className="phase2-shell__brand">Loegos Phase 2</strong>
+        <div className="phase2-shell__meta">
           {bootstrapProjectKey || "project"} / {bootstrapDocumentKey || "document"}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => setView("mirror")} data-testid="phase2-nav-mirror">
+        <div className="phase2-row">
+          <button type="button" className="terminal-button" onClick={() => setView("mirror")} data-testid="phase2-nav-mirror">
             Mirror
           </button>
-          <button type="button" onClick={() => setView("editor")} data-testid="phase2-nav-editor">
+          <button type="button" className="terminal-button" onClick={() => setView("editor")} data-testid="phase2-nav-editor">
             Editor
           </button>
         </div>
@@ -1208,6 +1377,8 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
 
       {view === "mirror" ? (
         <MirrorView
+          files={sources}
+          activeFile={resolvedActiveFile}
           fileEntry={activeEntry}
           projectKey={bootstrapProjectKey}
           documentKey={bootstrapDocumentKey}
