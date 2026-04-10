@@ -34,6 +34,9 @@ test("workspace route and room api surface are wired for canonical room-first en
   assert.match(roomServer, /ensureRoomSessionForProject/);
   assert.match(roomServer, /authorityContext/);
   assert.match(roomServer, /activePreview/);
+  assert.match(roomServer, /focusedWitness/);
+  assert.match(roomServer, /roomIdentity/);
+  assert.match(roomServer, /adjacent/);
   assert.match(roomDocuments, /hiddenFromProjectHome:\s*true/);
   assert.match(roomDocuments, /roomDocument:\s*true/);
   assert.match(roomSessions, /ensureCompilerFirstWorkspaceResetForUser/);
@@ -65,6 +68,10 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomUi, /previewStatus/);
   assert.match(roomUi, /AuthorityPanel/);
   assert.match(roomUi, /Box canon unchanged/);
+  assert.match(roomUi, /FocusedWitnessPanel/);
+  assert.match(roomUi, /OperatePanel/);
+  assert.match(roomUi, /Ask Seven to audit/);
+  assert.match(roomUi, /Witness/);
   assert.doesNotMatch(roomUi, /Inspect proposal/);
   assert.doesNotMatch(roomUi, /Structure Waking/);
   assert.match(roomUi, /apply_proposal_preview/);
@@ -86,11 +93,14 @@ test("strict ping rule, mirror regions, and receipt artifact support remain enco
   const roomApplyRoute = await read("src/app/api/workspace/room/apply/route.js");
   const projectRoute = await read("src/app/api/workspace/project/route.js");
   const roomServer = await read("src/lib/room-server.js");
+  const readerPage = await read("src/app/read/[documentKey]/page.jsx");
 
   assert.match(roomCanonical, /ping_requires_test/);
   assert.match(roomCanonical, /semantic_reject/);
   assert.match(roomTurnRoute, /never propose MOV without TST/i);
   assert.match(roomTurnRoute, /sharp friend/);
+  assert.match(roomTurnRoute, /7x7/);
+  assert.match(roomTurnRoute, /at most 7 sentences, at most 7 words each/);
   assert.match(roomTurnRoute, /one short answer and then ask why it matters right now/);
   assert.match(roomTurnRoute, /exact excerpt from assistantText/);
   assert.match(roomTurnRoute, /Do not write numbered lists, bullet lists/);
@@ -104,6 +114,7 @@ test("strict ping rule, mirror regions, and receipt artifact support remain enco
   assert.match(roomApplyRoute, /sessionView\.session\.threadDocumentKey/);
   assert.match(projectRoute, /includeDefaultSource:\s*false/);
   assert.match(roomServer, /ensureDefault:\s*false/);
+  assert.match(readerPage, /adjacent", "witness"/);
   assert.match(roomPolicy, /classifyRoomTurnMode/);
   assert.match(roomPolicy, /filterSegmentsToAssistantText/);
   assert.match(roomPolicy, /normalizeAssistantTextForRoom/);

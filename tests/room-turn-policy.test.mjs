@@ -222,3 +222,13 @@ test("assistant text normalization trims list-heavy answers into brief prose", (
   assert.match(normalized, /^A monolith is one big app\./);
   assert.equal((normalized.match(/\?/g) || []).length, 1);
 });
+
+test("assistant text normalization enforces seven-by-seven sentence compression", () => {
+  const normalized = normalizeAssistantTextForRoom(
+    "This answer definitely has more than seven words. Another sentence also runs well past the limit. Third sentence stays compact. Fourth sentence keeps moving. Fifth sentence still fits okay. Sixth sentence is also brief. Seventh sentence closes the loop. Eighth sentence should disappear.",
+  );
+
+  const sentences = normalized.match(/[^.!?]+(?:[.!?]+|$)/g)?.map((sentence) => sentence.trim()).filter(Boolean) || [];
+  assert.equal(sentences.length, 7);
+  assert.ok(sentences.every((sentence) => sentence.split(/\s+/).filter(Boolean).length <= 7));
+});

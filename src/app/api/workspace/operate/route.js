@@ -37,6 +37,9 @@ export const runtime = "nodejs";
 const OPERATE_UNAVAILABLE_MESSAGE = "Operate is unavailable right now.";
 const MAX_TOTAL_DOCUMENT_CHARS = 60000;
 const MAX_DOCUMENT_CHARS = 18000;
+const OPERATE_SUMMARY_ENGINE_KIND = "operate_summary";
+const OPERATE_SUMMARY_ENGINE_VERSION = "v1";
+const OPERATE_SUMMARY_PROMPT_VERSION = "room_phase_two_v1";
 const OPERATE_RESPONSE_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -311,6 +314,28 @@ function createOverlayResponse({
     summary,
     overrideSummary:
       overrideSummary && typeof overrideSummary === "object" ? overrideSummary : summary,
+  };
+}
+
+function createSummaryResponse({
+  run = null,
+  result = null,
+  documentKey = "",
+  includedSourceCount = 0,
+  includesAssembly = false,
+  available = false,
+} = {}) {
+  return {
+    ok: true,
+    mode: "summary",
+    runId: run?.id || "",
+    documentKey,
+    lastRunAt: run?.createdAt || "",
+    available: Boolean(available),
+    includedSourceCount: Number(includedSourceCount) || 0,
+    includesAssembly: Boolean(includesAssembly),
+    hasRun: Boolean(result),
+    result: result && typeof result === "object" ? result : null,
   };
 }
 
@@ -772,6 +797,27 @@ async function runSummaryOperate({
       );
     }
 
+    const auditDocumentKey =
+      operateContext.currentAssemblyDocument?.documentKey ||
+      documentKey ||
+      operateContext.resolvedDocuments[0]?.documentKey ||
+      "";
+    const persistedRun = await createReaderOperateRunForUser(session.user.id, {
+      projectId: operateContext.activeProject?.id || null,
+      documentKey: auditDocumentKey,
+      mode: "summary",
+      schemaVersion: 1,
+      engineKind: OPERATE_SUMMARY_ENGINE_KIND,
+      engineVersion: OPERATE_SUMMARY_ENGINE_VERSION,
+      modelName: appEnv.openai.textModel,
+      promptVersion: OPERATE_SUMMARY_PROMPT_VERSION,
+      sourceFingerprint: auditDocumentKey,
+      stale: false,
+      payloadJson: {
+        result,
+      },
+    });
+
     try {
       await updateReaderProjectForUser(session.user.id, operateContext.activeProject.projectKey, {
         appendEvents: [
@@ -781,16 +827,8 @@ async function runSummaryOperate({
             return: result.nextMove,
             echo: `${result.convergence} · gradient ${result.gradient}`,
             context: {
-              documentKey:
-                operateContext.currentAssemblyDocument?.documentKey ||
-                documentKey ||
-                operateContext.resolvedDocuments[0]?.documentKey ||
-                "",
-              primaryDocumentKey:
-                operateContext.currentAssemblyDocument?.documentKey ||
-                documentKey ||
-                operateContext.resolvedDocuments[0]?.documentKey ||
-                "",
+              documentKey: auditDocumentKey,
+              primaryDocumentKey: auditDocumentKey,
               gradient: result.gradient,
               convergence: result.convergence,
               trustFloor: result.trustFloor,
@@ -811,14 +849,15 @@ async function runSummaryOperate({
     }
 
     return NextResponse.json({
-      ok: true,
-      mode: "summary",
-      result,
-      auditDocumentKey:
-        operateContext.currentAssemblyDocument?.documentKey ||
-        documentKey ||
-        operateContext.resolvedDocuments[0]?.documentKey ||
-        "",
+      ...createSummaryResponse({
+        run: persistedRun,
+        result,
+        documentKey: auditDocumentKey,
+        includedSourceCount: operateContext.includedSourceCount,
+        includesAssembly: operateContext.includesAssembly,
+        available: operateContext.resolvedDocuments.length > 0,
+      }),
+      auditDocumentKey,
     });
   } catch (error) {
     console.error("Operate request crashed.", {
@@ -842,13 +881,6 @@ export async function GET(request) {
   const documentKey = String(searchParams.get("documentKey") || searchParams.get("document") || "").trim();
   const mode = String(searchParams.get("mode") || "overlay").trim().toLowerCase();
 
-  if (mode !== "overlay") {
-    return NextResponse.json(
-      { ok: false, error: "Only overlay retrieval is supported here." },
-      { status: 400 },
-    );
-  }
-
   const operateContext = await loadOperateContextForUser(session.user.id, {
     projectKey,
     documentKey,
@@ -859,6 +891,34 @@ export async function GET(request) {
     return NextResponse.json(
       { ok: false, mode: "overlay", error: operateContext.error },
       { status: operateContext.status || 400 },
+    );
+  }
+
+  if (mode !== "overlay") {
+    const summaryDocumentKey =
+      operateContext.currentAssemblyDocument?.documentKey ||
+      documentKey ||
+      operateContext.resolvedDocuments?.[0]?.documentKey ||
+      "";
+    const latestSummaryRun = await getLatestReaderOperateRunForUser(session.user.id, {
+      projectId: operateContext.activeProject?.id || null,
+      documentKey: summaryDocumentKey,
+      mode: "summary",
+    });
+    const result =
+      latestSummaryRun?.payloadJson && typeof latestSummaryRun.payloadJson === "object"
+        ? latestSummaryRun.payloadJson.result || null
+        : null;
+
+    return NextResponse.json(
+      createSummaryResponse({
+        run: latestSummaryRun,
+        result,
+        documentKey: summaryDocumentKey,
+        includedSourceCount: operateContext.includedSourceCount,
+        includesAssembly: operateContext.includesAssembly,
+        available: operateContext.resolvedDocuments.length > 0,
+      }),
     );
   }
 

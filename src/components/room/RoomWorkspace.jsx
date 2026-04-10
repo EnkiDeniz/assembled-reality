@@ -25,6 +25,7 @@ import {
   getRoomShapeRole,
   getSegmentShapeRole,
 } from "@/components/room/roomDesignSystem";
+import { buildOperateAuditPrompt } from "@/lib/operate";
 
 const DEFAULT_PROJECT_KEY = "default-project";
 
@@ -42,24 +43,31 @@ function normalizeLongForm(value = "") {
   return String(value || "").trim();
 }
 
-function buildWorkspaceHref(projectKey = "") {
+function buildWorkspaceHref(
+  projectKey = "",
+  { sessionId = "", documentKey = "", adjacent = "" } = {},
+) {
+  const params = new URLSearchParams();
   const normalizedProjectKey = normalizeText(projectKey);
-  if (!normalizedProjectKey || normalizedProjectKey === DEFAULT_PROJECT_KEY) {
-    return "/workspace";
+  const normalizedSessionId = normalizeText(sessionId);
+  const normalizedDocumentKey = normalizeText(documentKey);
+  const normalizedAdjacent = normalizeText(adjacent).toLowerCase();
+  if (normalizedProjectKey && normalizedProjectKey !== DEFAULT_PROJECT_KEY) {
+    params.set("project", normalizedProjectKey);
   }
-  return `/workspace?project=${encodeURIComponent(normalizedProjectKey)}`;
+  if (normalizedSessionId) params.set("sessionId", normalizedSessionId);
+  if (normalizedDocumentKey) params.set("document", normalizedDocumentKey);
+  if (normalizedAdjacent) params.set("adjacent", normalizedAdjacent);
+  const query = params.toString();
+  return query ? `/workspace?${query}` : "/workspace";
 }
 
-function buildReaderDocumentHref(projectKey = "", documentKey = "") {
-  const normalizedProjectKey = normalizeText(projectKey);
-  const normalizedDocumentKey = normalizeText(documentKey);
-  if (!normalizedDocumentKey) {
-    return buildWorkspaceHref(normalizedProjectKey);
-  }
-  const params = new URLSearchParams();
-  if (normalizedProjectKey) params.set("project", normalizedProjectKey);
-  const query = params.toString();
-  return `/read/${encodeURIComponent(normalizedDocumentKey)}${query ? `?${query}` : ""}`;
+function buildWitnessHref(projectKey = "", sessionId = "", documentKey = "", adjacent = "witness") {
+  return buildWorkspaceHref(projectKey, {
+    sessionId,
+    documentKey,
+    adjacent,
+  });
 }
 
 function splitParagraphs(text = "") {
@@ -82,6 +90,19 @@ function formatRelativeSessionLabel(value = "") {
   if (deltaHours < 24) return `${deltaHours}h ago`;
   const deltaDays = Math.round(deltaHours / 24);
   return `${deltaDays}d ago`;
+}
+
+function formatOperateTimestamp(value = "") {
+  const raw = normalizeText(value);
+  if (!raw) return "";
+  const parsed = Date.parse(raw);
+  if (Number.isNaN(parsed)) return raw;
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(parsed));
 }
 
 function hasProposalContent(roomPayload = null) {
@@ -287,6 +308,7 @@ function MirrorRegion({
 function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
   const mirror = view?.mirror || {};
   const projectKey = view?.project?.projectKey || "";
+  const sessionId = view?.session?.id || "";
   const evidenceItems = Array.isArray(mirror?.evidence) ? mirror.evidence : [];
   const storyItems = Array.isArray(mirror?.story) ? mirror.story : [];
   const moveItems = Array.isArray(mirror?.moves) ? mirror.moves : [];
@@ -349,10 +371,10 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
                         </div>
                         {item.documentKey ? (
                           <Link
-                            href={buildReaderDocumentHref(projectKey, item.documentKey)}
+                            href={buildWitnessHref(projectKey, sessionId, item.documentKey)}
                             className={styles.inlineLink}
                           >
-                            Read
+                            Witness
                           </Link>
                         ) : null}
                       </div>
@@ -1141,7 +1163,9 @@ function ThreadMessage({
           <div className={styles.previewBlock}>
             <div className={styles.messagePreviewMeta}>
               <span>{previewCopy.label}</span>
-              <small>{previewCopy.detail || "Visible in this turn."}</small>
+              {previewStatus !== "active" ? (
+                <small>{previewCopy.detail || "Visible in this turn."}</small>
+              ) : null}
             </div>
             {segments.length ? <ProposalSegments segments={segments} onHighlight={onHighlight} /> : null}
             <ProposalFooter
@@ -1165,30 +1189,26 @@ function ThreadMessage({
   );
 }
 
-function ToolLinks({ deepLinks }) {
-  const items = [
-    {
-      href: normalizeText(deepLinks?.reader),
-      label: "Reader",
-      icon: <FileText size={14} />,
-      subtle: false,
-    },
-  ].filter((item) => item.href);
+function AdjacentLinks({ view, onOpenWitness, onOpenOperate }) {
+  const hasWitness = Boolean(normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader));
+  const hasOperate = Boolean(normalizeText(view?.adjacent?.operate?.openHref));
 
-  if (!items.length) return null;
+  if (!hasWitness && !hasOperate) return null;
 
   return (
     <div className={styles.toolRow}>
-      {items.map((item) => (
-        <Link
-          key={`${item.label}-${item.href}`}
-          href={item.href}
-          className={item.subtle ? styles.toolLinkSubtle : styles.toolLink}
-        >
-          {item.icon}
-          {item.label}
-        </Link>
-      ))}
+      {hasWitness ? (
+        <button type="button" className={styles.toolLink} onClick={onOpenWitness}>
+          <FileText size={14} />
+          Witness
+        </button>
+      ) : null}
+      {hasOperate ? (
+        <button type="button" className={styles.toolLinkSubtle} onClick={onOpenOperate}>
+          <Play size={14} />
+          Operate
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -1315,6 +1335,121 @@ function ActivePreviewBanner({ activePreview }) {
   );
 }
 
+function FocusedWitnessPanel({ focusedWitness, onBack }) {
+  if (!focusedWitness) return null;
+
+  const blocks = Array.isArray(focusedWitness?.excerptBlocks) ? focusedWitness.excerptBlocks : [];
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="grounded">Witness</Kicker>
+          <strong>{focusedWitness.title || "Focused witness"}</strong>
+        </div>
+        <button type="button" className={styles.secondaryButton} onClick={onBack}>
+          Back to Room
+        </button>
+      </div>
+
+      {normalizeText(focusedWitness?.sourceSummary) ? (
+        <p className={styles.noticeText}>{focusedWitness.sourceSummary}</p>
+      ) : null}
+      {normalizeText(focusedWitness?.provenanceLabel) ? (
+        <p className={styles.noticeText}>{focusedWitness.provenanceLabel}</p>
+      ) : null}
+
+      <div className={styles.witnessStack}>
+        {blocks.length ? (
+          blocks.map((block) => (
+            <article key={block.id} className={styles.witnessBlock}>
+              <span>{block.kind || "paragraph"}</span>
+              <p>{block.text}</p>
+            </article>
+          ))
+        ) : (
+          <FogPlaceholder>No readable witness is in view yet.</FogPlaceholder>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OperatePanel({
+  operateSummary,
+  pending = false,
+  error = "",
+  result = null,
+  onRun,
+  onAskSeven,
+  onBack,
+}) {
+  const summaryResult = result && typeof result === "object" ? result : null;
+  const activeResult =
+    summaryResult ||
+    (operateSummary?.hasRun
+      ? {
+          nextMove: operateSummary?.nextMove,
+        }
+      : null);
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="neutral">Operate</Kicker>
+          <strong>Box-level advisory read</strong>
+        </div>
+        <button type="button" className={styles.secondaryButton} onClick={onBack}>
+          Back to Room
+        </button>
+      </div>
+
+      <div className={styles.operateSummaryGrid}>
+        <div className={styles.operateSummaryCard}>
+          <span>Included sources</span>
+          <strong>{Number(operateSummary?.includedSourceCount) || 0}</strong>
+        </div>
+        <div className={styles.operateSummaryCard}>
+          <span>Last run</span>
+          <strong>{formatOperateTimestamp(operateSummary?.lastRunAt) || "Not run yet"}</strong>
+        </div>
+      </div>
+
+      {activeResult?.nextMove ? (
+        <div className={styles.operateCallout}>
+          <span>Next move</span>
+          <p>{activeResult.nextMove}</p>
+        </div>
+      ) : null}
+
+      {!operateSummary?.available ? (
+        <p className={styles.noticeText}>Add witness to this box before running Operate.</p>
+      ) : null}
+      {error ? <p className={styles.errorText}>{error}</p> : null}
+
+      <div className={styles.inlineActions}>
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={onRun}
+          disabled={pending || !operateSummary?.available}
+        >
+          {pending ? "Operating..." : operateSummary?.hasRun ? "Refresh Operate" : "Run Operate"}
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onAskSeven}
+          disabled={!summaryResult}
+        >
+          Ask Seven to audit
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Composer({
   value,
   onChange,
@@ -1431,7 +1566,7 @@ function LoadingMessage() {
   );
 }
 
-function AuthorityPanel({ authorityContext }) {
+function AuthorityPanel({ authorityContext, roomIdentity }) {
   if (!authorityContext) return null;
 
   const sourceTitles = (Array.isArray(authorityContext?.sources) ? authorityContext.sources : [])
@@ -1444,6 +1579,9 @@ function AuthorityPanel({ authorityContext }) {
     .slice(0, 3);
   const artifact = authorityContext?.artifact || {};
   const runtime = authorityContext?.runtime || {};
+  const operateSummary = authorityContext?.adjacent?.operate || null;
+  const canonSource = authorityContext?.canonSource || authorityContext?.assembly || null;
+  const focusedWitness = authorityContext?.focusedWitness || null;
 
   return (
     <div className={styles.panel}>
@@ -1457,7 +1595,7 @@ function AuthorityPanel({ authorityContext }) {
       <div className={styles.authorityGrid}>
         <div className={styles.authorityBlock}>
           <span>Box</span>
-          <strong>{authorityContext?.project?.title || "Untitled Box"}</strong>
+          <strong>{roomIdentity?.boxTitle || authorityContext?.project?.title || "Untitled Box"}</strong>
           {normalizeText(authorityContext?.project?.subtitle) ? (
             <p>{authorityContext.project.subtitle}</p>
           ) : null}
@@ -1465,18 +1603,23 @@ function AuthorityPanel({ authorityContext }) {
 
         <div className={styles.authorityBlock}>
           <span>Conversation</span>
-          <strong>{authorityContext?.session?.title || "Conversation"}</strong>
-          <p>Canon stays box-level across conversations.</p>
+          <strong>{roomIdentity?.conversationTitle || authorityContext?.session?.title || "Conversation"}</strong>
+          <p>{roomIdentity?.canonScopeLabel || "Canon stays box-level across conversations."}</p>
         </div>
 
         <div className={styles.authorityBlock}>
-          <span>Artifact</span>
+          <span>Canon source</span>
+          <strong>{canonSource?.title || "Hidden Room source"}</strong>
+          <p>{normalizeText(artifact?.compileState) || "unknown"} • {Number(artifact?.clauseCount) || 0} clauses</p>
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Runtime state</span>
           <strong>
-            {normalizeText(artifact?.compileState) || "unknown"} • {Number(artifact?.clauseCount) || 0} clauses
+            {normalizeText(runtime?.state) || "open"}
           </strong>
           <p>
-            Runtime {normalizeText(runtime?.state) || "open"}
-            {normalizeText(runtime?.nextBestAction) ? ` • ${runtime.nextBestAction}` : ""}
+            {normalizeText(runtime?.nextBestAction) || "No runtime nudge right now."}
           </p>
         </div>
 
@@ -1490,6 +1633,34 @@ function AuthorityPanel({ authorityContext }) {
             </ul>
           ) : (
             <p>No recent source witness in view yet.</p>
+          )}
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Focused witness</span>
+          {focusedWitness?.title ? (
+            <>
+              <strong>{focusedWitness.title}</strong>
+              <p>{normalizeText(focusedWitness?.sourceSummary) || "Witness focus is open in this room."}</p>
+            </>
+          ) : (
+            <p>No witness focus is open.</p>
+          )}
+        </div>
+
+        <div className={styles.authorityBlock}>
+          <span>Adjacent advisory</span>
+          {operateSummary?.available ? (
+            <>
+              <strong>{operateSummary?.hasRun ? "Operate ready" : "Operate available"}</strong>
+              <p>
+                {operateSummary?.hasRun && normalizeText(operateSummary?.nextMove)
+                  ? operateSummary.nextMove
+                  : "Operate stays box-level and non-canonical here."}
+              </p>
+            </>
+          ) : (
+            <p>No adjacent advisory read yet.</p>
           )}
         </div>
 
@@ -1516,12 +1687,19 @@ function OverlaySurface({
   projectKey,
   onClose,
   onOpenMode,
+  onOpenWitness,
+  onOpenOperate,
   onProjectSelect,
   onCreateBox,
   onCreateSession,
   onActivateSession,
   onArchiveSession,
   onSourceComplete,
+  onRunOperate,
+  onAskSevenAudit,
+  operatePending,
+  operateError,
+  operateResult,
   busy,
 }) {
   if (!mode) return null;
@@ -1533,6 +1711,10 @@ function OverlaySurface({
         ? "Open another room"
         : mode === "create"
           ? "Open a fresh room"
+          : mode === "witness"
+            ? "Witness in focus"
+            : mode === "operate"
+              ? "Operate on this box"
           : "Room controls";
 
   return (
@@ -1574,7 +1756,7 @@ function OverlaySurface({
               </button>
             </div>
 
-            {view?.hasStructure ? <ToolLinks deepLinks={view?.deepLinks} /> : null}
+            <AdjacentLinks view={view} onOpenWitness={onOpenWitness} onOpenOperate={onOpenOperate} />
             {normalizeText(projectKey) ? (
               <RoomSessionList
                 sessions={view?.sessions}
@@ -1585,7 +1767,7 @@ function OverlaySurface({
                 busy={busy}
               />
             ) : null}
-            <AuthorityPanel authorityContext={view?.authorityContext} />
+            <AuthorityPanel authorityContext={view?.authorityContext} roomIdentity={view?.roomIdentity} />
             <SessionControls onClose={onClose} />
 
             <div className={styles.overlayMeta}>
@@ -1599,6 +1781,20 @@ function OverlaySurface({
         ) : null}
 
         {mode === "source" ? <SourceTray projectKey={projectKey} onComplete={onSourceComplete} /> : null}
+        {mode === "witness" ? (
+          <FocusedWitnessPanel focusedWitness={view?.focusedWitness} onBack={onClose} />
+        ) : null}
+        {mode === "operate" ? (
+          <OperatePanel
+            operateSummary={view?.adjacent?.operate || null}
+            pending={operatePending}
+            error={operateError}
+            result={operateResult}
+            onRun={onRunOperate}
+            onAskSeven={onAskSevenAudit}
+            onBack={onClose}
+          />
+        ) : null}
         {mode === "boxes" ? (
           <ProjectPicker
             projects={view?.projects}
@@ -1625,13 +1821,19 @@ export default function RoomWorkspace({ initialView }) {
   const [overlayMode, setOverlayMode] = useState("");
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
+  const [operatePending, setOperatePending] = useState(false);
+  const [operateError, setOperateError] = useState("");
+  const [operateResult, setOperateResult] = useState(null);
   const [highlightedRegion, setHighlightedRegion] = useState("");
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
+  const overlayIntentKeyRef = useRef("");
 
   useEffect(() => {
     setView(initialView);
+    setOperateError("");
+    setOperateResult(null);
   }, [initialView]);
 
   useEffect(() => {
@@ -1649,10 +1851,19 @@ export default function RoomWorkspace({ initialView }) {
 
   const projectKey = view?.project?.projectKey || "";
   const activeSessionId = view?.session?.id || "";
+  const currentFocusedDocumentKey = view?.focusedWitness?.documentKey || "";
   const messages = Array.isArray(view?.messages) ? view.messages : [];
   const showStarter =
     Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
   const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
+
+  useEffect(() => {
+    const nextIntent = normalizeText(view?.overlayIntent).toLowerCase();
+    const intentKey = [nextIntent, projectKey, activeSessionId, currentFocusedDocumentKey].join(":");
+    if (!nextIntent || overlayMode || overlayIntentKeyRef.current === intentKey) return;
+    overlayIntentKeyRef.current = intentKey;
+    setOverlayMode(nextIntent);
+  }, [activeSessionId, currentFocusedDocumentKey, overlayMode, projectKey, view?.overlayIntent]);
 
   function highlightRegion(region = "") {
     const normalizedRegion = normalizeText(region).toLowerCase();
@@ -1667,13 +1878,24 @@ export default function RoomWorkspace({ initialView }) {
     }, 1400);
   }
 
-  async function refreshRoom(nextProjectKey = projectKey, nextSessionId = activeSessionId) {
+  async function refreshRoom(
+    nextProjectKey = projectKey,
+    nextSessionId = activeSessionId,
+    nextDocumentKey = currentFocusedDocumentKey,
+    nextAdjacent = "",
+  ) {
     const params = new URLSearchParams();
     if (normalizeText(nextProjectKey)) {
       params.set("projectKey", normalizeText(nextProjectKey));
     }
     if (normalizeText(nextSessionId)) {
       params.set("sessionId", normalizeText(nextSessionId));
+    }
+    if (normalizeText(nextDocumentKey)) {
+      params.set("documentKey", normalizeText(nextDocumentKey));
+    }
+    if (normalizeText(nextAdjacent)) {
+      params.set("adjacent", normalizeText(nextAdjacent));
     }
     const response = await fetch(`/api/workspace/room${params.toString() ? `?${params.toString()}` : ""}`);
     const payload = await response.json().catch(() => null);
@@ -1687,7 +1909,7 @@ export default function RoomWorkspace({ initialView }) {
   async function handleProjectSelect(nextProjectKey) {
     setActionError("");
     try {
-      await refreshRoom(nextProjectKey);
+      await refreshRoom(nextProjectKey, "", "", "");
       startActionTransition(() => {
         router.replace(buildWorkspaceHref(nextProjectKey), { scroll: false });
       });
@@ -1714,7 +1936,7 @@ export default function RoomWorkspace({ initialView }) {
 
   async function handleSourceComplete() {
     setActionError("");
-    await refreshRoom(projectKey);
+    await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey);
     setOverlayMode("");
   }
 
@@ -1729,6 +1951,7 @@ export default function RoomWorkspace({ initialView }) {
         },
         body: JSON.stringify({
           projectKey,
+          documentKey: currentFocusedDocumentKey,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -1738,6 +1961,15 @@ export default function RoomWorkspace({ initialView }) {
       setView(payload.view);
       setComposerText("");
       setMessageError("");
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: payload?.view?.session?.id || "",
+            documentKey: currentFocusedDocumentKey,
+          }),
+          { scroll: false },
+        );
+      });
       setOverlayMode("instrument");
     } catch (error) {
       setActionError(
@@ -1758,6 +1990,7 @@ export default function RoomWorkspace({ initialView }) {
         body: JSON.stringify({
           projectKey,
           sessionId: nextSessionId,
+          documentKey: currentFocusedDocumentKey,
           action: "activate",
         }),
       });
@@ -1766,6 +1999,15 @@ export default function RoomWorkspace({ initialView }) {
         throw new Error(payload?.error || "Could not open that conversation.");
       }
       setView(payload.view);
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: payload?.view?.session?.id || nextSessionId,
+            documentKey: currentFocusedDocumentKey,
+          }),
+          { scroll: false },
+        );
+      });
       setOverlayMode("instrument");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that conversation.");
@@ -1784,6 +2026,7 @@ export default function RoomWorkspace({ initialView }) {
         body: JSON.stringify({
           projectKey,
           sessionId: nextSessionId,
+          documentKey: currentFocusedDocumentKey,
           action: "archive",
         }),
       });
@@ -1792,6 +2035,15 @@ export default function RoomWorkspace({ initialView }) {
         throw new Error(payload?.error || "Could not archive that conversation.");
       }
       setView(payload.view);
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: payload?.view?.session?.id || "",
+            documentKey: currentFocusedDocumentKey,
+          }),
+          { scroll: false },
+        );
+      });
       setOverlayMode("instrument");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not archive that conversation.");
@@ -1819,6 +2071,7 @@ export default function RoomWorkspace({ initialView }) {
         body: JSON.stringify({
           projectKey,
           sessionId: activeSessionId,
+          documentKey: currentFocusedDocumentKey,
           message,
         }),
       });
@@ -1851,6 +2104,7 @@ export default function RoomWorkspace({ initialView }) {
         body: JSON.stringify({
           projectKey,
           sessionId: activeSessionId,
+          documentKey: currentFocusedDocumentKey,
           action: "apply_proposal_preview",
           assistantMessageId: message.id,
         }),
@@ -1913,6 +2167,7 @@ export default function RoomWorkspace({ initialView }) {
         body: JSON.stringify({
           projectKey,
           sessionId: activeSessionId,
+          documentKey: currentFocusedDocumentKey,
           action: "complete_receipt_kit",
           receiptKit,
           completion: nextCompletion,
@@ -1927,6 +2182,123 @@ export default function RoomWorkspace({ initialView }) {
       setActionError(error instanceof Error ? error.message : "Could not record the return.");
     } finally {
       setBusyReceiptKitId("");
+    }
+  }
+
+  async function loadOperateSummary() {
+    if (!normalizeText(projectKey)) return null;
+    setOperatePending(true);
+    setOperateError("");
+    try {
+      const params = new URLSearchParams();
+      params.set("projectKey", projectKey);
+      params.set("mode", "summary");
+      const response = await fetch(`/api/workspace/operate?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Operate could not load the latest box read.");
+      }
+      setOperateResult(payload?.result || null);
+      return payload?.result || null;
+    } catch (error) {
+      setOperateResult(null);
+      setOperateError(
+        error instanceof Error ? error.message : "Operate could not load the latest box read.",
+      );
+      return null;
+    } finally {
+      setOperatePending(false);
+    }
+  }
+
+  async function handleRunOperate() {
+    if (!normalizeText(projectKey)) return;
+    setOperatePending(true);
+    setOperateError("");
+    try {
+      const response = await fetch("/api/workspace/operate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey,
+          mode: "summary",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Operate could not finish.");
+      }
+      setOperateResult(payload?.result || null);
+      await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey, "operate");
+    } catch (error) {
+      setOperateError(error instanceof Error ? error.message : "Operate could not finish.");
+    } finally {
+      setOperatePending(false);
+    }
+  }
+
+  function handleAskSevenAudit() {
+    const result = operateResult;
+    if (!result) return;
+    setComposerText(buildOperateAuditPrompt(result));
+    handleCloseOverlay();
+  }
+
+  function handleOpenWitness() {
+    const witnessHref = normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader);
+    if (!witnessHref) return;
+    startActionTransition(() => {
+      router.replace(witnessHref, { scroll: false });
+    });
+    if (view?.focusedWitness) {
+      setOverlayMode("witness");
+    }
+  }
+
+  async function handleOpenOperate() {
+    const operateHref = normalizeText(view?.adjacent?.operate?.openHref);
+    if (operateHref) {
+      startActionTransition(() => {
+        router.replace(operateHref, { scroll: false });
+      });
+    }
+    setOverlayMode("operate");
+    if (view?.adjacent?.operate?.hasRun) {
+      await loadOperateSummary();
+    } else {
+      setOperateError("");
+      setOperateResult(null);
+    }
+  }
+
+  function handleCloseOverlay() {
+    const nextMode = normalizeText(overlayMode).toLowerCase();
+    setOverlayMode("");
+    if (nextMode === "witness") {
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: activeSessionId,
+          }),
+          { scroll: false },
+        );
+      });
+      return;
+    }
+    if (nextMode === "operate") {
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: activeSessionId,
+            ...(currentFocusedDocumentKey ? { documentKey: currentFocusedDocumentKey } : {}),
+          }),
+          { scroll: false },
+        );
+      });
     }
   }
 
@@ -1947,14 +2319,21 @@ export default function RoomWorkspace({ initialView }) {
         mode={overlayMode}
         view={view}
         projectKey={projectKey}
-        onClose={() => setOverlayMode("")}
+        onClose={handleCloseOverlay}
         onOpenMode={setOverlayMode}
+        onOpenWitness={handleOpenWitness}
+        onOpenOperate={handleOpenOperate}
         onProjectSelect={handleProjectSelect}
         onCreateBox={handleCreateBox}
         onSourceComplete={handleSourceComplete}
         onCreateSession={handleCreateSession}
         onActivateSession={handleActivateSession}
         onArchiveSession={handleArchiveSession}
+        onRunOperate={handleRunOperate}
+        onAskSevenAudit={handleAskSevenAudit}
+        operatePending={operatePending}
+        operateError={operateError}
+        operateResult={operateResult}
         busy={actionPending}
       />
 

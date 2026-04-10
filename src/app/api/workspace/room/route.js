@@ -16,6 +16,14 @@ export async function GET(request) {
     String(searchParams.get("projectKey") || searchParams.get("project") || "").trim();
   const sessionId =
     String(searchParams.get("sessionId") || searchParams.get("session") || "").trim();
-  const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId });
+  const documentKey =
+    String(searchParams.get("documentKey") || searchParams.get("document") || "").trim();
+  const adjacent = String(searchParams.get("adjacent") || "").trim();
+  const view = await buildRoomWorkspaceViewForUser(session.user.id, {
+    projectKey,
+    sessionId,
+    documentKey,
+    adjacent,
+  });
   return NextResponse.json({ ok: true, view });
 }

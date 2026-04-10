@@ -1,5 +1,7 @@
 const ROOM_TURN_MODES = new Set(["conversation", "proposal"]);
 const LIST_PREFIX_PATTERN = /^\s*(?:[-*•]|\d+[.)])\s+/;
+const DEFAULT_MAX_SENTENCES = 7;
+const DEFAULT_MAX_WORDS_PER_SENTENCE = 7;
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -38,6 +40,18 @@ function splitSentences(value = "") {
   return (normalized.match(/[^.!?]+(?:[.!?]+|$)/g) || []).map((sentence) => sentence.trim()).filter(Boolean);
 }
 
+function truncateSentenceToWordLimit(sentence = "", maxWords = DEFAULT_MAX_WORDS_PER_SENTENCE) {
+  const normalized = normalizeLongText(sentence);
+  if (!normalized) return "";
+  if (countWords(normalized) <= maxWords) return normalized;
+
+  const trailingPunctuation = normalized.match(/[.!?]+$/)?.[0] || ".";
+  const core = normalized.replace(/[.!?]+$/g, "").trim();
+  const words = core.split(/\s+/).filter(Boolean).slice(0, maxWords);
+  if (!words.length) return "";
+  return `${words.join(" ")}${trailingPunctuation}`;
+}
+
 function stripListFormatting(value = "") {
   const lines = String(value || "")
     .replace(/\r/g, "")
@@ -54,7 +68,11 @@ function stripListFormatting(value = "") {
 
 export function normalizeAssistantTextForRoom(
   value = "",
-  { maxSentences = 5, maxQuestions = 1 } = {},
+  {
+    maxSentences = DEFAULT_MAX_SENTENCES,
+    maxQuestions = 1,
+    maxWordsPerSentence = DEFAULT_MAX_WORDS_PER_SENTENCE,
+  } = {},
 ) {
   const flattened = stripListFormatting(value).replace(/\s+/g, " ").trim();
   if (!flattened) return "";
@@ -71,11 +89,11 @@ export function normalizeAssistantTextForRoom(
     if (isQuestion) {
       questionCount += 1;
     }
-    kept.push(sentence);
+    kept.push(truncateSentenceToWordLimit(sentence, maxWordsPerSentence));
     if (kept.length >= maxSentences) break;
   }
 
-  return kept.join(" ").trim() || flattened;
+  return kept.filter(Boolean).join(" ").trim() || truncateSentenceToWordLimit(flattened, maxWordsPerSentence);
 }
 
 export function hasCanonicalProposalSegments(turn = null) {

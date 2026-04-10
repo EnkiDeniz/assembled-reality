@@ -58,6 +58,7 @@ export async function POST(request) {
     const view = await buildRoomWorkspaceViewForUser(session.user.id, {
       projectKey: project.projectKey,
       sessionId: roomSession?.id || "",
+      documentKey: normalizeText(body?.documentKey),
     });
     return NextResponse.json({ ok: true, view, session: roomSession });
   } catch (routeError) {
@@ -94,6 +95,7 @@ export async function PUT(request) {
       const view = await buildRoomWorkspaceViewForUser(session.user.id, {
         projectKey: project.projectKey,
         sessionId: roomSession?.id || "",
+        documentKey: normalizeText(body?.documentKey),
       });
       return NextResponse.json({ ok: true, view, session: roomSession });
     }
@@ -102,6 +104,7 @@ export async function PUT(request) {
       await archiveRoomSessionForProject(session.user.id, project, body?.sessionId);
       const view = await buildRoomWorkspaceViewForUser(session.user.id, {
         projectKey: project.projectKey,
+        documentKey: normalizeText(body?.documentKey),
       });
       return NextResponse.json({ ok: true, view });
     }

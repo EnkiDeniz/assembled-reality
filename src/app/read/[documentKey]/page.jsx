@@ -12,6 +12,7 @@ export default async function ReaderDocumentPage({ params, searchParams }) {
 
   const query = new URLSearchParams();
   query.set("document", documentKey);
+  query.set("adjacent", "witness");
 
   const projectKey = String(resolvedSearchParams?.project || "").trim();
   if (projectKey) {

@@ -17,12 +17,16 @@ test("compiler-first reset and explicit room sessions are encoded in the workspa
   assert.match(roomSessions, /createRoomSessionForProject/);
   assert.match(roomSessions, /activateRoomSessionForProject/);
   assert.match(roomSessions, /archiveRoomSessionForProject/);
+  assert.match(roomSessions, /requestedSession/);
+  assert.match(roomSessions, /projectId: project\.id/);
 
   assert.match(roomWorkspace, /New Conversation/);
   assert.match(roomWorkspace, /handleCreateSession/);
   assert.match(roomWorkspace, /handleActivateSession/);
   assert.match(roomWorkspace, /handleArchiveSession/);
+  assert.match(roomWorkspace, /refreshRoom\(nextProjectKey, "", "", ""\)/);
   assert.match(roomWorkspace, /sessionId/);
+  assert.match(roomWorkspace, /documentKey/);
 
   assert.match(roomCss, /sessionRowButton/);
   assert.match(roomCss, /ghostButton/);

@@ -384,7 +384,17 @@ export async function ensureRoomSessionForProject(
 
   const requestedSessionId = normalizeText(sessionId);
   if (requestedSessionId) {
-    return activateRoomSessionForProject(userId, project, requestedSessionId);
+    const requestedSession = await prisma.readerRoomSession.findFirst({
+      where: {
+        id: requestedSessionId,
+        userId,
+        projectId: project.id,
+      },
+    });
+
+    if (requestedSession) {
+      return activateRoomSessionForProject(userId, project, requestedSessionId);
+    }
   }
 
   const existingActive = await prisma.readerRoomSession.findFirst({

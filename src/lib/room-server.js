@@ -1,18 +1,23 @@
 import "server-only";
 
 import { getRequiredSession } from "@/lib/server-session";
-import { listReaderDocumentsForUser } from "@/lib/reader-documents";
+import {
+  getReaderDocumentDataForUser,
+  listReaderDocumentsForUser,
+} from "@/lib/reader-documents";
 import { getReaderProfileByUserId, listReadingReceiptDraftsForProjectForUser } from "@/lib/reader-db";
 import { getProjectByKey, getProjectDocuments } from "@/lib/project-model";
 import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 import { loadConversationThreadForUser } from "@/lib/reader-workspace";
+import { getLatestReaderOperateRunForUser } from "@/lib/reader-operate";
 import { extractRoomPayloadFromCitations, isRoomAssemblyDocument } from "@/lib/room";
 import {
   buildRoomCanonicalViewModel,
   compileRoomSource,
   createOrHydrateRoomRuntimeWindow,
 } from "@/lib/room-canonical";
+import { listOperateIncludedDocuments } from "@/lib/operate";
 import {
   ensureRoomAssemblyDocumentForProject,
   getRoomAssemblySource,
@@ -26,6 +31,35 @@ import {
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeOverlayIntent(value = "") {
+  const normalized = normalizeText(value).toLowerCase();
+  return ["instrument", "source", "boxes", "create", "witness", "operate"].includes(normalized)
+    ? normalized
+    : "";
+}
+
+function clipText(value = "", max = 220) {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= max) return normalized;
+  return `${normalized.slice(0, Math.max(0, max - 1)).trim()}…`;
+}
+
+function buildWorkspaceHref(projectKey = "", { sessionId = "", documentKey = "", adjacent = "" } = {}) {
+  const params = new URLSearchParams();
+  const normalizedProjectKey = normalizeText(projectKey);
+  const normalizedSessionId = normalizeText(sessionId);
+  const normalizedDocumentKey = normalizeText(documentKey);
+  const normalizedAdjacent = normalizeOverlayIntent(adjacent);
+
+  if (normalizedProjectKey) params.set("project", normalizedProjectKey);
+  if (normalizedSessionId) params.set("sessionId", normalizedSessionId);
+  if (normalizedDocumentKey) params.set("document", normalizedDocumentKey);
+  if (normalizedAdjacent) params.set("adjacent", normalizedAdjacent);
+
+  const query = params.toString();
+  return `/workspace${query ? `?${query}` : ""}`;
 }
 
 function pickActiveProject(projects = [], requestedProjectKey = "") {
@@ -81,20 +115,160 @@ function getLatestRealSource(projectDocuments = []) {
     )[0] || null;
 }
 
-function buildDeepLinks(project = null, latestRealSource = null) {
-  const projectKey = encodeURIComponent(String(project?.projectKey || "").trim());
-  const roomBase = projectKey ? `/workspace?project=${projectKey}` : "/workspace";
-  const sourceKey = encodeURIComponent(String(latestRealSource?.documentKey || "").trim());
-  const readerBase = sourceKey
-    ? `/read/${sourceKey}${projectKey ? `?project=${projectKey}` : ""}`
+function buildDeepLinks(project = null, latestRealSource = null, { sessionId = "", documentKey = "" } = {}) {
+  const normalizedProjectKey = normalizeText(project?.projectKey);
+  const focusKey = normalizeText(documentKey) || normalizeText(latestRealSource?.documentKey);
+  const roomBase = buildWorkspaceHref(normalizedProjectKey, { sessionId });
+  const witnessBase = focusKey
+    ? buildWorkspaceHref(normalizedProjectKey, {
+        sessionId,
+        documentKey: focusKey,
+        adjacent: "witness",
+      })
     : "";
 
   return {
     room: roomBase,
-    reader: readerBase,
+    reader: witnessBase,
     compare: "",
-    operate: "",
+    operate: buildWorkspaceHref(normalizedProjectKey, {
+      sessionId,
+      ...(normalizeText(documentKey) ? { documentKey } : {}),
+      adjacent: "operate",
+    }),
     receipts: "",
+  };
+}
+
+function isFocusableWitnessDocument(document = null) {
+  return isRealSourceDocument(document);
+}
+
+function buildWitnessExcerptBlocks(document = null, maxBlocks = 4) {
+  const blocks = (Array.isArray(document?.blocks) ? document.blocks : [])
+    .map((block, index) => ({
+      id: normalizeText(block?.id) || `block-${index + 1}`,
+      kind: normalizeText(block?.kind).toLowerCase() || "paragraph",
+      text: clipText(block?.plainText || block?.text || "", 220),
+    }))
+    .filter((block) => block.text);
+
+  if (blocks.length) {
+    return blocks.slice(0, maxBlocks);
+  }
+
+  const fallbackExcerpt = clipText(document?.excerpt || "", 220);
+  return fallbackExcerpt
+    ? [{ id: "excerpt", kind: "paragraph", text: fallbackExcerpt }]
+    : [];
+}
+
+async function buildFocusedWitness({
+  userId,
+  activeProject = null,
+  projectDocuments = [],
+  documentKey = "",
+  sessionId = "",
+} = {}) {
+  const normalizedDocumentKey = normalizeText(documentKey);
+  if (!normalizedDocumentKey || !activeProject?.projectKey) {
+    return null;
+  }
+
+  const matchingDocument = (Array.isArray(projectDocuments) ? projectDocuments : []).find(
+    (document) =>
+      normalizeText(document?.documentKey) === normalizedDocumentKey && isFocusableWitnessDocument(document),
+  );
+  if (!matchingDocument) {
+    return null;
+  }
+
+  const fullDocument = await getReaderDocumentDataForUser(userId, normalizedDocumentKey);
+  if (!fullDocument) {
+    return null;
+  }
+
+  const sourceView = buildSourceSummaryViewModel(fullDocument);
+
+  return {
+    documentKey: normalizedDocumentKey,
+    title: normalizeText(fullDocument?.title) || normalizeText(matchingDocument?.title) || "Focused witness",
+    sourceSummary: normalizeText(sourceView?.metaLine) || normalizeText(sourceView?.operateSummary),
+    provenanceLabel:
+      normalizeText(sourceView?.operateSummary) ||
+      normalizeText(sourceView?.trustProfile?.summary) ||
+      normalizeText(sourceView?.originLabel),
+    excerptBlocks: buildWitnessExcerptBlocks(fullDocument),
+    openHref: buildWorkspaceHref(activeProject.projectKey, {
+      sessionId,
+      documentKey: normalizedDocumentKey,
+      adjacent: "witness",
+    }),
+  };
+}
+
+function getOperateAnchorDocumentKey(activeProject = null, projectDocuments = []) {
+  const operateState = listOperateIncludedDocuments(activeProject, projectDocuments, {
+    includeAssembly: true,
+    includeGuide: false,
+  });
+  return normalizeText(
+    operateState?.currentAssemblyDocument?.documentKey || operateState?.includedDocuments?.[0]?.documentKey,
+  );
+}
+
+async function buildAdjacentOperate({
+  userId,
+  activeProject = null,
+  projectDocuments = [],
+  sessionId = "",
+  focusedDocumentKey = "",
+} = {}) {
+  if (!activeProject?.id || !activeProject?.projectKey) {
+    return {
+      operate: {
+        available: false,
+        hasRun: false,
+        lastRunAt: "",
+        nextMove: "",
+        includedSourceCount: 0,
+        openHref: "",
+      },
+    };
+  }
+
+  const operateState = listOperateIncludedDocuments(activeProject, projectDocuments, {
+    includeAssembly: true,
+    includeGuide: false,
+  });
+  const documentKey = getOperateAnchorDocumentKey(activeProject, projectDocuments);
+  const latestRun =
+    documentKey && operateState.canOperate
+      ? await getLatestReaderOperateRunForUser(userId, {
+          projectId: activeProject.id,
+          documentKey,
+          mode: "summary",
+        })
+      : null;
+  const summaryResult =
+    latestRun?.payloadJson && typeof latestRun.payloadJson === "object"
+      ? latestRun.payloadJson.result || null
+      : null;
+
+  return {
+    operate: {
+      available: Boolean(operateState.canOperate),
+      hasRun: Boolean(summaryResult),
+      lastRunAt: normalizeText(latestRun?.createdAt),
+      nextMove: normalizeText(summaryResult?.nextMove),
+      includedSourceCount: Number(operateState.includedSourceCount) || 0,
+      documentKey,
+      openHref: buildWorkspaceHref(activeProject.projectKey, {
+        sessionId,
+        ...(normalizeText(focusedDocumentKey) ? { documentKey: focusedDocumentKey } : {}),
+        adjacent: "operate",
+      }),
+    },
   };
 }
 
@@ -115,14 +289,36 @@ function buildEmptyRoomView({ readerData: _readerData = null, projects = [], res
   return {
     project: null,
     projects: buildProjectList(projects),
+    roomIdentity: {
+      boxTitle: "",
+      conversationTitle: "",
+      canonScopeLabel: "Canon stays box-level across conversations.",
+    },
     session: null,
     sessions: [],
     messages: [],
+    focusedWitness: null,
+    adjacent: {
+      operate: {
+        available: false,
+        hasRun: false,
+        lastRunAt: "",
+        nextMove: "",
+        includedSourceCount: 0,
+        openHref: "",
+      },
+    },
+    overlayIntent: "",
     authorityContext: {
       project: null,
       session: null,
+      canonSource: null,
       sources: [],
       assembly: null,
+      focusedWitness: null,
+      adjacent: {
+        operate: null,
+      },
       artifact: {
         clauseCount: 0,
         compileState: "pristine",
@@ -235,6 +431,8 @@ function buildRoomAuthorityContext({
   roomDocument = null,
   recentSources = [],
   canonicalView = null,
+  focusedWitness = null,
+  adjacent = null,
   resetAt = null,
 } = {}) {
   return {
@@ -254,6 +452,12 @@ function buildRoomAuthorityContext({
           isActive: Boolean(session.isActive),
         }
       : null,
+    canonSource: roomDocument
+      ? {
+          documentKey: roomDocument.documentKey,
+          title: roomDocument.title,
+        }
+      : null,
     sources: Array.isArray(recentSources) ? recentSources : [],
     assembly: roomDocument
       ? {
@@ -261,6 +465,8 @@ function buildRoomAuthorityContext({
           title: roomDocument.title,
         }
       : null,
+    focusedWitness: focusedWitness || null,
+    adjacent: adjacent && typeof adjacent === "object" ? adjacent : { operate: null },
     artifact: canonicalView?.roomSourceSummary || {
       clauseCount: 0,
       compileState: "unknown",
@@ -278,7 +484,10 @@ function buildRoomAuthorityContext({
   };
 }
 
-export async function buildRoomWorkspaceViewForUser(userId, { projectKey = "", sessionId = "" } = {}) {
+export async function buildRoomWorkspaceViewForUser(
+  userId,
+  { projectKey = "", sessionId = "", documentKey = "", adjacent = "" } = {},
+) {
   const resetState = await ensureCompilerFirstWorkspaceResetForUser(userId);
   const [readerData, documents] = await Promise.all([
     getReaderProfileByUserId(userId),
@@ -334,8 +543,25 @@ export async function buildRoomWorkspaceViewForUser(userId, { projectKey = "", s
     filename: `${roomDocument?.documentKey || "room"}.loe`,
   });
   const runtimeWindow = createOrHydrateRoomRuntimeWindow(roomDocument, artifact);
-  const deepLinks = buildDeepLinks(activeProject, latestRealSource);
   const recentSources = buildRecentSources(projectDocuments, latestRealSource);
+  const focusedWitness = await buildFocusedWitness({
+    userId,
+    activeProject,
+    projectDocuments,
+    documentKey,
+    sessionId: activeSession?.id || "",
+  });
+  const adjacentState = await buildAdjacentOperate({
+    userId,
+    activeProject,
+    projectDocuments,
+    sessionId: activeSession?.id || "",
+    focusedDocumentKey: focusedWitness?.documentKey || "",
+  });
+  const deepLinks = buildDeepLinks(activeProject, latestRealSource, {
+    sessionId: activeSession?.id || "",
+    documentKey: focusedWitness?.documentKey || "",
+  });
   const canonicalView = buildRoomCanonicalViewModel({
     project: activeProject,
     roomDocument,
@@ -370,8 +596,11 @@ export async function buildRoomWorkspaceViewForUser(userId, { projectKey = "", s
     roomDocument,
     recentSources,
     canonicalView,
+    focusedWitness,
+    adjacent: adjacentState,
     resetAt: resetState.resetAt,
   });
+  const overlayIntent = normalizeOverlayIntent(adjacent) || (focusedWitness ? "witness" : "");
 
   return {
     project: {
@@ -384,9 +613,17 @@ export async function buildRoomWorkspaceViewForUser(userId, { projectKey = "", s
       connectionStatus: readerData?.getReceiptsConnection?.status || "DISCONNECTED",
     },
     projects: buildProjectList(projects),
+    roomIdentity: {
+      boxTitle: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
+      conversationTitle: resolvedSession?.title || "Conversation",
+      canonScopeLabel: "Canon stays box-level across conversations.",
+    },
     session: resolvedSession,
     sessions: resolvedSessions,
     messages: canonicalView?.messages || messages,
+    focusedWitness,
+    adjacent: adjacentState,
+    overlayIntent,
     authorityContext,
     resetAt: resetState.resetAt,
     ...canonicalView,
@@ -403,5 +640,8 @@ export async function loadRoomWorkspacePageData({ searchParams } = {}) {
   const projectKey = String(resolvedSearchParams?.project || "").trim();
   const sessionId =
     String(resolvedSearchParams?.sessionId || resolvedSearchParams?.session || "").trim();
-  return buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId });
+  const documentKey =
+    String(resolvedSearchParams?.document || resolvedSearchParams?.documentKey || "").trim();
+  const adjacent = String(resolvedSearchParams?.adjacent || "").trim();
+  return buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId, documentKey, adjacent });
 }

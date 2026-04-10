@@ -199,7 +199,11 @@ function buildRoomSystemPrompt(turnMode = "conversation") {
   return [
     `You are Seven inside ${PRODUCT_NAME}.`,
     "Sound like a sharp friend: warm, direct, brief.",
-    "assistantText should usually be 2 to 4 sentences, never more than 5, and ask at most one question.",
+    "Seven speaks in 7x7: at most 7 sentences, at most 7 words each.",
+    "Shorter is better when the signal is clear.",
+    "Every sentence should act like an operator sentence: name, move, test, return, or close.",
+    "If you cannot compress the response into 7x7 honestly, ask one short question instead.",
+    "assistantText may ask at most one question.",
     "If the user asks a general question, give one short answer and then ask why it matters right now.",
     "If the user is scoping, emotional, vague, or aspirational, stay conversational and help them narrow what matters.",
     "Do not write numbered lists, bullet lists, headings, or textbook explainers in assistantText.",
@@ -281,7 +285,7 @@ function buildRoomUserPrompt({
     .join("\n\n");
 }
 
-async function persistRoomTurn(userId, roomSession, projectKey, message, turn, provider) {
+async function persistRoomTurn(userId, roomSession, projectKey, documentKey, message, turn, provider) {
   if (!normalizeText(roomSession?.threadDocumentKey)) {
     throw new Error("Conversation not found.");
   }
@@ -295,6 +299,7 @@ async function persistRoomTurn(userId, roomSession, projectKey, message, turn, p
   const view = await buildRoomWorkspaceViewForUser(userId, {
     projectKey,
     sessionId: roomSession.id,
+    documentKey,
   });
 
   return {
@@ -319,6 +324,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   const projectKey = String(body?.projectKey || "").trim();
   const sessionId = String(body?.sessionId || "").trim();
+  const documentKey = String(body?.documentKey || body?.document || "").trim();
   const message = normalizeLongText(body?.message);
 
   if (!message) {
@@ -327,7 +333,7 @@ export async function POST(request) {
 
   let view;
   try {
-    view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId });
+    view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId, documentKey });
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : "Could not open the room." },
@@ -375,6 +381,7 @@ export async function POST(request) {
           session.user.id,
           view.session,
           resolvedProjectKey,
+          documentKey,
           message,
           normalizeRoomTurnResult(coerceConversationTurn(normalizedTurn)),
           provider,
@@ -395,7 +402,15 @@ export async function POST(request) {
       gatePreview: gate.gatePreview,
     });
     return NextResponse.json(
-      await persistRoomTurn(session.user.id, view.session, resolvedProjectKey, message, gatedTurn, provider),
+      await persistRoomTurn(
+        session.user.id,
+        view.session,
+        resolvedProjectKey,
+        documentKey,
+        message,
+        gatedTurn,
+        provider,
+      ),
     );
   }
 

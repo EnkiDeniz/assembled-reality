@@ -258,6 +258,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   const projectKey = String(body?.projectKey || "").trim();
   const sessionId = String(body?.sessionId || "").trim();
+  const documentKey = String(body?.documentKey || body?.document || "").trim();
   const action = normalizeText(body?.action).toLowerCase();
 
   if (!projectKey) {
@@ -272,6 +273,7 @@ export async function POST(request) {
   const sessionView = await buildRoomWorkspaceViewForUser(session.user.id, {
     projectKey: project.projectKey,
     sessionId,
+    documentKey,
   });
   if (!normalizeText(sessionView?.session?.threadDocumentKey)) {
     return NextResponse.json({ ok: false, error: "Conversation not found." }, { status: 404 });
@@ -369,6 +371,7 @@ export async function POST(request) {
     const view = await buildRoomWorkspaceViewForUser(session.user.id, {
       projectKey: project.projectKey,
       sessionId: sessionView.session.id,
+      documentKey,
     });
     return NextResponse.json({ ok: true, view });
   }
@@ -463,6 +466,7 @@ export async function POST(request) {
     const view = await buildRoomWorkspaceViewForUser(session.user.id, {
       projectKey: project.projectKey,
       sessionId: sessionView.session.id,
+      documentKey,
     });
     return NextResponse.json({
       ok: true,
