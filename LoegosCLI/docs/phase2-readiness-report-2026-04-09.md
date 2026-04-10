@@ -50,3 +50,21 @@
 1. stabilize e2e boot path in CI (fresh server lifecycle, isolated worker)
 2. add one end-to-end assertion for voice play response headers (with mocked audio binary fixture)
 3. add one parity regression guard for mirror/editor drift snapshots
+
+## Echo Field Verdict Delivery (2026-04-09)
+
+Contract status: pass
+
+- Canonical semantic contract is now published in `LoegosCLI/docs/echo-field-contract-v1.md`.
+- Launch shell surfaces Echo Legibility with explicit questions:
+  - Did I ping?
+  - Am I waiting?
+  - What came back, from where?
+  - How clear is this region?
+- Distant echo/ripple signal is emitted and shown in runtime ledger as `distant_echo_arrived`.
+
+Behavioral evidence:
+
+- `tests/echo-field-state.test.mjs` validates awaiting -> mapped on return compile cycle.
+- `tests/echo-ripple-signal.test.mjs` validates ripple emission only under true distant-echo conditions.
+- `tests/reality-assembly-preview.test.mjs` validates shell wiring for Echo Legibility and ripple affordances.

@@ -28,6 +28,8 @@ RTN receipt @preapproval_780k via lender_portal as score
   assert.equal(ripple.previousFieldState, "awaiting");
   assert.equal(ripple.nextFieldState, "mapped");
   assert.equal(ripple.returnProvenance, "lender_portal");
+  assert.equal(ripple.returnDelta, 1);
+  assert.equal(typeof ripple.chainSummary, "string");
 });
 
 test("deriveDistantEchoSignal returns null without a field-clearing return", () => {

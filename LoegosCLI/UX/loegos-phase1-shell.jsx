@@ -304,26 +304,32 @@ function EchoLegibilityPanel({ model }) {
           letterSpacing: "0.06em",
         }}
       >
-        Echo Legibility
+        Echo Field Legibility
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>Did I ping?</div>
+          <div data-testid="phase2-ping-question">{pingLabel}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>Am I waiting?</div>
+          <div data-testid="phase2-waiting-question">{waitingLabel}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>
+            What came back, from where?
+          </div>
+          <div data-testid="phase2-return-question">{model.returnProvenance}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>How clear is this region?</div>
+          <div data-testid="phase2-fog-question">{fogDensityLabel}</div>
+        </div>
         <div>
           <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>field_state</div>
           <div data-testid="phase2-field-state" style={{ color: fieldColors.accent }}>
             {model.fieldState}
           </div>
-        </div>
-        <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>ping</div>
-          <div data-testid="phase2-ping-state">{pingLabel}</div>
-        </div>
-        <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>waiting</div>
-          <div data-testid="phase2-waiting-state">{waitingLabel}</div>
-        </div>
-        <div>
-          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>return_provenance</div>
-          <div data-testid="phase2-return-provenance">{model.returnProvenance}</div>
         </div>
         <div>
           <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>echo_to_story</div>
@@ -334,6 +340,10 @@ function EchoLegibilityPanel({ model }) {
         <div>
           <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>fog_density</div>
           <div data-testid="phase2-fog-density">{fogDensityLabel}</div>
+        </div>
+        <div>
+          <div style={{ color: TOKENS.muted, fontFamily: TOKENS.mono, fontSize: 11 }}>return_provenance</div>
+          <div data-testid="phase2-return-provenance">{model.returnProvenance}</div>
         </div>
       </div>
     </section>
@@ -691,6 +701,7 @@ function MirrorView({
   const runtimeRecord = fileEntry.runtimeWindow;
   const sections = buildBoxSectionsFromArtifact(artifact);
   const [drillOpen, setDrillOpen] = useState(false);
+  const [openRippleEventId, setOpenRippleEventId] = useState("");
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -866,7 +877,25 @@ function MirrorView({
                         }}
                       >
                         <strong>Ripple:</strong> {event.detail || "Distant echo arrived"}
-                        {String(event?.metadata?.chainSummary || "").trim() ? (
+                        <div style={{ marginTop: 4 }}>
+                          <button
+                            type="button"
+                            data-testid="phase2-ripple-toggle"
+                            onClick={() =>
+                              setOpenRippleEventId((current) => (current === event.id ? "" : event.id))
+                            }
+                            style={{
+                              border: `1px solid ${TOKENS.border}`,
+                              background: "transparent",
+                              borderRadius: 6,
+                              fontSize: 11,
+                              padding: "2px 6px",
+                            }}
+                          >
+                            {openRippleEventId === event.id ? "Hide chain" : "View chain"}
+                          </button>
+                        </div>
+                        {openRippleEventId === event.id && String(event?.metadata?.chainSummary || "").trim() ? (
                           <div style={{ color: TOKENS.muted }}>
                             chain: {event.metadata.chainSummary}
                           </div>

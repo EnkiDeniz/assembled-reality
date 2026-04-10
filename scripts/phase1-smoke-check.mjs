@@ -48,6 +48,13 @@ async function main() {
   assert.match(launchShell, /<MirrorView/);
   assert.match(launchShell, /<EditorView/);
   assert.match(launchShell, /migrationNotice/);
+  assert.match(launchShell, /Echo Field Legibility/);
+  assert.match(launchShell, /Did I ping\?/);
+  assert.match(launchShell, /Am I waiting\?/);
+  assert.match(launchShell, /What came back, from where\?/);
+  assert.match(launchShell, /How clear is this region\?/);
+  assert.match(launchShell, /distant_echo_arrived/);
+  assert.match(launchShell, /phase2-ripple-toggle/);
 
   assert.match(intakeAdapter, /\/api\/workspace\/folder/);
   assert.match(intakeAdapter, /\/api\/workspace\/paste/);
