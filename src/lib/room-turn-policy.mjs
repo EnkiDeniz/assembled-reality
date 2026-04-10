@@ -1,4 +1,5 @@
 const ROOM_TURN_MODES = new Set(["conversation", "proposal"]);
+const LIST_PREFIX_PATTERN = /^\s*(?:[-*•]|\d+[.)])\s+/;
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -29,6 +30,52 @@ function buildDiagnostic(code, severity, message) {
 export function normalizeRoomTurnMode(value = "", fallback = "conversation") {
   const normalized = normalizeLowerText(value);
   return ROOM_TURN_MODES.has(normalized) ? normalized : fallback;
+}
+
+function splitSentences(value = "") {
+  const normalized = normalizeLongText(value);
+  if (!normalized) return [];
+  return (normalized.match(/[^.!?]+(?:[.!?]+|$)/g) || []).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
+function stripListFormatting(value = "") {
+  const lines = String(value || "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) return "";
+  return lines
+    .map((line) => line.replace(LIST_PREFIX_PATTERN, "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+export function normalizeAssistantTextForRoom(
+  value = "",
+  { maxSentences = 5, maxQuestions = 1 } = {},
+) {
+  const flattened = stripListFormatting(value).replace(/\s+/g, " ").trim();
+  if (!flattened) return "";
+
+  const sentences = splitSentences(flattened);
+  if (!sentences.length) return flattened;
+
+  const kept = [];
+  let questionCount = 0;
+
+  for (const sentence of sentences) {
+    const isQuestion = /\?/.test(sentence);
+    if (isQuestion && questionCount >= maxQuestions) continue;
+    if (isQuestion) {
+      questionCount += 1;
+    }
+    kept.push(sentence);
+    if (kept.length >= maxSentences) break;
+  }
+
+  return kept.join(" ").trim() || flattened;
 }
 
 export function hasCanonicalProposalSegments(turn = null) {
@@ -74,6 +121,25 @@ export function looksLikeUncertainty(message = "") {
   const text = normalizeLowerText(message);
   if (!text) return false;
   return /\b(not sure|unsure|idk|i don't know|maybe|something is off|kind of|sort of|roughly|possibly)\b/.test(
+    text,
+  );
+}
+
+export function looksLikeGeneralQuestion(message = "") {
+  const text = normalizeLongText(message);
+  const lower = text.toLowerCase();
+  if (!text) return false;
+  return (
+    /^(what|why|how|when|who|where|is|are|do|does|did|can|could|should|would)\b/i.test(text) ||
+    /\b(i want to understand|help me understand|what is|what's)\b/.test(lower) ||
+    /\?$/.test(text)
+  );
+}
+
+export function looksLikeEmotionalScope(message = "") {
+  const text = normalizeLowerText(message);
+  if (!text) return false;
+  return /\b(scared|afraid|anxious|worried|overwhelmed|stuck|lost|confused|panic|panicking)\b/.test(
     text,
   );
 }
@@ -125,6 +191,20 @@ export function looksLikeConversationalMove(message = "") {
   );
 }
 
+export function describeRoomTurnStyle(message = "") {
+  const normalized = normalizeLongText(message);
+  if (!normalized) return "low_signal";
+  if (looksLikeLowSignal(normalized)) return "low_signal";
+  if (looksLikeExplicitStructureRequest(normalized)) return "structure_request";
+  if (looksLikeConcreteObservation(normalized)) return "observation";
+  if (looksLikeEmotionalScope(normalized)) return "emotional_scope";
+  if (looksLikeGeneralQuestion(normalized)) return "general_question";
+  if (looksLikeClarificationOnly(normalized)) return "clarification";
+  if (looksLikeAspiration(normalized)) return "aspiration";
+  if (looksLikeUncertainty(normalized)) return "uncertainty";
+  return "scoping";
+}
+
 function collectContextText(context = {}) {
   const recentSources = Array.isArray(context?.recentSources) ? context.recentSources : [];
   return [
@@ -171,13 +251,70 @@ export function classifyRoomTurnMode({ message = "", view = null } = {}) {
   const clarificationOnly = looksLikeClarificationOnly(normalized);
   const aspiration = looksLikeAspiration(normalized);
   const uncertainty = looksLikeUncertainty(normalized);
+  const generalQuestion = looksLikeGeneralQuestion(normalized);
+  const emotionalScope = looksLikeEmotionalScope(normalized);
 
   if (lowSignal) return "conversation";
   if (explicitStructure) return "proposal";
   if (observation) return "proposal";
-  if (hasStructure && !clarificationOnly) return "proposal";
-  if (clarificationOnly || aspiration || uncertainty) return "conversation";
+  if (clarificationOnly || aspiration || uncertainty || generalQuestion || emotionalScope) {
+    return "conversation";
+  }
+  if (hasStructure) return "proposal";
   return "conversation";
+}
+
+function extractAssistantExcerpt(assistantText = "", segmentText = "") {
+  const haystack = normalizeText(assistantText);
+  const needle = normalizeText(segmentText);
+  if (!haystack || !needle) return "";
+  const index = haystack.indexOf(needle);
+  if (index === -1) return "";
+  return haystack.slice(index, index + needle.length);
+}
+
+export function filterSegmentsToAssistantText(segments = [], assistantText = "") {
+  const rawSegments = Array.isArray(segments) ? segments : [];
+  return rawSegments
+    .map((segment) => {
+      const excerpt = extractAssistantExcerpt(assistantText, segment?.text);
+      if (!excerpt) return null;
+      return {
+        ...segment,
+        text: excerpt,
+      };
+    })
+    .filter(Boolean);
+}
+
+export function applyRoomTurnGuardrails(
+  turn = null,
+  { requestedTurnMode = "conversation" } = {},
+) {
+  const assistantText = normalizeAssistantTextForRoom(turn?.assistantText || turn?.reply);
+  const effectiveRequestedMode = normalizeRoomTurnMode(requestedTurnMode, "conversation");
+  const modelTurnMode = normalizeRoomTurnMode(turn?.turnMode, effectiveRequestedMode);
+  const effectiveTurnMode =
+    effectiveRequestedMode === "conversation" ? "conversation" : modelTurnMode;
+
+  if (!assistantText) {
+    return buildSafeFallbackTurn();
+  }
+
+  if (effectiveTurnMode === "conversation") {
+    return coerceConversationTurn({
+      ...turn,
+      assistantText,
+    });
+  }
+
+  return {
+    ...turn,
+    assistantText,
+    turnMode: effectiveTurnMode,
+    segments: filterSegmentsToAssistantText(turn?.segments, assistantText),
+    receiptKit: turn?.receiptKit || null,
+  };
 }
 
 export function auditRoomProposalSemantics({ proposal = null, context = null } = {}) {

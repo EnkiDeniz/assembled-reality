@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyRoomTurnGuardrails,
   auditRoomProposalSemantics,
   buildRoomSemanticContext,
   buildSafeFallbackTurn,
   classifyRoomTurnMode,
+  normalizeAssistantTextForRoom,
 } from "../src/lib/room-turn-policy.mjs";
 
 test("safe fallback returns plain conversation only", () => {
@@ -37,6 +39,23 @@ test("classifier keeps early aspiration and low-signal turns in conversation mod
     classifyRoomTurnMode({
       message: "blorp maybe idk",
       view: { hasStructure: false },
+    }),
+    "conversation",
+  );
+  assert.equal(
+    classifyRoomTurnMode({
+      message: "I want to understand what a monolith is",
+      view: { hasStructure: false },
+    }),
+    "conversation",
+  );
+});
+
+test("classifier keeps general questions conversational even after structure exists", () => {
+  assert.equal(
+    classifyRoomTurnMode({
+      message: "What is a monolith?",
+      view: { hasStructure: true },
     }),
     "conversation",
   );
@@ -135,4 +154,71 @@ test("semantic audit allows observational user-stated witness but marks it as we
       /reported signal, not externally verified evidence/i.test(diagnostic.message),
     ),
   );
+});
+
+test("guardrails drop structure entirely when the requested turn mode is conversation", () => {
+  const guarded = applyRoomTurnGuardrails(
+    {
+      assistantText: "A monolith is one big application. Why does that matter to you right now?",
+      turnMode: "proposal",
+      segments: [
+        {
+          text: "A monolith is one big application.",
+          domain: "witness",
+          suggestedClause: 'GND witness @term from "user_stated" with v_turn_1',
+        },
+      ],
+      receiptKit: {
+        id: "kit_1",
+        need: "Proof",
+        artifact: { type: "paste", config: {} },
+      },
+    },
+    { requestedTurnMode: "conversation" },
+  );
+
+  assert.equal(guarded.turnMode, "conversation");
+  assert.deepEqual(guarded.segments, []);
+  assert.equal(guarded.receiptKit, null);
+});
+
+test("guardrails keep only segment text that is an exact assistantText excerpt", () => {
+  const guarded = applyRoomTurnGuardrails(
+    {
+      assistantText:
+        "That's a direction, not a decision yet. What's the actual number you're working with?",
+      turnMode: "proposal",
+      segments: [
+        {
+          text: "That's a direction, not a decision yet.",
+          domain: "story",
+          suggestedClause: 'INT story "Direction is still broad."',
+        },
+        {
+          text: "Internal planning note that never appeared in the reply.",
+          domain: "aim",
+          suggestedClause: 'DIR aim "Hidden note"',
+        },
+      ],
+    },
+    { requestedTurnMode: "proposal" },
+  );
+
+  assert.equal(guarded.turnMode, "proposal");
+  assert.equal(guarded.segments.length, 1);
+  assert.equal(guarded.segments[0].text, "That's a direction, not a decision yet.");
+});
+
+test("assistant text normalization trims list-heavy answers into brief prose", () => {
+  const normalized = normalizeAssistantTextForRoom(`1. A monolith is one big app.
+2. It keeps everything together.
+3. It can be simpler at the start.
+4. It gets harder to change later.
+5. Why does that matter to you right now?
+6. What stack are you using?`);
+
+  assert.equal(normalized.includes("1."), false);
+  assert.equal(normalized.includes("2."), false);
+  assert.match(normalized, /^A monolith is one big app\./);
+  assert.equal((normalized.match(/\?/g) || []).length, 1);
 });

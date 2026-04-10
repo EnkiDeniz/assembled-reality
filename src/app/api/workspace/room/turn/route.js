@@ -17,10 +17,12 @@ import {
   runRoomProposalGate,
 } from "@/lib/room-canonical";
 import {
+  applyRoomTurnGuardrails,
   buildRoomSemanticContext,
   buildSafeFallbackTurn,
   classifyRoomTurnMode,
   coerceConversationTurn,
+  describeRoomTurnStyle,
   hasCanonicalProposalSegments,
 } from "@/lib/room-turn-policy.mjs";
 
@@ -84,12 +86,18 @@ function parseJsonObject(text = "") {
 function buildRoomSystemPrompt(turnMode = "conversation") {
   return [
     `You are Seven inside ${PRODUCT_NAME}.`,
-    "You are responding inside the Room. Conversation comes first. Structure appears only as lawful clause proposals.",
+    "Sound like a sharp friend: warm, direct, brief.",
+    "assistantText should usually be 2 to 4 sentences, never more than 5, and ask at most one question.",
+    "If the user asks a general question, give one short answer and then ask why it matters right now.",
+    "If the user is scoping, emotional, vague, or aspirational, stay conversational and help them narrow what matters.",
+    "Do not write numbered lists, bullet lists, headings, or textbook explainers in assistantText.",
+    'Do not use internal product language in assistantText unless the user already used it first: "compile", "canonical", "gate", "clause", "sigil", "kernel".',
     "Return strict JSON only. No markdown fences. No prose outside the JSON object.",
     "Use this exact top-level shape:",
-    "{\"assistantText\":\"...\",\"turnMode\":\"conversation|proposal\",\"segments\":[{\"text\":\"...\",\"domain\":\"aim|witness|story|move|test|return|other\",\"mirrorRegion\":\"aim|evidence|story|moves|returns\",\"suggestedClause\":\"DIR aim \\\"...\\\"\",\"intent\":\"declare|ground|interpret|move|test|observe|compare|capture|clarify\"}],\"receiptKit\":null}",
-    "assistantText must stay plain-language and calm.",
-    "segments[].text must be user-facing preview language, never internal planning notes or hidden reasoning.",
+    "{\"assistantText\":\"...\",\"turnMode\":\"conversation|proposal\",\"segments\":[{\"text\":\"...\",\"domain\":\"aim|witness|story|move|test|return|receipt|field|other\",\"mirrorRegion\":\"aim|evidence|story|moves|returns\",\"suggestedClause\":\"DIR aim \\\"...\\\"\",\"intent\":\"declare|ground|interpret|move|test|observe|compare|capture|clarify\"}],\"receiptKit\":null}",
+    "assistantText is the only thing the user sees by default.",
+    "segments are hidden structural metadata. Every segment.text must be an exact excerpt from assistantText, never internal planning notes or hidden reasoning.",
+    "If nothing structural is earned, segments must be [] and receiptKit must be null.",
     "Seven proposes. It never mutates canonical state.",
     "Only propose lawful clauses from this set:",
     'DIR aim "<text>"',
@@ -98,13 +106,18 @@ function buildRoomSystemPrompt(turnMode = "conversation") {
     'MOV move "<text>" via manual',
     'TST test "<text>"',
     'RTN observe|confirm|contradict "<text>" via user|third_party|lender_portal|service|system as text|score|bool|date|count',
-    "Never propose MOV without also proposing TST in the same response unless both already exist in source.",
-    "Keep witness separate from story. Desire, intention, hope, and aspiration are never GND witness. Interpretation and hypotheses stay INT story.",
-    "In-conversation clarification is not MOV/TST. Only propose MOV/TST when the user should do something outside this conversation.",
-    "At most one Receipt Kit. Use it only when a concrete proof action is helpful.",
+    "Desire, hope, intention, and aspiration are story, not witness.",
+    "Observations, reported facts, and returned signals may become witness.",
+    "Clarifying inside the chat is conversation, not MOV/TST.",
+    "Only real-world checks get MOV/TST, and never propose MOV without TST in the same response unless both already exist in source.",
+    "At most one Receipt Kit. Use it only when a concrete proof action is genuinely helpful.",
+    'Example: "I want to build Loegos" -> conversation mode, brief reply, ask which layer matters most, no clauses.',
+    'Example: "I want to understand what a monolith is" -> conversation mode, one short answer, then ask why it matters now, no clauses.',
+    'Example: "I\'m scared to leave my job" -> conversation mode, acknowledge the feeling, ask what decision is actually in front of them, no clauses.',
+    'Example: "The offer is $145k base, remote, 40-person Series B" -> proposal mode is allowed because this is a concrete reported fact.',
     turnMode === "conversation"
       ? 'Turn mode is conversation. Return {"turnMode":"conversation"} with assistantText only. segments must be [] and receiptKit must be null.'
-      : 'Turn mode is proposal. Return {"turnMode":"proposal"} only if the user has earned canonical structure. If structure is not earned, fall back to plain assistantText with empty segments.',
+      : 'Turn mode is proposal. Return {"turnMode":"proposal"} only if the user has genuinely earned structure. If structure is not earned, fall back to assistantText with empty segments.',
   ].join(" ");
 }
 
@@ -127,6 +140,7 @@ function buildRoomUserPrompt({
   return [
     `Turn number: ${turnNumber}`,
     `Turn mode: ${turnMode}`,
+    `Turn style hint: ${describeRoomTurnStyle(message)}`,
     `Box: ${normalizeText(view?.project?.title) || "Untitled Box"}`,
     view?.project?.subtitle ? `Box note: ${normalizeText(view.project.subtitle)}` : "",
     `Canonical Room source:\n${roomSource || "GND box @room_default"}`,
@@ -205,13 +219,17 @@ export async function POST(request) {
   });
 
   async function finalizeTurn(nextTurn, provider) {
+    const guardedTurn = applyRoomTurnGuardrails(nextTurn, {
+      requestedTurnMode: turnMode,
+    });
     const normalizedTurn = normalizeRoomTurnResult({
-      ...nextTurn,
-      proposalId: normalizeText(nextTurn?.proposalId) || makeRoomId("proposal"),
-      turnMode,
+      ...guardedTurn,
+      proposalId:
+        normalizeText(guardedTurn?.proposalId || nextTurn?.proposalId) || makeRoomId("proposal"),
+      turnMode: guardedTurn?.turnMode || turnMode,
     });
 
-    if (turnMode === "conversation" || !hasCanonicalProposalSegments(normalizedTurn)) {
+    if (normalizedTurn.turnMode === "conversation" || !hasCanonicalProposalSegments(normalizedTurn)) {
       return NextResponse.json(
         await persistRoomTurn(
           session.user.id,
@@ -278,30 +296,31 @@ export async function POST(request) {
     });
 
     const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        console.error("Room turn request failed.", {
-          status: response.status,
-          detail: payload?.error?.message || payload?.error?.type || payload?.error?.code || "",
-        });
-        return finalizeTurn(buildSafeFallbackTurn(), "fallback");
-      }
+    if (!response.ok) {
+      console.error("Room turn request failed.", {
+        status: response.status,
+        detail: payload?.error?.message || payload?.error?.type || payload?.error?.code || "",
+      });
+      return finalizeTurn(buildSafeFallbackTurn(), "fallback");
+    }
 
-      const parsed = parseJsonObject(extractMessageText(payload));
-      if (!parsed) {
-        return finalizeTurn(buildSafeFallbackTurn(), "fallback");
-      }
+    const parsed = parseJsonObject(extractMessageText(payload));
+    if (!parsed) {
+      return finalizeTurn(buildSafeFallbackTurn(), "fallback");
+    }
 
-      const normalizedTurn = normalizeRoomTurnResult({
+    if (!normalizeLongText(parsed?.assistantText || parsed?.reply)) {
+      return finalizeTurn(buildSafeFallbackTurn(), "fallback");
+    }
+
+    return finalizeTurn(
+      {
         ...parsed,
         proposalId: makeRoomId("proposal"),
         turnMode,
-      });
-
-      if (!normalizedTurn.assistantText) {
-        return finalizeTurn(buildSafeFallbackTurn(), "fallback");
-      }
-
-      return finalizeTurn(normalizedTurn, "openai");
+      },
+      "openai",
+    );
   } catch (error) {
     console.error("Room turn request crashed.", {
       error: error instanceof Error ? error.message : String(error),

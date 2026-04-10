@@ -20,6 +20,7 @@ test("workspace route and room api surface are wired for canonical room-first en
   assert.match(roomTurnRoute, /runRoomProposalGate/);
   assert.match(roomTurnRoute, /gatePreview/);
   assert.match(roomTurnRoute, /classifyRoomTurnMode/);
+  assert.match(roomTurnRoute, /applyRoomTurnGuardrails/);
   assert.match(roomTurnRoute, /buildSafeFallbackTurn/);
   assert.match(roomApplyRoute, /apply_proposal_preview/);
   assert.match(roomApplyRoute, /complete_receipt_kit/);
@@ -71,11 +72,18 @@ test("strict ping rule, mirror regions, and receipt artifact support remain enco
 
   assert.match(roomCanonical, /ping_requires_test/);
   assert.match(roomCanonical, /semantic_reject/);
-  assert.match(roomTurnRoute, /Never propose MOV without also proposing TST/);
+  assert.match(roomTurnRoute, /never propose MOV without TST/i);
+  assert.match(roomTurnRoute, /sharp friend/);
+  assert.match(roomTurnRoute, /one short answer and then ask why it matters right now/);
+  assert.match(roomTurnRoute, /exact excerpt from assistantText/);
+  assert.match(roomTurnRoute, /Do not write numbered lists, bullet lists/);
   assert.match(roomTurnRoute, /Turn mode is conversation/);
+  assert.match(roomTurnRoute, /Turn style hint:/);
   assert.match(roomTurnRoute, /mirrorRegion/);
   assert.match(roomTurnRoute, /aim\|evidence\|story\|moves\|returns/);
   assert.match(roomPolicy, /classifyRoomTurnMode/);
+  assert.match(roomPolicy, /filterSegmentsToAssistantText/);
+  assert.match(roomPolicy, /normalizeAssistantTextForRoom/);
   assert.match(roomPolicy, /Conversation-only clarification is not a lawful move or test/);
   assert.match(roomState, /"upload"/);
   assert.match(roomState, /"paste"/);
