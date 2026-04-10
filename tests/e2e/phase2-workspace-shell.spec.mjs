@@ -84,9 +84,48 @@ test("phase2 workspace shell preserves intake/player and proposal gate", async (
   await page.getByTestId("phase2-chat-input").fill("give me a better root");
   await page.getByTestId("phase2-chat-send").click();
   await expect(page.getByTestId("phase2-ledger-panel")).toContainText("proposal_accepted");
+  await page.getByTestId("phase2-seven-segment").first().click();
+  await expect(page.getByTestId("phase2-seven-segment-clause")).toContainText("DIR aim");
+  await page.getByTestId("phase2-box-collapse-toggle").click();
+  await expect(page.getByText(/Collapsed for focus/i)).toBeVisible();
+  await page.getByTestId("phase2-box-collapse-toggle").click();
+  await expect(page.getByTestId("phase2-evidence-story-ratio")).toBeVisible();
+  await expect(page.getByTestId("phase2-settings-panel")).toBeVisible();
+  await page.getByTestId("phase2-tab-profile").click();
+  await expect(page.getByTestId("phase2-profile-content")).toBeVisible();
+  await page.getByTestId("phase2-tab-help").click();
+  await expect(page.getByTestId("phase2-help-content")).toBeVisible();
 
   await page.getByTestId("phase2-voice-resume").click();
   await expect(page.getByText(/Listening session restored/i)).toBeVisible();
+
+  await expect(page.getByTestId("phase2-room-surface")).toBeVisible();
+  await expect(page.getByTestId("phase2-compass-lock")).toBeVisible();
+  await page.getByTestId("phase2-compass-enable").click();
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 1 - Single Box");
+  await expect(page.getByTestId("phase2-range-track")).toBeVisible();
+  await page.getByTestId("phase2-range-switch").click();
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 2 - Domain");
+  await page.getByTestId("phase2-range-switch").click();
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 3 - Full Field");
+  await page.getByTestId("phase2-range-switch").click();
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 4 - Shared Field");
+  await expect(page.getByTestId("phase2-range-hotkeys-hint")).toBeVisible();
+
+  await page.locator("body").click();
+  await page.keyboard.press("1");
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 1 - Single Box");
+  await page.keyboard.press("4");
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 4 - Shared Field");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByTestId("phase2-compass-enable").click();
+  await expect(page.getByTestId("phase2-range-label")).toContainText("Level 4 - Shared Field");
+
+  await page.getByRole("button", { name: "Show advanced" }).click();
+  await expect(page.getByTestId("phase2-instrument-drawer")).toContainText("Manual attest override");
+  await page.getByPlaceholder('Explain rationale for "CLS attest ... if"').fill("human review required");
+  await page.getByRole("button", { name: "Submit attest request" }).click();
+  await expect(page.getByTestId("phase2-ledger-panel")).toContainText("manual_attest_requested");
 
   await page.getByTestId("phase2-nav-editor").click();
   await expect(page.getByTestId("phase2-parity-indicator")).toContainText("ok");

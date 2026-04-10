@@ -166,3 +166,204 @@ export function deriveDistantEchoSignal(previousArtifact = null, nextArtifact = 
     chainSummary: buildEdgeChainSummary(nextArtifact),
   };
 }
+
+export function extractClausesByHead(artifact = null, head = "") {
+  const clauses = Array.isArray(artifact?.ast) ? artifact.ast : [];
+  return clauses.filter((clause) => clause.head === head);
+}
+
+export function clauseSummary(clause = null) {
+  if (!clause) return "";
+  const head = String(clause?.head || "").trim();
+  const verb = String(clause?.verb || "").trim();
+  const positional = Array.isArray(clause?.positional) ? clause.positional : [];
+  const text = positional
+    .map((token) => String(token?.value || token?.raw || "").trim())
+    .join(" ")
+    .trim();
+  return `${head} ${verb} ${text}`.trim();
+}
+
+export function getClauseKeyword(clause = null, key = "") {
+  return String(clause?.keywords?.[key]?.value || clause?.keywords?.[key]?.raw || "").trim();
+}
+
+export function getLastReturnClause(artifact = null) {
+  const returns = extractClausesByHead(artifact, "RTN");
+  return returns.length ? returns[returns.length - 1] : null;
+}
+
+export function deriveLatestQualifiedReturnAt(runtimeRecord = null) {
+  const events = Array.isArray(runtimeRecord?.events) ? runtimeRecord.events : [];
+  const matched = events
+    .filter((event) => event?.kind === "return_received")
+    .map((event) => event?.createdAt)
+    .filter(Boolean)
+    .pop();
+  return String(matched || "").trim();
+}
+
+export function deriveFreshnessState(updatedAt = "") {
+  const timestamp = Date.parse(String(updatedAt || "").trim());
+  if (!Number.isFinite(timestamp)) return "unknown";
+  const ageMs = Date.now() - timestamp;
+  if (ageMs <= 5 * 60 * 1000) return "fresh";
+  if (ageMs <= 60 * 60 * 1000) return "aging";
+  return "stale";
+}
+
+export function formatAgeLabel(timestamp = "") {
+  const value = Date.parse(String(timestamp || "").trim());
+  if (!Number.isFinite(value)) return "not_returned";
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - value) / 1000));
+  if (deltaSeconds < 60) return `${deltaSeconds}s`;
+  const deltaMinutes = Math.floor(deltaSeconds / 60);
+  if (deltaMinutes < 60) return `${deltaMinutes}m`;
+  const deltaHours = Math.floor(deltaMinutes / 60);
+  return `${deltaHours}h`;
+}
+
+export function mapMergedStateForField(mergedState = "") {
+  const normalized = String(mergedState || "").trim().toLowerCase();
+  if (normalized === "shape_error" || normalized === "flagged") return "fractured";
+  if (normalized === "attested") return "fog";
+  if (normalized === "awaiting") return "awaiting";
+  if (normalized === "sealed") return "mapped";
+  return "fog";
+}
+
+export function deriveDomainKeyForEntry(entry = null) {
+  const sections = buildBoxSectionsFromArtifact(entry?.artifact);
+  const aimKey = String(sections.aim || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
+  if (aimKey) {
+    const tokens = aimKey.split("_").filter(Boolean);
+    return tokens.slice(0, 2).join("_") || aimKey;
+  }
+  const filename = String(entry?.filename || "").trim().toLowerCase();
+  const fileKey = filename
+    .replace(/\.loe$/, "")
+    .split(/[-_]/)
+    .slice(0, 2)
+    .join("_");
+  return fileKey
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
+}
+
+export function deriveEntrySignalProfile(entry = null) {
+  const sourceDocuments = Array.isArray(entry?.sourceDocuments) ? entry.sourceDocuments : [];
+  const events = Array.isArray(entry?.runtimeWindow?.events) ? entry.runtimeWindow.events : [];
+  const importedEvents = events.filter((event) => event?.kind === "intake_imported");
+  const linkedImports = importedEvents.filter(
+    (event) => String(event?.metadata?.kind || "").trim() === "link",
+  ).length;
+  const externalEvidenceSignals = sourceDocuments.length + linkedImports;
+  return {
+    domainKey: deriveDomainKeyForEntry(entry),
+    importedEventsCount: importedEvents.length,
+    sourceDocumentsCount: sourceDocuments.length,
+    externalEvidenceSignals,
+    sharedCandidate: externalEvidenceSignals > 0,
+  };
+}
+
+export function buildScopedEntries({ files = {}, activeFile = "", levelKey = "box" }) {
+  const entries = Object.entries(files || {}).map(([filename, entry]) => ({ filename, ...entry }));
+  if (levelKey === "box") {
+    return entries.filter((entry) => entry.filename === activeFile);
+  }
+  if (levelKey === "domain") {
+    const activeEntry = entries.find((entry) => entry.filename === activeFile) || null;
+    const domainKey = deriveDomainKeyForEntry(activeEntry);
+    if (!domainKey) return activeEntry ? [activeEntry] : [];
+    const domainEntries = entries.filter((entry) => deriveDomainKeyForEntry(entry) === domainKey);
+    return domainEntries.length ? domainEntries : activeEntry ? [activeEntry] : [];
+  }
+  if (levelKey === "shared") {
+    return entries.filter((entry) => deriveEntrySignalProfile(entry).sharedCandidate);
+  }
+  return entries;
+}
+
+function toDisplayChipLabel(state = "") {
+  const value = String(state || "").trim().toLowerCase();
+  if (!value) return "open";
+  return value;
+}
+
+export function deriveStateChipModel(artifact = null, runtimeWindow = null) {
+  const mergedState = toDisplayChipLabel(artifact?.mergedWindowState || runtimeWindow?.state || "open");
+  const diagnostics = Array.isArray(artifact?.diagnostics) ? artifact.diagnostics : [];
+  const hardErrors = diagnostics.filter((entry) => entry?.severity === "error").length;
+  const model = buildEchoFieldModel(artifact, runtimeWindow);
+  const stateLabel =
+    hardErrors > 0 && mergedState !== "shape_error"
+      ? "shape_error"
+      : mergedState;
+  return {
+    stateLabel,
+    mergedState,
+    hardErrors,
+    fieldState: model.fieldState,
+    waiting: model.waiting,
+    pingSent: model.pingSent,
+  };
+}
+
+function derivePaneContracts(chipModel, artifact = null) {
+  const returns = extractClausesByHead(artifact, "RTN");
+  const pingReady = chipModel.pingSent;
+  const hasReturn = returns.length > 0;
+  const waiting = chipModel.waiting;
+  const fractured = chipModel.fieldState === "fractured";
+  const mapped = chipModel.fieldState === "mapped";
+
+  return {
+    ping: {
+      requiredAction: pingReady ? "Refine the active test probe." : "Send one ping (MOV + TST).",
+      proofCondition: "A MOV and TST clause are both present.",
+    },
+    listen: {
+      requiredAction: waiting ? "Wait for one return with provenance." : "No active wait. Keep listening ambient.",
+      proofCondition: "Last move is matched by an RTN or no ping is outstanding.",
+    },
+    echoes: {
+      requiredAction: hasReturn ? "Review the latest returned evidence." : "Collect one return-backed signal (RTN via ...).",
+      proofCondition: "At least one RTN clause is present with provenance.",
+    },
+    field: {
+      requiredAction: fractured
+        ? "Resolve structural break before closure."
+        : mapped
+          ? "Decide lawful close: seal or attest with rationale."
+          : "Reduce fog with returned evidence.",
+      proofCondition: "Mapped/sealed only when return evidence exists and no hard shape error blocks.",
+    },
+  };
+}
+
+export function derivePaneInteractionContract(artifact = null, runtimeWindow = null) {
+  const chipModel = deriveStateChipModel(artifact, runtimeWindow);
+  const paneContract = derivePaneContracts(chipModel, artifact);
+  const nextBestAction =
+    chipModel.stateLabel === "shape_error" || chipModel.stateLabel === "flagged"
+      ? "Fix shape violations first, then retry the loop."
+      : !chipModel.pingSent
+        ? "Send a lawful ping: add MOV and TST."
+        : chipModel.waiting
+          ? "Capture one return with provenance to clear awaiting."
+          : chipModel.fieldState !== "mapped"
+            ? "Gather return-backed evidence to map the field."
+            : "Choose closure deliberately: CLS seal, or CLS attest with rationale.";
+  return {
+    stateChip: chipModel,
+    paneContract,
+    nextBestAction,
+  };
+}

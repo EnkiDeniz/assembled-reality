@@ -70,6 +70,19 @@ async function main() {
   assert.match(launchShell, /phase2-range-hotkeys-hint/);
   assert.match(launchShell, /getRangeStorageKey/);
   assert.match(launchShell, /shared_signals:/);
+  assert.match(launchShell, /phase2-room-surface/);
+  assert.match(launchShell, /What is still unknown\?/);
+  assert.match(launchShell, /phase2-seven-segment/);
+  assert.match(launchShell, /phase2-box-collapse-toggle/);
+  assert.match(launchShell, /phase2-evidence-story-ratio/);
+  assert.match(launchShell, /phase2-settings-panel/);
+  assert.match(launchShell, /phase2-tab-settings/);
+  assert.match(launchShell, /phase2-tab-profile/);
+  assert.match(launchShell, /phase2-tab-help/);
+  assert.match(launchShell, /phase2-compass-lock/);
+  assert.match(launchShell, /phase2-instrument-drawer/);
+  assert.match(launchShell, /Manual attest override/);
+  assert.match(launchShell, /What is next lawful move\?/);
 
   assert.match(intakeAdapter, /\/api\/workspace\/folder/);
   assert.match(intakeAdapter, /\/api\/workspace\/paste/);

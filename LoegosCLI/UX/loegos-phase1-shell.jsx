@@ -4,6 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { compileSource } from "../packages/compiler/src/index.mjs";
 import {
   buildBoxSectionsFromArtifact,
+  buildScopedEntries,
+  clauseSummary,
+  deriveEntrySignalProfile,
+  deriveFreshnessState,
+  deriveLatestQualifiedReturnAt,
+  derivePaneInteractionContract,
+  extractClausesByHead,
+  formatAgeLabel,
+  getClauseKeyword,
+  getLastReturnClause,
+  mapMergedStateForField,
   deriveDistantEchoSignal,
   buildEchoFieldModel,
   splitDiagnostics,
@@ -98,6 +109,10 @@ function getStorageKey(projectKey = "", documentKey = "") {
 
 function getRangeStorageKey(projectKey = "", documentKey = "") {
   return `loegos-phase2:range:${String(projectKey || "project").trim()}:${String(documentKey || "doc").trim()}`;
+}
+
+function getUtilityStorageKey(projectKey = "", documentKey = "") {
+  return `loegos-phase2:utility:${String(projectKey || "project").trim()}:${String(documentKey || "doc").trim()}`;
 }
 
 function buildDefaultSourceFromBootstrap(bootstrap = {}) {
@@ -287,6 +302,51 @@ function SectionCard({ title, items = [], accent = TOKENS.accent }) {
   );
 }
 
+function mapSegmentDomainToRegion(domain = "") {
+  const normalized = String(domain || "").trim().toLowerCase();
+  if (normalized === "aim") return "aim";
+  if (normalized === "evidence" || normalized === "ground") return "evidence";
+  if (normalized === "story" || normalized === "interpretation") return "story";
+  if (normalized === "move" || normalized === "test" || normalized === "action") return "action";
+  return "";
+}
+
+function SevenSegment({
+  segment,
+  index,
+  messageIndex,
+  openSegmentId,
+  onToggle,
+}) {
+  const domain = String(segment?.domain || "neutral").trim().toLowerCase();
+  const text = String(segment?.text || "").trim();
+  const clause = String(segment?.suggestedClause || "").trim();
+  const segmentId = `m${messageIndex}-s${index}`;
+  const isOpen = openSegmentId === segmentId;
+  const region = mapSegmentDomainToRegion(domain);
+  const isTagged = Boolean(region) || Boolean(clause);
+
+  if (!text) return null;
+
+  return (
+    <span className="phase2-segment-wrap">
+      <button
+        type="button"
+        data-testid="phase2-seven-segment"
+        className={`phase2-segment ${isOpen ? "is-open" : ""} ${isTagged ? "is-tagged" : ""}`}
+        onClick={() => onToggle(segmentId, region)}
+      >
+        {text}
+      </button>
+      {isOpen && clause ? (
+        <span className="phase2-segment__clause" data-testid="phase2-seven-segment-clause">
+          {clause}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function EchoLegibilityPanel({ model }) {
   const fieldColors = FIELD_COLORS[model.fieldState] || FIELD_COLORS.fog;
   const echoRatioPercent = `${Math.round((Number(model.echoRatio) || 0) * 100)}%`;
@@ -343,114 +403,6 @@ function EchoLegibilityPanel({ model }) {
       </div>
     </section>
   );
-}
-
-function extractClausesByHead(artifact = null, head = "") {
-  const clauses = Array.isArray(artifact?.ast) ? artifact.ast : [];
-  return clauses.filter((clause) => clause.head === head);
-}
-
-function clauseSummary(clause = null) {
-  if (!clause) return "";
-  const head = String(clause?.head || "").trim();
-  const verb = String(clause?.verb || "").trim();
-  const positional = Array.isArray(clause?.positional) ? clause.positional : [];
-  const text = positional.map((token) => String(token?.value || token?.raw || "").trim()).join(" ").trim();
-  return `${head} ${verb} ${text}`.trim();
-}
-
-function deriveFreshnessState(updatedAt = "") {
-  const timestamp = Date.parse(String(updatedAt || "").trim());
-  if (!Number.isFinite(timestamp)) return "unknown";
-  const ageMs = Date.now() - timestamp;
-  if (ageMs <= 5 * 60 * 1000) return "fresh";
-  if (ageMs <= 60 * 60 * 1000) return "aging";
-  return "stale";
-}
-
-function getClauseKeyword(clause = null, key = "") {
-  return String(clause?.keywords?.[key]?.value || clause?.keywords?.[key]?.raw || "").trim();
-}
-
-function getLastReturnClause(artifact = null) {
-  const returns = extractClausesByHead(artifact, "RTN");
-  return returns.length ? returns[returns.length - 1] : null;
-}
-
-function deriveLatestQualifiedReturnAt(runtimeRecord = null) {
-  const events = Array.isArray(runtimeRecord?.events) ? runtimeRecord.events : [];
-  const matched = events
-    .filter((event) => event?.kind === "return_received")
-    .map((event) => event?.createdAt)
-    .filter(Boolean)
-    .pop();
-  return String(matched || "").trim();
-}
-
-function mapMergedStateForField(mergedState = "") {
-  const normalized = String(mergedState || "").trim().toLowerCase();
-  if (normalized === "shape_error" || normalized === "flagged") return "fractured";
-  if (normalized === "attested") return "fog";
-  if (normalized === "awaiting") return "awaiting";
-  if (normalized === "sealed") return "mapped";
-  return "fog";
-}
-
-function formatAgeLabel(timestamp = "") {
-  const value = Date.parse(String(timestamp || "").trim());
-  if (!Number.isFinite(value)) return "not_returned";
-  const deltaSeconds = Math.max(0, Math.floor((Date.now() - value) / 1000));
-  if (deltaSeconds < 60) return `${deltaSeconds}s`;
-  const deltaMinutes = Math.floor(deltaSeconds / 60);
-  if (deltaMinutes < 60) return `${deltaMinutes}m`;
-  const deltaHours = Math.floor(deltaMinutes / 60);
-  return `${deltaHours}h`;
-}
-
-function deriveDomainKeyForEntry(entry = null) {
-  const sections = buildBoxSectionsFromArtifact(entry?.artifact);
-  const aimKey = toIdentifier(sections.aim || "");
-  if (aimKey) {
-    const tokens = aimKey.split("_").filter(Boolean);
-    return tokens.slice(0, 2).join("_") || aimKey;
-  }
-  const filename = String(entry?.filename || "").trim().toLowerCase();
-  return toIdentifier(filename.replace(/\.loe$/, "").split(/[-_]/).slice(0, 2).join("_"));
-}
-
-function deriveEntrySignalProfile(entry = null) {
-  const sourceDocuments = Array.isArray(entry?.sourceDocuments) ? entry.sourceDocuments : [];
-  const events = Array.isArray(entry?.runtimeWindow?.events) ? entry.runtimeWindow.events : [];
-  const importedEvents = events.filter((event) => event?.kind === "intake_imported");
-  const linkedImports = importedEvents.filter(
-    (event) => String(event?.metadata?.kind || "").trim() === "link",
-  ).length;
-  const externalEvidenceSignals = sourceDocuments.length + linkedImports;
-  return {
-    domainKey: deriveDomainKeyForEntry(entry),
-    importedEventsCount: importedEvents.length,
-    sourceDocumentsCount: sourceDocuments.length,
-    externalEvidenceSignals,
-    sharedCandidate: externalEvidenceSignals > 0,
-  };
-}
-
-function buildScopedEntries({ files = {}, activeFile = "", levelKey = "box" }) {
-  const entries = Object.entries(files || {}).map(([filename, entry]) => ({ filename, ...entry }));
-  if (levelKey === "box") {
-    return entries.filter((entry) => entry.filename === activeFile);
-  }
-  if (levelKey === "domain") {
-    const activeEntry = entries.find((entry) => entry.filename === activeFile) || null;
-    const domainKey = deriveDomainKeyForEntry(activeEntry);
-    if (!domainKey) return activeEntry ? [activeEntry] : [];
-    const domainEntries = entries.filter((entry) => deriveDomainKeyForEntry(entry) === domainKey);
-    return domainEntries.length ? domainEntries : activeEntry ? [activeEntry] : [];
-  }
-  if (levelKey === "shared") {
-    return entries.filter((entry) => deriveEntrySignalProfile(entry).sharedCandidate);
-  }
-  return entries;
 }
 
 function PaneCard({ title, testId, accent = TOKENS.accent, lines = [] }) {
@@ -735,6 +687,171 @@ function VoicePlayerPanel({ sourceText = "", documentKey = "", onStatus }) {
   );
 }
 
+function SettingsProfileHelpPanel({ projectKey = "", documentKey = "", onStatus }) {
+  const storageKey = getUtilityStorageKey(projectKey, documentKey);
+  const [activeTab, setActiveTab] = useState("settings");
+  const [settings, setSettings] = useState({
+    themeMode: "system",
+    density: "comfortable",
+    hotkeysEnabled: true,
+  });
+  const [profile, setProfile] = useState({
+    displayName: "",
+    role: "",
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setSettings((current) => ({
+        ...current,
+        ...(parsed?.settings || {}),
+      }));
+      setProfile((current) => ({
+        ...current,
+        ...(parsed?.profile || {}),
+      }));
+    } catch {
+      // Ignore broken local preference payloads.
+    }
+  }, [storageKey]);
+
+  function persist(nextSettings, nextProfile) {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          settings: nextSettings,
+          profile: nextProfile,
+        }),
+      );
+    } catch {
+      // Ignore storage failures to keep shell responsive.
+    }
+  }
+
+  function updateSettings(nextSettings) {
+    setSettings(nextSettings);
+    persist(nextSettings, profile);
+  }
+
+  function updateProfile(nextProfile) {
+    setProfile(nextProfile);
+    persist(settings, nextProfile);
+  }
+
+  return (
+    <section className="phase2-card phase2-settings-panel" data-testid="phase2-settings-panel">
+      <div className="phase2-card__title">Workspace Utility</div>
+      <div className="phase2-settings-tabs" role="tablist" aria-label="Settings profile help tabs">
+        <button
+          type="button"
+          data-testid="phase2-tab-settings"
+          className={`terminal-button ${activeTab === "settings" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("settings")}
+        >
+          Settings
+        </button>
+        <button
+          type="button"
+          data-testid="phase2-tab-profile"
+          className={`terminal-button ${activeTab === "profile" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("profile")}
+        >
+          Profile
+        </button>
+        <button
+          type="button"
+          data-testid="phase2-tab-help"
+          className={`terminal-button ${activeTab === "help" ? "is-active" : ""}`}
+          onClick={() => setActiveTab("help")}
+        >
+          Help
+        </button>
+      </div>
+
+      {activeTab === "settings" ? (
+        <div className="phase2-stack-gap" data-testid="phase2-settings-content">
+          <label className="phase2-card__meta">
+            Theme mode
+            <select
+              className="terminal-input"
+              value={settings.themeMode}
+              onChange={(event) => updateSettings({ ...settings, themeMode: event.target.value })}
+            >
+              <option value="system">System</option>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </label>
+          <label className="phase2-card__meta">
+            Density
+            <select
+              className="terminal-input"
+              value={settings.density}
+              onChange={(event) => updateSettings({ ...settings, density: event.target.value })}
+            >
+              <option value="comfortable">Comfortable</option>
+              <option value="compact">Compact</option>
+            </select>
+          </label>
+          <label className="phase2-settings-checkbox">
+            <input
+              type="checkbox"
+              checked={Boolean(settings.hotkeysEnabled)}
+              onChange={(event) => updateSettings({ ...settings, hotkeysEnabled: event.target.checked })}
+            />
+            <span>Enable compass hotkeys</span>
+          </label>
+          <button
+            type="button"
+            className="terminal-button"
+            onClick={() => onStatus("Preferences saved locally for this workspace.")}
+          >
+            Save preferences
+          </button>
+        </div>
+      ) : null}
+
+      {activeTab === "profile" ? (
+        <div className="phase2-stack-gap" data-testid="phase2-profile-content">
+          <input
+            className="terminal-input"
+            placeholder="Display name"
+            value={profile.displayName}
+            onChange={(event) => updateProfile({ ...profile, displayName: event.target.value })}
+          />
+          <input
+            className="terminal-input"
+            placeholder="Role (founder, operator, reviewer...)"
+            value={profile.role}
+            onChange={(event) => updateProfile({ ...profile, role: event.target.value })}
+          />
+          <div className="phase2-card__meta">
+            Current profile: {profile.displayName || "Anonymous"}{profile.role ? ` - ${profile.role}` : ""}
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "help" ? (
+        <div className="phase2-stack-gap" data-testid="phase2-help-content">
+          <div className="phase2-card__line">1. State your decision in Room.</div>
+          <div className="phase2-card__line">2. Send one lawful ping (move + test).</div>
+          <div className="phase2-card__line">3. Attach one return with provenance.</div>
+          <div className="phase2-card__line">4. Use next lawful move and close with proof.</div>
+          <a href="/workspace/phase1?phase2demo=1" className="phase2-link">
+            Open launch workspace
+          </a>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function EditorView({ files, activeFile, onSelectFile, parityOk }) {
   const artifact = files[activeFile]?.artifact || null;
   const runtimeRecord = files[activeFile]?.runtimeWindow || null;
@@ -822,11 +939,17 @@ function MirrorView({
   const sections = buildBoxSectionsFromArtifact(artifact);
   const [drillOpen, setDrillOpen] = useState(false);
   const [openRippleEventId, setOpenRippleEventId] = useState("");
+  const [compassEnabled, setCompassEnabled] = useState(false);
+  const [instrumentOpen, setInstrumentOpen] = useState(false);
+  const [boxCollapsed, setBoxCollapsed] = useState(false);
+  const [highlightRegion, setHighlightRegion] = useState("");
+  const [openSegmentId, setOpenSegmentId] = useState("");
   const [rangeIndex, setRangeIndex] = useState(0);
   const [rangePulse, setRangePulse] = useState(false);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [attestRationale, setAttestRationale] = useState("");
   const rangeStorageKey = getRangeStorageKey(projectKey, documentKey);
 
   useEffect(() => {
@@ -889,6 +1012,8 @@ function MirrorView({
   const badgeColor = BADGE_COLORS[runtimeRecord.state] || TOKENS.muted;
   const warnings = splitDiagnostics(artifact.diagnostics).warnings;
   const echoFieldModel = buildEchoFieldModel(artifact, runtimeRecord);
+  const interactionContract = derivePaneInteractionContract(artifact, runtimeRecord);
+  const paneContract = interactionContract.paneContract;
   const scopedMoveClauses = effectiveEntries.flatMap((entry) => extractClausesByHead(entry.artifact, "MOV"));
   const scopedTestClauses = effectiveEntries.flatMap((entry) => extractClausesByHead(entry.artifact, "TST"));
   const awaitingEntries = effectiveEntries.filter((entry) =>
@@ -904,6 +1029,8 @@ function MirrorView({
   );
 
   const pingLines = [
+    `required_action: ${paneContract.ping.requiredAction}`,
+    `proof_condition: ${paneContract.ping.proofCondition}`,
     `status: ${scopedMoveClauses.length > 0 && scopedTestClauses.length > 0 ? "sent" : "not_sent"}`,
     `outstanding_pings: ${awaitingEntries.length}`,
     scopedMoveClauses[scopedMoveClauses.length - 1]
@@ -912,6 +1039,8 @@ function MirrorView({
   ];
 
   const listenLines = [
+    `required_action: ${paneContract.listen.requiredAction}`,
+    `proof_condition: ${paneContract.listen.proofCondition}`,
     awaitingEntries.length
       ? `mode: listening (${awaitingEntries.length} awaiting)`
       : "mode: not_waiting",
@@ -927,6 +1056,8 @@ function MirrorView({
   const lastScopedReturnVia = getClauseKeyword(lastScopedReturn?.clause, "via") || "none";
   const scopedRippleCount = scopedEchoEvents.filter(({ event }) => event.kind === "distant_echo_arrived").length;
   const echoLines = [
+    `required_action: ${paneContract.echoes.requiredAction}`,
+    `proof_condition: ${paneContract.echoes.proofCondition}`,
     `returns: ${scopedReturnClauses.length}`,
     `ripple_events: ${scopedRippleCount}`,
     `provenance: ${lastScopedReturnVia}`,
@@ -947,7 +1078,17 @@ function MirrorView({
     0,
   );
   const scopeCountLabel = `${effectiveEntries.length}${scopedEntries.length === 0 ? " (fallback)" : ""}`;
+  const loopCompleted = (runtimeRecord?.events || []).some((event) => event.kind === "return_received");
+  const canUnlockCompass = loopCompleted || allEntries.length >= 3;
+  const shouldShowCompass = compassEnabled || canUnlockCompass;
+  const evidenceCount = sections.evidence.length;
+  const storyCount = sections.story.length;
+  const actionCount = sections.actions.length;
+  const ratioTotal = evidenceCount + storyCount || 1;
+  const evidenceRatio = Math.round((evidenceCount / ratioTotal) * 100);
   const fieldLines = [
+    `required_action: ${paneContract.field.requiredAction}`,
+    `proof_condition: ${paneContract.field.proofCondition}`,
     `field_state: ${echoFieldModel.fieldState}`,
     `mapped/fog/fractured/awaiting: ${mappedCount}/${Math.max(0, effectiveEntries.length - mappedCount - fracturedCount - awaitingCount)}/${fracturedCount}/${awaitingCount}`,
     `freshness: ${freshness}`,
@@ -1009,9 +1150,99 @@ function MirrorView({
     setRangePulse(true);
   }
 
+  function handleSegmentToggle(segmentId, region) {
+    setOpenSegmentId((current) => (current === segmentId ? "" : segmentId));
+    if (region) {
+      setHighlightRegion(region);
+      setBoxCollapsed(false);
+      window.setTimeout(() => setHighlightRegion(""), 1200);
+    }
+  }
+
+  function handleAttestOverride() {
+    const rationale = String(attestRationale || "").trim();
+    if (!rationale) {
+      onStatus("Attest override requires rationale.");
+      return;
+    }
+    const escaped = rationale.replace(/"/g, "'");
+    const nextSource = `${String(fileEntry.source || "").trim()}\nCLS attest manual_override if "${escaped}"\n`;
+    onSourceUpdate(nextSource, {
+      kind: "manual_attest_requested",
+      detail: "Manual attest requested with rationale.",
+      metadata: { rationale },
+    });
+    setAttestRationale("");
+    onStatus("Attest override submitted to compiler/runtime gate.");
+  }
+
   return (
     <div className="phase2-mirror-layout">
       <div>
+        <section data-testid="phase2-room-surface" className="phase2-card phase2-block-gap">
+          <div className="phase2-box-head">
+            <div className="phase2-card__title">The Room</div>
+            <button type="button" data-testid="phase2-state-badge" className="phase2-state-badge" style={{ color: badgeColor }}>
+              {interactionContract.stateChip.stateLabel}
+            </button>
+          </div>
+          <div className="phase2-card__line">What am I testing now? {paneContract.ping.requiredAction}</div>
+          <div className="phase2-card__meta">What is still unknown? {paneContract.echoes.requiredAction}</div>
+          <div className="phase2-card__meta">What is next lawful move? {interactionContract.nextBestAction}</div>
+          <div className="phase2-card__meta">Proof condition: {paneContract.field.proofCondition}</div>
+          <div className="phase2-scroll phase2-chat-scroll phase2-block-gap">
+            {messages.length === 0 ? (
+              <div className="phase2-pane__empty">Start by describing the decision you want to test.</div>
+            ) : (
+              messages.map((message, index) => (
+                <div key={`message-${index}`} className="phase2-chat-message">
+                  {message.role === "human" ? (
+                    <div>
+                      <strong>You:</strong> {message.text}
+                    </div>
+                  ) : (
+                    <div>
+                      <strong>Seven:</strong>{" "}
+                      {(message?.proposal?.segments || []).length ? (
+                        (message.proposal.segments || []).map((segment, segmentIndex) => (
+                          <SevenSegment
+                            key={`segment-${segmentIndex}`}
+                            segment={segment}
+                            index={segmentIndex}
+                            messageIndex={index}
+                            openSegmentId={openSegmentId}
+                            onToggle={handleSegmentToggle}
+                          />
+                        ))
+                      ) : (
+                        <span>{message.proposal?.segments?.[0]?.text || "No segment returned."}</span>
+                      )}
+                      <div style={{ color: message.gate?.accepted ? TOKENS.success : TOKENS.error }}>
+                        {message.gate?.accepted ? "accepted" : `rejected (${message.gate?.reason})`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+          <textarea
+            data-testid="phase2-chat-input"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            rows={3}
+            placeholder="Describe your next test and ask Seven for one lawful proposal"
+            className="terminal-input"
+            style={{ width: "100%", minHeight: 84 }}
+          />
+          <div className="phase2-row">
+            <button type="button" className="terminal-button" onClick={handleSend} data-testid="phase2-chat-send" disabled={pending}>
+              {pending ? "Sending..." : "Send to Seven"}
+            </button>
+            {statusMessage ? <div className="phase2-card__meta">{statusMessage}</div> : null}
+          </div>
+        </section>
+
         <section data-testid="phase2-product-law" className="phase2-card phase2-block-gap">
           <div className="phase2-card__title" style={{ color: TOKENS.accent }}>
             Product Law
@@ -1020,54 +1251,91 @@ function MirrorView({
             Only returned evidence clears fog; mapped regions can become stale without renewed echoes.
           </div>
         </section>
-        <section data-testid="phase2-four-pane-instrument" className="phase2-card phase2-block-gap">
-          <div className="phase2-instrument-head">
-            <span>Echo Compass</span>
-            <span data-testid="phase2-range-label" className="phase2-card__meta">
-              {activeRange.label}
-            </span>
-          </div>
-          <div className="phase2-range-switch-wrap">
-            <div className="phase2-four-pane-grid">
-              <PaneCard title="△ Ping" testId="phase2-pane-ping" accent={TOKENS.warn} lines={pingLines} />
-              <PaneCard title="◻ Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
-              <PaneCard title="○ Listen" testId="phase2-pane-listen" accent={TOKENS.warn} lines={listenLines} />
-              <PaneCard title="7 Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
+        {shouldShowCompass ? (
+          <section data-testid="phase2-four-pane-instrument" className="phase2-card phase2-block-gap">
+            <div className="phase2-instrument-head">
+              <span>Compass (ambient)</span>
+              <span data-testid="phase2-range-label" className="phase2-card__meta">
+                {activeRange.label}
+              </span>
+            </div>
+            <div className="phase2-range-switch-wrap">
+              <div className="phase2-four-pane-grid">
+                <PaneCard title="△ Ping" testId="phase2-pane-ping" accent={TOKENS.warn} lines={pingLines} />
+                <PaneCard title="◻ Field" testId="phase2-pane-field" accent={badgeColor} lines={fieldLines} />
+                <PaneCard title="○ Listen" testId="phase2-pane-listen" accent={TOKENS.warn} lines={listenLines} />
+                <PaneCard title="7 Echoes" testId="phase2-pane-echoes" accent={TOKENS.success} lines={echoLines} />
+              </div>
+              <button
+                type="button"
+                data-testid="phase2-range-switch"
+                onClick={cycleRange}
+                className="phase2-range-switch"
+                style={{ boxShadow: rangePulse ? "0 0 0 6px color-mix(in srgb, var(--loegos-brand) 25%, transparent)" : "none" }}
+                title="Switch range level"
+              >
+                ⊙
+              </button>
+            </div>
+            <div data-testid="phase2-range-track" className="phase2-range-track">
+              {RANGE_LEVELS.map((level, index) => {
+                const isActive = index === rangeIndex;
+                return (
+                  <div key={level.key} className={`phase2-range-track__item ${isActive ? "is-active" : ""}`}>
+                    L{index + 1}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="phase2-card__meta" data-testid="phase2-range-hint">
+              {"Center switch rotates range: box -> domain -> full field -> shared field."}
+            </div>
+            <div className="phase2-card__meta phase2-hotkeys-hint" data-testid="phase2-range-hotkeys-hint">
+              Hotkeys: 1=box, 2=domain, 3=full field, 4=shared field.
+            </div>
+          </section>
+        ) : (
+          <section className="phase2-card phase2-block-gap" data-testid="phase2-compass-lock">
+            <div className="phase2-card__title">Compass locked</div>
+            <div className="phase2-card__line">
+              {"Unlock after first full ping->return loop, 3+ boxes, or enable manually."}
             </div>
             <button
               type="button"
-              data-testid="phase2-range-switch"
-              onClick={cycleRange}
-              className="phase2-range-switch"
-              style={{ boxShadow: rangePulse ? "0 0 0 6px color-mix(in srgb, var(--loegos-brand) 25%, transparent)" : "none" }}
-              title="Switch range level"
+              className="terminal-button"
+              data-testid="phase2-compass-enable"
+              onClick={() => setCompassEnabled(true)}
             >
-              ⊙
+              Enable compass now
             </button>
-          </div>
-          <div data-testid="phase2-range-track" className="phase2-range-track">
-            {RANGE_LEVELS.map((level, index) => {
-              const isActive = index === rangeIndex;
-              return (
-                <div
-                  key={level.key}
-                  className={`phase2-range-track__item ${isActive ? "is-active" : ""}`}
-                >
-                  L{index + 1}
-                </div>
-              );
-            })}
-          </div>
-          <div className="phase2-card__meta" data-testid="phase2-range-hint">
-            {"Center switch rotates range: box -> domain -> full field -> shared field."}
-          </div>
-          <div className="phase2-card__meta phase2-hotkeys-hint" data-testid="phase2-range-hotkeys-hint">
-            Hotkeys: 1=box, 2=domain, 3=full field, 4=shared field.
-          </div>
-        </section>
+          </section>
+        )}
         <section className="phase2-card phase2-block-gap">
           <div className="phase2-box-head">
-            <strong>Box</strong>
+            <strong>Box Mirror</strong>
+            <div className="phase2-row">
+              <div className="phase2-card__meta">
+                {sections.aim || "structure forming"} | e:{evidenceCount} s:{storyCount} a:{actionCount}
+              </div>
+              <button
+                type="button"
+                className="terminal-button"
+                data-testid="phase2-box-collapse-toggle"
+                onClick={() => setBoxCollapsed((value) => !value)}
+              >
+                {boxCollapsed ? "Expand" : "Collapse"}
+              </button>
+            </div>
+          </div>
+          <div className="phase2-ratio-wrap" data-testid="phase2-evidence-story-ratio">
+            <span className="phase2-ratio-wrap__label">◻</span>
+            <div className="phase2-ratio-wrap__track">
+              <div className="phase2-ratio-wrap__fill" style={{ width: `${evidenceRatio}%` }} />
+            </div>
+            <span className="phase2-ratio-wrap__label">○</span>
+          </div>
+          {!boxCollapsed ? (
+            <>
             <button
               type="button"
               data-testid="phase2-state-badge"
@@ -1077,147 +1345,159 @@ function MirrorView({
             >
               {runtimeRecord.state}
             </button>
-          </div>
-          {drillOpen ? (
-            <div className="phase2-card__meta">
-              Compile: {artifact.compileState} | Runtime: {artifact.runtimeState} | Closure:{" "}
-              {artifact.closureType || "none"}
-            </div>
-          ) : null}
-          <div
-            data-testid="phase2-parity-chip"
-            className="phase2-card__meta"
-            style={{ color: parityOk ? TOKENS.success : TOKENS.error }}
-          >
-            mirror/editor parity: {parityOk ? "ok" : "mismatch"}
-          </div>
-          <SectionCard title="Aim" items={sections.aim ? [{ text: sections.aim, line: 0 }] : []} accent={TOKENS.accent} />
-          <div className="phase2-two-col">
-            <SectionCard title="Evidence" items={sections.evidence} accent={TOKENS.success} />
-            <SectionCard title="Story" items={sections.story} accent={TOKENS.warn} />
-          </div>
-          <div>
-            <SectionCard title="Action" items={sections.actions} accent={TOKENS.accent} />
-          </div>
-          <div className="phase2-divider">
-            <div className="phase2-card__title">Shape Advisory (Mirror only)</div>
-            {warnings.length ? (
-              <div className="phase2-card__line" style={{ color: TOKENS.warn }}>{warnings[0].message}</div>
-            ) : (
-              <div className="phase2-card__empty">No advisory right now.</div>
-            )}
-          </div>
-          <div>
-            <a href="/shapelibrary" target="_blank" rel="noreferrer" className="phase2-link">
-              Open Shape Library Operator Surface
-            </a>
-          </div>
-          <div>
-            <EchoLegibilityPanel model={echoFieldModel} />
-          </div>
-        </section>
-
-        <section className="phase2-card phase2-block-gap">
-          <div className="phase2-card__title">Chat Intake (Proposal Gate)</div>
-          <div className="phase2-scroll phase2-chat-scroll">
-            {messages.map((message, index) => (
-              <div key={`message-${index}`} className="phase2-chat-message">
-                {message.role === "human" ? (
-                  <div>
-                    <strong>You:</strong> {message.text}
-                  </div>
-                ) : (
-                  <div>
-                    <strong>Seven:</strong> {message.proposal?.segments?.[0]?.text}
-                    <div style={{ color: message.gate?.accepted ? TOKENS.success : TOKENS.error }}>
-                      {message.gate?.accepted ? "accepted" : `rejected (${message.gate?.reason})`}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <textarea
-            data-testid="phase2-chat-input"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            rows={3}
-            placeholder="Type input for Seven"
-            className="terminal-input"
-            style={{ width: "100%", minHeight: 84 }}
-          />
-          <button type="button" className="terminal-button" onClick={handleSend} data-testid="phase2-chat-send" disabled={pending}>
-            {pending ? "Sending..." : "Send"}
-          </button>
-          {statusMessage ? <div className="phase2-card__meta">{statusMessage}</div> : null}
-        </section>
-
-        <section className="phase2-card phase2-block-gap">
-          <div className="phase2-card__title">Runtime Ledger Timeline</div>
-          <div data-testid="phase2-ledger-panel" className="phase2-scroll phase2-ledger-scroll">
-            {(runtimeRecord?.events || []).length === 0 ? (
-              <div style={{ color: TOKENS.muted }}>No events yet.</div>
-            ) : (
-              (runtimeRecord.events || [])
-                .slice()
-                .reverse()
-                .map((event) => (
-                  <div key={event.id} className="phase2-ledger-item">
-                    {event.kind === "distant_echo_arrived" ? (
-                      <div
-                        data-testid="phase2-distant-echo-event"
-                        style={{
-                          border: `1px solid ${TOKENS.accent}`,
-                          borderRadius: 8,
-                          padding: "4px 6px",
-                          background: "var(--loegos-surface-2)",
-                        }}
-                      >
-                        <strong>Ripple:</strong> {event.detail || "Distant echo arrived"}
-                        <div className="phase2-block-gap-xs">
-                          <button
-                            type="button"
-                            data-testid="phase2-ripple-toggle"
-                            onClick={() =>
-                              setOpenRippleEventId((current) => (current === event.id ? "" : event.id))
-                            }
-                            className="terminal-button"
-                          >
-                            {openRippleEventId === event.id ? "Hide chain" : "View chain"}
-                          </button>
-                        </div>
-                        {openRippleEventId === event.id && String(event?.metadata?.chainSummary || "").trim() ? (
-                          <div className="phase2-card__meta">
-                            chain: {event.metadata.chainSummary}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div>
-                        {event.kind} - {event.detail || "updated"}
-                      </div>
-                    )}
-                  </div>
-                ))
-            )}
-            {(runtimeRecord?.receipts || []).length > 0 ? (
-              <div className="phase2-block-gap-xs">
-                <div className="phase2-card__title">Receipts</div>
-                {(runtimeRecord.receipts || [])
-                  .slice()
-                  .reverse()
-                  .map((receipt) => (
-                    <div key={receipt.id} className="phase2-ledger-item">
-                      {receipt.kind} ({receipt.compilationId})
-                    </div>
-                  ))}
+            {drillOpen ? (
+              <div className="phase2-card__meta">
+                Compile: {artifact.compileState} | Runtime: {artifact.runtimeState} | Closure:{" "}
+                {artifact.closureType || "none"}
               </div>
             ) : null}
+            <div
+              data-testid="phase2-parity-chip"
+              className="phase2-card__meta"
+              style={{ color: parityOk ? TOKENS.success : TOKENS.error }}
+            >
+              mirror/editor parity: {parityOk ? "ok" : "mismatch"}
+            </div>
+            <div className={`phase2-region ${highlightRegion === "aim" ? "is-highlighted" : ""}`}>
+              <SectionCard title="Aim" items={sections.aim ? [{ text: sections.aim, line: 0 }] : []} accent={TOKENS.accent} />
+            </div>
+            <div className="phase2-two-col">
+              <div className={`phase2-region ${highlightRegion === "evidence" ? "is-highlighted" : ""}`}>
+                <SectionCard title="Evidence" items={sections.evidence} accent={TOKENS.success} />
+              </div>
+              <div className={`phase2-region ${highlightRegion === "story" ? "is-highlighted" : ""}`}>
+                <SectionCard title="Story" items={sections.story} accent={TOKENS.warn} />
+              </div>
+            </div>
+            <div className={`phase2-region ${highlightRegion === "action" ? "is-highlighted" : ""}`}>
+              <SectionCard title="Action" items={sections.actions} accent={TOKENS.accent} />
+            </div>
+            <div className="phase2-divider">
+              <div className="phase2-card__title">Shape Advisory (Mirror only)</div>
+              {warnings.length ? (
+                <div className="phase2-card__line" style={{ color: TOKENS.warn }}>{warnings[0].message}</div>
+              ) : (
+                <div className="phase2-card__empty">No advisory right now.</div>
+              )}
+            </div>
+            <div>
+              <a href="/shapelibrary" target="_blank" rel="noreferrer" className="phase2-link">
+                Open Shape Library Operator Surface
+              </a>
+            </div>
+            <div>
+              <EchoLegibilityPanel model={echoFieldModel} />
+            </div>
+            </>
+          ) : (
+            <div className="phase2-card__meta">Collapsed for focus. Expand to inspect full structure, advisory, and legibility.</div>
+          )}
+        </section>
+        <section className="phase2-card phase2-block-gap" data-testid="phase2-instrument-drawer">
+          <div className="phase2-box-head">
+            <div className="phase2-card__title">Instrument drawer</div>
+            <button type="button" className="terminal-button" onClick={() => setInstrumentOpen((current) => !current)}>
+              {instrumentOpen ? "Hide advanced" : "Show advanced"}
+            </button>
           </div>
+          {instrumentOpen ? (
+            <>
+              <div className="phase2-card__meta">
+                Trace, audit, and override controls. Compiler/runtime still decide lawful state.
+              </div>
+              <div className="phase2-card phase2-block-gap">
+                <div className="phase2-card__title">Manual attest override</div>
+                <div className="phase2-card__meta">
+                  Use only when closure requires human attestation with explicit rationale.
+                </div>
+                <textarea
+                  value={attestRationale}
+                  onChange={(event) => setAttestRationale(event.target.value)}
+                  rows={2}
+                  className="terminal-input"
+                  placeholder='Explain rationale for "CLS attest ... if"'
+                  style={{ width: "100%" }}
+                />
+                <button type="button" className="terminal-button" onClick={handleAttestOverride}>
+                  Submit attest request
+                </button>
+              </div>
+              <div className="phase2-card__title">Runtime Ledger Timeline</div>
+              <div data-testid="phase2-ledger-panel" className="phase2-scroll phase2-ledger-scroll">
+                {(runtimeRecord?.events || []).length === 0 ? (
+                  <div style={{ color: TOKENS.muted }}>No events yet.</div>
+                ) : (
+                  (runtimeRecord.events || [])
+                    .slice()
+                    .reverse()
+                    .map((event) => (
+                      <div key={event.id} className="phase2-ledger-item">
+                        {event.kind === "distant_echo_arrived" ? (
+                          <div
+                            data-testid="phase2-distant-echo-event"
+                            style={{
+                              border: `1px solid ${TOKENS.accent}`,
+                              borderRadius: 8,
+                              padding: "4px 6px",
+                              background: "var(--loegos-surface-2)",
+                            }}
+                          >
+                            <strong>Ripple:</strong> {event.detail || "Distant echo arrived"}
+                            <div className="phase2-block-gap-xs">
+                              <button
+                                type="button"
+                                data-testid="phase2-ripple-toggle"
+                                onClick={() =>
+                                  setOpenRippleEventId((current) => (current === event.id ? "" : event.id))
+                                }
+                                className="terminal-button"
+                              >
+                                {openRippleEventId === event.id ? "Hide chain" : "View chain"}
+                              </button>
+                            </div>
+                            {openRippleEventId === event.id && String(event?.metadata?.chainSummary || "").trim() ? (
+                              <div className="phase2-card__meta">
+                                chain: {event.metadata.chainSummary}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div>
+                            {event.kind} - {event.detail || "updated"}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                )}
+                {(runtimeRecord?.receipts || []).length > 0 ? (
+                  <div className="phase2-block-gap-xs">
+                    <div className="phase2-card__title">Receipts</div>
+                    {(runtimeRecord.receipts || [])
+                      .slice()
+                      .reverse()
+                      .map((receipt) => (
+                        <div key={receipt.id} className="phase2-ledger-item">
+                          {receipt.kind} ({receipt.compilationId})
+                        </div>
+                      ))}
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="phase2-card__meta">
+              Hidden by default. Open when you need deep diagnostics, ledger trace, or attest control.
+            </div>
+          )}
         </section>
       </div>
 
       <div className="phase2-side-column">
+        <SettingsProfileHelpPanel
+          projectKey={projectKey}
+          documentKey={documentKey}
+          onStatus={onStatus}
+        />
         <IntakePanel
           projectKey={projectKey}
           onStatus={onStatus}

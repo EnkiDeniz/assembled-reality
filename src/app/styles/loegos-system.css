@@ -2027,6 +2027,84 @@
   color: var(--loegos-text-secondary);
 }
 
+.phase2-segment-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 4px;
+  margin-bottom: 2px;
+}
+
+.phase2-segment {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--loegos-text-primary);
+  padding: 0 2px;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.phase2-segment.is-tagged {
+  border-color: color-mix(in srgb, var(--loegos-brand) 35%, transparent);
+  cursor: pointer;
+}
+
+.phase2-segment.is-open {
+  background: color-mix(in srgb, var(--loegos-brand) 12%, transparent);
+}
+
+.phase2-segment__clause {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--loegos-brand);
+  border: 1px solid var(--loegos-line);
+  border-radius: 8px;
+  padding: 2px 6px;
+  background: var(--loegos-surface-2);
+}
+
+.phase2-ratio-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+
+.phase2-ratio-wrap__label {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--loegos-text-secondary);
+}
+
+.phase2-ratio-wrap__track {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--loegos-surface-2);
+  border: 1px solid var(--loegos-line);
+}
+
+.phase2-ratio-wrap__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    var(--loegos-signal-clear) 0%,
+    var(--loegos-brand) 100%
+  );
+  transition: width 220ms ease;
+}
+
+.phase2-region {
+  border-radius: 10px;
+  transition: box-shadow 180ms ease;
+}
+
+.phase2-region.is-highlighted {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--loegos-brand) 45%, transparent);
+}
+
 .phase2-scroll {
   overflow: auto;
 }
@@ -2110,14 +2188,97 @@
   margin-right: 8px;
 }
 
+.phase2-settings-panel .terminal-button.is-active {
+  border-color: var(--loegos-brand);
+  color: var(--loegos-brand);
+}
+
+.phase2-settings-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.phase2-settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--loegos-text-secondary);
+}
+
 @media (max-width: 960px) {
   .phase2-mirror-layout {
     grid-template-columns: 1fr;
+    padding: 10px;
   }
 
   .phase2-four-pane-grid,
   .phase2-two-col,
   .phase2-echo-legibility__grid {
     grid-template-columns: 1fr;
+  }
+
+  .phase2-shell__header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .phase2-side-column {
+    grid-template-columns: 1fr;
+  }
+
+  .phase2-range-switch {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .phase2-shell__header {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .phase2-shell__brand {
+    width: 100%;
+  }
+
+  .phase2-shell__meta {
+    width: 100%;
+  }
+
+  .phase2-row {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .phase2-card {
+    padding: 9px;
+  }
+
+  .phase2-chat-scroll {
+    max-height: 180px;
+  }
+
+  .phase2-ledger-scroll {
+    max-height: 160px;
+  }
+
+  .phase2-range-track__item {
+    font-size: 9px;
+    padding: 3px 4px;
+  }
+
+  .phase2-segment-wrap {
+    display: block;
+    margin-right: 0;
+    margin-bottom: 6px;
+  }
+
+  .phase2-segment__clause {
+    display: block;
+    margin-top: 4px;
   }
 }
