@@ -263,6 +263,12 @@ export function normalizeRoomMeta(value = null) {
   };
 }
 
+// Compatibility for older workspace/phase1 imports that still treat project room data
+// as a "state" object. The canonical Room now stores lightweight metadata instead.
+export function normalizeRoomState(value = null) {
+  return normalizeRoomMeta(value);
+}
+
 export function mergeRoomMeta(currentMeta = null, patch = {}) {
   const current = normalizeRoomMeta(currentMeta);
   const nextPatch = patch && typeof patch === "object" ? patch : {};
@@ -279,6 +285,10 @@ export function mergeRoomMeta(currentMeta = null, patch = {}) {
     ...nextPatch,
     ui: nextUi,
   });
+}
+
+export function mergeRoomState(currentState = null, patch = {}) {
+  return mergeRoomMeta(currentState, patch);
 }
 
 export function normalizeRoomLegacySnapshot(value = null) {
