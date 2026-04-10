@@ -20,6 +20,12 @@ import {
   X,
 } from "lucide-react";
 import styles from "@/components/room/RoomWorkspace.module.css";
+import {
+  deriveRoomTerrainPresentation,
+  getMirrorRegionRole,
+  getRoomShapeRole,
+  getSegmentShapeRole,
+} from "@/components/room/roomDesignSystem";
 
 const DEFAULT_PROJECT_KEY = "default-project";
 
@@ -28,18 +34,6 @@ const RECEIPT_RESULT_OPTIONS = [
   { value: "surprised", label: "Surprised" },
   { value: "contradicted", label: "Contradicted" },
 ];
-
-const SEGMENT_TONES = {
-  aim: { glyph: "△", toneClass: styles.segmentToneAim },
-  witness: { glyph: "◻", toneClass: styles.segmentToneEvidence },
-  evidence: { glyph: "◻", toneClass: styles.segmentToneEvidence },
-  story: { glyph: "○", toneClass: styles.segmentToneStory },
-  move: { glyph: "->", toneClass: styles.segmentToneMoves },
-  test: { glyph: "?", toneClass: styles.segmentToneMoves },
-  return: { glyph: "<-", toneClass: styles.segmentToneReturns },
-  receipt: { glyph: "<-", toneClass: styles.segmentToneReturns },
-  other: { glyph: "", toneClass: styles.segmentToneOther },
-};
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -99,8 +93,18 @@ function findReturnForReceipt(view = null, receiptKitId = "") {
   return items.find((item) => normalizeText(item?.receiptKitId) === normalizedReceiptKitId) || null;
 }
 
+function getToneClass(tone = "neutral") {
+  return (
+    styles[`tone${String(tone || "neutral").replace(/^\w/, (char) => char.toUpperCase())}`] || styles.toneNeutral
+  );
+}
+
 function getSegmentTone(domain = "") {
-  return SEGMENT_TONES[normalizeText(domain).toLowerCase()] || SEGMENT_TONES.other;
+  const shapeRole = getSegmentShapeRole(domain);
+  return {
+    shapeRole,
+    toneClass: getToneClass(shapeRole.tone),
+  };
 }
 
 function shouldShowMessageLead(content = "", segments = []) {
@@ -121,14 +125,58 @@ function isActiveProposalMessage(view = null, message = null) {
   );
 }
 
-function FieldStateChip({ fieldState, floating = false }) {
-  const toneClass =
-    styles[`stateTone${String(fieldState?.tone || "new").replace(/^\w/, (char) => char.toUpperCase())}`] ||
-    styles.stateToneNew;
+function Kicker({ children, tone = "neutral", className = "" }) {
+  return <span className={`${styles.kicker} ${getToneClass(tone)} ${className}`}>{children}</span>;
+}
+
+function ShapeGlyph({ role = "other", className = "" }) {
+  const shapeRole = getRoomShapeRole(role);
+  if (!shapeRole.glyph) return null;
   return (
-    <span className={`${styles.fieldChip} ${toneClass} ${floating ? styles.fieldChipFloating : ""}`}>
-      <span className={styles.fieldDot} />
-      {fieldState?.label || "Open"}
+    <span className={`${styles.shapeGlyph} ${getToneClass(shapeRole.tone)} ${className}`} aria-hidden="true">
+      {shapeRole.glyph}
+    </span>
+  );
+}
+
+function SignalDot({ tone = "neutral", pulse = false, className = "" }) {
+  return (
+    <span
+      className={`${styles.signalDot} ${styles[`dotTone${String(tone || "neutral").replace(/^\w/, (char) => char.toUpperCase())}`] || styles.dotToneNeutral} ${pulse ? styles.signalDotPulse : ""} ${className}`}
+      aria-hidden="true"
+    />
+  );
+}
+
+function RatioBar({ ratio = 0.5, className = "" }) {
+  const boundedRatio = Math.max(0, Math.min(1, Number.isFinite(Number(ratio)) ? Number(ratio) : 0.5));
+  return (
+    <div className={`${styles.mirrorRatio} ${className}`}>
+      <ShapeGlyph role="evidence" className={styles.mirrorRatioGlyph} />
+      <div className={styles.mirrorRatioTrack}>
+        <div
+          className={styles.mirrorRatioFill}
+          style={{ width: `${Math.round(boundedRatio * 100)}%` }}
+        />
+      </div>
+      <ShapeGlyph role="story" className={`${styles.mirrorRatioGlyph} ${styles.mirrorRatioGlyphStory}`} />
+    </div>
+  );
+}
+
+function StatusChip({ view, floating = false }) {
+  const terrain = deriveRoomTerrainPresentation({ fieldState: view?.fieldState });
+  const terrainClass =
+    styles[`terrain${String(terrain.key || "fog").replace(/^\w/, (char) => char.toUpperCase())}`] || styles.terrainFog;
+
+  return (
+    <span
+      className={`${styles.fieldChip} ${terrainClass} ${floating ? styles.fieldChipFloating : ""}`}
+      aria-label={`${terrain.canonicalLabel}. ${terrain.description}`}
+      title={terrain.description}
+    >
+      <SignalDot tone={terrain.tone} pulse={terrain.key === "awaiting"} className={styles.fieldDot} />
+      <span className={styles.fieldChipLabel}>{terrain.canonicalLabel || "Open"}</span>
     </span>
   );
 }
@@ -144,19 +192,20 @@ function FogPlaceholder({ children = "Not enough signal yet." }) {
 }
 
 function MirrorRegion({
-  title,
-  glyph,
+  region = "other",
+  title = "",
   caption = "",
   children = null,
   highlighted = false,
-  tone = "other",
   delay = 0,
   fullWidth = false,
 }) {
   if (!children) return null;
 
+  const shapeRole = getMirrorRegionRole(region);
   const toneClass =
-    styles[`mirrorTone${String(tone || "other").replace(/^\w/, (char) => char.toUpperCase())}`] || "";
+    styles[`mirrorTone${String(shapeRole.key || "other").replace(/^\w/, (char) => char.toUpperCase())}`] || "";
+  const regionLabel = title || shapeRole.regionLabel;
 
   return (
     <section
@@ -165,8 +214,10 @@ function MirrorRegion({
     >
       <div className={styles.mirrorRegionHead}>
         <div className={styles.mirrorRegionLabel}>
-          {glyph ? <span className={styles.mirrorRegionGlyph}>{glyph}</span> : null}
-          <h3>{title}</h3>
+          <ShapeGlyph role={shapeRole.key} className={styles.mirrorRegionGlyph} />
+          <Kicker tone={shapeRole.tone} className={styles.mirrorRegionTitle}>
+            {regionLabel}
+          </Kicker>
         </div>
         {caption ? <span className={styles.mirrorRegionCount}>{caption}</span> : null}
       </div>
@@ -198,6 +249,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
     <section className={styles.mirrorStrip}>
       <button type="button" className={styles.mirrorToggle} onClick={onToggle}>
         <span className={styles.mirrorToggleGlyph}>{collapsed ? "▸" : "▾"}</span>
+        <ShapeGlyph role="aim" className={styles.mirrorToggleShape} />
         <span className={styles.mirrorToggleSummary}>{summary}</span>
       </button>
 
@@ -205,9 +257,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
         <div className={styles.mirrorBodyInner}>
           {normalizeText(mirror?.aim?.text) ? (
             <MirrorRegion
-              title="Aim"
-              glyph="△"
-              tone="aim"
+              region="aim"
               highlighted={highlightedRegion === "aim"}
               delay={0}
               fullWidth
@@ -220,25 +270,14 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
           ) : null}
 
           {showEvidenceStory ? (
-            <div className={styles.mirrorRatio}>
-              <span className={styles.mirrorRatioGlyph}>◻</span>
-              <div className={styles.mirrorRatioTrack}>
-                <div
-                  className={styles.mirrorRatioFill}
-                  style={{ width: `${Math.max(0, Math.min(100, evidenceRatio * 100))}%` }}
-                />
-              </div>
-              <span className={`${styles.mirrorRatioGlyph} ${styles.mirrorRatioGlyphStory}`}>○</span>
-            </div>
+            <RatioBar ratio={evidenceRatio} />
           ) : null}
 
           {showEvidenceStory ? (
             <div className={styles.mirrorSplit}>
               {evidenceItems.length ? (
                 <MirrorRegion
-                  title="Evidence"
-                  glyph="◻"
-                  tone="evidence"
+                  region="evidence"
                   caption={String(evidenceItems.length)}
                   highlighted={highlightedRegion === "evidence"}
                   delay={400}
@@ -266,9 +305,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
 
               {storyItems.length ? (
                 <MirrorRegion
-                  title="Story"
-                  glyph="○"
-                  tone="story"
+                  region="story"
                   caption={String(storyItems.length)}
                   highlighted={highlightedRegion === "story"}
                   delay={500}
@@ -290,9 +327,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
 
           {moveItems.length ? (
             <MirrorRegion
-              title="Ping Suggested"
-              glyph="→"
-              tone="moves"
+              region="moves"
               caption={String(moveItems.length)}
               highlighted={highlightedRegion === "moves"}
               delay={700}
@@ -314,9 +349,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
 
           {returnItems.length ? (
             <MirrorRegion
-              title="Returns / Receipts"
-              glyph="↩"
-              tone="returns"
+              region="returns"
               caption={String(returnItems.length)}
               highlighted={highlightedRegion === "returns"}
               delay={800}
@@ -345,7 +378,9 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
 function StarterView({ starter = null }) {
   return (
     <section className={styles.starter}>
-      <span className={styles.eyebrow}>Room</span>
+      <Kicker tone="neutral" className={styles.starterKicker}>
+        Room
+      </Kicker>
       <h1>{starter?.firstLine || "What's on your mind?"}</h1>
       <p>{starter?.secondLine || "A decision. A question. Something you're carrying. Just start talking."}</p>
     </section>
@@ -357,7 +392,7 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <div>
-          <span className={styles.eyebrow}>Boxes</span>
+          <Kicker tone="neutral">Boxes</Kicker>
           <strong>Open another room</strong>
         </div>
         <button type="button" className={styles.secondaryButton} onClick={onCreate}>
@@ -414,7 +449,7 @@ function CreateBoxForm({ onCreate, busy }) {
     <form className={styles.panel} onSubmit={handleSubmit}>
       <div className={styles.panelHead}>
         <div>
-          <span className={styles.eyebrow}>New Box</span>
+          <Kicker tone="brand">New Box</Kicker>
           <strong>Open a fresh room</strong>
         </div>
       </div>
@@ -555,7 +590,7 @@ function SourceTray({ projectKey, onComplete }) {
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <div>
-          <span className={styles.eyebrow}>Source</span>
+          <Kicker tone="grounded">Source</Kicker>
           <strong>Bring witness into the room</strong>
         </div>
       </div>
@@ -636,11 +671,21 @@ function SourceTray({ projectKey, onComplete }) {
 function ReturnCard({ item }) {
   if (!item) return null;
 
+  const resultTone =
+    normalizeText(item?.result).toLowerCase() === "contradicted"
+      ? "flagged"
+      : normalizeText(item?.result).toLowerCase() === "surprised"
+        ? "story"
+        : "grounded";
+
   return (
     <div className={styles.returnCard}>
       <div className={styles.returnHead}>
         <strong>{item.label || "Return"}</strong>
-        <span className={styles.returnBadge}>{item.result || "matched"}</span>
+        <span className={`${styles.returnBadge} ${getToneClass(resultTone)}`}>
+          <SignalDot tone={resultTone} />
+          {item.result || "matched"}
+        </span>
       </div>
       <div className={styles.compareGrid}>
         <div>
@@ -767,7 +812,7 @@ function ReceiptKitCard({ receiptKit, view, onComplete, busy }) {
     <div className={styles.receiptKit}>
       <div className={styles.receiptHead}>
         <div>
-          <span className={styles.eyebrow}>Receipt Kit</span>
+          <Kicker tone="brand">Receipt Kit</Kicker>
           <strong>{receiptKit?.need || "Capture the return"}</strong>
         </div>
         <div className={styles.inlineActions}>
@@ -923,7 +968,7 @@ function ProposalSegments({ segments, onHighlight }) {
           <span key={segment.id} className={styles.segmentInline}>
             <button
               type="button"
-              className={`${styles.segmentButton} ${tone.toneClass}`}
+              className={`${styles.segmentButton} ${tone.toneClass} ${isOpen ? styles.segmentButtonOpen : ""}`}
               onClick={() => {
                 setOpenId((current) => (current === segment.id ? "" : segment.id));
                 if (segment?.mirrorRegion) {
@@ -935,7 +980,7 @@ function ProposalSegments({ segments, onHighlight }) {
             </button>
             {isOpen && hasClause ? (
               <span className={`${styles.segmentClause} ${tone.toneClass}`}>
-                {tone.glyph ? <span className={styles.segmentGlyph}>{tone.glyph}</span> : null}
+                <ShapeGlyph role={tone.shapeRole.key} className={styles.segmentGlyph} />
                 {segment.suggestedClause}
               </span>
             ) : null}
@@ -1241,7 +1286,7 @@ function OverlaySurface({
       <aside className={styles.overlayPanel} onClick={(event) => event.stopPropagation()}>
         <div className={styles.overlayHeader}>
           <div className={styles.overlayHeaderCopy}>
-            <span className={styles.eyebrow}>Room</span>
+            <Kicker tone="neutral">Room</Kicker>
             <strong>{view?.project?.title || "Room"}</strong>
             <p>{title}</p>
           </div>
@@ -1529,7 +1574,7 @@ export default function RoomWorkspace({ initialView }) {
 
   return (
     <main className={styles.page}>
-      {view?.hasStructure ? <FieldStateChip fieldState={view?.fieldState} floating /> : null}
+      {view?.hasStructure ? <StatusChip view={view} floating /> : null}
 
       <button
         type="button"
