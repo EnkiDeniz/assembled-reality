@@ -1,8 +1,9 @@
-export const ROOM_METADATA_VERSION = 1;
+export const ROOM_METADATA_VERSION = 2;
 export const ROOM_THREAD_PREFIX = "room:";
 export const ROOM_PAYLOAD_KIND = "room_payload";
+export const ROOM_LEGACY_SEED_MODE = "comments-only";
 
-const FIELD_STATES = new Set([
+const ROOM_FIELD_TONES = new Set([
   "new",
   "open",
   "grounded",
@@ -28,15 +29,32 @@ const RECEIPT_DIRECTIONS = new Set([
   "surprises",
 ]);
 
-const MOVE_STATUSES = new Set([
-  "suggested",
-  "awaiting",
-  "completed",
-  "flagged",
-  "rerouted",
+const SEGMENT_DOMAINS = new Set([
+  "aim",
+  "witness",
+  "evidence",
+  "story",
+  "move",
+  "test",
+  "return",
+  "receipt",
+  "field",
+  "other",
 ]);
 
-const RETURN_RESULTS = new Set(["matched", "surprised", "contradicted"]);
+const SEGMENT_INTENTS = new Set([
+  "declare",
+  "ground",
+  "interpret",
+  "move",
+  "test",
+  "observe",
+  "compare",
+  "capture",
+  "clarify",
+]);
+
+const MIRROR_REGIONS = new Set(["aim", "evidence", "story", "moves", "returns"]);
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -44,6 +62,36 @@ function normalizeText(value = "") {
 
 function normalizeLongText(value = "") {
   return String(value || "").trim();
+}
+
+function normalizeDateString(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const parsed = Date.parse(raw);
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
+}
+
+function toRoomSlug(value = "") {
+  return (
+    normalizeText(value)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "box"
+  );
+}
+
+export function escapeLoeString(value = "") {
+  return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').trim();
+}
+
+export function deriveMirrorRegionFromDomain(domain = "") {
+  const normalizedDomain = normalizeText(domain).toLowerCase();
+  if (normalizedDomain === "aim") return "aim";
+  if (normalizedDomain === "witness" || normalizedDomain === "evidence") return "evidence";
+  if (normalizedDomain === "story") return "story";
+  if (normalizedDomain === "move" || normalizedDomain === "test") return "moves";
+  if (normalizedDomain === "return" || normalizedDomain === "receipt") return "returns";
+  return "";
 }
 
 export function makeRoomId(prefix = "room") {
@@ -54,6 +102,14 @@ export function makeRoomId(prefix = "room") {
 export function buildRoomThreadKey(projectKey = "") {
   const normalizedProjectKey = normalizeText(projectKey) || "default-project";
   return `${ROOM_THREAD_PREFIX}${normalizedProjectKey}`;
+}
+
+export function buildRoomDocumentRef(projectKey = "") {
+  return `room_${toRoomSlug(projectKey)}`;
+}
+
+export function buildInitialRoomAssemblySource(projectKey = "") {
+  return `GND box @${buildRoomDocumentRef(projectKey)}`;
 }
 
 function normalizeReceiptKitArtifact(artifact = null) {
@@ -92,151 +148,215 @@ export function normalizeReceiptKit(value = null) {
   };
 }
 
-function normalizeMirrorItem(item = null, fallbackPrefix = "item") {
-  const nextItem = item && typeof item === "object" ? item : {};
-  const text = normalizeText(nextItem.text);
-  if (!text) return null;
-
-  return {
-    id: normalizeText(nextItem.id) || makeRoomId(fallbackPrefix),
-    text,
-    why: normalizeText(nextItem.why),
-    source: normalizeText(nextItem.source).toLowerCase() || "room",
-    createdAt: normalizeText(nextItem.createdAt) || new Date().toISOString(),
-  };
-}
-
-function normalizeMoveItem(item = null) {
-  const nextItem = normalizeMirrorItem(item, "move");
-  if (!nextItem) return null;
-  const status = normalizeText(item?.status).toLowerCase();
-
-  return {
-    ...nextItem,
-    status: MOVE_STATUSES.has(status) ? status : "suggested",
-    expected: normalizeText(item?.expected),
-    receiptKitId: normalizeText(item?.receiptKitId) || "",
-    via: normalizeText(item?.via),
-  };
-}
-
-function normalizeReturnItem(item = null) {
-  const nextItem = item && typeof item === "object" ? item : {};
-  const actual = normalizeLongText(nextItem.actual);
-  if (!actual) return null;
-  const result = normalizeText(nextItem.result).toLowerCase();
-
-  return {
-    id: normalizeText(nextItem.id) || makeRoomId("return"),
-    receiptKitId: normalizeText(nextItem.receiptKitId) || "",
-    moveId: normalizeText(nextItem.moveId) || "",
-    label: normalizeText(nextItem.label),
-    predicted: normalizeText(nextItem.predicted),
-    actual,
-    result: RETURN_RESULTS.has(result) ? result : "matched",
-    via: normalizeText(nextItem.via),
-    draftId: normalizeText(nextItem.draftId) || "",
-    createdAt: normalizeText(nextItem.createdAt) || new Date().toISOString(),
-  };
-}
-
-export function normalizeRoomMirrorDraft(value = null) {
+export function normalizeRoomProposalSegment(value = null, index = 0) {
   const nextValue = value && typeof value === "object" ? value : {};
+  const suggestedClause =
+    normalizeLongText(nextValue.suggestedClause) || normalizeLongText(nextValue.loe);
+  const text = normalizeLongText(nextValue.text);
+  if (!text && !suggestedClause) return null;
+
+  const domain = normalizeText(nextValue.domain).toLowerCase();
+  const intent = normalizeText(nextValue.intent).toLowerCase();
+  const mirrorRegion = normalizeText(nextValue.mirrorRegion).toLowerCase();
 
   return {
-    aimText: normalizeText(nextValue.aimText),
-    aimGloss: normalizeText(nextValue.aimGloss),
-    evidenceItems: (Array.isArray(nextValue.evidenceItems) ? nextValue.evidenceItems : [])
-      .map((item) => normalizeMirrorItem(item, "evidence"))
-      .filter(Boolean)
-      .slice(0, 4),
-    storyItems: (Array.isArray(nextValue.storyItems) ? nextValue.storyItems : [])
-      .map((item) => normalizeMirrorItem(item, "story"))
-      .filter(Boolean)
-      .slice(0, 4),
-    moveItems: (Array.isArray(nextValue.moveItems) ? nextValue.moveItems : [])
-      .map(normalizeMoveItem)
-      .filter(Boolean)
-      .slice(0, 2),
+    id: normalizeText(nextValue.id) || makeRoomId(`segment-${index + 1}`),
+    text: text || suggestedClause,
+    domain: SEGMENT_DOMAINS.has(domain) ? domain : "other",
+    mirrorRegion: MIRROR_REGIONS.has(mirrorRegion)
+      ? mirrorRegion
+      : deriveMirrorRegionFromDomain(domain),
+    suggestedClause,
+    intent: SEGMENT_INTENTS.has(intent) ? intent : "clarify",
+  };
+}
+
+export function summarizeGateDiagnostics(diagnostics = []) {
+  return (Array.isArray(diagnostics) ? diagnostics : [])
+    .filter(Boolean)
+    .map((diagnostic) => ({
+      code: normalizeText(diagnostic?.code) || "diag",
+      severity: normalizeText(diagnostic?.severity).toLowerCase() || "info",
+      message: normalizeText(diagnostic?.message),
+      line: Number.isFinite(Number(diagnostic?.span?.line)) ? Number(diagnostic.span.line) : null,
+    }))
+    .filter((diagnostic) => diagnostic.message)
+    .slice(0, 8);
+}
+
+export function normalizeRoomGatePreview(value = null) {
+  const nextValue = value && typeof value === "object" ? value : {};
+  const artifactSummary =
+    nextValue.artifactSummary && typeof nextValue.artifactSummary === "object"
+      ? {
+          compileState: normalizeText(nextValue.artifactSummary.compileState).toLowerCase() || "unknown",
+          runtimeState: normalizeText(nextValue.artifactSummary.runtimeState).toLowerCase() || "open",
+          mergedWindowState:
+            normalizeText(nextValue.artifactSummary.mergedWindowState).toLowerCase() || "open",
+          clauseCount: Math.max(0, Number(nextValue.artifactSummary.clauseCount) || 0),
+          fieldState: normalizeText(nextValue.artifactSummary.fieldState).toLowerCase() || "fog",
+          waiting: Boolean(nextValue.artifactSummary.waiting),
+          pingSent: Boolean(nextValue.artifactSummary.pingSent),
+        }
+      : {
+          compileState: "unknown",
+          runtimeState: "open",
+          mergedWindowState: "open",
+          clauseCount: 0,
+          fieldState: "fog",
+          waiting: false,
+          pingSent: false,
+        };
+
+  return {
+    accepted: Boolean(nextValue.accepted),
+    reason: normalizeText(nextValue.reason).toLowerCase(),
+    diagnostics: summarizeGateDiagnostics(nextValue.diagnostics),
+    artifactSummary,
+    nextBestAction: normalizeText(nextValue.nextBestAction),
   };
 }
 
 export function normalizeRoomTurnResult(value = null) {
   const nextValue = value && typeof value === "object" ? value : {};
-  const mirrorDraft = normalizeRoomMirrorDraft(nextValue.mirrorDraft);
-  const receiptKit = normalizeReceiptKit(nextValue.receiptKit);
 
   return {
-    reply:
+    assistantText:
+      normalizeLongText(nextValue.assistantText) ||
       normalizeLongText(nextValue.reply) ||
-      "I can help tighten that. Apply the draft if it feels true, then test the smallest part reality can answer.",
-    mirrorDraft,
-    receiptKit,
+      "I have a lawful next move for the room. Inspect it before you apply anything.",
+    proposalId: normalizeText(nextValue.proposalId) || makeRoomId("proposal"),
+    segments: (Array.isArray(nextValue.segments) ? nextValue.segments : [])
+      .map((segment, index) => normalizeRoomProposalSegment(segment, index))
+      .filter(Boolean)
+      .slice(0, 12),
+    receiptKit: normalizeReceiptKit(nextValue.receiptKit),
+    gatePreview: normalizeRoomGatePreview(nextValue.gatePreview),
   };
 }
 
-export function normalizeRoomState(value = null) {
+export function normalizeRoomMeta(value = null) {
   const nextValue = value && typeof value === "object" ? value : {};
+  const ui = nextValue.ui && typeof nextValue.ui === "object" ? nextValue.ui : {};
+  const legacySnapshot =
+    nextValue.legacySnapshot && typeof nextValue.legacySnapshot === "object"
+      ? normalizeRoomLegacySnapshot(nextValue.legacySnapshot)
+      : normalizeRoomLegacySnapshot(nextValue);
+  const hasLegacySnapshot = Boolean(
+    legacySnapshot.aimText ||
+      legacySnapshot.evidenceItems.length ||
+      legacySnapshot.storyItems.length ||
+      legacySnapshot.moveItems.length ||
+      legacySnapshot.returnItems.length,
+  );
 
   return {
     version: ROOM_METADATA_VERSION,
-    aim: {
-      text: normalizeText(nextValue?.aim?.text),
-      gloss: normalizeText(nextValue?.aim?.gloss),
-      source: normalizeText(nextValue?.aim?.source).toLowerCase() || "",
-      updatedAt: normalizeText(nextValue?.aim?.updatedAt) || null,
+    documentKey: normalizeText(nextValue.documentKey),
+    ui: {
+      collapsed: Boolean(ui.collapsed),
     },
-    evidenceItems: (Array.isArray(nextValue.evidenceItems) ? nextValue.evidenceItems : [])
-      .map((item) => normalizeMirrorItem(item, "evidence"))
-      .filter(Boolean)
-      .slice(-24),
-    storyItems: (Array.isArray(nextValue.storyItems) ? nextValue.storyItems : [])
-      .map((item) => normalizeMirrorItem(item, "story"))
-      .filter(Boolean)
-      .slice(-24),
-    moveItems: (Array.isArray(nextValue.moveItems) ? nextValue.moveItems : [])
-      .map(normalizeMoveItem)
-      .filter(Boolean)
-      .slice(-24),
-    returnItems: (Array.isArray(nextValue.returnItems) ? nextValue.returnItems : [])
-      .map(normalizeReturnItem)
-      .filter(Boolean)
-      .slice(-24),
-    lastAppliedMessageId: normalizeText(nextValue.lastAppliedMessageId) || "",
-    lastTurnAt: normalizeText(nextValue.lastTurnAt) || null,
+    seededFromLegacyAt: normalizeDateString(nextValue.seededFromLegacyAt),
+    legacySeedMode:
+      normalizeText(nextValue.legacySeedMode).toLowerCase() || ROOM_LEGACY_SEED_MODE,
+    legacySnapshot: hasLegacySnapshot ? legacySnapshot : null,
   };
 }
 
-export function mergeRoomState(currentState = null, patch = {}) {
-  const current = normalizeRoomState(currentState);
+export function mergeRoomMeta(currentMeta = null, patch = {}) {
+  const current = normalizeRoomMeta(currentMeta);
   const nextPatch = patch && typeof patch === "object" ? patch : {};
+  const nextUi =
+    nextPatch.ui === undefined
+      ? current.ui
+      : {
+          ...current.ui,
+          ...(nextPatch.ui && typeof nextPatch.ui === "object" ? nextPatch.ui : {}),
+        };
 
-  return normalizeRoomState({
+  return normalizeRoomMeta({
     ...current,
     ...nextPatch,
-    aim:
-      nextPatch.aim === undefined
-        ? current.aim
-        : {
-            ...current.aim,
-            ...(nextPatch.aim || {}),
-          },
-    evidenceItems:
-      nextPatch.evidenceItems === undefined ? current.evidenceItems : nextPatch.evidenceItems,
-    storyItems:
-      nextPatch.storyItems === undefined ? current.storyItems : nextPatch.storyItems,
-    moveItems: nextPatch.moveItems === undefined ? current.moveItems : nextPatch.moveItems,
-    returnItems:
-      nextPatch.returnItems === undefined ? current.returnItems : nextPatch.returnItems,
+    ui: nextUi,
   });
 }
 
+export function normalizeRoomLegacySnapshot(value = null) {
+  const nextValue = value && typeof value === "object" ? value : {};
+
+  function normalizeLegacyItem(item, prefix) {
+    const nextItem = item && typeof item === "object" ? item : {};
+    const text = normalizeText(nextItem.text || nextItem.actual || nextItem.label);
+    if (!text) return null;
+    return {
+      id: normalizeText(nextItem.id) || makeRoomId(prefix),
+      text,
+      detail:
+        normalizeText(nextItem.why) ||
+        normalizeText(nextItem.expected) ||
+        normalizeText(nextItem.result) ||
+        normalizeText(nextItem.via),
+    };
+  }
+
+  return {
+    aimText: normalizeText(nextValue?.aim?.text || nextValue.aimText),
+    evidenceItems: (Array.isArray(nextValue.evidenceItems) ? nextValue.evidenceItems : [])
+      .map((item) => normalizeLegacyItem(item, "legacy-evidence"))
+      .filter(Boolean)
+      .slice(0, 24),
+    storyItems: (Array.isArray(nextValue.storyItems) ? nextValue.storyItems : [])
+      .map((item) => normalizeLegacyItem(item, "legacy-story"))
+      .filter(Boolean)
+      .slice(0, 24),
+    moveItems: (Array.isArray(nextValue.moveItems) ? nextValue.moveItems : [])
+      .map((item) => normalizeLegacyItem(item, "legacy-move"))
+      .filter(Boolean)
+      .slice(0, 24),
+    returnItems: (Array.isArray(nextValue.returnItems) ? nextValue.returnItems : [])
+      .map((item) => normalizeLegacyItem(item, "legacy-return"))
+      .filter(Boolean)
+      .slice(0, 24),
+  };
+}
+
+export function buildLegacyRoomCarryoverComments(legacyRoom = null) {
+  const snapshot = normalizeRoomLegacySnapshot(legacyRoom);
+  const lines = [];
+
+  if (snapshot.aimText) {
+    lines.push(`DIR aim "${escapeLoeString(snapshot.aimText)}"`);
+  }
+
+  const noteSections = [
+    ["evidence", snapshot.evidenceItems],
+    ["story", snapshot.storyItems],
+    ["moves", snapshot.moveItems],
+    ["returns", snapshot.returnItems],
+  ];
+
+  if (noteSections.some(([, items]) => items.length > 0)) {
+    lines.push("");
+    lines.push("# Imported legacy room notes");
+    lines.push("# These are carryover comments only. They are not canonical clauses.");
+    noteSections.forEach(([label, items]) => {
+      if (!items.length) return;
+      lines.push(`# ${label}`);
+      items.forEach((item) => {
+        const detail = item.detail ? ` (${item.detail})` : "";
+        lines.push(`# - ${item.text}${detail}`);
+      });
+    });
+  }
+
+  return lines.join("\n").trim();
+}
+
 export function buildRoomPayloadCitations(payload = null) {
-  const normalized = normalizeRoomTurnResult(payload);
   return [
     {
       kind: ROOM_PAYLOAD_KIND,
-      payload: normalized,
+      payload: normalizeRoomTurnResult(payload),
     },
   ];
 }
@@ -247,179 +367,19 @@ export function extractRoomPayloadFromCitations(citations = []) {
     (entry) => normalizeText(entry?.kind).toLowerCase() === ROOM_PAYLOAD_KIND,
   );
 
-  if (!payloadEntry?.payload) {
-    return null;
-  }
-
+  if (!payloadEntry?.payload) return null;
   return normalizeRoomTurnResult(payloadEntry.payload);
 }
 
-function normalizeUniqueTextItems(currentItems = [], nextItems = [], kind = "item") {
-  const seen = new Set();
-
-  return [...(Array.isArray(currentItems) ? currentItems : []), ...(Array.isArray(nextItems) ? nextItems : [])]
-    .map((item) => {
-      if (kind === "move") return normalizeMoveItem(item);
-      if (kind === "return") return normalizeReturnItem(item);
-      return normalizeMirrorItem(item, kind);
-    })
-    .filter(Boolean)
-    .filter((item) => {
-      const key = normalizeText(item.text || item.actual).toLowerCase();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+export function isRoomAssemblyDocument(document = null) {
+  if (!document) return false;
+  if (!document.isAssembly && document.documentType !== "assembly") return false;
+  return Boolean(document?.seedMeta?.roomDocument);
 }
 
-export function applyMirrorDraftToRoomState(currentState = null, mirrorDraft = null, options = {}) {
-  const current = normalizeRoomState(currentState);
-  const draft = normalizeRoomMirrorDraft(mirrorDraft);
-  const nextAimText = draft.aimText || current.aim.text;
-  const nextAimGloss = draft.aimGloss || current.aim.gloss;
-
-  return normalizeRoomState({
-    ...current,
-    aim: {
-      text: nextAimText,
-      gloss: nextAimGloss,
-      source: nextAimText ? "room" : current.aim.source,
-      updatedAt: nextAimText || nextAimGloss ? new Date().toISOString() : current.aim.updatedAt,
-    },
-    evidenceItems: normalizeUniqueTextItems(current.evidenceItems, draft.evidenceItems, "evidence"),
-    storyItems: normalizeUniqueTextItems(current.storyItems, draft.storyItems, "story"),
-    moveItems: normalizeUniqueTextItems(current.moveItems, draft.moveItems, "move"),
-    lastAppliedMessageId: normalizeText(options.assistantMessageId) || current.lastAppliedMessageId,
-  });
-}
-
-export function commitReceiptKitToRoomState(
-  currentState = null,
-  {
-    receiptKit = null,
-    mode = "return",
-    result = "matched",
-    actual = "",
-    moveText = "",
-    uploadedDocument = null,
-    draftId = "",
-  } = {},
-) {
-  const current = normalizeRoomState(currentState);
-  const normalizedKit = normalizeReceiptKit(receiptKit);
-  if (!normalizedKit) {
-    return current;
-  }
-
-  const now = new Date().toISOString();
-  const receiptKitId = normalizedKit.id;
-  const existingMoveIndex = current.moveItems.findIndex(
-    (item) => item.receiptKitId === receiptKitId,
-  );
-  const baseMoveText =
-    normalizeText(moveText) ||
-    normalizeText(normalizedKit.fastestPath) ||
-    normalizeText(normalizedKit.need);
-  const nextMove =
-    baseMoveText
-      ? normalizeMoveItem({
-          ...(existingMoveIndex >= 0 ? current.moveItems[existingMoveIndex] : {}),
-          text: baseMoveText,
-          why: normalizeText(normalizedKit.why),
-          expected: normalizeText(normalizedKit.prediction.expected),
-          receiptKitId,
-          via: normalizedKit.artifact.type,
-          status:
-            mode === "move"
-              ? "awaiting"
-              : result === "contradicted"
-                ? "flagged"
-                : result === "surprised"
-                  ? "rerouted"
-                  : "completed",
-          createdAt:
-            existingMoveIndex >= 0
-              ? current.moveItems[existingMoveIndex].createdAt
-              : now,
-        })
-      : null;
-
-  const nextMoves = [...current.moveItems];
-  if (nextMove) {
-    if (existingMoveIndex >= 0) {
-      nextMoves[existingMoveIndex] = nextMove;
-    } else {
-      nextMoves.unshift(nextMove);
-    }
-  }
-
-  if (mode === "move") {
-    return normalizeRoomState({
-      ...current,
-      moveItems: nextMoves,
-    });
-  }
-
-  const nextReturn = normalizeReturnItem({
-    receiptKitId,
-    moveId: nextMove?.id || "",
-    label: normalizeText(normalizedKit.need),
-    predicted: normalizeText(normalizedKit.prediction.expected),
-    actual:
-      normalizeLongText(actual) ||
-      normalizeText(uploadedDocument?.title) ||
-      normalizeText(uploadedDocument?.documentKey),
-    result,
-    via: normalizedKit.artifact.type,
-    draftId,
-    createdAt: now,
-  });
-
-  return normalizeRoomState({
-    ...current,
-    moveItems: nextMoves,
-    returnItems: normalizeUniqueTextItems(current.returnItems, [nextReturn], "return"),
-  });
-}
-
-export function deriveRoomFieldState({
-  roomState = null,
-  realSourceCount = 0,
-  receiptCount = 0,
-  sealedReceiptCount = 0,
-} = {}) {
-  const normalized = normalizeRoomState(roomState);
-  const hasAim = Boolean(normalized.aim.text);
-  const hasEvidence = normalized.evidenceItems.length > 0 || Number(realSourceCount) > 0;
-  const hasStory = normalized.storyItems.length > 0;
-  const activeAwaiting = normalized.moveItems.some((item) => item.status === "awaiting");
-  const hasContradiction = normalized.returnItems.some((item) => item.result === "contradicted");
-  const hasSurprise = normalized.returnItems.some((item) => item.result === "surprised");
-  const hasReturn = normalized.returnItems.length > 0 || Number(receiptCount) > 0;
-
-  if (!hasAim && !hasEvidence && !hasStory && !hasReturn && !activeAwaiting) {
-    return "new";
-  }
-  if (activeAwaiting) {
-    return "awaiting";
-  }
-  if (hasContradiction) {
-    return "flagged";
-  }
-  if (hasSurprise) {
-    return "rerouted";
-  }
-  if (hasReturn && (Number(sealedReceiptCount) > 0 || normalized.returnItems.length > 0)) {
-    return "sealed";
-  }
-  if (hasEvidence || hasStory) {
-    return "grounded";
-  }
-  return "open";
-}
-
-export function getRoomFieldStateTone(state = "new") {
+export function getRoomFieldStateTone(state = "open") {
   const normalizedState = normalizeText(state).toLowerCase();
-  if (!FIELD_STATES.has(normalizedState)) return "new";
-  return normalizedState;
+  if (normalizedState === "actionable") return "grounded";
+  if (normalizedState === "stopped") return "flagged";
+  return ROOM_FIELD_TONES.has(normalizedState) ? normalizedState : "open";
 }

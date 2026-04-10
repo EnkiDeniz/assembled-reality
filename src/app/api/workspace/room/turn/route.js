@@ -5,11 +5,14 @@ import { appendConversationExchangeForUser } from "@/lib/reader-workspace";
 import {
   buildRoomPayloadCitations,
   buildRoomThreadKey,
+  makeRoomId,
   normalizeReceiptKit,
   normalizeRoomTurnResult,
 } from "@/lib/room";
 import { buildRoomWorkspaceViewForUser } from "@/lib/room-server";
 import { getRequiredSession } from "@/lib/server-session";
+import { ensureRoomAssemblyDocumentForProject, getRoomAssemblySource } from "@/lib/room-documents";
+import { createOrHydrateRoomRuntimeWindow, runRoomProposalGate } from "@/lib/room-canonical";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,12 +71,6 @@ function parseJsonObject(text = "") {
   }
 }
 
-function summarizeCollection(items = [], formatter, emptyLabel = "none") {
-  const normalizedItems = Array.isArray(items) ? items : [];
-  const summary = normalizedItems.map(formatter).filter(Boolean).slice(0, 5).join(" | ");
-  return summary || emptyLabel;
-}
-
 function countWords(text = "") {
   const normalized = normalizeText(text);
   return normalized ? normalized.split(/\s+/).length : 0;
@@ -82,30 +79,38 @@ function countWords(text = "") {
 function makeAimCandidate(message = "") {
   const firstSentence = normalizeText(String(message || "").split(/[\n.?!]/)[0] || "");
   if (!firstSentence) return "";
-  if (countWords(firstSentence) <= 11) return firstSentence;
-  return clipText(firstSentence, 68);
+  if (countWords(firstSentence) <= 10) return firstSentence;
+  return clipText(firstSentence, 80);
 }
 
 function buildRoomSystemPrompt() {
   return [
     `You are Seven inside ${PRODUCT_NAME}.`,
-    "This surface is the Room: conversation first, structure only when it helps.",
-    "Return strict JSON only. Do not include markdown fences or explanatory prose outside the JSON object.",
+    "You are responding inside the Room. Conversation comes first. Structure appears only as lawful clause proposals.",
+    "Return strict JSON only. No markdown fences. No prose outside the JSON object.",
     "Use this exact top-level shape:",
-    "{\"reply\":\"...\",\"mirrorDraft\":{\"aimText\":\"\",\"aimGloss\":\"\",\"evidenceItems\":[{\"text\":\"\",\"why\":\"\"}],\"storyItems\":[{\"text\":\"\",\"why\":\"\"}],\"moveItems\":[{\"text\":\"\",\"why\":\"\",\"expected\":\"\"}]},\"receiptKit\":{\"need\":\"\",\"why\":\"\",\"fastestPath\":\"\",\"enough\":\"\",\"artifact\":{\"type\":\"paste|upload|link|draft_message|checklist|compare\",\"config\":{}},\"prediction\":{\"expected\":\"\",\"direction\":\"confirms|contradicts|narrows|surprises\",\"timebound\":\"\",\"surprise\":\"\"}}}",
-    "Keep reply in plain language first. Be warm, direct, and calm.",
-    "Never dump formal Lœgos language unless it is hidden inside a suggestion field or omitted entirely.",
-    "Separate witness from story. Do not upgrade interpretation into evidence.",
-    "No silent mutation. You are proposing a mirror draft, not committing it.",
-    "Mirror draft rules: 0-1 aim, up to 4 evidence items, up to 4 story items, up to 2 moves.",
-    "Receipt Kit rules: at most one receipt kit; set it to null if no kit is needed.",
-    "If there is a clear next ping, include it as a move and use a receipt kit that helps reality answer.",
-    "If the user reports a return, help classify it by prediction versus actual without sounding bureaucratic.",
+    "{\"assistantText\":\"...\",\"segments\":[{\"text\":\"...\",\"domain\":\"aim|witness|story|move|test|return|other\",\"mirrorRegion\":\"aim|evidence|story|moves|returns\",\"suggestedClause\":\"DIR aim \\\"...\\\"\",\"intent\":\"declare|ground|interpret|move|test|observe|compare|capture|clarify\"}],\"receiptKit\":null}",
+    "assistantText must stay plain-language and calm.",
+    "Seven proposes. It never mutates canonical state.",
+    "Only propose lawful clauses from this set:",
+    'DIR aim "<text>"',
+    'GND witness @ref from "user_stated" with v_turn_<n>',
+    'INT story "<text>"',
+    'MOV move "<text>" via manual',
+    'TST test "<text>"',
+    'RTN observe|confirm|contradict "<text>" via user|third_party|lender_portal|service|system as text|score|bool|date|count',
+    "Never propose MOV without also proposing TST in the same response unless both already exist in source.",
+    "Keep witness separate from story. Clear firsthand user observations may become GND witness. Interpretation and hypotheses stay INT story.",
+    "At most one Receipt Kit. Use it only when a concrete proof action is helpful.",
   ].join(" ");
 }
 
-function buildRoomUserPrompt(message = "", view = null) {
-  const mirror = view?.mirror || {};
+function buildRoomUserPrompt({
+  message = "",
+  view = null,
+  roomSource = "",
+  turnNumber = 1,
+} = {}) {
   const messages = Array.isArray(view?.messages) ? view.messages : [];
   const recentThread = messages
     .slice(-6)
@@ -116,64 +121,25 @@ function buildRoomUserPrompt(message = "", view = null) {
     .join("\n");
 
   return [
+    `Turn number: ${turnNumber}`,
     `Box: ${normalizeText(view?.project?.title) || "Untitled Box"}`,
     view?.project?.subtitle ? `Box note: ${normalizeText(view.project.subtitle)}` : "",
-    `Field state: ${normalizeText(view?.fieldState?.key) || "new"}`,
-    `Aim: ${normalizeText(mirror?.aim?.text) || "none"}`,
-    mirror?.aim?.gloss ? `Aim gloss: ${normalizeText(mirror.aim.gloss)}` : "",
-    `Witness / Evidence: ${summarizeCollection(
-      mirror?.evidence,
-      (item) => {
-        const title = normalizeText(item?.title);
-        const detail = normalizeText(item?.detail);
-        return title ? `${title}${detail ? ` (${detail})` : ""}` : "";
-      },
-      "none",
-    )}`,
-    `Story: ${summarizeCollection(
-      mirror?.story,
-      (item) => {
-        const text = normalizeText(item?.text);
-        const detail = normalizeText(item?.detail);
-        return text ? `${text}${detail ? ` (${detail})` : ""}` : "";
-      },
-      "none",
-    )}`,
-    `Pings / Moves: ${summarizeCollection(
-      mirror?.moves,
-      (item) => {
-        const text = normalizeText(item?.text);
-        const status = normalizeText(item?.status);
-        return text ? `${text}${status ? ` [${status}]` : ""}` : "";
-      },
-      "none",
-    )}`,
-    `Returns / Receipts: ${summarizeCollection(
-      mirror?.returns,
-      (item) => {
-        const label = normalizeText(item?.label);
-        const result = normalizeText(item?.result);
-        const actual = normalizeText(item?.actual);
-        return label || actual
-          ? `${label || actual}${result ? ` [${result}]` : ""}`
-          : "";
-      },
-      "none",
-    )}`,
-    view?.pendingMove?.text
-      ? `Pending outbound ping: ${normalizeText(view.pendingMove.text)}`
-      : "",
+    `Canonical Room source:\n${roomSource || "GND box @room_default"}`,
+    `Current status: ${normalizeText(view?.fieldState?.key) || "open"}`,
+    view?.mirror?.aim?.text ? `Current aim: ${normalizeText(view.mirror.aim.text)}` : "Current aim: none",
+    Array.isArray(view?.recentReturns) && view.recentReturns.length
+      ? `Recent returns: ${view.recentReturns
+          .slice(0, 3)
+          .map((item) => `${item.actual} [${item.provenanceLabel || item.via || "unlabeled"}]`)
+          .join(" | ")}`
+      : "Recent returns: none",
     Array.isArray(view?.recentSources) && view.recentSources.length
       ? `Recent sources: ${view.recentSources
           .slice(0, 4)
-          .map((source) => {
-            const title = normalizeText(source?.title);
-            const meta = normalizeText(source?.metaLine);
-            return title ? `${title}${meta ? ` (${meta})` : ""}` : "";
-          })
+          .map((source) => normalizeText(source?.title))
           .filter(Boolean)
           .join(" | ")}`
-      : "Recent sources: none yet",
+      : "Recent sources: none",
     recentThread ? `Recent thread:\n${recentThread}` : "",
     `New user turn: ${normalizeLongText(message)}`,
   ]
@@ -181,94 +147,118 @@ function buildRoomUserPrompt(message = "", view = null) {
     .join("\n\n");
 }
 
-function bindReceiptKitToTurn(turn = null) {
-  const normalizedTurn = normalizeRoomTurnResult(turn);
-  const receiptKit = normalizeReceiptKit(normalizedTurn.receiptKit);
-  if (!receiptKit) return normalizedTurn;
+function shouldGroundAsWitness(message = "") {
+  return /\b(i|we)\b/i.test(message) || /\bmy\b/i.test(message) || /\bnoticed|saw|found|got|received|measured|wrote|have\b/i.test(message);
+}
 
-  const moveItems = normalizedTurn.mirrorDraft.moveItems.map((item, index) =>
-    index === 0 && !item.receiptKitId
-      ? {
-          ...item,
-          receiptKitId: receiptKit.id,
-        }
-      : item,
+function suggestsReturn(message = "") {
+  return /\b(came back|came through|returned|it changed|it stopped|it now|result|output changed|confirmed|contradicted|worked|didn't work)\b/i.test(
+    message,
   );
+}
 
-  return normalizeRoomTurnResult({
-    ...normalizedTurn,
-    mirrorDraft: {
-      ...normalizedTurn.mirrorDraft,
-      moveItems,
-    },
-    receiptKit,
-  });
+function suggestsDraftMessage(message = "") {
+  return /\b(email|message|text|send|reach out|write to|follow up)\b/i.test(message);
+}
+
+function suggestsCompare(message = "") {
+  return /\b(compare|difference|different|before|after|changed|match|mismatch)\b/i.test(message);
 }
 
 function buildFallbackTurn(message = "", view = null) {
-  const aimCandidate = makeAimCandidate(message);
-  const hasAim = Boolean(view?.roomState?.aim?.text || view?.mirror?.aim?.text);
-  const hasSources = Array.isArray(view?.recentSources) && view.recentSources.length > 0;
-  const wantsCompare = /\b(compare|difference|version|match|actual|predicted)\b/i.test(message);
-  const wantsLink = /\bhttps?:\/\//i.test(message);
-  const wantsDraft = /\b(email|message|text|call|ask|reach out|follow up|send)\b/i.test(message);
-  const moveText = wantsDraft
-    ? "Send the smallest direct ping and wait for the first real answer."
-    : "Test the next smallest part reality can answer this week.";
-  const expected = hasAim
-    ? `A return that narrows whether "${view?.roomState?.aim?.text || view?.mirror?.aim?.text}" is holding.`
-    : "A return that makes the line more concrete.";
+  const currentAim = normalizeText(view?.mirror?.aim?.text);
+  const aimCandidate = currentAim || makeAimCandidate(message);
+  const turnNumber = (Array.isArray(view?.messages) ? view.messages.length : 0) + 1;
+  const witnessRef = `user_turn_${turnNumber}`;
+  const moveText = suggestsDraftMessage(message)
+    ? "Send one concrete message that asks reality to answer plainly."
+    : "Rerun one concrete example with the screenshot explicitly labeled static.";
+  const testText = suggestsDraftMessage(message)
+    ? "A reply arrives and changes what the room should do next."
+    : "The output changes when the screenshot is labeled static.";
+  const assistantText = suggestsReturn(message)
+    ? "That sounds like a real return, not just more story. I turned it into a proposed observation so you can apply it cleanly."
+    : "I pulled out a lawful next shape for the room. Read it first, then apply only what feels true.";
 
-  return bindReceiptKitToTurn({
-    reply: hasAim
-      ? [
-          "Keep the line plain and let the box stay honest about what is witness versus story.",
-          "I drafted one small move so the next answer comes from reality instead of more internal debate.",
-        ].join(" ")
-      : [
-          aimCandidate
-            ? `I hear a workable line trying to form: "${aimCandidate}".`
-            : "There is a real line in this, but it still needs to get smaller and more portable.",
-          "I drafted a version you can apply if it feels true, then test with the smallest move reality can answer.",
-        ].join(" "),
-    mirrorDraft: {
-      aimText: hasAim ? "" : aimCandidate,
-      aimGloss: hasAim ? "" : "Working line held in plain language.",
-      evidenceItems: [],
-      storyItems: hasAim
-        ? [
-            {
-              text: clipText(message, 140),
-              why: "Working interpretation from the latest turn.",
-            },
-          ]
-        : [],
-      moveItems: [
-        {
-          text: moveText,
-          why: "Conversation should hand off to contact with reality.",
-          expected,
+  const segments = [];
+  if (!currentAim && aimCandidate) {
+    segments.push({
+      text: aimCandidate,
+      domain: "aim",
+      mirrorRegion: "aim",
+      suggestedClause: `DIR aim "${aimCandidate.replace(/"/g, '\\"')}"`,
+      intent: "declare",
+    });
+  }
+  if (shouldGroundAsWitness(message) && !suggestsReturn(message)) {
+    segments.push({
+      text: clipText(message, 160),
+      domain: "witness",
+      mirrorRegion: "evidence",
+      suggestedClause: `GND witness @${witnessRef} from "user_stated" with v_turn_${turnNumber}`,
+      intent: "ground",
+    });
+  } else if (normalizeLongText(message)) {
+    segments.push({
+      text: clipText(message, 160),
+      domain: "story",
+      mirrorRegion: "story",
+      suggestedClause: `INT story "${clipText(message, 160).replace(/"/g, '\\"')}"`,
+      intent: "interpret",
+    });
+  }
+
+  if (suggestsReturn(message)) {
+    segments.push({
+      text: clipText(message, 180),
+      domain: "return",
+      mirrorRegion: "returns",
+      suggestedClause: `RTN observe "${clipText(message, 180).replace(/"/g, '\\"')}" via user as text`,
+      intent: "observe",
+    });
+  } else {
+    segments.push(
+      {
+        text: moveText,
+        domain: "move",
+        mirrorRegion: "moves",
+        suggestedClause: `MOV move "${moveText.replace(/"/g, '\\"')}" via manual`,
+        intent: "move",
+      },
+      {
+        text: testText,
+        domain: "test",
+        mirrorRegion: "moves",
+        suggestedClause: `TST test "${testText.replace(/"/g, '\\"')}"`,
+        intent: "test",
+      },
+    );
+  }
+
+  const receiptKit = suggestsReturn(message)
+    ? null
+    : normalizeReceiptKit({
+        need: "Capture the return that comes back from this test.",
+        why: "The room only changes when predicted and actual are held side by side.",
+        fastestPath: suggestsDraftMessage(message) ? "Draft the message and send it." : "Paste what changes after the rerun.",
+        enough: "One concrete return is enough to change the next move.",
+        artifact: {
+          type: suggestsCompare(message) ? "compare" : suggestsDraftMessage(message) ? "draft_message" : "paste",
+          config: {},
         },
-      ],
-    },
-    receiptKit: {
-      need: wantsDraft ? "Get the ping out and capture the first return." : "Capture the return cleanly.",
-      why: wantsDraft
-        ? "An outbound move should leave a visible listening state in the room."
-        : "The room changes when predicted and actual are held side by side.",
-      fastestPath: wantsDraft ? "Draft the message and mark the ping sent." : "Paste or attach what came back.",
-      enough: "One concrete return is enough to change the next move.",
-      artifact: {
-        type: wantsLink ? "link" : wantsDraft ? "draft_message" : wantsCompare ? "compare" : hasSources ? "paste" : "upload",
-        config: {},
-      },
-      prediction: {
-        expected,
-        direction: "narrows",
-        timebound: "This week",
-        surprise: "If reality answers in a different direction, mark it directly.",
-      },
-    },
+        prediction: {
+          expected: testText,
+          direction: "narrows",
+          timebound: "This turn or the next real contact.",
+          surprise: "If reality answers differently, record that directly.",
+        },
+      });
+
+  return normalizeRoomTurnResult({
+    assistantText,
+    proposalId: makeRoomId("proposal"),
+    segments,
+    receiptKit,
   });
 }
 
@@ -277,7 +267,7 @@ async function persistRoomTurn(userId, projectKey, message, turn, provider) {
   const exchange = await appendConversationExchangeForUser(userId, {
     documentKey: threadKey,
     userLine: message,
-    answer: turn.reply,
+    answer: turn.assistantText,
     citations: buildRoomPayloadCitations(turn),
   });
   const view = await buildRoomWorkspaceViewForUser(userId, { projectKey });
@@ -309,12 +299,36 @@ export async function POST(request) {
 
   const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey });
   const resolvedProjectKey = view?.project?.projectKey || projectKey;
+  const roomDocument = await ensureRoomAssemblyDocumentForProject(session.user.id, resolvedProjectKey);
+  const roomSource = getRoomAssemblySource(roomDocument);
+  const currentArtifactWindow = createOrHydrateRoomRuntimeWindow(
+    roomDocument,
+    runRoomProposalGate({
+      currentSource: roomSource,
+      proposal: { segments: [] },
+      filename: `${roomDocument?.documentKey || "room"}.loe`,
+    }).artifact,
+  );
+  const turnNumber = (Array.isArray(view?.messages) ? view.messages.length : 0) + 1;
+
+  async function finalizeTurn(nextTurn, provider) {
+    const gate = runRoomProposalGate({
+      currentSource: roomSource,
+      proposal: nextTurn,
+      filename: `${roomDocument?.documentKey || "room"}.loe`,
+      runtimeWindow: currentArtifactWindow,
+    });
+    const normalizedTurn = normalizeRoomTurnResult({
+      ...nextTurn,
+      gatePreview: gate.gatePreview,
+    });
+    return NextResponse.json(
+      await persistRoomTurn(session.user.id, resolvedProjectKey, message, normalizedTurn, provider),
+    );
+  }
 
   if (!appEnv.openai.enabled) {
-    const fallback = buildFallbackTurn(message, view);
-    return NextResponse.json(
-      await persistRoomTurn(session.user.id, resolvedProjectKey, message, fallback, "fallback"),
-    );
+    return finalizeTurn(buildFallbackTurn(message, view), "fallback");
   }
 
   try {
@@ -333,7 +347,17 @@ export async function POST(request) {
           },
           {
             role: "user",
-            content: [{ type: "input_text", text: buildRoomUserPrompt(message, view) }],
+            content: [
+              {
+                type: "input_text",
+                text: buildRoomUserPrompt({
+                  message,
+                  view,
+                  roomSource,
+                  turnNumber,
+                }),
+              },
+            ],
           },
         ],
       }),
@@ -345,37 +369,28 @@ export async function POST(request) {
         status: response.status,
         detail: payload?.error?.message || payload?.error?.type || payload?.error?.code || "",
       });
-      const fallback = buildFallbackTurn(message, view);
-      return NextResponse.json(
-        await persistRoomTurn(session.user.id, resolvedProjectKey, message, fallback, "fallback"),
-      );
+      return finalizeTurn(buildFallbackTurn(message, view), "fallback");
     }
 
     const parsed = parseJsonObject(extractMessageText(payload));
     if (!parsed) {
-      const fallback = buildFallbackTurn(message, view);
-      return NextResponse.json(
-        await persistRoomTurn(session.user.id, resolvedProjectKey, message, fallback, "fallback"),
-      );
-    }
-    const normalizedTurn = bindReceiptKitToTurn(parsed);
-    if (!normalizedTurn.reply) {
-      const fallback = buildFallbackTurn(message, view);
-      return NextResponse.json(
-        await persistRoomTurn(session.user.id, resolvedProjectKey, message, fallback, "fallback"),
-      );
+      return finalizeTurn(buildFallbackTurn(message, view), "fallback");
     }
 
-    return NextResponse.json(
-      await persistRoomTurn(session.user.id, resolvedProjectKey, message, normalizedTurn, "openai"),
-    );
+    const normalizedTurn = normalizeRoomTurnResult({
+      ...parsed,
+      proposalId: makeRoomId("proposal"),
+    });
+
+    if (!normalizedTurn.assistantText || normalizedTurn.segments.length === 0) {
+      return finalizeTurn(buildFallbackTurn(message, view), "fallback");
+    }
+
+    return finalizeTurn(normalizedTurn, "openai");
   } catch (error) {
     console.error("Room turn request crashed.", {
       error: error instanceof Error ? error.message : String(error),
     });
-    const fallback = buildFallbackTurn(message, view);
-    return NextResponse.json(
-      await persistRoomTurn(session.user.id, resolvedProjectKey, message, fallback, "fallback"),
-    );
+    return finalizeTurn(buildFallbackTurn(message, view), "fallback");
   }
 }

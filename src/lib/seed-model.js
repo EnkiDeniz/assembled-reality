@@ -1,4 +1,5 @@
 import { DEFAULT_PROJECT_KEY, DEFAULT_PROJECT_TITLE } from "@/lib/project-model";
+import { isRoomAssemblyDocument } from "@/lib/room";
 
 export const SEED_TEMPLATE_VERSION = 1;
 
@@ -101,6 +102,7 @@ export function buildSeedMarkdown({
 
 export function isSeedDocument(document = null, project = null) {
   if (!document) return false;
+  if (isRoomAssemblyDocument(document)) return false;
   if (normalizeSeedMeta(document.seedMeta).isSeed) return true;
 
   const currentAssemblyKey = String(project?.currentAssemblyDocumentKey || "").trim();
@@ -128,7 +130,11 @@ export function getSeedDocument(project = null, documents = [], preferredDocumen
     const currentAssembly = normalizedDocuments.find(
       (document) => document.documentKey === currentAssemblyKey,
     );
-    if (currentAssembly && (currentAssembly.isAssembly || currentAssembly.documentType === "assembly")) {
+    if (
+      currentAssembly &&
+      !isRoomAssemblyDocument(currentAssembly) &&
+      (currentAssembly.isAssembly || currentAssembly.documentType === "assembly")
+    ) {
       return currentAssembly;
     }
   }
@@ -136,7 +142,9 @@ export function getSeedDocument(project = null, documents = [], preferredDocumen
   return (
     normalizedDocuments.find((document) => normalizeSeedMeta(document.seedMeta).isSeed) ||
     normalizedDocuments.find(
-      (document) => document.isAssembly || document.documentType === "assembly",
+      (document) =>
+        !isRoomAssemblyDocument(document) &&
+        (document.isAssembly || document.documentType === "assembly"),
     ) ||
     null
   );
@@ -144,6 +152,7 @@ export function getSeedDocument(project = null, documents = [], preferredDocumen
 
 export function isRealSourceDocument(document = null) {
   if (!document) return false;
+  if (isRoomAssemblyDocument(document)) return false;
   if (document.isAssembly || document.documentType === "assembly") return false;
   if (document.documentType === "builtin" || document.sourceType === "builtin") return false;
   return true;

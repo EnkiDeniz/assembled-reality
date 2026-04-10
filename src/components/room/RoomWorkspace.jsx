@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -11,10 +11,14 @@ import {
   ExternalLink,
   FileText,
   MessageSquareText,
+  MoreHorizontal,
+  Paperclip,
+  Play,
   Plus,
   ReceiptText,
   SendHorizontal,
   Upload,
+  X,
 } from "lucide-react";
 import styles from "@/components/room/RoomWorkspace.module.css";
 
@@ -26,8 +30,24 @@ const RECEIPT_RESULT_OPTIONS = [
   { value: "contradicted", label: "Contradicted" },
 ];
 
+const SEGMENT_TONES = {
+  aim: { glyph: "△", toneClass: styles.segmentToneAim },
+  witness: { glyph: "◻", toneClass: styles.segmentToneEvidence },
+  evidence: { glyph: "◻", toneClass: styles.segmentToneEvidence },
+  story: { glyph: "○", toneClass: styles.segmentToneStory },
+  move: { glyph: "->", toneClass: styles.segmentToneMoves },
+  test: { glyph: "?", toneClass: styles.segmentToneMoves },
+  return: { glyph: "<-", toneClass: styles.segmentToneReturns },
+  receipt: { glyph: "<-", toneClass: styles.segmentToneReturns },
+  other: { glyph: "", toneClass: styles.segmentToneOther },
+};
+
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeLongForm(value = "") {
+  return String(value || "").trim();
 }
 
 function buildWorkspaceHref(projectKey = "") {
@@ -56,52 +76,11 @@ function splitParagraphs(text = "") {
     .filter(Boolean);
 }
 
-function hasMirrorDraftContent(mirrorDraft = null) {
-  const draft = mirrorDraft && typeof mirrorDraft === "object" ? mirrorDraft : null;
-  if (!draft) return false;
+function hasProposalContent(roomPayload = null) {
   return Boolean(
-    normalizeText(draft.aimText) ||
-      normalizeText(draft.aimGloss) ||
-      (Array.isArray(draft.evidenceItems) && draft.evidenceItems.length) ||
-      (Array.isArray(draft.storyItems) && draft.storyItems.length) ||
-      (Array.isArray(draft.moveItems) && draft.moveItems.length),
+    (Array.isArray(roomPayload?.segments) && roomPayload.segments.length > 0) ||
+      roomPayload?.receiptKit,
   );
-}
-
-function buildFormalLines(roomPayload = null) {
-  const payload = roomPayload && typeof roomPayload === "object" ? roomPayload : {};
-  const draft = payload.mirrorDraft && typeof payload.mirrorDraft === "object" ? payload.mirrorDraft : {};
-  const lines = [];
-
-  if (normalizeText(draft.aimText)) {
-    lines.push(`AIM "${normalizeText(draft.aimText)}"`);
-  }
-  if (normalizeText(draft.aimGloss)) {
-    lines.push(`GLOSS "${normalizeText(draft.aimGloss)}"`);
-  }
-  (Array.isArray(draft.evidenceItems) ? draft.evidenceItems : []).forEach((item) => {
-    if (normalizeText(item?.text)) {
-      lines.push(`WIT "${normalizeText(item.text)}"`);
-    }
-  });
-  (Array.isArray(draft.storyItems) ? draft.storyItems : []).forEach((item) => {
-    if (normalizeText(item?.text)) {
-      lines.push(`STORY "${normalizeText(item.text)}"`);
-    }
-  });
-  (Array.isArray(draft.moveItems) ? draft.moveItems : []).forEach((item) => {
-    if (normalizeText(item?.text)) {
-      lines.push(`MOVE "${normalizeText(item.text)}"`);
-    }
-    if (normalizeText(item?.expected)) {
-      lines.push(`EXPECT "${normalizeText(item.expected)}"`);
-    }
-  });
-  if (payload.receiptKit?.artifact?.type) {
-    lines.push(`KIT ${String(payload.receiptKit.artifact.type).toUpperCase()}`);
-  }
-
-  return lines;
 }
 
 function getArtifactLabel(type = "") {
@@ -115,20 +94,26 @@ function getArtifactLabel(type = "") {
   return "Receipt Kit";
 }
 
-function findReturnForReceipt(roomState = null, receiptKitId = "") {
+function findReturnForReceipt(view = null, receiptKitId = "") {
   const normalizedReceiptKitId = normalizeText(receiptKitId);
-  const items = Array.isArray(roomState?.returnItems) ? roomState.returnItems : [];
+  const items = Array.isArray(view?.recentReturns) ? view.recentReturns : [];
   return items.find((item) => normalizeText(item?.receiptKitId) === normalizedReceiptKitId) || null;
 }
 
-function findMoveForReceipt(roomState = null, receiptKitId = "") {
-  const normalizedReceiptKitId = normalizeText(receiptKitId);
-  const items = Array.isArray(roomState?.moveItems) ? roomState.moveItems : [];
-  return items.find((item) => normalizeText(item?.receiptKitId) === normalizedReceiptKitId) || null;
+function getSegmentTone(domain = "") {
+  return SEGMENT_TONES[normalizeText(domain).toLowerCase()] || SEGMENT_TONES.other;
+}
+
+function shouldShowMessageLead(content = "", segments = []) {
+  const normalizedContent = normalizeText(content);
+  if (!normalizedContent) return false;
+  return !segments.some((segment) => normalizeText(segment?.text) === normalizedContent);
 }
 
 function FieldStateChip({ fieldState }) {
-  const toneClass = styles[`stateTone${String(fieldState?.tone || "new").replace(/^\w/, (char) => char.toUpperCase())}`] || styles.stateToneNew;
+  const toneClass =
+    styles[`stateTone${String(fieldState?.tone || "new").replace(/^\w/, (char) => char.toUpperCase())}`] ||
+    styles.stateToneNew;
   return (
     <span className={`${styles.fieldChip} ${toneClass}`}>
       <span className={styles.fieldDot} />
@@ -147,9 +132,15 @@ function FogPlaceholder({ children = "Not enough signal yet." }) {
   );
 }
 
-function MirrorSection({ title, caption = "", children, emptyCopy = "" }) {
+function MirrorSection({
+  title,
+  caption = "",
+  children,
+  emptyCopy = "",
+  highlighted = false,
+}) {
   return (
-    <section className={styles.mirrorSection}>
+    <section className={`${styles.mirrorSection} ${highlighted ? styles.mirrorSectionActive : ""}`}>
       <div className={styles.mirrorSectionHead}>
         <h3>{title}</h3>
         {caption ? <span>{caption}</span> : null}
@@ -159,25 +150,32 @@ function MirrorSection({ title, caption = "", children, emptyCopy = "" }) {
   );
 }
 
-function MirrorPanel({ view, collapsed, onToggle }) {
+function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
   const mirror = view?.mirror || {};
   const projectKey = view?.project?.projectKey || "";
 
+  if (!view?.hasStructure) return null;
+
   return (
-    <aside className={styles.mirror}>
-      <button type="button" className={styles.mirrorHeader} onClick={onToggle}>
-        <div>
+    <section className={styles.mirrorStrip}>
+      <button type="button" className={styles.mirrorToggle} onClick={onToggle}>
+        <div className={styles.mirrorToggleCopy}>
           <span className={styles.eyebrow}>Box Mirror</span>
-          <strong>{normalizeText(mirror?.aim?.text) || "Structure forming…"}</strong>
+          <strong>{normalizeText(mirror?.aim?.text) || "Structure forming..."}</strong>
         </div>
-        {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+        <div className={styles.mirrorToggleState}>
+          <FieldStateChip fieldState={view?.fieldState} />
+          {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+        </div>
       </button>
 
       {!collapsed ? (
-        <div className={styles.mirrorBody}>
-          <FieldStateChip fieldState={view?.fieldState} />
-
-          <MirrorSection title="Aim" emptyCopy="The line is still foggy. Keep it small enough for reality to answer.">
+        <div className={styles.mirrorGrid}>
+          <MirrorSection
+            title="Aim"
+            highlighted={highlightedRegion === "aim"}
+            emptyCopy="The line is still forming. Keep talking until it gets precise."
+          >
             {normalizeText(mirror?.aim?.text) ? (
               <div className={styles.mirrorPrimary}>
                 <p>{mirror.aim.text}</p>
@@ -186,12 +184,13 @@ function MirrorPanel({ view, collapsed, onToggle }) {
             ) : null}
           </MirrorSection>
 
-          <MirrorSection
-            title="Witness / Evidence"
-            caption={String(Array.isArray(mirror?.evidence) ? mirror.evidence.length : 0)}
-            emptyCopy="Let a source land before this hardens."
-          >
-            {Array.isArray(mirror?.evidence) && mirror.evidence.length ? (
+          {Array.isArray(mirror?.evidence) && mirror.evidence.length ? (
+            <MirrorSection
+              title="Witness / Evidence"
+              caption={String(mirror.evidence.length)}
+              highlighted={highlightedRegion === "evidence"}
+              emptyCopy="Witness lands here after apply."
+            >
               <div className={styles.mirrorList}>
                 {mirror.evidence.map((item) => (
                   <div key={item.id} className={styles.mirrorItem}>
@@ -210,15 +209,16 @@ function MirrorPanel({ view, collapsed, onToggle }) {
                   </div>
                 ))}
               </div>
-            ) : null}
-          </MirrorSection>
+            </MirrorSection>
+          ) : null}
 
-          <MirrorSection
-            title="Story"
-            caption={String(Array.isArray(mirror?.story) ? mirror.story.length : 0)}
-            emptyCopy="Interpretation can wait until witness has shape."
-          >
-            {Array.isArray(mirror?.story) && mirror.story.length ? (
+          {Array.isArray(mirror?.story) && mirror.story.length ? (
+            <MirrorSection
+              title="Story"
+              caption={String(mirror.story.length)}
+              highlighted={highlightedRegion === "story"}
+              emptyCopy="Interpretation shows up only when it has a place."
+            >
               <div className={styles.mirrorList}>
                 {mirror.story.map((item) => (
                   <div key={item.id} className={styles.mirrorItem}>
@@ -229,15 +229,16 @@ function MirrorPanel({ view, collapsed, onToggle }) {
                   </div>
                 ))}
               </div>
-            ) : null}
-          </MirrorSection>
+            </MirrorSection>
+          ) : null}
 
-          <MirrorSection
-            title="Pings / Moves"
-            caption={String(Array.isArray(mirror?.moves) ? mirror.moves.length : 0)}
-            emptyCopy="Moves appear here once the room knows what to ask."
-          >
-            {Array.isArray(mirror?.moves) && mirror.moves.length ? (
+          {Array.isArray(mirror?.moves) && mirror.moves.length ? (
+            <MirrorSection
+              title="Pings / Moves"
+              caption={String(mirror.moves.length)}
+              highlighted={highlightedRegion === "moves"}
+              emptyCopy="A lawful ping appears here after apply."
+            >
               <div className={styles.mirrorList}>
                 {mirror.moves.map((item) => (
                   <div key={item.id} className={styles.mirrorItem}>
@@ -249,53 +250,120 @@ function MirrorPanel({ view, collapsed, onToggle }) {
                   </div>
                 ))}
               </div>
-            ) : null}
-          </MirrorSection>
+            </MirrorSection>
+          ) : null}
 
-          <MirrorSection
-            title="Returns / Receipts"
-            caption={String(Array.isArray(mirror?.returns) ? mirror.returns.length : 0)}
-            emptyCopy="Returns will change the room state here."
-          >
-            {Array.isArray(mirror?.returns) && mirror.returns.length ? (
+          {Array.isArray(mirror?.returns) && mirror.returns.length ? (
+            <MirrorSection
+              title="Returns / Receipts"
+              caption={String(mirror.returns.length)}
+              highlighted={highlightedRegion === "returns"}
+              emptyCopy="Returns change the room here."
+            >
               <div className={styles.mirrorList}>
                 {mirror.returns.map((item) => (
                   <div key={item.id} className={styles.mirrorItem}>
                     <div>
                       <strong>{item.label || item.actual || "Return"}</strong>
                       {item.actual ? <span>{item.actual}</span> : null}
+                      {item.provenanceLabel ? <span>{item.provenanceLabel}</span> : null}
                     </div>
                     <span className={styles.returnResult}>{item.result || "draft"}</span>
                   </div>
                 ))}
               </div>
-            ) : null}
-          </MirrorSection>
+            </MirrorSection>
+          ) : null}
         </div>
       ) : null}
-    </aside>
+    </section>
   );
 }
 
-function StarterView({ onOpenBoxes, onOpenSource, onOpenCreateBox, projectCount = 0 }) {
+function ProposalWakeCard({ title, region, items = [], highlighted = false, onHighlight }) {
+  if (!items.length) return null;
+
+  return (
+    <button
+      type="button"
+      className={`${styles.wakeCard} ${highlighted ? styles.wakeCardActive : ""}`}
+      onClick={() => onHighlight?.(region)}
+    >
+      <span className={styles.wakeLabel}>{title}</span>
+      <strong>{items[0]?.text}</strong>
+      {items.slice(1, 3).map((item) => (
+        <span key={item.id}>{item.text}</span>
+      ))}
+    </button>
+  );
+}
+
+function ProposalWake({ wake, highlightedRegion, onHighlight }) {
+  if (!wake) return null;
+
+  const aimItems = wake?.sections?.aim ? [wake.sections.aim] : [];
+
+  return (
+    <section className={styles.proposalWake}>
+      <div className={styles.wakeHeader}>
+        <div>
+          <span className={styles.eyebrow}>Structure Waking</span>
+          <strong>{wake?.assistantText || "Preview only until you apply it."}</strong>
+        </div>
+        <span className={styles.wakeMeta}>Preview only</span>
+      </div>
+
+      <div className={styles.wakeGrid}>
+        <ProposalWakeCard
+          title="Aim"
+          region="aim"
+          items={aimItems}
+          highlighted={highlightedRegion === "aim"}
+          onHighlight={onHighlight}
+        />
+        <ProposalWakeCard
+          title="Witness / Evidence"
+          region="evidence"
+          items={wake?.sections?.evidence}
+          highlighted={highlightedRegion === "evidence"}
+          onHighlight={onHighlight}
+        />
+        <ProposalWakeCard
+          title="Story"
+          region="story"
+          items={wake?.sections?.story}
+          highlighted={highlightedRegion === "story"}
+          onHighlight={onHighlight}
+        />
+        <ProposalWakeCard
+          title="Pings / Moves"
+          region="moves"
+          items={wake?.sections?.moves}
+          highlighted={highlightedRegion === "moves"}
+          onHighlight={onHighlight}
+        />
+        <ProposalWakeCard
+          title="Returns / Receipts"
+          region="returns"
+          items={wake?.sections?.returns}
+          highlighted={highlightedRegion === "returns"}
+          onHighlight={onHighlight}
+        />
+      </div>
+
+      {normalizeText(wake?.nextBestAction) ? (
+        <p className={styles.wakeCopy}>{wake.nextBestAction}</p>
+      ) : null}
+    </section>
+  );
+}
+
+function StarterView({ starter = null }) {
   return (
     <section className={styles.starter}>
       <span className={styles.eyebrow}>Room</span>
-      <h2>What are you trying to make real?</h2>
-      <p>Start with a source, or say the line plainly enough that reality can answer it.</p>
-      <div className={styles.inlineActions}>
-        <button type="button" className={styles.primaryButton} onClick={onOpenSource}>
-          Add Source
-        </button>
-        <button type="button" className={styles.secondaryButton} onClick={onOpenCreateBox}>
-          Create Box
-        </button>
-        {projectCount > 1 ? (
-          <button type="button" className={styles.secondaryButton} onClick={onOpenBoxes}>
-            Open Box
-          </button>
-        ) : null}
-      </div>
+      <h1>{starter?.firstLine || "What's on your mind?"}</h1>
+      <p>{starter?.secondLine || "A decision. A question. Something you're carrying. Just start talking."}</p>
     </section>
   );
 }
@@ -383,7 +451,7 @@ function CreateBoxForm({ onCreate, busy }) {
       {error ? <p className={styles.errorText}>{error}</p> : null}
       <div className={styles.inlineActions}>
         <button type="submit" className={styles.primaryButton} disabled={busy}>
-          {busy ? "Creating…" : "Create Box"}
+          {busy ? "Creating..." : "Create Box"}
         </button>
       </div>
     </form>
@@ -536,7 +604,7 @@ function SourceTray({ projectKey, onComplete }) {
             <input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
           </label>
           <button type="submit" className={styles.primaryButton} disabled={pending}>
-            {pending ? "Uploading…" : "Add Source"}
+            {pending ? "Uploading..." : "Add Source"}
           </button>
         </form>
       ) : null}
@@ -553,7 +621,7 @@ function SourceTray({ projectKey, onComplete }) {
             />
           </label>
           <button type="submit" className={styles.primaryButton} disabled={pending}>
-            {pending ? "Adding…" : "Add Source"}
+            {pending ? "Adding..." : "Add Source"}
           </button>
         </form>
       ) : null}
@@ -570,7 +638,7 @@ function SourceTray({ projectKey, onComplete }) {
             />
           </label>
           <button type="submit" className={styles.primaryButton} disabled={pending}>
-            {pending ? "Capturing…" : "Capture Link"}
+            {pending ? "Capturing..." : "Capture Link"}
           </button>
         </form>
       ) : null}
@@ -581,17 +649,13 @@ function SourceTray({ projectKey, onComplete }) {
   );
 }
 
-function normalizeLongForm(value = "") {
-  return String(value || "").trim();
-}
-
 function ReturnCard({ item }) {
   if (!item) return null;
 
   return (
     <div className={styles.returnCard}>
       <div className={styles.returnHead}>
-        <strong>Return</strong>
+        <strong>{item.label || "Return"}</strong>
         <span className={styles.returnBadge}>{item.result || "matched"}</span>
       </div>
       <div className={styles.compareGrid}>
@@ -604,20 +668,24 @@ function ReturnCard({ item }) {
           <p>{item.actual || "No actual recorded."}</p>
         </div>
       </div>
+      {item.provenanceLabel ? <p className={styles.noticeText}>{item.provenanceLabel}</p> : null}
     </div>
   );
 }
 
-function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) {
+function ReceiptKitCard({ receiptKit, view, onComplete, busy }) {
   const artifactType = normalizeText(receiptKit?.artifact?.type).toLowerCase();
-  const config = receiptKit?.artifact?.config && typeof receiptKit.artifact.config === "object"
-    ? receiptKit.artifact.config
-    : {};
-  const checklistItems = Array.isArray(config.items) && config.items.length
-    ? config.items.map((item) => normalizeText(item)).filter(Boolean)
-    : normalizeText(receiptKit?.need)
-      ? [normalizeText(receiptKit.need)]
-      : [];
+  const config =
+    receiptKit?.artifact?.config && typeof receiptKit.artifact.config === "object"
+      ? receiptKit.artifact.config
+      : {};
+  const checklistItems =
+    Array.isArray(config.items) && config.items.length
+      ? config.items.map((item) => normalizeText(item)).filter(Boolean)
+      : normalizeText(receiptKit?.need)
+        ? [normalizeText(receiptKit.need)]
+        : [];
+  const [expanded, setExpanded] = useState(false);
   const [actual, setActual] = useState("");
   const [result, setResult] = useState("matched");
   const [messageDraft, setMessageDraft] = useState(
@@ -634,7 +702,16 @@ function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) 
     () => Object.entries(checkedMap).filter(([, value]) => value).map(([key]) => key),
     [checkedMap],
   );
-  const canMarkSent = artifactType !== "compare" && !moveItem && !returnItem;
+  const returnItem = receiptKit ? findReturnForReceipt(view, receiptKit.id) : null;
+  const waiting = view?.fieldState?.key === "awaiting" && !returnItem;
+
+  useEffect(() => {
+    if (!returnItem) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      setExpanded(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [returnItem]);
 
   function validateReturnInput() {
     if (artifactType === "upload" && !uploadFile && !normalizeText(actual)) {
@@ -646,7 +723,12 @@ function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) 
     if (artifactType === "checklist" && checkedItems.length === 0 && !normalizeText(actual)) {
       return "Check what landed or note what changed.";
     }
-    if (artifactType !== "upload" && artifactType !== "link" && artifactType !== "checklist" && !normalizeText(actual)) {
+    if (
+      artifactType !== "upload" &&
+      artifactType !== "link" &&
+      artifactType !== "checklist" &&
+      !normalizeText(actual)
+    ) {
       return "Record what came back.";
     }
     return "";
@@ -659,7 +741,10 @@ function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) 
         receiptKit,
         completion: {
           mode: "move",
-          moveText: normalizeText(messageDraft) || normalizeText(receiptKit?.fastestPath) || normalizeText(receiptKit?.need),
+          moveText:
+            normalizeText(messageDraft) ||
+            normalizeText(receiptKit?.fastestPath) ||
+            normalizeText(receiptKit?.need),
           messageDraft: normalizeLongForm(messageDraft),
         },
       });
@@ -672,6 +757,7 @@ function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) 
     const nextError = validateReturnInput();
     if (nextError) {
       setError(nextError);
+      setExpanded(true);
       return;
     }
     setError("");
@@ -700,7 +786,16 @@ function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) 
           <span className={styles.eyebrow}>Receipt Kit</span>
           <strong>{receiptKit?.need || "Capture the return"}</strong>
         </div>
-        <span className={styles.receiptType}>{getArtifactLabel(artifactType)}</span>
+        <div className={styles.inlineActions}>
+          <span className={styles.receiptType}>{getArtifactLabel(artifactType)}</span>
+          <button
+            type="button"
+            className={styles.inlineLinkButton}
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? "Hide kit" : "Open kit"}
+          </button>
+        </div>
       </div>
 
       {receiptKit?.why ? <p className={styles.receiptCopy}>{receiptKit.why}</p> : null}
@@ -716,174 +811,184 @@ function ReceiptKitCard({ receiptKit, moveItem, returnItem, onComplete, busy }) 
         </div>
       </div>
 
-      {artifactType === "draft_message" ? (
-        <label className={styles.field}>
-          <span>Draft</span>
-          <textarea
-            value={messageDraft}
-            onChange={(event) => setMessageDraft(event.target.value)}
-            rows={4}
-            placeholder="Write the smallest clear ping."
-          />
-        </label>
-      ) : null}
-
-      {artifactType === "link" ? (
-        <label className={styles.field}>
-          <span>Return link</span>
-          <input
-            type="url"
-            value={linkUrl}
-            onChange={(event) => setLinkUrl(event.target.value)}
-            placeholder="https://"
-          />
-        </label>
-      ) : null}
-
-      {artifactType === "upload" ? (
-        <label className={styles.field}>
-          <span>Attach return</span>
-          <input
-            type="file"
-            onChange={(event) => setUploadFile(event.target.files?.[0] || null)}
-          />
-        </label>
-      ) : null}
-
-      {artifactType === "checklist" ? (
-        <div className={styles.checklist}>
-          {checklistItems.map((item) => (
-            <label key={item} className={styles.checkRow}>
-              <input
-                type="checkbox"
-                checked={Boolean(checkedMap[item])}
-                onChange={(event) =>
-                  setCheckedMap((current) => ({
-                    ...current,
-                    [item]: event.target.checked,
-                  }))
-                }
-              />
-              <span>{item}</span>
-            </label>
-          ))}
+      {!expanded ? (
+        <div className={styles.receiptSummary}>
+          {normalizeText(receiptKit?.fastestPath) ? <p>{receiptKit.fastestPath}</p> : null}
+          <div className={styles.inlineActions}>
+            {!returnItem ? (
+              <button type="button" className={styles.secondaryButton} onClick={handleMarkSent} disabled={busy}>
+                {busy ? "Holding..." : "Mark Ping Sent"}
+              </button>
+            ) : null}
+            <button type="button" className={styles.primaryButton} onClick={() => setExpanded(true)}>
+              {returnItem ? "Review Return" : "Record Return"}
+            </button>
+          </div>
+          {waiting ? <p className={styles.awaitingText}>The room is listening for the return.</p> : null}
+          {returnItem ? <ReturnCard item={returnItem} /> : null}
+          {error ? <p className={styles.errorText}>{error}</p> : null}
         </div>
-      ) : null}
+      ) : (
+        <>
+          {artifactType === "draft_message" ? (
+            <label className={styles.field}>
+              <span>Draft</span>
+              <textarea
+                value={messageDraft}
+                onChange={(event) => setMessageDraft(event.target.value)}
+                rows={4}
+                placeholder="Write the smallest clear ping."
+              />
+            </label>
+          ) : null}
 
-      <label className={styles.field}>
-        <span>{artifactType === "compare" ? "Actual" : "What came back"}</span>
-        <textarea
-          value={actual}
-          onChange={(event) => setActual(event.target.value)}
-          rows={artifactType === "compare" ? 4 : 3}
-          placeholder={
-            artifactType === "compare"
-              ? "Write the actual outcome."
-              : "Paste the return, note the reaction, or describe what changed."
-          }
-        />
-      </label>
+          {artifactType === "link" ? (
+            <label className={styles.field}>
+              <span>Return link</span>
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(event) => setLinkUrl(event.target.value)}
+                placeholder="https://"
+              />
+            </label>
+          ) : null}
 
-      <div className={styles.inlineActions}>
-        <label className={styles.selectField}>
-          <span>Result</span>
-          <select value={result} onChange={(event) => setResult(event.target.value)}>
-            {RECEIPT_RESULT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {canMarkSent ? (
-          <button type="button" className={styles.secondaryButton} onClick={handleMarkSent} disabled={busy}>
-            {busy ? "Holding…" : "Mark Ping Sent"}
-          </button>
-        ) : null}
-        <button type="button" className={styles.primaryButton} onClick={handleRecordReturn} disabled={busy}>
-          {busy ? "Saving…" : "Record Return"}
-        </button>
-      </div>
+          {artifactType === "upload" ? (
+            <label className={styles.field}>
+              <span>Attach return</span>
+              <input type="file" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} />
+            </label>
+          ) : null}
 
-      {moveItem && !returnItem ? (
-        <p className={styles.awaitingText}>The room is listening for the return.</p>
-      ) : null}
-      {error ? <p className={styles.errorText}>{error}</p> : null}
-      {returnItem ? <ReturnCard item={returnItem} /> : null}
+          {artifactType === "checklist" ? (
+            <div className={styles.checklist}>
+              {checklistItems.map((item) => (
+                <label key={item} className={styles.checkRow}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(checkedMap[item])}
+                    onChange={(event) =>
+                      setCheckedMap((current) => ({
+                        ...current,
+                        [item]: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>{item}</span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+
+          <label className={styles.field}>
+            <span>{artifactType === "compare" ? "Actual" : "What came back"}</span>
+            <textarea
+              value={actual}
+              onChange={(event) => setActual(event.target.value)}
+              rows={artifactType === "compare" ? 4 : 3}
+              placeholder={
+                artifactType === "compare"
+                  ? "Write the actual outcome."
+                  : "Paste the return, note the reaction, or describe what changed."
+              }
+            />
+          </label>
+
+          <div className={styles.inlineActions}>
+            <label className={styles.selectField}>
+              <span>Result</span>
+              <select value={result} onChange={(event) => setResult(event.target.value)}>
+                {RECEIPT_RESULT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!returnItem ? (
+              <button type="button" className={styles.secondaryButton} onClick={handleMarkSent} disabled={busy}>
+                {busy ? "Holding..." : "Mark Ping Sent"}
+              </button>
+            ) : null}
+            <button type="button" className={styles.primaryButton} onClick={handleRecordReturn} disabled={busy}>
+              {busy ? "Saving..." : "Record Return"}
+            </button>
+          </div>
+
+          {waiting ? <p className={styles.awaitingText}>The room is listening for the return.</p> : null}
+          {error ? <p className={styles.errorText}>{error}</p> : null}
+          {returnItem ? <ReturnCard item={returnItem} /> : null}
+        </>
+      )}
     </div>
   );
 }
 
-function MirrorDraftInspector({ roomPayload, onApply, busy }) {
-  const draft = roomPayload?.mirrorDraft || null;
-  const formalLines = buildFormalLines(roomPayload);
-  const hasContent = hasMirrorDraftContent(draft);
-
-  if (!hasContent && !roomPayload?.receiptKit) return null;
+function ProposalSegments({ segments, onHighlight }) {
+  const [openId, setOpenId] = useState("");
 
   return (
-    <div className={styles.inspectPanel}>
-      {hasContent ? (
-        <div className={styles.inspectGrid}>
-          {normalizeText(draft?.aimText) ? (
-            <div className={styles.inspectBlock}>
-              <span>Aim</span>
-              <p>{draft.aimText}</p>
-              {normalizeText(draft?.aimGloss) ? <small>{draft.aimGloss}</small> : null}
-            </div>
-          ) : null}
+    <div className={styles.segmentFlow}>
+      {segments.map((segment) => {
+        const tone = getSegmentTone(segment?.domain);
+        const isOpen = openId === segment.id;
+        const hasClause = normalizeText(segment?.suggestedClause);
 
-          {Array.isArray(draft?.evidenceItems) && draft.evidenceItems.length ? (
-            <div className={styles.inspectBlock}>
-              <span>Witness</span>
-              <ul>
-                {draft.evidenceItems.map((item) => (
-                  <li key={item.id || item.text}>{item.text}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+        return (
+          <span key={segment.id} className={styles.segmentInline}>
+            <button
+              type="button"
+              className={`${styles.segmentButton} ${tone.toneClass}`}
+              onClick={() => {
+                setOpenId((current) => (current === segment.id ? "" : segment.id));
+                if (segment?.mirrorRegion) {
+                  onHighlight?.(segment.mirrorRegion);
+                }
+              }}
+            >
+              {segment.text}
+            </button>
+            {isOpen && hasClause ? (
+              <span className={`${styles.segmentClause} ${tone.toneClass}`}>
+                {tone.glyph ? <span className={styles.segmentGlyph}>{tone.glyph}</span> : null}
+                {segment.suggestedClause}
+              </span>
+            ) : null}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
-          {Array.isArray(draft?.storyItems) && draft.storyItems.length ? (
-            <div className={styles.inspectBlock}>
-              <span>Story</span>
-              <ul>
-                {draft.storyItems.map((item) => (
-                  <li key={item.id || item.text}>{item.text}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+function ProposalFooter({ roomPayload, onApply, busy }) {
+  const gatePreview = roomPayload?.gatePreview || null;
+  const diagnostics = Array.isArray(gatePreview?.diagnostics) ? gatePreview.diagnostics : [];
+  const accepted = gatePreview?.accepted !== false;
 
-          {Array.isArray(draft?.moveItems) && draft.moveItems.length ? (
-            <div className={styles.inspectBlock}>
-              <span>Move</span>
-              <ul>
-                {draft.moveItems.map((item) => (
-                  <li key={item.id || item.text}>
-                    {item.text}
-                    {item.expected ? <small>{item.expected}</small> : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+  if (!gatePreview && !hasProposalContent(roomPayload)) return null;
 
-      {formalLines.length ? (
-        <div className={styles.formalBlock}>
-          <span className={styles.eyebrow}>Inspect</span>
-          <pre>{formalLines.join("\n")}</pre>
-        </div>
-      ) : null}
+  return (
+    <div className={styles.proposalFooter}>
+      <div
+        className={`${styles.proposalStatus} ${accepted ? styles.proposalStatusAccepted : styles.proposalStatusRejected}`}
+      >
+        <span>{accepted ? "Ready" : "Blocked"}</span>
+        <p>
+          {accepted
+            ? gatePreview?.nextBestAction || "Apply this proposal to make it canonical."
+            : gatePreview?.reason || "This proposal is not lawful yet."}
+        </p>
+        {diagnostics.length ? (
+          <small>{diagnostics.map((item) => item.message).join(" • ")}</small>
+        ) : null}
+      </div>
 
-      {hasContent ? (
-        <div className={styles.inlineActions}>
-          <button type="button" className={styles.primaryButton} onClick={onApply} disabled={busy}>
-            {busy ? "Applying…" : "Apply to Box"}
-          </button>
-        </div>
+      {accepted && Array.isArray(roomPayload?.segments) && roomPayload.segments.length ? (
+        <button type="button" className={styles.primaryButton} onClick={onApply} disabled={busy}>
+          {busy ? "Applying..." : "Apply to Room"}
+        </button>
       ) : null}
     </div>
   );
@@ -891,62 +996,55 @@ function MirrorDraftInspector({ roomPayload, onApply, busy }) {
 
 function ThreadMessage({
   message,
-  roomState,
-  onApplyDraft,
+  view,
+  onApplyProposal,
   onCompleteReceiptKit,
   applying,
   busyReceiptKitId,
+  onHighlight,
 }) {
-  const [inspectOpen, setInspectOpen] = useState(false);
   const roomPayload = message?.roomPayload || null;
   const receiptKit = roomPayload?.receiptKit || null;
-  const moveItem = receiptKit ? findMoveForReceipt(roomState, receiptKit.id) : null;
-  const returnItem = receiptKit ? findReturnForReceipt(roomState, receiptKit.id) : null;
+  const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
   const paragraphs = splitParagraphs(message?.content || "");
   const isAssistant = message?.role === "assistant";
 
   return (
-    <article className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser}`}>
-      <div className={styles.messageMeta}>
-        <span>{isAssistant ? "Seven" : "You"}</span>
-        {message?.createdAt ? <small>{String(message.createdAt).slice(0, 16).replace("T", " ")}</small> : null}
-      </div>
-
-      <div className={styles.messageBody}>
-        {paragraphs.length ? paragraphs.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>) : <p>{message?.content}</p>}
-      </div>
-
-      {roomPayload ? (
-        <div className={styles.messageActions}>
-          {(hasMirrorDraftContent(roomPayload?.mirrorDraft) || receiptKit) ? (
-            <button
-              type="button"
-              className={styles.inlineLinkButton}
-              onClick={() => setInspectOpen((current) => !current)}
-            >
-              {inspectOpen ? "Hide draft" : "Inspect draft"}
-            </button>
-          ) : null}
+    <article className={`${styles.messageRow} ${isAssistant ? styles.messageRowAssistant : styles.messageRowUser}`}>
+      <div className={`${styles.messageCard} ${isAssistant ? styles.messageAssistant : styles.messageUser}`}>
+        <div className={styles.messageMeta}>
+          <span>{isAssistant ? "Seven" : "You"}</span>
+          {message?.createdAt ? <small>{String(message.createdAt).slice(0, 16).replace("T", " ")}</small> : null}
         </div>
-      ) : null}
 
-      {inspectOpen && roomPayload ? (
-        <MirrorDraftInspector
-          roomPayload={roomPayload}
-          onApply={() => onApplyDraft(message)}
-          busy={applying}
-        />
-      ) : null}
+        <div className={styles.messageBody}>
+          {isAssistant && segments.length ? (
+            <>
+              {shouldShowMessageLead(message?.content, segments) ? (
+                <p className={styles.messageLead}>{message.content}</p>
+              ) : null}
+              <ProposalSegments segments={segments} onHighlight={onHighlight} />
+            </>
+          ) : paragraphs.length ? (
+            paragraphs.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)
+          ) : (
+            <p>{message?.content}</p>
+          )}
+        </div>
 
-      {receiptKit ? (
-        <ReceiptKitCard
-          receiptKit={receiptKit}
-          moveItem={moveItem}
-          returnItem={returnItem}
-          onComplete={onCompleteReceiptKit}
-          busy={busyReceiptKitId === receiptKit.id}
-        />
-      ) : null}
+        {isAssistant && roomPayload ? (
+          <ProposalFooter roomPayload={roomPayload} onApply={() => onApplyProposal(message)} busy={applying} />
+        ) : null}
+
+        {receiptKit ? (
+          <ReceiptKitCard
+            receiptKit={receiptKit}
+            view={view}
+            onComplete={onCompleteReceiptKit}
+            busy={busyReceiptKitId === receiptKit.id}
+          />
+        ) : null}
+      </div>
     </article>
   );
 }
@@ -978,23 +1076,153 @@ function ToolLinks({ deepLinks }) {
   );
 }
 
-function Composer({ value, onChange, onSubmit, pending }) {
+function Composer({
+  value,
+  onChange,
+  onSubmit,
+  pending,
+  placeholder = "Start talking...",
+  onOpenAttach,
+  listenHref,
+}) {
   return (
     <form className={styles.composer} onSubmit={onSubmit}>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Say the line plainly, or ask what the room should check next."
-        rows={4}
-      />
-      <div className={styles.composerActions}>
-        <p>Plain language first. Structure only if it helps.</p>
-        <button type="submit" className={styles.primaryButton} disabled={pending || !normalizeText(value)}>
-          <SendHorizontal size={14} />
-          {pending ? "Listening…" : "Send"}
-        </button>
+      <div className={styles.composerShell}>
+        <div className={styles.composerRow}>
+          <button
+            type="button"
+            className={styles.composerTool}
+            onClick={onOpenAttach}
+            aria-label="Add source"
+          >
+            <Paperclip size={16} />
+          </button>
+          <textarea
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            rows={1}
+          />
+          <button type="submit" className={styles.primaryButton} disabled={pending || !normalizeText(value)}>
+            <SendHorizontal size={14} />
+            {pending ? "Listening..." : "Send"}
+          </button>
+        </div>
+        <div className={styles.composerActions}>
+          <Link href={listenHref || "/workspace/phase1"} className={styles.composerListen}>
+            <Play size={14} />
+            Listen
+          </Link>
+          <p>Plain language first. Structure wakes up only when it earns it.</p>
+        </div>
       </div>
     </form>
+  );
+}
+
+function LoadingMessage() {
+  return (
+    <article className={`${styles.messageRow} ${styles.messageRowAssistant}`}>
+      <div className={`${styles.messageCard} ${styles.messageAssistant}`}>
+        <div className={styles.messageMeta}>
+          <span>Seven</span>
+          <small>Thinking</small>
+        </div>
+        <div className={styles.loadingDots}>
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function OverlaySurface({
+  mode,
+  view,
+  projectKey,
+  onClose,
+  onOpenMode,
+  onProjectSelect,
+  onCreateBox,
+  onSourceComplete,
+  busy,
+}) {
+  if (!mode) return null;
+
+  const title =
+    mode === "source"
+      ? "Bring witness into the room"
+      : mode === "boxes"
+        ? "Open another room"
+        : mode === "create"
+          ? "Open a fresh room"
+          : "Room controls";
+
+  return (
+    <div className={styles.overlayBackdrop} onClick={onClose}>
+      <aside className={styles.overlayPanel} onClick={(event) => event.stopPropagation()}>
+        <div className={styles.overlayHeader}>
+          <div className={styles.overlayHeaderCopy}>
+            <span className={styles.eyebrow}>Room</span>
+            <strong>{view?.project?.title || "Room"}</strong>
+            <p>{title}</p>
+          </div>
+          <div className={styles.inlineActions}>
+            {mode !== "instrument" ? (
+              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("instrument")}>
+                <ChevronRight size={14} />
+                Back
+              </button>
+            ) : null}
+            <button type="button" className={styles.secondaryButton} onClick={onClose} aria-label="Close controls">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {mode === "instrument" ? (
+          <div className={styles.overlayContent}>
+            <div className={styles.overlayActions}>
+              <button type="button" className={styles.primaryButton} onClick={() => onOpenMode("source")}>
+                <Upload size={14} />
+                Add Source
+              </button>
+              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("boxes")}>
+                <Boxes size={14} />
+                Boxes
+              </button>
+              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("create")}>
+                <Plus size={14} />
+                New Box
+              </button>
+            </div>
+
+            {view?.hasStructure ? <ToolLinks deepLinks={view?.deepLinks} /> : null}
+
+            <div className={styles.overlayMeta}>
+              <span>{Number(view?.project?.sourceCount) || 0} source{Number(view?.project?.sourceCount) === 1 ? "" : "s"}</span>
+              <span>
+                {Number(view?.project?.receiptDraftCount) || 0} receipt draft
+                {Number(view?.project?.receiptDraftCount) === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {mode === "source" ? <SourceTray projectKey={projectKey} onComplete={onSourceComplete} /> : null}
+        {mode === "boxes" ? (
+          <ProjectPicker
+            projects={view?.projects}
+            activeProjectKey={projectKey}
+            onSelect={onProjectSelect}
+            onCreate={() => onOpenMode("create")}
+          />
+        ) : null}
+        {mode === "create" ? <CreateBoxForm onCreate={onCreateBox} busy={busy} /> : null}
+      </aside>
+    </div>
   );
 }
 
@@ -1007,18 +1235,46 @@ export default function RoomWorkspace({ initialView }) {
   const [messageError, setMessageError] = useState("");
   const [actionError, setActionError] = useState("");
   const [mirrorCollapsed, setMirrorCollapsed] = useState(false);
-  const [showProjectPicker, setShowProjectPicker] = useState(false);
-  const [showCreateBox, setShowCreateBox] = useState(false);
-  const [showSourceTray, setShowSourceTray] = useState(false);
+  const [overlayMode, setOverlayMode] = useState("");
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
+  const [highlightedRegion, setHighlightedRegion] = useState("");
+  const threadRef = useRef(null);
+  const highlightTimeoutRef = useRef(null);
 
   useEffect(() => {
     setView(initialView);
   }, [initialView]);
 
+  useEffect(() => {
+    if (!threadRef.current) return;
+    threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [view, turnPending]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const projectKey = view?.project?.projectKey || "";
   const messages = Array.isArray(view?.messages) ? view.messages : [];
+  const showStarter = Boolean(view?.starter?.show) && messages.length === 0;
+
+  function highlightRegion(region = "") {
+    const normalizedRegion = normalizeText(region).toLowerCase();
+    if (!normalizedRegion) return;
+    setHighlightedRegion(normalizedRegion);
+    setMirrorCollapsed(false);
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedRegion("");
+    }, 1400);
+  }
 
   async function refreshRoom(nextProjectKey = projectKey) {
     const params = new URLSearchParams();
@@ -1041,9 +1297,7 @@ export default function RoomWorkspace({ initialView }) {
       startActionTransition(() => {
         router.replace(buildWorkspaceHref(nextProjectKey), { scroll: false });
       });
-      setShowProjectPicker(false);
-      setShowCreateBox(false);
-      setShowSourceTray(false);
+      setOverlayMode("");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that box.");
     }
@@ -1067,6 +1321,7 @@ export default function RoomWorkspace({ initialView }) {
   async function handleSourceComplete() {
     setActionError("");
     await refreshRoom(projectKey);
+    setOverlayMode("");
   }
 
   async function handleTurnSubmit(event) {
@@ -1099,9 +1354,9 @@ export default function RoomWorkspace({ initialView }) {
     }
   }
 
-  async function handleApplyDraft(message) {
-    const mirrorDraft = message?.roomPayload?.mirrorDraft;
-    if (!hasMirrorDraftContent(mirrorDraft)) return;
+  async function handleApplyProposal(message) {
+    const roomPayload = message?.roomPayload;
+    if (!hasProposalContent(roomPayload)) return;
     setApplyingMessageId(message.id);
     setActionError("");
     try {
@@ -1112,19 +1367,17 @@ export default function RoomWorkspace({ initialView }) {
         },
         body: JSON.stringify({
           projectKey,
-          action: "apply_mirror_draft",
+          action: "apply_proposal_preview",
           assistantMessageId: message.id,
-          mirrorDraft,
-          receiptKit: message?.roomPayload?.receiptKit || null,
         }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(payload?.error || "Could not apply the draft.");
+        throw new Error(payload?.error || "Could not apply the proposal.");
       }
       setView(payload.view);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not apply the draft.");
+      setActionError(error instanceof Error ? error.message : "Could not apply the proposal.");
     } finally {
       setApplyingMessageId("");
     }
@@ -1194,122 +1447,92 @@ export default function RoomWorkspace({ initialView }) {
 
   return (
     <main className={styles.page}>
-      <div className={styles.shell}>
-        <header className={styles.header}>
-          <div className={styles.headerCopy}>
-            <span className={styles.eyebrow}>Workspace</span>
-            <h1>{view?.project?.title || "Room"}</h1>
-            <p>{view?.project?.subtitle || "Calm conversation first. Structure only when it helps."}</p>
-          </div>
-          <div className={styles.headerActions}>
-            <FieldStateChip fieldState={view?.fieldState} />
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => {
-                setShowProjectPicker((current) => !current);
-                setShowCreateBox(false);
-              }}
-            >
-              <Boxes size={14} />
-              Boxes
-            </button>
-            <button
-              type="button"
-              className={styles.primaryButton}
-              onClick={() => {
-                setShowSourceTray((current) => !current);
-                setShowProjectPicker(false);
-              }}
-            >
-              <Upload size={14} />
-              Add Source
-            </button>
-          </div>
-        </header>
+      <button
+        type="button"
+        className={styles.instrumentTrigger}
+        onClick={() => setOverlayMode("instrument")}
+        aria-label="Open room controls"
+      >
+        <MoreHorizontal size={18} />
+      </button>
 
-        {(showProjectPicker || showCreateBox || showSourceTray) ? (
-          <section className={styles.topPanels}>
-            {showProjectPicker ? (
-              <ProjectPicker
-                projects={view?.projects}
-                activeProjectKey={projectKey}
-                onSelect={handleProjectSelect}
-                onCreate={() => {
-                  setShowCreateBox(true);
-                  setShowProjectPicker(false);
-                }}
-              />
-            ) : null}
-            {showCreateBox ? (
-              <CreateBoxForm onCreate={handleCreateBox} busy={actionPending} />
-            ) : null}
-            {showSourceTray ? (
-              <SourceTray projectKey={projectKey} onComplete={handleSourceComplete} />
-            ) : null}
-          </section>
+      <OverlaySurface
+        mode={overlayMode}
+        view={view}
+        projectKey={projectKey}
+        onClose={() => setOverlayMode("")}
+        onOpenMode={setOverlayMode}
+        onProjectSelect={handleProjectSelect}
+        onCreateBox={handleCreateBox}
+        onSourceComplete={handleSourceComplete}
+        busy={actionPending}
+      />
+
+      <div className={styles.shell}>
+        {actionError || messageError ? (
+          <div className={styles.bannerStack}>
+            {actionError ? <p className={styles.errorBanner}>{actionError}</p> : null}
+            {messageError ? <p className={styles.errorBanner}>{messageError}</p> : null}
+          </div>
         ) : null}
 
-        <ToolLinks deepLinks={view?.deepLinks} />
-
-        {actionError ? <p className={styles.errorBanner}>{actionError}</p> : null}
-        {messageError ? <p className={styles.errorBanner}>{messageError}</p> : null}
-
-        <div className={styles.layout}>
-          <div className={styles.threadColumn}>
-            {view?.starter?.show ? (
-              <StarterView
-                projectCount={Array.isArray(view?.projects) ? view.projects.length : 0}
-                onOpenBoxes={() => {
-                  setShowProjectPicker(true);
-                  setShowSourceTray(false);
-                }}
-                onOpenSource={() => {
-                  setShowSourceTray(true);
-                  setShowProjectPicker(false);
-                }}
-                onOpenCreateBox={() => {
-                  setShowCreateBox(true);
-                  setShowProjectPicker(false);
-                }}
+        <section className={styles.roomCanvas}>
+          {view?.proposalWake || view?.hasStructure ? (
+            <div className={styles.surfaceStack}>
+              <ProposalWake
+                wake={view?.proposalWake}
+                highlightedRegion={highlightedRegion}
+                onHighlight={highlightRegion}
               />
-            ) : null}
+              <MirrorPanel
+                view={view}
+                highlightedRegion={highlightedRegion}
+                collapsed={mirrorCollapsed}
+                onToggle={() => setMirrorCollapsed((current) => !current)}
+              />
+            </div>
+          ) : null}
+
+          <div
+            ref={threadRef}
+            className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
+          >
+            {showStarter ? <StarterView starter={view?.starter} /> : null}
 
             <div className={styles.thread}>
               {messages.map((message) => (
                 <ThreadMessage
                   key={message.id}
                   message={message}
-                  roomState={view?.roomState}
-                  onApplyDraft={handleApplyDraft}
+                  view={view}
+                  onApplyProposal={handleApplyProposal}
                   onCompleteReceiptKit={handleCompleteReceiptKit}
                   applying={applyingMessageId === message.id}
                   busyReceiptKitId={busyReceiptKitId}
+                  onHighlight={highlightRegion}
                 />
               ))}
-              {!messages.length ? (
+
+              {turnPending ? <LoadingMessage /> : null}
+
+              {!messages.length && !showStarter && !view?.hasStructure ? (
                 <div className={styles.emptyThread}>
                   <FogPlaceholder>Unresolved regions belong here until witness arrives.</FogPlaceholder>
                 </div>
               ) : null}
             </div>
-
-            <Composer
-              value={composerText}
-              onChange={setComposerText}
-              onSubmit={handleTurnSubmit}
-              pending={turnPending}
-            />
           </div>
 
-          <div className={styles.mirrorColumn}>
-            <MirrorPanel
-              view={view}
-              collapsed={mirrorCollapsed}
-              onToggle={() => setMirrorCollapsed((current) => !current)}
-            />
-          </div>
-        </div>
+          <Composer
+            value={composerText}
+            onChange={setComposerText}
+            onSubmit={handleTurnSubmit}
+            pending={turnPending}
+            placeholder={!view?.hasStructure ? "Start talking..." : "Say more..."}
+            onOpenAttach={() => setOverlayMode("source")}
+            listenHref={view?.deepLinks?.reader || "/workspace/phase1"}
+          />
+        </section>
       </div>
     </main>
   );

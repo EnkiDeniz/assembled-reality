@@ -6,41 +6,70 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("workspace route and room api surface are wired for room-first entry", async () => {
+test("workspace route and room api surface are wired for canonical room-first entry", async () => {
   const workspacePage = await read("src/app/workspace/page.jsx");
   const roomRoute = await read("src/app/api/workspace/room/route.js");
   const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomApplyRoute = await read("src/app/api/workspace/room/apply/route.js");
+  const roomServer = await read("src/lib/room-server.js");
+  const roomDocuments = await read("src/lib/room-documents.js");
 
   assert.match(workspacePage, /RoomWorkspace/);
   assert.match(workspacePage, /loadRoomWorkspacePageData/);
   assert.match(roomRoute, /buildRoomWorkspaceViewForUser/);
-  assert.match(roomTurnRoute, /appendConversationExchangeForUser/);
-  assert.match(roomTurnRoute, /No silent mutation/);
-  assert.match(roomApplyRoute, /apply_mirror_draft/);
+  assert.match(roomTurnRoute, /runRoomProposalGate/);
+  assert.match(roomTurnRoute, /gatePreview/);
+  assert.match(roomApplyRoute, /apply_proposal_preview/);
   assert.match(roomApplyRoute, /complete_receipt_kit/);
+  assert.match(roomServer, /ensureRoomAssemblyDocumentForProject/);
+  assert.match(roomDocuments, /hiddenFromProjectHome:\s*true/);
+  assert.match(roomDocuments, /roomDocument:\s*true/);
 });
 
-test("room shell keeps source intake, receipt kits, and deep links inside the new client surface", async () => {
-  const roomShell = await read("src/components/room/RoomWorkspace.jsx");
+test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden assembly documents", async () => {
+  const roomCanonical = await read("src/lib/room-canonical.js");
+  const roomState = await read("src/lib/room.js");
+  const roomUi = await read("src/components/room/RoomWorkspace.jsx");
+  const seedModel = await read("src/lib/seed-model.js");
+
+  assert.match(roomCanonical, /applySevenProposalGate/);
+  assert.match(roomCanonical, /buildBoxSectionsFromArtifact/);
+  assert.match(roomCanonical, /buildEchoFieldModel/);
+  assert.match(roomCanonical, /derivePaneInteractionContract/);
+  assert.match(roomCanonical, /createWindowState/);
+  assert.match(roomCanonical, /buildProposalWakeViewModel/);
+  assert.match(roomCanonical, /proposal_applied/);
+
+  assert.match(roomState, /buildInitialRoomAssemblySource/);
+  assert.match(roomState, /ROOM_LEGACY_SEED_MODE/);
+  assert.match(roomState, /normalizeRoomTurnResult/);
+  assert.match(roomState, /isRoomAssemblyDocument/);
+  assert.match(roomState, /deriveMirrorRegionFromDomain/);
+
+  assert.match(roomUi, /Structure Waking/);
+  assert.match(roomUi, /Apply to Room/);
+  assert.match(roomUi, /apply_proposal_preview/);
+  assert.match(roomUi, /complete_receipt_kit/);
+  assert.match(roomUi, /mirrorRegion/);
+  assert.match(roomUi, /What's on your mind\?/);
+  assert.match(roomUi, /Start talking\.\.\./);
+
+  assert.match(seedModel, /isRoomAssemblyDocument/);
+});
+
+test("strict ping rule, mirror regions, and receipt artifact support remain encoded in the room layer", async () => {
+  const roomCanonical = await read("src/lib/room-canonical.js");
+  const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomState = await read("src/lib/room.js");
 
-  assert.match(roomShell, /\/api\/workspace\/room\/turn/);
-  assert.match(roomShell, /\/api\/workspace\/room\/apply/);
-  assert.match(roomShell, /\/api\/workspace\/paste/);
-  assert.match(roomShell, /\/api\/workspace\/link/);
-  assert.match(roomShell, /\/api\/documents/);
-  assert.match(roomShell, /ReceiptKitCard/);
-  assert.match(roomShell, /MirrorPanel/);
-  assert.match(roomShell, /ToolLinks/);
-
+  assert.match(roomCanonical, /ping_requires_test/);
+  assert.match(roomTurnRoute, /Never propose MOV without also proposing TST/);
+  assert.match(roomTurnRoute, /mirrorRegion/);
+  assert.match(roomTurnRoute, /aim\|evidence\|story\|moves\|returns/);
   assert.match(roomState, /"upload"/);
   assert.match(roomState, /"paste"/);
   assert.match(roomState, /"link"/);
   assert.match(roomState, /"draft_message"/);
   assert.match(roomState, /"checklist"/);
   assert.match(roomState, /"compare"/);
-  assert.match(roomState, /"awaiting"/);
-  assert.match(roomState, /"sealed"/);
-  assert.match(roomState, /commitReceiptKitToRoomState/);
 });

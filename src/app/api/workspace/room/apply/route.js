@@ -1,23 +1,29 @@
 import { NextResponse } from "next/server";
 import { PRIMARY_WORKSPACE_DOCUMENT_KEY } from "@/lib/project-model";
 import {
-  buildAssemblyIndexEvent,
-  normalizeProjectArchitectureMeta,
-  validateRootText,
-} from "@/lib/assembly-architecture";
-import {
   createReadingReceiptDraftForUser,
   getReadingReceiptDraftByIdForUser,
 } from "@/lib/reader-db";
-import { getReaderProjectForUser, updateReaderProjectForUser } from "@/lib/reader-projects";
-import {
-  applyMirrorDraftToRoomState,
-  commitReceiptKitToRoomState,
-  normalizeReceiptKit,
-  normalizeRoomMirrorDraft,
-} from "@/lib/room";
+import { getReaderProjectForUser } from "@/lib/reader-projects";
 import { buildRoomWorkspaceViewForUser } from "@/lib/room-server";
 import { getRequiredSession } from "@/lib/server-session";
+import { loadConversationThreadForUser } from "@/lib/reader-workspace";
+import {
+  buildRoomThreadKey,
+  extractRoomPayloadFromCitations,
+  normalizeReceiptKit,
+} from "@/lib/room";
+import {
+  applyArtifactToRuntimeWindow,
+  compileRoomSource,
+  createOrHydrateRoomRuntimeWindow,
+  runRoomProposalGate,
+} from "@/lib/room-canonical";
+import {
+  ensureRoomAssemblyDocumentForProject,
+  getRoomAssemblySource,
+  saveRoomAssemblySourceForUser,
+} from "@/lib/room-documents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,29 +36,23 @@ function normalizeLongText(value = "") {
   return String(value || "").trim();
 }
 
-function countWords(text = "") {
-  const normalized = normalizeText(text);
-  return normalized ? normalized.split(/\s+/).length : 0;
+function inferScalarKind(value = "") {
+  const normalized = normalizeText(value);
+  if (!normalized) return "text";
+  if (/^(true|false)$/i.test(normalized)) return "bool";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return "date";
+  if (/^-?\d+(\.\d+)?$/.test(normalized)) return "score";
+  return "text";
 }
 
-function bindReceiptKitToDraft(mirrorDraft = null, receiptKit = null) {
-  const normalizedDraft = normalizeRoomMirrorDraft(mirrorDraft);
-  const normalizedKit = normalizeReceiptKit(receiptKit);
-  if (!normalizedKit || normalizedDraft.moveItems.length !== 1) {
-    return normalizedDraft;
-  }
-
-  return {
-    ...normalizedDraft,
-    moveItems: normalizedDraft.moveItems.map((item, index) =>
-      index === 0 && !item.receiptKitId
-        ? {
-            ...item,
-            receiptKitId: normalizedKit.id,
-          }
-        : item,
-    ),
-  };
+function makeIdentifier(value = "", fallback = "room_value") {
+  return (
+    normalizeText(value)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 80) || fallback
+  );
 }
 
 function buildChecklistActual(completion = {}) {
@@ -65,6 +65,185 @@ function buildChecklistActual(completion = {}) {
   }
   if (checkedItems.length) return checkedItems.join(", ");
   return note;
+}
+
+function findAssistantMessage(thread = null, assistantMessageId = "") {
+  const normalizedId = normalizeText(assistantMessageId);
+  if (!normalizedId) return null;
+  return (thread?.messages || []).find(
+    (message) =>
+      message?.id === normalizedId &&
+      String(message?.role || "").toUpperCase() === "ASSISTANT",
+  );
+}
+
+function buildApplyEvent({ kind, proposalId = "", assistantMessageId = "", detail = "" } = {}) {
+  return {
+    kind,
+    proposalId: normalizeText(proposalId),
+    assistantMessageId: normalizeText(assistantMessageId),
+    detail: normalizeText(detail),
+  };
+}
+
+function buildReturnEvent(actual = "", provenanceLabel = "") {
+  return {
+    kind: "return_received",
+    actual: normalizeLongText(actual),
+    provenanceLabel: normalizeText(provenanceLabel).toLowerCase(),
+  };
+}
+
+function buildRoomReceiptDraftTitle(view = null) {
+  return `${normalizeText(view?.project?.title) || "Box"} return receipt`;
+}
+
+async function createLocalReceiptDraft({
+  userId,
+  project = null,
+  view = null,
+  roomDocument = null,
+  receiptKit = null,
+  completion = {},
+  uploadedDocument = null,
+  actual = "",
+}) {
+  const documentKey =
+    normalizeText(uploadedDocument?.documentKey) ||
+    normalizeText(view?.recentSources?.[0]?.documentKey) ||
+    normalizeText(project?.currentAssemblyDocumentKey) ||
+    normalizeText(roomDocument?.documentKey) ||
+    PRIMARY_WORKSPACE_DOCUMENT_KEY;
+
+  const draft = await createReadingReceiptDraftForUser(userId, {
+    projectId: project?.id || null,
+    projectKey: project?.projectKey || view?.project?.projectKey || "",
+    documentKey,
+    status: "LOCAL_DRAFT",
+    title: buildRoomReceiptDraftTitle(view),
+    interpretation: actual || "Room return captured.",
+    implications: `Predicted: ${normalizeText(receiptKit?.prediction?.expected) || "Not specified"}\nResult: ${normalizeText(completion?.result) || "matched"}`,
+    stance: normalizeText(completion?.result) === "contradicted" ? "WORKING" : "TENTATIVE",
+    sourceSections: normalizeText(uploadedDocument?.documentKey)
+      ? [normalizeText(uploadedDocument.documentKey)]
+      : [],
+    payload: {
+      mode: "room",
+      receiptKit,
+      completion,
+      actual,
+      uploadedDocument,
+    },
+  });
+
+  if (!draft?.id) return null;
+  return getReadingReceiptDraftByIdForUser(userId, draft.id);
+}
+
+function buildReceiptCompletionProposal({
+  receiptKit = null,
+  completion = {},
+  uploadedDocument = null,
+  actual = "",
+}) {
+  const mode = normalizeText(completion?.mode).toLowerCase() === "move" ? "move" : "return";
+  const segments = [];
+  const moveText =
+    normalizeText(completion?.moveText) ||
+    normalizeText(completion?.messageDraft) ||
+    normalizeText(receiptKit?.fastestPath) ||
+    normalizeText(receiptKit?.need);
+  const testText =
+    normalizeText(receiptKit?.prediction?.expected) ||
+    normalizeText(receiptKit?.enough) ||
+    "Reality answers the active move clearly.";
+
+  if (mode === "move") {
+    segments.push(
+      {
+        text: moveText,
+        domain: "move",
+        suggestedClause: `MOV move "${moveText.replace(/"/g, '\\"')}" via manual`,
+        intent: "move",
+      },
+      {
+        text: testText,
+        domain: "test",
+        suggestedClause: `TST test "${testText.replace(/"/g, '\\"')}"`,
+        intent: "test",
+      },
+    );
+
+    return {
+      proposal: { segments },
+      receiptEntry: null,
+      mode,
+      provenanceLabel: "",
+      actual: "",
+    };
+  }
+
+  let provenanceLabel = "user_entered";
+  let via = "user";
+
+  if (normalizeText(uploadedDocument?.documentKey)) {
+    const fileRef = makeIdentifier(
+      uploadedDocument?.documentKey || uploadedDocument?.title || uploadedDocument?.originalFilename,
+      "uploaded_document",
+    );
+    const filename = normalizeText(
+      uploadedDocument?.title || uploadedDocument?.originalFilename || uploadedDocument?.documentKey,
+    );
+    segments.push({
+      text: filename || "Uploaded document",
+      domain: "witness",
+      suggestedClause: `GND witness @${fileRef} from "${filename.replace(/"/g, '\\"')}" with hash_${fileRef}`,
+      intent: "ground",
+    });
+    segments.push({
+      text: actual || filename,
+      domain: "return",
+      suggestedClause: `RTN receipt @${fileRef} via service as ${inferScalarKind(actual || filename)}`,
+      intent: "capture",
+    });
+    provenanceLabel = "uploaded_document";
+    via = "service";
+  } else if (normalizeText(completion?.linkUrl)) {
+    segments.push({
+      text: actual || normalizeText(completion.linkUrl),
+      domain: "return",
+      suggestedClause: `RTN observe "${(actual || normalizeText(completion.linkUrl)).replace(/"/g, '\\"')}" via third_party as text`,
+      intent: "observe",
+    });
+    provenanceLabel = "linked_source";
+    via = "third_party";
+  } else {
+    segments.push({
+      text: actual,
+      domain: "return",
+      suggestedClause: `RTN observe "${actual.replace(/"/g, '\\"')}" via user as ${inferScalarKind(actual)}`,
+      intent: "observe",
+    });
+  }
+
+  const receiptEntry = {
+    label: normalizeText(receiptKit?.need) || "Return",
+    predicted: normalizeText(receiptKit?.prediction?.expected),
+    actual,
+    result: normalizeText(completion?.result).toLowerCase() || "matched",
+    via,
+    provenanceLabel,
+    receiptKitId: normalizeText(receiptKit?.id),
+    draftId: "",
+  };
+
+  return {
+    proposal: { segments },
+    receiptEntry,
+    mode,
+    provenanceLabel,
+    actual,
+  };
 }
 
 export async function POST(request) {
@@ -86,49 +265,83 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: "Box not found." }, { status: 404 });
   }
 
-  const projectMeta = normalizeProjectArchitectureMeta(project.metadataJson || project.architectureMeta || null);
-  const currentRoomState = projectMeta.room;
+  const roomDocument = await ensureRoomAssemblyDocumentForProject(session.user.id, project.projectKey);
+  const currentSource = getRoomAssemblySource(roomDocument);
+  const currentArtifact = compileRoomSource({
+    source: currentSource,
+    filename: `${roomDocument?.documentKey || "room"}.loe`,
+  });
+  const currentWindow = createOrHydrateRoomRuntimeWindow(roomDocument, currentArtifact);
 
-  if (action === "apply_mirror_draft") {
-    const receiptKit = normalizeReceiptKit(body?.receiptKit);
-    const mirrorDraft = bindReceiptKitToDraft(body?.mirrorDraft, receiptKit);
+  if (action === "apply_proposal_preview") {
     const assistantMessageId = normalizeText(body?.assistantMessageId);
-    const nextRoomState = applyMirrorDraftToRoomState(currentRoomState, mirrorDraft, {
-      assistantMessageId,
-    });
-    const appendEvents = [
-      buildAssemblyIndexEvent("room_mirror_applied", {
-        move: "Accepted a Room draft into the box mirror.",
-        return: "Aim, witness, story, or move structure was persisted.",
-        echo: "room-apply",
-        context: {
-          assistantMessageId,
-          aimText: nextRoomState.aim.text,
-          evidenceCount: nextRoomState.evidenceItems.length,
-          storyCount: nextRoomState.storyItems.length,
-          moveCount: nextRoomState.moveItems.length,
-        },
-      }),
-    ];
-    const nextProjectUpdate = {
-      roomState: nextRoomState,
-      touchSystemExample: true,
-      appendEvents,
-    };
-    const nextAimText = normalizeText(mirrorDraft.aimText);
-    const nextAimGloss = normalizeText(mirrorDraft.aimGloss);
-    if (!projectMeta.root.text && nextAimText && countWords(nextAimText) <= 7) {
-      const rootError = validateRootText(nextAimText);
-      if (!rootError) {
-        nextProjectUpdate.rootText = nextAimText;
-        if (nextAimGloss) {
-          nextProjectUpdate.rootGloss = nextAimGloss;
-        }
-      }
+    if (!assistantMessageId) {
+      return NextResponse.json({ ok: false, error: "Assistant message is required." }, { status: 400 });
     }
 
-    await updateReaderProjectForUser(session.user.id, projectKey, nextProjectUpdate);
-    const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey });
+    const thread = await loadConversationThreadForUser(session.user.id, buildRoomThreadKey(project.projectKey));
+    const assistantMessage = findAssistantMessage(thread, assistantMessageId);
+    if (!assistantMessage) {
+      return NextResponse.json({ ok: false, error: "Proposal preview not found." }, { status: 404 });
+    }
+
+    const roomPayload = extractRoomPayloadFromCitations(assistantMessage.citations);
+    if (!roomPayload) {
+      return NextResponse.json({ ok: false, error: "That message has no Room proposal." }, { status: 400 });
+    }
+
+    const gate = runRoomProposalGate({
+      currentSource,
+      proposal: roomPayload,
+      filename: `${roomDocument?.documentKey || "room"}.loe`,
+      runtimeWindow: currentWindow,
+    });
+
+    if (!gate.accepted) {
+      return NextResponse.json(
+        { ok: false, error: "That proposal is no longer lawful to apply.", gatePreview: gate.gatePreview },
+        { status: 400 },
+      );
+    }
+
+    let nextWindow = applyArtifactToRuntimeWindow(currentWindow, gate.artifact, {
+      previousArtifact: currentArtifact,
+      event: buildApplyEvent({
+        kind: "proposal_applied",
+        proposalId: roomPayload.proposalId,
+        assistantMessageId,
+        detail: "Applied accepted Room proposal.",
+      }),
+    });
+
+    const priorReturnCount = (currentArtifact?.ast || []).filter((clause) => clause.head === "RTN").length;
+    const nextReturnCount = (gate.artifact?.ast || []).filter((clause) => clause.head === "RTN").length;
+    if (nextReturnCount > priorReturnCount) {
+      const latestReturn = gate.artifact.ast.filter((clause) => clause.head === "RTN").at(-1);
+      nextWindow = {
+        ...nextWindow,
+        events: [
+          ...(Array.isArray(nextWindow.events) ? nextWindow.events : []),
+          {
+            ...buildReturnEvent(
+              normalizeText(latestReturn?.positional?.[0]?.value || latestReturn?.positional?.[0]?.raw),
+              normalizeText(latestReturn?.keywords?.via?.value || "user"),
+            ),
+            id: `evt_${(Array.isArray(nextWindow.events) ? nextWindow.events.length : 0) + 1}`,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
+    }
+
+    await saveRoomAssemblySourceForUser(session.user.id, roomDocument.documentKey, {
+      source: gate.nextSource,
+      runtimeWindow: nextWindow,
+    });
+
+    const view = await buildRoomWorkspaceViewForUser(session.user.id, {
+      projectKey: project.projectKey,
+    });
     return NextResponse.json({ ok: true, view });
   }
 
@@ -140,100 +353,82 @@ export async function POST(request) {
 
     const completion = body?.completion && typeof body.completion === "object" ? body.completion : {};
     const mode = normalizeText(completion?.mode).toLowerCase() === "move" ? "move" : "return";
-    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey });
     let uploadedDocument =
       completion?.uploadedDocument && typeof completion.uploadedDocument === "object"
         ? completion.uploadedDocument
         : null;
-    const checkedItems = Array.isArray(completion?.checkedItems)
-      ? completion.checkedItems.map((item) => normalizeText(item)).filter(Boolean)
-      : [];
     const actual =
       normalizeLongText(completion?.actual) ||
-      buildChecklistActual({ actual: completion?.actual, checkedItems }) ||
+      buildChecklistActual({ actual: completion?.actual, checkedItems: completion?.checkedItems }) ||
       normalizeText(uploadedDocument?.title) ||
       normalizeText(uploadedDocument?.documentKey);
+
+    const proposalBundle = buildReceiptCompletionProposal({
+      receiptKit,
+      completion,
+      uploadedDocument,
+      actual,
+    });
+
+    const gate = runRoomProposalGate({
+      currentSource,
+      proposal: proposalBundle.proposal,
+      filename: `${roomDocument?.documentKey || "room"}.loe`,
+      runtimeWindow: currentWindow,
+    });
+
+    if (!gate.accepted) {
+      return NextResponse.json(
+        { ok: false, error: "The receipt completion is not lawful yet.", gatePreview: gate.gatePreview },
+        { status: 400 },
+      );
+    }
+
+    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, {
+      projectKey: project.projectKey,
+    });
     let draft = null;
 
     if (mode === "return") {
-      const documentKey =
-        normalizeText(uploadedDocument?.documentKey) ||
-        normalizeText(viewBefore?.recentSources?.[0]?.documentKey) ||
-        normalizeText(project?.currentAssemblyDocumentKey) ||
-        PRIMARY_WORKSPACE_DOCUMENT_KEY;
-
-      draft = await createReadingReceiptDraftForUser(session.user.id, {
-        projectId: project.id || null,
-        projectKey,
-        documentKey,
-        status: "LOCAL_DRAFT",
-        title: `${normalizeText(viewBefore?.project?.title) || "Box"} return receipt`,
-        interpretation: actual || "Room return captured.",
-        implications: `Predicted: ${normalizeText(receiptKit?.prediction?.expected) || "Not specified"}\nResult: ${normalizeText(completion?.result) || "matched"}`,
-        stance: normalizeText(completion?.result) === "contradicted" ? "WORKING" : "TENTATIVE",
-        sourceSections: normalizeText(uploadedDocument?.documentKey)
-          ? [normalizeText(uploadedDocument.documentKey)]
-          : [],
-        payload: {
-          mode: "room",
-          receiptKit,
-          returnComparison: {
-            predicted: normalizeText(receiptKit?.prediction?.expected),
-            actual,
-            result: normalizeText(completion?.result) || "matched",
-          },
-          uploadedDocument,
-          checkedItems,
-          messageDraft: normalizeLongText(completion?.messageDraft),
-          linkUrl: normalizeText(completion?.linkUrl),
-        },
+      draft = await createLocalReceiptDraft({
+        userId: session.user.id,
+        project,
+        view: viewBefore,
+        roomDocument,
+        receiptKit,
+        completion,
+        uploadedDocument,
+        actual,
       });
-
-      if (draft?.id) {
-        uploadedDocument =
-          uploadedDocument ||
-          (await getReadingReceiptDraftByIdForUser(session.user.id, draft.id))?.payload?.uploadedDocument ||
-          null;
+      if (draft?.payload?.uploadedDocument && !uploadedDocument) {
+        uploadedDocument = draft.payload.uploadedDocument;
       }
     }
 
-    const nextRoomState = commitReceiptKitToRoomState(currentRoomState, {
-      receiptKit,
-      mode,
-      result: normalizeText(completion?.result) || "matched",
-      actual,
-      moveText: normalizeText(completion?.moveText) || normalizeText(completion?.messageDraft),
-      uploadedDocument,
-      draftId: draft?.id || "",
+    const receiptEntry = proposalBundle.receiptEntry
+      ? {
+          ...proposalBundle.receiptEntry,
+          draftId: draft?.id || "",
+        }
+      : null;
+
+    const nextWindow = applyArtifactToRuntimeWindow(currentWindow, gate.artifact, {
+      previousArtifact: currentArtifact,
+      event: buildApplyEvent({
+        kind: mode === "move" ? "ping_sent" : "receipt_kit_completed",
+        detail: mode === "move" ? "Committed lawful ping clauses." : "Recorded Room return.",
+      }),
+      receipt: receiptEntry,
     });
 
-    await updateReaderProjectForUser(session.user.id, projectKey, {
-      roomState: nextRoomState,
-      touchSystemExample: true,
-      appendEvents: [
-        buildAssemblyIndexEvent(mode === "move" ? "room_ping_sent" : "room_return_recorded", {
-          move:
-            mode === "move"
-              ? `Sent Room ping: ${normalizeText(completion?.moveText) || normalizeText(receiptKit.fastestPath) || normalizeText(receiptKit.need)}`
-              : `Recorded Room return for ${normalizeText(receiptKit.need) || "the active ping"}.`,
-          return:
-            mode === "move"
-              ? "The room is now waiting for reality to answer."
-              : `Return classified as ${normalizeText(completion?.result) || "matched"}.`,
-          echo: mode === "move" ? "awaiting" : normalizeText(completion?.result) || "matched",
-          context: {
-            receiptKitId: receiptKit.id,
-            actual,
-            result: normalizeText(completion?.result) || "matched",
-            draftId: draft?.id || null,
-            uploadedDocumentKey: normalizeText(uploadedDocument?.documentKey) || null,
-            checkedItems,
-          },
-        }),
-      ],
+    await saveRoomAssemblySourceForUser(session.user.id, roomDocument.documentKey, {
+      source: gate.nextSource,
+      runtimeWindow: nextWindow,
     });
 
-    const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey });
+    const view = await buildRoomWorkspaceViewForUser(session.user.id, {
+      projectKey: project.projectKey,
+    });
     return NextResponse.json({
       ok: true,
       view,
