@@ -4,11 +4,11 @@ import { PRODUCT_NAME } from "@/lib/product-language";
 import { appendConversationExchangeForUser } from "@/lib/reader-workspace";
 import {
   buildRoomPayloadCitations,
-  buildRoomThreadKey,
   makeRoomId,
   normalizeRoomTurnResult,
 } from "@/lib/room";
 import { buildRoomWorkspaceViewForUser } from "@/lib/room-server";
+import { ensureCompilerFirstWorkspaceResetForUser } from "@/lib/room-sessions";
 import { getRequiredSession } from "@/lib/server-session";
 import { ensureRoomAssemblyDocumentForProject, getRoomAssemblySource } from "@/lib/room-documents";
 import {
@@ -28,6 +28,116 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const ROOM_SEGMENT_DOMAIN_VALUES = [
+  "aim",
+  "witness",
+  "evidence",
+  "story",
+  "move",
+  "test",
+  "return",
+  "receipt",
+  "field",
+  "other",
+];
+
+const ROOM_SEGMENT_INTENT_VALUES = [
+  "declare",
+  "ground",
+  "interpret",
+  "move",
+  "test",
+  "observe",
+  "compare",
+  "capture",
+  "clarify",
+];
+
+const ROOM_MIRROR_REGION_VALUES = ["aim", "evidence", "story", "moves", "returns"];
+
+const ROOM_TURN_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    assistantText: { type: "string" },
+    turnMode: {
+      type: "string",
+      enum: ["conversation", "proposal"],
+    },
+    segments: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          text: { type: "string" },
+          domain: {
+            type: "string",
+            enum: ROOM_SEGMENT_DOMAIN_VALUES,
+          },
+          mirrorRegion: {
+            type: "string",
+            enum: ROOM_MIRROR_REGION_VALUES,
+          },
+          suggestedClause: { type: "string" },
+          intent: {
+            type: "string",
+            enum: ROOM_SEGMENT_INTENT_VALUES,
+          },
+        },
+        required: ["text", "domain", "mirrorRegion", "suggestedClause", "intent"],
+      },
+    },
+    receiptKit: {
+      anyOf: [
+        { type: "null" },
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            id: { type: "string" },
+            need: { type: "string" },
+            why: { type: "string" },
+            fastestPath: { type: "string" },
+            enough: { type: "string" },
+            artifact: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                type: {
+                  type: "string",
+                  enum: ["upload", "paste", "draft_message", "link", "checklist", "compare"],
+                },
+                config: {
+                  type: "object",
+                  additionalProperties: true,
+                },
+              },
+              required: ["type", "config"],
+            },
+            prediction: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                expected: { type: "string" },
+                direction: {
+                  type: "string",
+                  enum: ["confirms", "contradicts", "narrows", "surprises"],
+                },
+                timebound: { type: "string" },
+                surprise: { type: "string" },
+              },
+              required: ["expected", "direction", "timebound", "surprise"],
+            },
+          },
+          required: ["id", "need", "why", "fastestPath", "enough", "artifact", "prediction"],
+        },
+      ],
+    },
+  },
+  required: ["assistantText", "turnMode", "segments", "receiptKit"],
+};
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -146,6 +256,9 @@ function buildRoomUserPrompt({
     `Canonical Room source:\n${roomSource || "GND box @room_default"}`,
     `Current status: ${normalizeText(view?.fieldState?.key) || "open"}`,
     view?.mirror?.aim?.text ? `Current aim: ${normalizeText(view.mirror.aim.text)}` : "Current aim: none",
+    view?.session?.handoffSummary
+      ? `Session handoff: ${normalizeLongText(view.session.handoffSummary)}`
+      : "",
     Array.isArray(view?.recentReturns) && view.recentReturns.length
       ? `Recent returns: ${view.recentReturns
           .slice(0, 3)
@@ -166,15 +279,21 @@ function buildRoomUserPrompt({
     .join("\n\n");
 }
 
-async function persistRoomTurn(userId, projectKey, message, turn, provider) {
-  const threadKey = buildRoomThreadKey(projectKey);
+async function persistRoomTurn(userId, roomSession, projectKey, message, turn, provider) {
+  if (!normalizeText(roomSession?.threadDocumentKey)) {
+    throw new Error("Conversation not found.");
+  }
+
   const exchange = await appendConversationExchangeForUser(userId, {
-    documentKey: threadKey,
+    documentKey: roomSession.threadDocumentKey,
     userLine: message,
     answer: turn.assistantText,
     citations: buildRoomPayloadCitations(turn),
   });
-  const view = await buildRoomWorkspaceViewForUser(userId, { projectKey });
+  const view = await buildRoomWorkspaceViewForUser(userId, {
+    projectKey,
+    sessionId: roomSession.id,
+  });
 
   return {
     ok: true,
@@ -193,15 +312,34 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  await ensureCompilerFirstWorkspaceResetForUser(session.user.id);
+
   const body = await request.json().catch(() => null);
   const projectKey = String(body?.projectKey || "").trim();
+  const sessionId = String(body?.sessionId || "").trim();
   const message = normalizeLongText(body?.message);
 
   if (!message) {
     return NextResponse.json({ ok: false, error: "Say what the room should respond to." }, { status: 400 });
   }
 
-  const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey });
+  let view;
+  try {
+    view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId });
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "Could not open the room." },
+      { status: 400 },
+    );
+  }
+
+  if (!normalizeText(view?.project?.projectKey)) {
+    return NextResponse.json({ ok: false, error: "Create a box first." }, { status: 400 });
+  }
+  if (!normalizeText(view?.session?.id)) {
+    return NextResponse.json({ ok: false, error: "Open a conversation first." }, { status: 400 });
+  }
+
   const resolvedProjectKey = view?.project?.projectKey || projectKey;
   const roomDocument = await ensureRoomAssemblyDocumentForProject(session.user.id, resolvedProjectKey);
   const roomSource = getRoomAssemblySource(roomDocument);
@@ -233,6 +371,7 @@ export async function POST(request) {
       return NextResponse.json(
         await persistRoomTurn(
           session.user.id,
+          view.session,
           resolvedProjectKey,
           message,
           normalizeRoomTurnResult(coerceConversationTurn(normalizedTurn)),
@@ -254,7 +393,7 @@ export async function POST(request) {
       gatePreview: gate.gatePreview,
     });
     return NextResponse.json(
-      await persistRoomTurn(session.user.id, resolvedProjectKey, message, gatedTurn, provider),
+      await persistRoomTurn(session.user.id, view.session, resolvedProjectKey, message, gatedTurn, provider),
     );
   }
 
@@ -292,7 +431,16 @@ export async function POST(request) {
             ],
           },
         ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "room_turn_result",
+            strict: true,
+            schema: ROOM_TURN_RESPONSE_SCHEMA,
+          },
+        },
       }),
+      cache: "no-store",
     });
 
     const payload = await response.json().catch(() => null);

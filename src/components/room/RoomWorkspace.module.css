@@ -141,6 +141,10 @@
   color: rgba(198, 204, 212, 0.62);
 }
 
+.starter .primaryButton {
+  margin-top: 18px;
+}
+
 .proposalWake {
   width: min(100%, 960px);
   margin: 0 auto;
@@ -761,6 +765,11 @@
   resize: none;
 }
 
+.composerRow textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .field input[type="file"] {
   min-height: 0;
   padding: 10px 12px;
@@ -819,6 +828,7 @@
 
 .primaryButton,
 .secondaryButton,
+.ghostButton,
 .inlineLinkButton,
 .toolLink,
 .toolLinkSubtle,
@@ -857,6 +867,7 @@
 }
 
 .secondaryButton,
+.ghostButton,
 .inlineLinkButton,
 .toolLink,
 .toolLinkSubtle,
@@ -876,6 +887,33 @@
   font-size: 14px;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.sessionRowButton {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sessionRowActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+}
+
+.ghostButton {
+  min-height: 32px;
+  padding: 0 10px;
+  background: transparent;
+  color: rgba(242, 244, 247, 0.68);
 }
 
 .projectRow strong {
@@ -2101,6 +2139,7 @@
 .wakeCard:hover,
 .primaryButton:hover,
 .secondaryButton:hover,
+.ghostButton:hover,
 .inlineLinkButton:hover,
 .toolLink:hover,
 .toolLinkSubtle:hover,
@@ -2121,6 +2160,7 @@
 .mirrorSectionActive,
 .primaryButton:hover,
 .secondaryButton:hover,
+.ghostButton:hover,
 .inlineLinkButton:hover,
 .toolLink:hover,
 .toolLinkSubtle:hover,
@@ -2135,6 +2175,7 @@
 
 .instrumentTrigger:hover,
 .secondaryButton:hover,
+.ghostButton:hover,
 .inlineLinkButton:hover,
 .toolLink:hover,
 .toolLinkSubtle:hover,
@@ -2159,7 +2200,8 @@
 }
 
 .primaryButton:disabled,
-.secondaryButton:disabled {
+.secondaryButton:disabled,
+.ghostButton:disabled {
   opacity: 0.5;
   cursor: default;
   transform: none;
@@ -2169,6 +2211,7 @@
 .wakeCard:focus-visible,
 .primaryButton:focus-visible,
 .secondaryButton:focus-visible,
+.ghostButton:focus-visible,
 .inlineLinkButton:focus-visible,
 .toolLink:focus-visible,
 .toolLinkSubtle:focus-visible,

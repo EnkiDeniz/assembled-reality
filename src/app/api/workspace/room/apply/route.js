@@ -9,10 +9,10 @@ import { buildRoomWorkspaceViewForUser } from "@/lib/room-server";
 import { getRequiredSession } from "@/lib/server-session";
 import { loadConversationThreadForUser } from "@/lib/reader-workspace";
 import {
-  buildRoomThreadKey,
   extractRoomPayloadFromCitations,
   normalizeReceiptKit,
 } from "@/lib/room";
+import { ensureCompilerFirstWorkspaceResetForUser } from "@/lib/room-sessions";
 import { buildRoomSemanticContext, hasCanonicalProposalSegments } from "@/lib/room-turn-policy.mjs";
 import {
   applyArtifactToRuntimeWindow,
@@ -253,8 +253,11 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  await ensureCompilerFirstWorkspaceResetForUser(session.user.id);
+
   const body = await request.json().catch(() => null);
   const projectKey = String(body?.projectKey || "").trim();
+  const sessionId = String(body?.sessionId || "").trim();
   const action = normalizeText(body?.action).toLowerCase();
 
   if (!projectKey) {
@@ -264,6 +267,14 @@ export async function POST(request) {
   const project = await getReaderProjectForUser(session.user.id, projectKey);
   if (!project) {
     return NextResponse.json({ ok: false, error: "Box not found." }, { status: 404 });
+  }
+
+  const sessionView = await buildRoomWorkspaceViewForUser(session.user.id, {
+    projectKey: project.projectKey,
+    sessionId,
+  });
+  if (!normalizeText(sessionView?.session?.threadDocumentKey)) {
+    return NextResponse.json({ ok: false, error: "Conversation not found." }, { status: 404 });
   }
 
   const roomDocument = await ensureRoomAssemblyDocumentForProject(session.user.id, project.projectKey);
@@ -280,7 +291,10 @@ export async function POST(request) {
       return NextResponse.json({ ok: false, error: "Assistant message is required." }, { status: 400 });
     }
 
-    const thread = await loadConversationThreadForUser(session.user.id, buildRoomThreadKey(project.projectKey));
+    const thread = await loadConversationThreadForUser(
+      session.user.id,
+      sessionView.session.threadDocumentKey,
+    );
     const assistantMessage = findAssistantMessage(thread, assistantMessageId);
     if (!assistantMessage) {
       return NextResponse.json({ ok: false, error: "Proposal preview not found." }, { status: 404 });
@@ -294,9 +308,7 @@ export async function POST(request) {
       return NextResponse.json({ ok: false, error: "That message has no Room proposal." }, { status: 400 });
     }
 
-    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, {
-      projectKey: project.projectKey,
-    });
+    const viewBefore = sessionView;
 
     const gate = runRoomProposalGate({
       currentSource,
@@ -356,6 +368,7 @@ export async function POST(request) {
 
     const view = await buildRoomWorkspaceViewForUser(session.user.id, {
       projectKey: project.projectKey,
+      sessionId: sessionView.session.id,
     });
     return NextResponse.json({ ok: true, view });
   }
@@ -385,9 +398,7 @@ export async function POST(request) {
       actual,
     });
 
-    const viewBefore = await buildRoomWorkspaceViewForUser(session.user.id, {
-      projectKey: project.projectKey,
-    });
+    const viewBefore = sessionView;
     const gate = runRoomProposalGate({
       currentSource,
       proposal: proposalBundle.proposal,
@@ -451,6 +462,7 @@ export async function POST(request) {
 
     const view = await buildRoomWorkspaceViewForUser(session.user.id, {
       projectKey: project.projectKey,
+      sessionId: sessionView.session.id,
     });
     return NextResponse.json({
       ok: true,

@@ -14,6 +14,8 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const projectKey =
     String(searchParams.get("projectKey") || searchParams.get("project") || "").trim();
-  const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey });
+  const sessionId =
+    String(searchParams.get("sessionId") || searchParams.get("session") || "").trim();
+  const view = await buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId });
   return NextResponse.json({ ok: true, view });
 }

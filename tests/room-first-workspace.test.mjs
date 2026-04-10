@@ -11,8 +11,11 @@ test("workspace route and room api surface are wired for canonical room-first en
   const roomRoute = await read("src/app/api/workspace/room/route.js");
   const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomApplyRoute = await read("src/app/api/workspace/room/apply/route.js");
+  const roomSessionsRoute = await read("src/app/api/workspace/room/sessions/route.js");
   const roomServer = await read("src/lib/room-server.js");
   const roomDocuments = await read("src/lib/room-documents.js");
+  const roomSessions = await read("src/lib/room-sessions.js");
+  const schema = await read("prisma/schema.prisma");
 
   assert.match(workspacePage, /RoomWorkspace/);
   assert.match(workspacePage, /loadRoomWorkspacePageData/);
@@ -24,9 +27,16 @@ test("workspace route and room api surface are wired for canonical room-first en
   assert.match(roomTurnRoute, /buildSafeFallbackTurn/);
   assert.match(roomApplyRoute, /apply_proposal_preview/);
   assert.match(roomApplyRoute, /complete_receipt_kit/);
+  assert.match(roomSessionsRoute, /createRoomSessionForProject/);
+  assert.match(roomSessionsRoute, /activateRoomSessionForProject/);
+  assert.match(roomSessionsRoute, /archiveRoomSessionForProject/);
   assert.match(roomServer, /ensureRoomAssemblyDocumentForProject/);
+  assert.match(roomServer, /ensureRoomSessionForProject/);
+  assert.match(roomServer, /authorityContext/);
   assert.match(roomDocuments, /hiddenFromProjectHome:\s*true/);
   assert.match(roomDocuments, /roomDocument:\s*true/);
+  assert.match(roomSessions, /ensureCompilerFirstWorkspaceResetForUser/);
+  assert.match(schema, /model ReaderRoomSession/);
 });
 
 test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden assembly documents", async () => {
@@ -69,6 +79,9 @@ test("strict ping rule, mirror regions, and receipt artifact support remain enco
   const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomState = await read("src/lib/room.js");
   const roomPolicy = await read("src/lib/room-turn-policy.mjs");
+  const roomApplyRoute = await read("src/app/api/workspace/room/apply/route.js");
+  const projectRoute = await read("src/app/api/workspace/project/route.js");
+  const roomServer = await read("src/lib/room-server.js");
 
   assert.match(roomCanonical, /ping_requires_test/);
   assert.match(roomCanonical, /semantic_reject/);
@@ -79,8 +92,14 @@ test("strict ping rule, mirror regions, and receipt artifact support remain enco
   assert.match(roomTurnRoute, /Do not write numbered lists, bullet lists/);
   assert.match(roomTurnRoute, /Turn mode is conversation/);
   assert.match(roomTurnRoute, /Turn style hint:/);
+  assert.match(roomTurnRoute, /json_schema/);
+  assert.match(roomTurnRoute, /ROOM_TURN_RESPONSE_SCHEMA/);
+  assert.match(roomTurnRoute, /sessionId/);
   assert.match(roomTurnRoute, /mirrorRegion/);
   assert.match(roomTurnRoute, /aim\|evidence\|story\|moves\|returns/);
+  assert.match(roomApplyRoute, /sessionView\.session\.threadDocumentKey/);
+  assert.match(projectRoute, /includeDefaultSource:\s*false/);
+  assert.match(roomServer, /ensureDefault:\s*false/);
   assert.match(roomPolicy, /classifyRoomTurnMode/);
   assert.match(roomPolicy, /filterSegmentsToAssistantText/);
   assert.match(roomPolicy, /normalizeAssistantTextForRoom/);

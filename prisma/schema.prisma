@@ -103,6 +103,7 @@ model User {
   readerDocuments      ReaderDocument[]
   readerSourceAssets   ReaderSourceAsset[]
   readerProjects       ReaderProject[]
+  readerRoomSessions   ReaderRoomSession[]
   readerListeningSessions ReaderListeningSession[]
   readerOperateRuns    ReaderOperateRun[]
   readerAttestedOverrides ReaderAttestedOverride[]
@@ -119,6 +120,7 @@ model ReaderProfile {
   lastReadSlug        String?
   lastReadAt          DateTime?
   disclaimerAcceptedAt DateTime?
+  compilerFirstWorkspaceResetAt DateTime?
   preferredVoiceProvider ReaderVoiceProvider?
   preferredVoiceId    String?
   preferredListeningRate Float              @default(1)
@@ -270,10 +272,30 @@ model ReaderProject {
   readingReceiptDrafts      ReadingReceiptDraft[]
   operateRuns               ReaderOperateRun[]
   attestedOverrides         ReaderAttestedOverride[]
+  roomSessions              ReaderRoomSession[]
 
   @@unique([userId, projectKey])
   @@index([userId, updatedAt])
   @@index([userId, isArchived, updatedAt])
+}
+
+model ReaderRoomSession {
+  id               String        @id @default(cuid())
+  userId           String
+  projectId        String
+  sessionKey       String        @unique
+  threadDocumentKey String       @unique
+  title            String?
+  handoffSummary   String?       @db.Text
+  isActive         Boolean       @default(false)
+  isArchived       Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project          ReaderProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId, isActive, updatedAt])
+  @@index([projectId, isArchived, updatedAt])
 }
 
 model ReaderProjectDocument {

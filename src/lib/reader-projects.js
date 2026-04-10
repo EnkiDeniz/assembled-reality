@@ -410,16 +410,20 @@ async function findOrCreateProjectRecordForUser(
   }
 }
 
-export async function listReaderProjectsForUser(userId, documents = []) {
+export async function listReaderProjectsForUser(userId, documents = [], options = {}) {
   const readerProjectModel = getReaderProjectModel();
   if (!readerProjectModel) {
     return buildProjectsFromDocuments(documents);
   }
 
+  const ensureDefault = options?.ensureDefault !== false;
+
   try {
-    const defaultProject = await ensureDefaultProjectRecord(userId, documents);
-    if (!defaultProject) {
-      return buildProjectsFromDocuments(documents);
+    if (ensureDefault) {
+      const defaultProject = await ensureDefaultProjectRecord(userId, documents);
+      if (!defaultProject) {
+        return buildProjectsFromDocuments(documents);
+      }
     }
 
     const projectRecords = await readerProjectModel.findMany({
@@ -443,6 +447,10 @@ export async function listReaderProjectsForUser(userId, documents = []) {
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     });
+
+    if (!projectRecords.length && !ensureDefault) {
+      return [];
+    }
 
     return sortSerializedProjects(
       projectRecords.map((projectRecord) => serializePersistedProject(projectRecord, documents)),

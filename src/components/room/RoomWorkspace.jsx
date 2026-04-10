@@ -69,6 +69,21 @@ function splitParagraphs(text = "") {
     .filter(Boolean);
 }
 
+function formatRelativeSessionLabel(value = "") {
+  const raw = normalizeText(value);
+  if (!raw) return "";
+  const parsed = Date.parse(raw);
+  if (Number.isNaN(parsed)) return raw;
+
+  const deltaMinutes = Math.max(0, Math.round((Date.now() - parsed) / 60000));
+  if (deltaMinutes < 1) return "just now";
+  if (deltaMinutes < 60) return `${deltaMinutes}m ago`;
+  const deltaHours = Math.round(deltaMinutes / 60);
+  if (deltaHours < 24) return `${deltaHours}h ago`;
+  const deltaDays = Math.round(deltaHours / 24);
+  return `${deltaDays}d ago`;
+}
+
 function hasProposalContent(roomPayload = null) {
   const turnMode = normalizeText(roomPayload?.turnMode).toLowerCase();
   const segments = Array.isArray(roomPayload?.segments) ? roomPayload.segments : [];
@@ -371,7 +386,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
   );
 }
 
-function StarterView({ starter = null }) {
+function StarterView({ starter = null, canCreateBox = false, onCreateBox = null }) {
   return (
     <section className={styles.starter}>
       <Kicker tone="neutral" className={styles.starterKicker}>
@@ -379,6 +394,12 @@ function StarterView({ starter = null }) {
       </Kicker>
       <h1>{starter?.firstLine || "What's on your mind?"}</h1>
       <p>{starter?.secondLine || "A decision. A question. Something you're carrying. Just start talking."}</p>
+      {canCreateBox ? (
+        <button type="button" className={styles.primaryButton} onClick={onCreateBox}>
+          <Plus size={14} />
+          Create a Box
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -1147,11 +1168,89 @@ function SessionControls({ onClose }) {
   );
 }
 
+function RoomSessionList({
+  sessions,
+  activeSessionId,
+  onCreate,
+  onActivate,
+  onArchive,
+  busy = false,
+}) {
+  const items = Array.isArray(sessions) ? sessions : [];
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="neutral">Conversations</Kicker>
+          <strong>Continue or start fresh</strong>
+        </div>
+        <button type="button" className={styles.secondaryButton} onClick={onCreate} disabled={busy}>
+          <Plus size={14} />
+          New Conversation
+        </button>
+      </div>
+
+      {!items.length ? (
+        <p className={styles.noticeText}>No conversations yet.</p>
+      ) : (
+        <div className={styles.projectList}>
+          {items.map((session) => {
+            const isActive = session?.id === activeSessionId;
+            return (
+              <div
+                key={session?.id || session?.sessionKey}
+                className={`${styles.projectRow} ${isActive ? styles.projectRowActive : ""}`}
+              >
+                <button
+                  type="button"
+                  className={styles.sessionRowButton}
+                  onClick={() => onActivate?.(session?.id)}
+                  disabled={busy || isActive}
+                >
+                  <div>
+                    <strong>{session?.title || "Conversation"}</strong>
+                    <span>
+                      {Number(session?.messageCount) || 0} message
+                      {Number(session?.messageCount) === 1 ? "" : "s"}
+                      {session?.updatedAt ? ` • ${formatRelativeSessionLabel(session.updatedAt)}` : ""}
+                    </span>
+                    {normalizeText(session?.handoffSummary) ? (
+                      <span>{session.handoffSummary}</span>
+                    ) : null}
+                  </div>
+                </button>
+                <div className={styles.sessionRowActions}>
+                  {isActive ? <span className={styles.projectBadge}>Open</span> : null}
+                  {!isActive && session?.isArchived ? (
+                    <span className={styles.projectBadge}>Archived</span>
+                  ) : null}
+                  {!session?.isArchived ? (
+                    <button
+                      type="button"
+                      className={styles.ghostButton}
+                      onClick={() => onArchive?.(session?.id)}
+                      disabled={busy}
+                    >
+                      Archive
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Composer({
   value,
   onChange,
   onSubmit,
   pending,
+  disabled = false,
   placeholder = "Start talking...",
   onOpenAttach,
   listenHref,
@@ -1160,6 +1259,7 @@ function Composer({
   const isComposingRef = useRef(false);
   const hasValue = Boolean(normalizeText(value));
   const canListen = Boolean(normalizeText(listenHref));
+  const canSubmit = hasValue && !pending && !disabled;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -1211,6 +1311,7 @@ function Composer({
               }}
               placeholder={placeholder}
               rows={1}
+              disabled={disabled}
             />
             {canListen ? (
               <Link href={listenHref} className={styles.composerListenInline}>
@@ -1225,8 +1326,8 @@ function Composer({
             )}
             <button
               type="submit"
-              className={`${styles.composerSend} ${hasValue && !pending ? styles.composerSendActive : ""}`}
-              disabled={pending || !hasValue}
+              className={`${styles.composerSend} ${canSubmit ? styles.composerSendActive : ""}`}
+              disabled={!canSubmit}
               aria-label={pending ? "Sending" : "Send"}
             >
               <SendHorizontal size={15} />
@@ -1268,6 +1369,9 @@ function OverlaySurface({
   onOpenMode,
   onProjectSelect,
   onCreateBox,
+  onCreateSession,
+  onActivateSession,
+  onArchiveSession,
   onSourceComplete,
   busy,
 }) {
@@ -1322,6 +1426,16 @@ function OverlaySurface({
             </div>
 
             {view?.hasStructure ? <ToolLinks deepLinks={view?.deepLinks} /> : null}
+            {normalizeText(projectKey) ? (
+              <RoomSessionList
+                sessions={view?.sessions}
+                activeSessionId={view?.session?.id}
+                onCreate={onCreateSession}
+                onActivate={onActivateSession}
+                onArchive={onArchiveSession}
+                busy={busy}
+              />
+            ) : null}
             <SessionControls onClose={onClose} />
 
             <div className={styles.overlayMeta}>
@@ -1384,6 +1498,7 @@ export default function RoomWorkspace({ initialView }) {
   }, []);
 
   const projectKey = view?.project?.projectKey || "";
+  const activeSessionId = view?.session?.id || "";
   const messages = Array.isArray(view?.messages) ? view.messages : [];
   const showStarter =
     Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
@@ -1401,10 +1516,13 @@ export default function RoomWorkspace({ initialView }) {
     }, 1400);
   }
 
-  async function refreshRoom(nextProjectKey = projectKey) {
+  async function refreshRoom(nextProjectKey = projectKey, nextSessionId = activeSessionId) {
     const params = new URLSearchParams();
     if (normalizeText(nextProjectKey)) {
       params.set("projectKey", normalizeText(nextProjectKey));
+    }
+    if (normalizeText(nextSessionId)) {
+      params.set("sessionId", normalizeText(nextSessionId));
     }
     const response = await fetch(`/api/workspace/room${params.toString() ? `?${params.toString()}` : ""}`);
     const payload = await response.json().catch(() => null);
@@ -1449,8 +1567,92 @@ export default function RoomWorkspace({ initialView }) {
     setOverlayMode("");
   }
 
+  async function handleCreateSession() {
+    if (!normalizeText(projectKey)) return;
+    setActionError("");
+    try {
+      const response = await fetch("/api/workspace/room/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Could not start a new conversation.");
+      }
+      setView(payload.view);
+      setComposerText("");
+      setMessageError("");
+      setOverlayMode("instrument");
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Could not start a new conversation.",
+      );
+    }
+  }
+
+  async function handleActivateSession(nextSessionId) {
+    if (!normalizeText(projectKey) || !normalizeText(nextSessionId)) return;
+    setActionError("");
+    try {
+      const response = await fetch("/api/workspace/room/sessions", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey,
+          sessionId: nextSessionId,
+          action: "activate",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Could not open that conversation.");
+      }
+      setView(payload.view);
+      setOverlayMode("instrument");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not open that conversation.");
+    }
+  }
+
+  async function handleArchiveSession(nextSessionId) {
+    if (!normalizeText(projectKey) || !normalizeText(nextSessionId)) return;
+    setActionError("");
+    try {
+      const response = await fetch("/api/workspace/room/sessions", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectKey,
+          sessionId: nextSessionId,
+          action: "archive",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Could not archive that conversation.");
+      }
+      setView(payload.view);
+      setOverlayMode("instrument");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not archive that conversation.");
+    }
+  }
+
   async function handleTurnSubmit(event) {
     event.preventDefault();
+    if (!normalizeText(projectKey) || !normalizeText(activeSessionId)) {
+      setMessageError("Create a box to start talking.");
+      return;
+    }
     const message = normalizeLongForm(composerText);
     if (!message) return;
     setTurnPending(true);
@@ -1465,6 +1667,7 @@ export default function RoomWorkspace({ initialView }) {
         },
         body: JSON.stringify({
           projectKey,
+          sessionId: activeSessionId,
           message,
         }),
       });
@@ -1496,6 +1699,7 @@ export default function RoomWorkspace({ initialView }) {
         },
         body: JSON.stringify({
           projectKey,
+          sessionId: activeSessionId,
           action: "apply_proposal_preview",
           assistantMessageId: message.id,
         }),
@@ -1557,6 +1761,7 @@ export default function RoomWorkspace({ initialView }) {
         },
         body: JSON.stringify({
           projectKey,
+          sessionId: activeSessionId,
           action: "complete_receipt_kit",
           receiptKit,
           completion: nextCompletion,
@@ -1581,7 +1786,7 @@ export default function RoomWorkspace({ initialView }) {
       <button
         type="button"
         className={`${styles.instrumentTrigger} ${view?.hasStructure ? styles.instrumentTriggerWithChip : ""}`}
-        onClick={() => setOverlayMode("instrument")}
+        onClick={() => setOverlayMode(normalizeText(projectKey) ? "instrument" : "create")}
         aria-label="Open room controls"
       >
         <MoreHorizontal size={18} />
@@ -1596,6 +1801,9 @@ export default function RoomWorkspace({ initialView }) {
         onProjectSelect={handleProjectSelect}
         onCreateBox={handleCreateBox}
         onSourceComplete={handleSourceComplete}
+        onCreateSession={handleCreateSession}
+        onActivateSession={handleActivateSession}
+        onArchiveSession={handleArchiveSession}
         busy={actionPending}
       />
 
@@ -1621,7 +1829,13 @@ export default function RoomWorkspace({ initialView }) {
             ref={threadRef}
             className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
           >
-            {showStarter ? <StarterView starter={view?.starter} /> : null}
+            {showStarter ? (
+              <StarterView
+                starter={view?.starter}
+                canCreateBox={!normalizeText(projectKey)}
+                onCreateBox={() => setOverlayMode("create")}
+              />
+            ) : null}
 
             <div className={styles.thread}>
               {optimisticUserMessage ? (
@@ -1666,7 +1880,8 @@ export default function RoomWorkspace({ initialView }) {
             onSubmit={handleTurnSubmit}
             pending={turnPending}
             placeholder={!view?.hasStructure ? "Start talking..." : "Say more..."}
-            onOpenAttach={() => setOverlayMode("source")}
+            disabled={!canSend}
+            onOpenAttach={() => setOverlayMode(normalizeText(projectKey) ? "source" : "create")}
             listenHref={view?.deepLinks?.reader || ""}
           />
         </section>
@@ -1674,3 +1889,4 @@ export default function RoomWorkspace({ initialView }) {
     </main>
   );
 }
+  const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));

@@ -11,6 +11,7 @@ import {
   dismissLoegosOriginExampleUpdateForUser,
   refreshLoegosOriginExampleForUser,
 } from "@/lib/loegos-origin-example";
+import { ensureCompilerFirstWorkspaceResetForUser } from "@/lib/room-sessions";
 import { getRequiredSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,8 @@ export async function POST(request) {
     return NextResponse.json({ error: "Box title is required." }, { status: 400 });
   }
 
+  await ensureCompilerFirstWorkspaceResetForUser(session.user.id);
+
   if (rootText) {
     const rootError = validateRootText(rootText);
     if (rootError) {
@@ -44,6 +47,7 @@ export async function POST(request) {
       subtitle,
       rootText,
       rootGloss,
+      includeDefaultSource: false,
     });
 
     return NextResponse.json({
