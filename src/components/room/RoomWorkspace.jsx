@@ -1502,6 +1502,7 @@ export default function RoomWorkspace({ initialView }) {
   const messages = Array.isArray(view?.messages) ? view.messages : [];
   const showStarter =
     Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
+  const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
 
   function highlightRegion(region = "") {
     const normalizedRegion = normalizeText(region).toLowerCase();
@@ -1889,4 +1890,3 @@ export default function RoomWorkspace({ initialView }) {
     </main>
   );
 }
-  const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
