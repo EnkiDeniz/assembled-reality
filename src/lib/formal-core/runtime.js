@@ -1,5 +1,6 @@
 import { stripMarkdownSyntax } from "@/lib/document-blocks";
 import { normalizeProjectArchitectureMeta } from "@/lib/assembly-architecture";
+import { isRoomAssemblyDocument } from "@/lib/room";
 
 const FORMAL_SHAPES = Object.freeze({
   aim: { key: "aim", symbol: "△", label: "Aim" },
@@ -1144,6 +1145,7 @@ function buildSourceArtifacts(documents = [], operateTouchedByDocumentKey = new 
     .filter(
       (document) =>
         document &&
+        !isRoomAssemblyDocument(document) &&
         !document.isAssembly &&
         document.documentType !== "assembly" &&
         document.documentType !== "builtin" &&
@@ -1279,8 +1281,16 @@ export function buildFormalSentenceAnnotations(text = "", context = {}) {
 export function buildFormalBoxState(project = null, documents = [], drafts = [], events = []) {
   const resolvedDocuments = Array.isArray(documents) ? documents.filter(Boolean) : [];
   const currentAssemblyDocument =
-    resolvedDocuments.find((document) => document?.documentKey === project?.currentAssemblyDocumentKey) ||
-    resolvedDocuments.find((document) => document?.isAssembly || document?.documentType === "assembly") ||
+    resolvedDocuments.find(
+      (document) =>
+        !isRoomAssemblyDocument(document) &&
+        document?.documentKey === project?.currentAssemblyDocumentKey,
+    ) ||
+    resolvedDocuments.find(
+      (document) =>
+        !isRoomAssemblyDocument(document) &&
+        (document?.isAssembly || document?.documentType === "assembly"),
+    ) ||
     null;
   const operateTouchedByDocumentKey = buildOperateTouchedMap(buildEventsFromProject(project, events));
 

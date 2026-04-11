@@ -470,6 +470,212 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle, onOpenWitne
   );
 }
 
+function getWorkingEchoTone(status = "") {
+  const normalized = normalizeText(status).toLowerCase();
+  if (normalized === "move_ready") return "brand";
+  if (normalized === "awaiting_return") return "grounded";
+  if (normalized === "contested") return "flagged";
+  return "neutral";
+}
+
+function formatWorkingEchoStatus(status = "") {
+  const normalized = normalizeText(status).toLowerCase();
+  if (normalized === "move_ready") return "Move ready";
+  if (normalized === "awaiting_return") return "Awaiting return";
+  if (normalized === "contested") return "Contested";
+  if (normalized === "grounded") return "Grounded";
+  return "Forming";
+}
+
+function WorkingEchoRefs({ refs = [] }) {
+  const items = (Array.isArray(refs) ? refs : []).map((item) => normalizeText(item)).filter(Boolean);
+  if (!items.length) return null;
+
+  return (
+    <div className={styles.workingEchoRefs}>
+      {items.slice(0, 3).map((item) => (
+        <span key={item} className={styles.workingEchoRef}>
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function WorkingEchoEvidenceGroup({ title = "", items = [], empty = "" }) {
+  const visibleItems = (Array.isArray(items) ? items : []).filter(
+    (item) => normalizeText(item?.title) || normalizeText(item?.detail),
+  );
+  if (!visibleItems.length && !empty) return null;
+
+  return (
+    <div className={styles.workingEchoGroup}>
+      {title ? <span className={styles.workingEchoGroupTitle}>{title}</span> : null}
+      {visibleItems.length ? (
+        <div className={styles.workingEchoList}>
+          {visibleItems.map((item) => (
+            <div key={item.id || `${item.title}:${item.detail}`} className={styles.workingEchoItem}>
+              <strong>{item.title || "Evidence"}</strong>
+              {normalizeText(item?.detail) ? <span>{item.detail}</span> : null}
+              <WorkingEchoRefs refs={item.sourceRefs} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>{empty}</p>
+      )}
+    </div>
+  );
+}
+
+function WorkingEchoReturnStrip({ returnDelta = null }) {
+  if (!returnDelta) return null;
+
+  const changedRead = Array.isArray(returnDelta?.changedRead) ? returnDelta.changedRead : [];
+  const weakenedRead = Array.isArray(returnDelta?.weakenedRead) ? returnDelta.weakenedRead : [];
+  if (!normalizeText(returnDelta?.summary) && !changedRead.length && !weakenedRead.length) return null;
+
+  return (
+    <div className={styles.workingEchoReturnStrip} data-testid="room-working-echo-return">
+      <div className={styles.workingEchoReturnCard}>
+        <Kicker tone="grounded">What Changed After Return</Kicker>
+        {normalizeText(returnDelta?.summary) ? <p>{returnDelta.summary}</p> : <p>A return changed the read.</p>}
+        {changedRead.length ? (
+          <div className={styles.workingEchoList}>
+            {changedRead.map((item, index) => (
+              <div
+                key={`${normalizeText(item?.text) || "changed"}:${index + 1}`}
+                className={styles.workingEchoItem}
+              >
+                <strong>{item.text}</strong>
+                <WorkingEchoRefs refs={item.sourceRefs} />
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className={styles.workingEchoReturnCard}>
+        <Kicker tone="flagged">What Earlier Read Weakened</Kicker>
+        {weakenedRead.length ? (
+          <div className={styles.workingEchoList}>
+            {weakenedRead.map((item, index) => (
+              <div
+                key={`${normalizeText(item?.text) || "weakened"}:${index + 1}`}
+                className={styles.workingEchoItem}
+              >
+                <strong>{item.text}</strong>
+                <WorkingEchoRefs refs={item.sourceRefs} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>No earlier read has been weakened on the surface yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
+  if (!workingEcho) return null;
+
+  const evidenceItems = Array.isArray(workingEcho?.evidenceCarried) ? workingEcho.evidenceCarried : [];
+  const supports = Array.isArray(workingEcho?.evidenceBuckets?.supports)
+    ? workingEcho.evidenceBuckets.supports
+    : evidenceItems;
+  const weakens = Array.isArray(workingEcho?.evidenceBuckets?.weakens)
+    ? workingEcho.evidenceBuckets.weakens
+    : [];
+  const missing = Array.isArray(workingEcho?.evidenceBuckets?.missing)
+    ? workingEcho.evidenceBuckets.missing
+    : [];
+  const tensionItems = Array.isArray(workingEcho?.openTension) ? workingEcho.openTension : [];
+  const candidateMove = workingEcho?.candidateMove || null;
+  const previewLink = workingEcho?.previewLink || null;
+  const returnDelta = workingEcho?.returnDelta || null;
+
+  return (
+    <section className={styles.workingEchoPanel} data-testid="room-working-echo">
+      <div className={styles.workingEchoHead}>
+        <div>
+          <Kicker tone={getWorkingEchoTone(workingEcho?.status)}>Working Echo</Kicker>
+          <strong>Session-scoped. Not canon.</strong>
+        </div>
+        <div className={styles.workingEchoMeta}>
+          <span className={styles.workingEchoStatus}>{formatWorkingEchoStatus(workingEcho?.status)}</span>
+          {previewLink?.assistantMessageId ? (
+            <span className={styles.workingEchoMetaText}>Linked preview</span>
+          ) : null}
+          <button
+            type="button"
+            className={styles.inlineLinkButton}
+            onClick={onToggle}
+            data-testid="room-working-echo-toggle"
+          >
+            {collapsed ? "Show" : "Hide"}
+          </button>
+        </div>
+      </div>
+
+      <WorkingEchoReturnStrip returnDelta={returnDelta} />
+
+      <div className={`${styles.workingEchoGrid} ${collapsed ? styles.workingEchoGridCollapsed : ""}`}>
+        <section className={styles.workingEchoCard} data-testid="room-working-echo-real">
+          <Kicker tone="grounded">What Seems Real</Kicker>
+          {normalizeText(workingEcho?.aim?.text) ? <p>{workingEcho.aim.text}</p> : <p>Signal is forming, but not settled.</p>}
+          <WorkingEchoRefs refs={workingEcho?.aim?.sourceRefs} />
+          <WorkingEchoEvidenceGroup
+            title="Supports"
+            items={supports}
+            empty={evidenceItems.length ? "" : "No grounded supporting evidence is surfaced yet."}
+          />
+        </section>
+
+        <section className={styles.workingEchoCard} data-testid="room-working-echo-conflicts">
+          <Kicker tone="flagged">What Conflicts</Kicker>
+          {tensionItems.length ? (
+            <div className={styles.workingEchoList}>
+              {tensionItems.map((item) => (
+                <div key={item.id} className={styles.workingEchoItem}>
+                  <strong>{item.text}</strong>
+                  <span>{item.kind.replace(/_/g, " ")}</span>
+                  <WorkingEchoRefs refs={item.sourceRefs} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No live contradiction is surfaced yet.</p>
+          )}
+          <WorkingEchoEvidenceGroup title="Weakens The Popular Read" items={weakens} />
+          {missing.length ? <WorkingEchoEvidenceGroup title="Still Missing" items={missing} /> : null}
+        </section>
+
+        <section className={styles.workingEchoCard} data-testid="room-working-echo-deciding-split">
+          <Kicker tone="brand">What Would Decide It</Kicker>
+          <p>{workingEcho?.whatWouldDecideIt?.text || "No deciding split is visible yet."}</p>
+          <WorkingEchoRefs refs={workingEcho?.whatWouldDecideIt?.sourceRefs} />
+          {returnDelta?.nextMoveShift?.text ? (
+            <div className={styles.workingEchoItem}>
+              <strong>Next move changed</strong>
+              <span>{returnDelta.nextMoveShift.text}</span>
+              <WorkingEchoRefs refs={returnDelta.nextMoveShift.sourceRefs} />
+            </div>
+          ) : null}
+        </section>
+
+        {candidateMove ? (
+          <section className={styles.workingEchoCard} data-testid="room-working-echo-move">
+            <Kicker tone="neutral">Candidate Move</Kicker>
+            <p>{candidateMove.text}</p>
+            <WorkingEchoRefs refs={candidateMove.sourceRefs} />
+          </section>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function StarterView({ starter = null, canCreateBox = false, onCreateBox = null }) {
   return (
     <section className={styles.starter} data-testid="room-starter">
@@ -1864,6 +2070,7 @@ export default function RoomWorkspace({ initialView }) {
   const [operateError, setOperateError] = useState("");
   const [operateResult, setOperateResult] = useState(null);
   const [highlightedRegion, setHighlightedRegion] = useState("");
+  const [workingEchoCollapsed, setWorkingEchoCollapsed] = useState(false);
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
@@ -2409,17 +2616,27 @@ export default function RoomWorkspace({ initialView }) {
         ) : null}
 
         <section className={styles.roomCanvas}>
-          {view?.hasStructure ? (
-            <MirrorPanel
-              view={view}
-              highlightedRegion={highlightedRegion}
-              collapsed={mirrorCollapsed}
-              onToggle={() => setMirrorCollapsed((current) => !current)}
-              onOpenWitness={handleOpenWitness}
-            />
-          ) : null}
+          <div className={styles.surfaceStack}>
+            {view?.hasStructure ? (
+              <MirrorPanel
+                view={view}
+                highlightedRegion={highlightedRegion}
+                collapsed={mirrorCollapsed}
+                onToggle={() => setMirrorCollapsed((current) => !current)}
+                onOpenWitness={handleOpenWitness}
+              />
+            ) : null}
 
-          {view?.activePreview ? <ActivePreviewBanner activePreview={view.activePreview} /> : null}
+            {view?.workingEcho ? (
+              <WorkingEchoPanel
+                workingEcho={view.workingEcho}
+                collapsed={workingEchoCollapsed}
+                onToggle={() => setWorkingEchoCollapsed((current) => !current)}
+              />
+            ) : null}
+
+            {view?.activePreview ? <ActivePreviewBanner activePreview={view.activePreview} /> : null}
+          </div>
 
           <div
             ref={threadRef}

@@ -1,5 +1,6 @@
 import { PRIMARY_WORKSPACE_DOCUMENT_KEY } from "@/lib/project-model";
 import { buildBoxSource, getBoxSourceBadge, getBoxSourceMetaLine } from "@/lib/source-model";
+import { isRoomAssemblyDocument } from "@/lib/room";
 
 export const OPERATE_TRUST_LEVELS = Object.freeze(["L1", "L2", "L3"]);
 export const OPERATE_CONVERGENCE_STATES = Object.freeze([
@@ -91,6 +92,7 @@ export function isBuiltInGuideDocument(document = null) {
 }
 
 export function isAssemblyDocument(document = null) {
+  if (isRoomAssemblyDocument(document)) return false;
   return Boolean(document?.isAssembly) || document?.documentType === "assembly";
 }
 

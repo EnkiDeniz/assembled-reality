@@ -1,4 +1,4 @@
-import { mergeRoomState, normalizeRoomState } from "@/lib/room";
+import { mergeRoomMeta, normalizeRoomMeta } from "@/lib/room";
 
 export const ASSEMBLY_PRIMARY_TAGS = Object.freeze({
   aim: "aim",
@@ -527,7 +527,7 @@ export function normalizeProjectArchitectureMeta(meta = null) {
     stateHistory,
     assemblyIndexMeta,
     system,
-    room: normalizeRoomState(nextMeta.room),
+    room: normalizeRoomMeta(nextMeta.room),
   };
 }
 
@@ -599,7 +599,7 @@ export function mergeProjectArchitectureMeta(currentMeta = null, patch = {}) {
     room:
       patch.room === undefined
         ? current.room
-        : mergeRoomState(current.room, patch.room),
+        : mergeRoomMeta(current.room, patch.room),
   };
 }
 

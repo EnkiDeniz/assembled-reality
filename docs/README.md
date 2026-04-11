@@ -4,16 +4,83 @@ This folder now holds the prior runtime canon, support specs, audits, and preser
 
 It is no longer the primary kickoff center for the next product pivot.
 
+## Read This First
+
+If you want the clearest current statement of what the product is trying to become, start with:
+
+1. `docs/working-echo-and-911-north-star-2026-04-11.md`
+2. `docs/language-first-build-rule-2026-04-11.md`
+3. `docs/testing-lanes-language-first-2026-04-11.md`
+4. `docs/human-drive-minimal-overengineering-proposal-2026-04-11.md`
+5. `docs/reverse-trace-signal-field-spec-2026-04-11.md`
+6. `docs/drive-tape-v0-spec-2026-04-11.md`
+7. `docs/we-were-already-running-the-loop-2026-04-11.md`
+8. `docs/engineer-thread-reverse-trace-read-2026-04-11.md`
+9. `version 1/README.md`
+
+The short version is:
+
+- the product is not only Seven's chat output
+- the product is also the visible, provisional working echo outside the chat
+- the next benchmark and the next design pass should optimize for whether that visible echo improves the next move
+- the first working-echo surface should foreground:
+  - what seems real
+  - what conflicts
+  - what would decide it
+- the benchmark must consume the same surfaced object the product renders
+- the next product question is no longer "does the echo matter?"
+- it is now "what kind of echo carries harder receipts than excellent structured chat and a strong external board?"
+- and the testing stack now needs four distinct lanes:
+  - law
+  - language fidelity
+  - product short loop
+  - product long loop
+- and the next build should stop at a real human drive before we add more machinery than the language needs
+- and one promising future legibility surface is a reverse trace that shows what survived the interaction
+- and the first practical pre-test for that idea is Drive Tape v0, a replay instrument built from the current Test Drive II corpus
+- and the first reverse-trace read of the real founder / engineer thread independently shows the same reroute toward signal survival
+- and the next phase should treat that as real evidence that the product is catching up to an already-running language loop
+
+## North Stars vs Guardrails
+
+When deciding what to build next, use this split:
+
+### North Stars
+
+- steering feel
+- braking
+- road contact
+- reality loop
+- proof travel
+
+### Guardrails, not goals
+
+- lowest token count
+- fastest first answer
+- prettiest prose
+- quietest interface
+- softest friction
+
+If a change does not improve steering, truth, return visibility, or proof travel, it is probably secondary right now.
+
 ## Start Here For The Pivot
 
 If you are defining or rebuilding the next product shape, start in:
 
-1. `version 1/README.md`
-2. `version 1/loegos-as-a-reality-assembly-language.md`
-3. `version 1/loegos-v1-product-redefinition.md`
-4. `version 1/seven-governance-protocol-for-loegos-v1.md`
-5. `version 1/loegos-v1-capability-assembly-map.md`
-6. `version 1/loegos-v1-kickoff-build-plan.md`
+1. `docs/working-echo-and-911-north-star-2026-04-11.md`
+2. `docs/language-first-build-rule-2026-04-11.md`
+3. `docs/testing-lanes-language-first-2026-04-11.md`
+4. `docs/human-drive-minimal-overengineering-proposal-2026-04-11.md`
+5. `docs/reverse-trace-signal-field-spec-2026-04-11.md`
+6. `docs/drive-tape-v0-spec-2026-04-11.md`
+7. `docs/we-were-already-running-the-loop-2026-04-11.md`
+8. `docs/engineer-thread-reverse-trace-read-2026-04-11.md`
+9. `version 1/README.md`
+10. `version 1/loegos-as-a-reality-assembly-language.md`
+11. `version 1/loegos-v1-product-redefinition.md`
+12. `version 1/seven-governance-protocol-for-loegos-v1.md`
+13. `version 1/loegos-v1-capability-assembly-map.md`
+14. `version 1/loegos-v1-kickoff-build-plan.md`
 
 ## Use This Folder For
 
@@ -36,6 +103,17 @@ To understand what is currently built right now (including Shape Library UI inte
 
 - `version 1/` defines where the product is going
 - `docs/` explains much of what the system has been and how the current runtime works
+- `docs/working-echo-and-911-north-star-2026-04-11.md` defines the product hinge we should now optimize around
+- `docs/language-first-build-rule-2026-04-11.md` defines when the language should lead and when the machine is allowed to help
+- `docs/testing-lanes-language-first-2026-04-11.md` defines the testing architecture for the next wave
+- `docs/human-drive-minimal-overengineering-proposal-2026-04-11.md` defines the smallest next sequence to reach a real human drive without overbuilding
+- `docs/reverse-trace-signal-field-spec-2026-04-11.md` defines a future trace-legibility mode that renders what survived law and reality contact
+- `docs/drive-tape-v0-spec-2026-04-11.md` defines the first replay-only instrument build of that trace idea using the existing benchmark corpus
+- `docs/we-were-already-running-the-loop-2026-04-11.md` states the new discovery that the real thread was already behaving like the aimed reality loop in natural language
+- `docs/engineer-thread-reverse-trace-read-2026-04-11.md` records the reverse-trace read of the actual founder / engineer thread and confirms the reroute toward signal survival
+- `docs/working-echo-contract-spec-2026-04-11.md` defines the working-echo object itself
+- `docs/working-echo-build-and-test-proposal-2026-04-11.md` defines the next build-first sequence
+- `docs/learning-so-far-working-echo-2026-04-11.md` records what the latest clean Test Drive II run actually taught us
 
 Both matter, but they are not the same layer.
 

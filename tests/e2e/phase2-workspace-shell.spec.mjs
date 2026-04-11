@@ -128,10 +128,10 @@ test("phase2 workspace shell preserves intake/player and proposal gate", async (
   await page.getByTestId("phase2-compass-enable").click();
   await expect(page.getByTestId("phase2-range-label")).toContainText("Level 4 - Shared Field");
 
-  await page.getByRole("button", { name: "Show advanced" }).click();
+  await page.getByTestId("phase2-instrument-toggle").click();
   await expect(page.getByTestId("phase2-instrument-drawer")).toContainText("Manual attest override");
   await page.getByPlaceholder('Explain rationale for "CLS attest ... if"').fill("human review required");
-  await page.getByRole("button", { name: "Submit attest request" }).click();
+  await page.getByTestId("phase2-attest-submit").click();
   await expect(page.getByTestId("phase2-ledger-panel")).toContainText("manual_attest_requested");
 
   await page.getByTestId("phase2-nav-editor").click();

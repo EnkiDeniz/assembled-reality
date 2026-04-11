@@ -40,20 +40,16 @@ With BAT:
 
 ## 3) Constitutional laws
 
-1. **No closure inflation**  
-   BAT cannot claim `confirmed` unless runtime authority has earned it.
-
-2. **One move rule**  
-   BAT must output exactly one next lawful move.
-
-3. **One receipt rule**  
-   BAT must output one primary receipt condition for the next move.
-
-4. **Disconfirmation required**  
-   BAT must always state how the current read could be wrong.
-
-5. **Layer authority rule**  
-   Base Library suggestions are priors, never verdicts.
+1. **No closure inflation**
+  BAT cannot claim `confirmed` unless runtime authority has earned it.
+2. **One move rule**
+  BAT must output exactly one next lawful move.
+3. **One receipt rule**
+  BAT must output one primary receipt condition for the next move.
+4. **Disconfirmation required**
+  BAT must always state how the current read could be wrong.
+5. **Layer authority rule**
+  Base Library suggestions are priors, never verdicts.
 
 ---
 

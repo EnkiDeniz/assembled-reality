@@ -27,7 +27,9 @@ test("compiler-first reset and explicit room sessions are encoded in the workspa
   assert.match(roomWorkspace, /refreshRoom\(nextProjectKey, "", "", ""\)/);
   assert.match(roomWorkspace, /sessionId/);
   assert.match(roomWorkspace, /documentKey/);
+  assert.match(roomWorkspace, /room-working-echo/);
 
   assert.match(roomCss, /sessionRowButton/);
   assert.match(roomCss, /ghostButton/);
+  assert.match(roomCss, /workingEchoPanel/);
 });

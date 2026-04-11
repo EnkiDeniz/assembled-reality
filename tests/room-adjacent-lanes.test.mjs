@@ -11,6 +11,8 @@ test("room workspace carries focused witness and adjacent operate as non-canonic
   const roomRoute = await read("src/app/api/workspace/room/route.js");
   const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomApplyRoute = await read("src/app/api/workspace/room/apply/route.js");
+  const roomTurnHandler = await read("src/lib/room-turn-route-handler.js");
+  const roomApplyHandler = await read("src/lib/room-apply-route-handler.js");
   const roomSessionsRoute = await read("src/app/api/workspace/room/sessions/route.js");
   const operateRoute = await read("src/app/api/workspace/operate/route.js");
   const roomUi = await read("src/components/room/RoomWorkspace.jsx");
@@ -19,8 +21,10 @@ test("room workspace carries focused witness and adjacent operate as non-canonic
   assert.match(roomServer, /roomIdentity/);
   assert.match(roomServer, /adjacent:\s*\{/);
   assert.match(roomRoute, /documentKey/);
-  assert.match(roomTurnRoute, /documentKey/);
-  assert.match(roomApplyRoute, /documentKey/);
+  assert.match(roomTurnRoute, /handleRoomTurnPost/);
+  assert.match(roomApplyRoute, /handleRoomApplyPost/);
+  assert.match(roomTurnHandler, /documentKey/);
+  assert.match(roomApplyHandler, /documentKey/);
   assert.match(roomSessionsRoute, /documentKey/);
 
   assert.match(operateRoute, /createSummaryResponse/);

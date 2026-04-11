@@ -28,6 +28,7 @@ import {
   annotateWordLayerWithLakinMoments,
   buildBoxWordLayerViewModel,
 } from "@/lib/word-layer";
+import { isRoomAssemblyDocument } from "@/lib/room";
 
 export const BOX_PHASES = Object.freeze({
   lane: "lane",
@@ -187,6 +188,7 @@ function getMostRecentItem(items = []) {
 }
 
 function isAssemblyDocument(document = null) {
+  if (isRoomAssemblyDocument(document)) return false;
   return Boolean(document?.isAssembly || document?.documentType === "assembly");
 }
 

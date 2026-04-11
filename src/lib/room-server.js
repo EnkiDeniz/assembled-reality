@@ -28,6 +28,7 @@ import {
   listRoomSessionsForProjectForUser,
   updateRoomSessionHandoffSummaryForUser,
 } from "@/lib/room-sessions";
+import { buildWorkingEcho } from "@/lib/room-working-echo";
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -355,6 +356,7 @@ function buildEmptyRoomView({ readerData: _readerData = null, projects = [], res
       returns: [],
     },
     pendingMove: null,
+    workingEcho: null,
     activePreview: null,
     recentReturns: [],
     recentSources: [],
@@ -605,6 +607,13 @@ export async function buildRoomWorkspaceViewForUser(
     normalizedOverlayIntent === "witness"
       ? (focusedWitness ? "witness" : "")
       : normalizedOverlayIntent || (focusedWitness ? "witness" : "");
+  const workingEcho = buildWorkingEcho({
+    canonicalView,
+    messages: canonicalView?.messages || messages,
+    recentSources,
+    focusedWitness,
+    activeSession: resolvedSession,
+  });
 
   return {
     project: {
@@ -630,6 +639,7 @@ export async function buildRoomWorkspaceViewForUser(
     overlayIntent,
     authorityContext,
     resetAt: resetState.resetAt,
+    workingEcho,
     ...canonicalView,
   };
 }

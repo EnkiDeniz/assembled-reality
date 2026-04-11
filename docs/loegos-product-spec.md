@@ -42,13 +42,14 @@ It is a system for:
 
 - taking in source material from many modalities
 - preserving provenance
+- externalizing a visible working echo while thinking
 - shaping working artifacts
 - reading the current position honestly
 - drafting proof that can travel beyond the tool
 
 The shortest correct description is:
 
-**Loegos is a box where meaningful human signal becomes sources, assemblies, and receipts.**
+**Loegos is a box where meaningful human signal becomes sources, a visible working echo, lawful structure, and receipts.**
 
 ## 2. Core Product Bet
 
@@ -68,6 +69,9 @@ They think and decide through:
 - multiple people seeing the same thing differently
 
 Loegos exists to let those signals enter one container, become structured enough to work with, and then be read together without flattening them into fake certainty.
+
+The product is not only the answer Seven gives.
+It is also the visible, provisional read that helps the user answer back better.
 
 This means:
 
@@ -109,6 +113,12 @@ The top-level user loop is:
 `Think → Create → Operate`
 
 This is the live product loop inside an opened Box.
+
+Inside the Room, the critical micro-loop is:
+
+`Talk → Echo → Move → Return`
+
+That micro-loop is where the product either becomes distinct or collapses back into chat.
 
 ### Think
 
@@ -159,6 +169,7 @@ The stable nouns in the product are:
 
 - `Box`
 - `Sources`
+- `Working Echo`
 - `Assembly`
 - `Receipts`
 - `Seven`
@@ -169,6 +180,28 @@ The stable nouns in the product are:
 Sources are normalized units of incoming signal.
 
 They are not automatically truth. They are structured inputs with provenance.
+
+### Working Echo
+
+Working Echo is the visible, non-canonical, revisable read of what the box conversation currently seems to be assembling.
+
+It should help the user see:
+
+- what seems real
+- what conflicts
+- what would decide it
+- possible next move
+- current uncertainty
+
+It is not identical to canon and it should not be hidden inside the transcript.
+
+It should stay grounded with visible provenance on the claims it makes, including:
+
+- aim
+- evidence carried
+- open tension
+- deciding split
+- candidate move
 
 ### Assembly
 

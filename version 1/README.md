@@ -20,6 +20,16 @@ Supporting note:
 
 - `loegos-language-workbench-vs-alignment-game.md`
 
+External steering notes that now matter for the next wave:
+
+- `../docs/language-first-build-rule-2026-04-11.md`
+- `../docs/testing-lanes-language-first-2026-04-11.md`
+- `../docs/human-drive-minimal-overengineering-proposal-2026-04-11.md`
+- `../docs/reverse-trace-signal-field-spec-2026-04-11.md`
+- `../docs/drive-tape-v0-spec-2026-04-11.md`
+- `../docs/we-were-already-running-the-loop-2026-04-11.md`
+- `../docs/engineer-thread-reverse-trace-read-2026-04-11.md`
+
 ## What these documents do
 
 ### `loegos-aim-brief-final-v1.0.md`
@@ -53,6 +63,34 @@ The substrate and capability read: what already exists, what is partial, and wha
 ### `loegos-v1-kickoff-build-plan.md`
 
 The next build sequence derived from the new theory, object model, and platform split.
+
+### `../docs/language-first-build-rule-2026-04-11.md`
+
+The anti-overengineering rule: let the language do the meaning, let the machine make it usable, let reality decide what held.
+
+### `../docs/testing-lanes-language-first-2026-04-11.md`
+
+The current testing architecture: law, language fidelity, product short loop, and delayed product long loop.
+
+### `../docs/human-drive-minimal-overengineering-proposal-2026-04-11.md`
+
+The smallest build-and-test sequence that should get us to a real human drive before we add more machinery than the language needs.
+
+### `../docs/reverse-trace-signal-field-spec-2026-04-11.md`
+
+A future trace-legibility mode that renders the whole interaction back through the language and makes survival, contradiction, return, and receipt visually inspectable.
+
+### `../docs/drive-tape-v0-spec-2026-04-11.md`
+
+The first replay-only instrument build of that trace idea, grounded in the current Test Drive II corpus and focused on signal survival rather than prose review alone.
+
+### `../docs/we-were-already-running-the-loop-2026-04-11.md`
+
+The founder / driver note that names the new realization: the thread was already behaving like the aimed reality loop before the full product surface existed to show it.
+
+### `../docs/engineer-thread-reverse-trace-read-2026-04-11.md`
+
+The independent reverse-trace read of the real founder / engineer thread, confirming the same reroute toward signal survival and away from parallel machine-authored meaning.
 
 ## The current backbone
 
@@ -126,3 +164,5 @@ start here, not in the legacy workspace docs.
 Do not treat the older shell shape as the product.
 
 Treat the existing backend, intake, listening, language, Operate, override, and receipt substrate as reusable parts for the new product definition.
+
+Also do not let machine bridge logic quietly replace what Lœgos itself already knows. Surface lawful meaning first, then use the machine only for legibility, persistence, and proof binding.

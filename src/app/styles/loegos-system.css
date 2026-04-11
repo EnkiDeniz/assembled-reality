@@ -791,6 +791,13 @@
   line-height: 1.6;
 }
 
+.intro-auth__note-link {
+  color: var(--white);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.24);
+  text-underline-offset: 0.16em;
+}
+
 .intro-auth-inline__footer-row {
   display: flex;
   flex-wrap: wrap;
@@ -2220,6 +2227,20 @@
   gap: 8px;
   font-size: 12px;
   color: var(--loegos-text-secondary);
+}
+
+.phase2-icon-button {
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.phase2-icon-glyph {
+  font-size: 14px;
+  line-height: 1;
 }
 
 @media (max-width: 960px) {

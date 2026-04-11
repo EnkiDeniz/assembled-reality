@@ -8,6 +8,12 @@
 
 These flows define how the product should work as a Box-based system with `Think → Create → Operate` as the live loop.
 
+Inside the Room, the critical product loop is:
+
+`Talk → Working Echo → Move → Return`
+
+The important design rule is that the user should not only read Seven's chat reply. They should also be able to see the visible working echo outside the transcript and answer against it.
+
 Each flow describes:
 
 - entry conditions
@@ -149,7 +155,35 @@ Each flow describes:
 
 - the user receives useful interpretation or audit help without leaving the Box context
 
-## 7. Move Material Into Staging
+## 7. See The Working Echo And Answer Against It
+
+### Entry conditions
+
+- the user has asked Seven something meaningful
+- the system has enough signal to surface a provisional read
+
+### User actions
+
+- read Seven's answer
+- inspect the visible working echo outside the transcript
+- notice what seems real, what conflicts, and what would decide it
+- answer back against that surfaced read
+
+### System responses
+
+- the working echo is visible and clearly marked as non-canonical
+- the working echo only wakes up when enough grounded signal exists to surface a useful read
+- the user can tell what is forming without mistaking it for accepted box truth
+- the next reply can sharpen, correct, challenge, or extend the echo
+
+### Success state
+
+- the next turn becomes more specific, better grounded, or more honest because the user can see:
+  - what seems real
+  - what conflicts
+  - what would decide it
+
+## 8. Move Material Into Staging
 
 ### Entry conditions
 
@@ -170,7 +204,7 @@ Each flow describes:
 
 - the Box now has an intermediate construction memory
 
-## 8. Assemble A Working Artifact
+## 9. Assemble A Working Artifact
 
 ### Entry conditions
 
@@ -191,7 +225,7 @@ Each flow describes:
 
 - the user has shaped a working artifact, not just collected notes
 
-## 9. Run Operate On The Box
+## 10. Run Operate On The Box
 
 ### Entry conditions
 
@@ -217,7 +251,7 @@ Each flow describes:
 
 - the user sees an honest diagnosis of the Box’s current position
 
-## 10. Ask Seven To Audit The Operate Result
+## 11. Ask Seven To Audit The Operate Result
 
 ### Entry conditions
 
@@ -236,7 +270,7 @@ Each flow describes:
 
 - the user can move from diagnosis into interpretation and improvement
 
-## 11. Draft A Local Receipt
+## 12. Draft A Local Receipt
 
 ### Entry conditions
 
@@ -256,7 +290,7 @@ Each flow describes:
 
 - proof exists locally even if remote sync fails
 
-## 12. Review Proof And Connect GetReceipts
+## 13. Review Proof And Connect GetReceipts
 
 ### Entry conditions
 

@@ -94,6 +94,26 @@ function hasStrictPingViolation(artifact = null) {
   return moves.length > 0 && tests.length === 0;
 }
 
+function normalizeClauseLines(value = "") {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function extractSuggestedClauses(proposal = null) {
+  const segments = Array.isArray(proposal?.segments) ? proposal.segments : [];
+  return segments.flatMap((segment) => normalizeClauseLines(segment?.suggestedClause || segment?.loe || ""));
+}
+
+function proposalAddsNoNewClauses(currentSource = "", proposal = null) {
+  const suggestedClauses = extractSuggestedClauses(proposal);
+  if (!suggestedClauses.length) return false;
+  const currentLines = new Set(normalizeClauseLines(currentSource));
+  return suggestedClauses.every((clause) => currentLines.has(clause));
+}
+
 export function createOrHydrateRoomRuntimeWindow(roomDocument = null, artifact = null) {
   const stored = roomDocument?.seedMeta?.roomRuntimeWindow;
   const normalizedStored = stored && typeof stored === "object" ? stored : null;
@@ -166,6 +186,28 @@ export function runRoomProposalGate({
       accepted: false,
       reason: semanticAudit.reason || "semantic_reject",
       diagnostics: semanticAudit.diagnostics,
+      artifact: currentArtifact,
+      nextSource: currentSource,
+    };
+
+    return {
+      ...rejectedGate,
+      gatePreview: buildRoomGatePreview(rejectedGate, runtimeWindow),
+    };
+  }
+
+  if (proposalAddsNoNewClauses(currentSource, proposal)) {
+    const rejectedGate = {
+      accepted: false,
+      reason: "already_canonical",
+      diagnostics: [
+        {
+          code: "RM002",
+          severity: "error",
+          message: "proposal already exists in canon",
+          span: { line: 1, startCol: 1, endCol: 1 },
+        },
+      ],
       artifact: currentArtifact,
       nextSource: currentSource,
     };

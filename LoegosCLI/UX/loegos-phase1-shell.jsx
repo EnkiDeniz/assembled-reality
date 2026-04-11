@@ -311,6 +311,10 @@ function mapSegmentDomainToRegion(domain = "") {
   return "";
 }
 
+function IconGlyph({ symbol = "•" }) {
+  return <span className="phase2-icon-glyph" aria-hidden="true">{symbol}</span>;
+}
+
 function toWitnessRef(value = "") {
   return String(value || "")
     .trim()
@@ -1531,8 +1535,16 @@ function MirrorView({
             style={{ width: "100%", minHeight: 84 }}
           />
           <div className="phase2-row">
-            <button type="button" className="terminal-button" onClick={handleSend} data-testid="phase2-chat-send" disabled={pending}>
-              {pending ? "Sending..." : "Send to Seven"}
+            <button
+              type="button"
+              className="terminal-button phase2-icon-button"
+              onClick={handleSend}
+              data-testid="phase2-chat-send"
+              disabled={pending}
+              aria-label={pending ? "Sending to Seven" : "Send to Seven"}
+              title={pending ? "Sending to Seven" : "Send to Seven"}
+            >
+              <IconGlyph symbol={pending ? "…" : "➤"} />
             </button>
             {statusMessage ? <div className="phase2-card__meta">{statusMessage}</div> : null}
           </div>
@@ -1540,11 +1552,13 @@ function MirrorView({
         <div className="phase2-row phase2-block-gap">
           <button
             type="button"
-            className="terminal-button"
+            className="terminal-button phase2-icon-button"
             data-testid="phase2-room-tools-toggle"
             onClick={() => setSupportOpen((current) => !current)}
+            aria-label={supportOpen ? "Hide tools" : "Show tools"}
+            title={supportOpen ? "Hide tools" : "Show tools"}
           >
-            {supportOpen ? "Hide tools" : "Show tools"}
+            <IconGlyph symbol={supportOpen ? "▤" : "☰"} />
           </button>
           <div className="phase2-card__meta">Chat-first mode keeps conversation primary.</div>
         </div>
@@ -1557,11 +1571,13 @@ function MirrorView({
               </div>
               <button
                 type="button"
-                className="terminal-button"
+                className="terminal-button phase2-icon-button"
                 data-testid="phase2-box-collapse-toggle"
                 onClick={() => setBoxCollapsed((value) => !value)}
+                aria-label={boxCollapsed ? "Expand box mirror" : "Collapse box mirror"}
+                title={boxCollapsed ? "Expand box mirror" : "Collapse box mirror"}
               >
-                {boxCollapsed ? "Expand" : "Collapse"}
+                <IconGlyph symbol={boxCollapsed ? "▾" : "▴"} />
               </button>
             </div>
           </div>
@@ -1692,19 +1708,28 @@ function MirrorView({
             </div>
             <button
               type="button"
-              className="terminal-button"
+              className="terminal-button phase2-icon-button"
               data-testid="phase2-compass-enable"
               onClick={() => setCompassEnabled(true)}
+              aria-label="Enable compass"
+              title="Enable compass"
             >
-              Enable compass now
+              <IconGlyph symbol="◎" />
             </button>
           </section>
         )}
         <section className="phase2-card phase2-block-gap" data-testid="phase2-instrument-drawer">
           <div className="phase2-box-head">
             <div className="phase2-card__title">Instrument drawer</div>
-            <button type="button" className="terminal-button" onClick={() => setInstrumentOpen((current) => !current)}>
-              {instrumentOpen ? "Hide advanced" : "Show advanced"}
+            <button
+              type="button"
+              className="terminal-button phase2-icon-button"
+              data-testid="phase2-instrument-toggle"
+              onClick={() => setInstrumentOpen((current) => !current)}
+              aria-label={instrumentOpen ? "Hide advanced controls" : "Show advanced controls"}
+              title={instrumentOpen ? "Hide advanced controls" : "Show advanced controls"}
+            >
+              <IconGlyph symbol={instrumentOpen ? "⌄" : "⌃"} />
             </button>
           </div>
           {instrumentOpen ? (
@@ -1725,8 +1750,15 @@ function MirrorView({
                   placeholder='Explain rationale for "CLS attest ... if"'
                   style={{ width: "100%" }}
                 />
-                <button type="button" className="terminal-button" onClick={handleAttestOverride}>
-                  Submit attest request
+                <button
+                  type="button"
+                  className="terminal-button phase2-icon-button"
+                  data-testid="phase2-attest-submit"
+                  onClick={handleAttestOverride}
+                  aria-label="Submit attest request"
+                  title="Submit attest request"
+                >
+                  <IconGlyph symbol="✓" />
                 </button>
               </div>
               <div className="phase2-card__title">Runtime Ledger Timeline</div>
@@ -1957,11 +1989,25 @@ export default function LoegosPhase1Shell({ bootstrap = {} }) {
           {bootstrapProjectKey || "project"} / {bootstrapDocumentKey || "document"}
         </div>
         <div className="phase2-row">
-          <button type="button" className="terminal-button" onClick={() => setView("mirror")} data-testid="phase2-nav-mirror">
-            Mirror
+          <button
+            type="button"
+            className="terminal-button phase2-icon-button"
+            onClick={() => setView("mirror")}
+            data-testid="phase2-nav-mirror"
+            aria-label="Mirror view"
+            title="Mirror view"
+          >
+            <IconGlyph symbol="◧" />
           </button>
-          <button type="button" className="terminal-button" onClick={() => setView("editor")} data-testid="phase2-nav-editor">
-            Editor
+          <button
+            type="button"
+            className="terminal-button phase2-icon-button"
+            onClick={() => setView("editor")}
+            data-testid="phase2-nav-editor"
+            aria-label="Editor view"
+            title="Editor view"
+          >
+            <IconGlyph symbol="⌨" />
           </button>
         </div>
       </header>

@@ -79,11 +79,15 @@ test("live room routes do not import the advisory seam yet", async () => {
   const roomRoute = await read("src/app/api/workspace/room/route.js");
   const roomTurnRoute = await read("src/app/api/workspace/room/turn/route.js");
   const roomApplyRoute = await read("src/app/api/workspace/room/apply/route.js");
+  const roomTurnHandler = await read("src/lib/room-turn-route-handler.js");
+  const roomApplyHandler = await read("src/lib/room-apply-route-handler.js");
 
   assert.doesNotMatch(roomServer, /room-advisory/);
   assert.doesNotMatch(roomRoute, /room-advisory/);
   assert.doesNotMatch(roomTurnRoute, /room-advisory/);
   assert.doesNotMatch(roomApplyRoute, /room-advisory/);
+  assert.doesNotMatch(roomTurnHandler, /room-advisory/);
+  assert.doesNotMatch(roomApplyHandler, /room-advisory/);
 });
 
 test("advisory context builder stays pure and exposes the future seam shape", () => {
