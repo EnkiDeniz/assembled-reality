@@ -600,7 +600,11 @@ export async function buildRoomWorkspaceViewForUser(
     adjacent: adjacentState,
     resetAt: resetState.resetAt,
   });
-  const overlayIntent = normalizeOverlayIntent(adjacent) || (focusedWitness ? "witness" : "");
+  const normalizedOverlayIntent = normalizeOverlayIntent(adjacent);
+  const overlayIntent =
+    normalizedOverlayIntent === "witness"
+      ? (focusedWitness ? "witness" : "")
+      : normalizedOverlayIntent || (focusedWitness ? "witness" : "");
 
   return {
     project: {

@@ -70,6 +70,15 @@ function buildWitnessHref(projectKey = "", sessionId = "", documentKey = "", adj
   });
 }
 
+function extractDocumentKeyFromWorkspaceHref(href = "") {
+  const normalized = normalizeText(href);
+  if (!normalized) return "";
+  const queryIndex = normalized.indexOf("?");
+  if (queryIndex === -1) return "";
+  const params = new URLSearchParams(normalized.slice(queryIndex + 1));
+  return normalizeText(params.get("document") || params.get("documentKey") || "");
+}
+
 function splitParagraphs(text = "") {
   return String(text || "")
     .split(/\n{2,}/)
@@ -250,6 +259,7 @@ function StatusChip({ view, floating = false }) {
 
   return (
     <span
+      data-testid="room-field-chip"
       className={`${styles.fieldChip} ${terrainClass} ${floating ? styles.fieldChipFloating : ""}`}
       aria-label={`${terrain.canonicalLabel}. ${terrain.description}`}
       title={terrain.description}
@@ -305,10 +315,8 @@ function MirrorRegion({
   );
 }
 
-function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
+function MirrorPanel({ view, highlightedRegion, collapsed, onToggle, onOpenWitness }) {
   const mirror = view?.mirror || {};
-  const projectKey = view?.project?.projectKey || "";
-  const sessionId = view?.session?.id || "";
   const evidenceItems = Array.isArray(mirror?.evidence) ? mirror.evidence : [];
   const storyItems = Array.isArray(mirror?.story) ? mirror.story : [];
   const moveItems = Array.isArray(mirror?.moves) ? mirror.moves : [];
@@ -326,8 +334,13 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
   if (!view?.hasStructure) return null;
 
   return (
-    <section className={styles.mirrorStrip}>
-      <button type="button" className={styles.mirrorToggle} onClick={onToggle}>
+    <section className={styles.mirrorStrip} data-testid="room-mirror">
+      <button
+        type="button"
+        className={styles.mirrorToggle}
+        onClick={onToggle}
+        data-testid="room-mirror-toggle"
+      >
         <span className={styles.mirrorToggleGlyph}>{collapsed ? "▸" : "▾"}</span>
         <ShapeGlyph role="aim" className={styles.mirrorToggleShape} />
         <span className={styles.mirrorToggleSummary}>{summary}</span>
@@ -342,7 +355,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
               delay={0}
               fullWidth
             >
-              <div className={styles.mirrorPrimary}>
+              <div className={styles.mirrorPrimary} data-testid="room-mirror-aim">
                 <p>{mirror.aim.text}</p>
                 {normalizeText(mirror?.aim?.gloss) ? <span>{mirror.aim.gloss}</span> : null}
               </div>
@@ -370,12 +383,14 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
                           {item.detail ? <span>{item.detail}</span> : null}
                         </div>
                         {item.documentKey ? (
-                          <Link
-                            href={buildWitnessHref(projectKey, sessionId, item.documentKey)}
-                            className={styles.inlineLink}
+                          <button
+                            type="button"
+                            className={styles.inlineLinkButton}
+                            data-testid={`room-mirror-witness-${item.documentKey}`}
+                            onClick={() => onOpenWitness?.(item.documentKey)}
                           >
                             Witness
-                          </Link>
+                          </button>
                         ) : null}
                       </div>
                     ))}
@@ -457,7 +472,7 @@ function MirrorPanel({ view, highlightedRegion, collapsed, onToggle }) {
 
 function StarterView({ starter = null, canCreateBox = false, onCreateBox = null }) {
   return (
-    <section className={styles.starter}>
+    <section className={styles.starter} data-testid="room-starter">
       <Kicker tone="neutral" className={styles.starterKicker}>
         Room
       </Kicker>
@@ -492,6 +507,7 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
           <button
             key={project.projectKey}
             type="button"
+            data-testid={`room-project-${project.projectKey}`}
             className={`${styles.projectRow} ${project.projectKey === activeProjectKey ? styles.projectRowActive : ""}`}
             onClick={() => onSelect(project.projectKey)}
           >
@@ -542,7 +558,12 @@ function CreateBoxForm({ onCreate, busy }) {
       <div className={styles.formGrid}>
         <label className={styles.field}>
           <span>Name</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Box title" />
+          <input
+            data-testid="room-create-box-name"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Box title"
+          />
         </label>
         <label className={styles.field}>
           <span>Note</span>
@@ -555,7 +576,7 @@ function CreateBoxForm({ onCreate, busy }) {
       </div>
       {error ? <p className={styles.errorText}>{error}</p> : null}
       <div className={styles.inlineActions}>
-        <button type="submit" className={styles.primaryButton} disabled={busy}>
+        <button type="submit" className={styles.primaryButton} disabled={busy} data-testid="room-create-box-submit">
           {busy ? "Creating..." : "Create Box"}
         </button>
       </div>
@@ -1089,7 +1110,9 @@ function ProposalFooter({ roomPayload, previewStatus, onApply, busy }) {
   let body =
     gatePreview?.nextBestAction || "Apply this preview to make it canonical.";
 
-  if (status === "blocked" || !accepted) {
+  if (status === "active" && accepted) {
+    body = "";
+  } else if (status === "blocked" || !accepted) {
     statusTitle = "Blocked";
     body = gatePreview?.reason || "This preview is not lawful yet.";
   } else if (status === "applied") {
@@ -1103,17 +1126,24 @@ function ProposalFooter({ roomPayload, previewStatus, onApply, busy }) {
   return (
     <div className={styles.proposalFooter}>
       <div
+        data-testid={`room-proposal-status-${status}`}
         className={`${styles.proposalStatus} ${accepted ? styles.proposalStatusAccepted : styles.proposalStatusRejected}`}
       >
         <span>{statusTitle}</span>
-        <p>{body}</p>
+        {body ? <p>{body}</p> : null}
         {diagnostics.length ? (
           <small>{diagnostics.map((item) => item.message).join(" • ")}</small>
         ) : null}
       </div>
 
       {accepted && status === "active" && Array.isArray(roomPayload?.segments) && roomPayload.segments.length ? (
-        <button type="button" className={styles.applyButton} onClick={onApply} disabled={busy}>
+        <button
+          type="button"
+          className={styles.applyButton}
+          onClick={onApply}
+          disabled={busy}
+          data-testid="room-apply-preview"
+        >
           {busy ? "Applying..." : "Apply to Room"}
         </button>
       ) : null}
@@ -1198,13 +1228,13 @@ function AdjacentLinks({ view, onOpenWitness, onOpenOperate }) {
   return (
     <div className={styles.toolRow}>
       {hasWitness ? (
-        <button type="button" className={styles.toolLink} onClick={onOpenWitness}>
+        <button type="button" className={styles.toolLink} onClick={() => onOpenWitness?.()} data-testid="room-open-witness">
           <FileText size={14} />
           Witness
         </button>
       ) : null}
       {hasOperate ? (
-        <button type="button" className={styles.toolLinkSubtle} onClick={onOpenOperate}>
+        <button type="button" className={styles.toolLinkSubtle} onClick={onOpenOperate} data-testid="room-open-operate">
           <Play size={14} />
           Operate
         </button>
@@ -1252,7 +1282,7 @@ function RoomSessionList({
           <Kicker tone="neutral">Conversations</Kicker>
           <strong>Continue or start fresh</strong>
         </div>
-        <button type="button" className={styles.secondaryButton} onClick={onCreate} disabled={busy}>
+        <button type="button" className={styles.secondaryButton} onClick={onCreate} disabled={busy} data-testid="room-create-session">
           <Plus size={14} />
           New Conversation
         </button>
@@ -1271,6 +1301,7 @@ function RoomSessionList({
               >
                 <button
                   type="button"
+                  data-testid={`room-session-${session?.id || session?.sessionKey}`}
                   className={styles.sessionRowButton}
                   onClick={() => onActivate?.(session?.id)}
                   disabled={busy || isActive}
@@ -1321,14 +1352,14 @@ function ActivePreviewBanner({ activePreview }) {
     "A preview is live in this conversation.";
 
   return (
-    <section className={styles.previewBanner}>
+    <section className={styles.previewBanner} data-testid="room-active-preview">
       <div className={styles.previewBannerCopy}>
         <Kicker tone="brand">Preview</Kicker>
         <strong>{summary}</strong>
-        <p>{normalizeText(activePreview?.nextBestAction) || "Visible now. Not canonical until applied."}</p>
+        <p>Visible in this conversation. Canon unchanged until applied.</p>
       </div>
       <div className={styles.previewBannerMeta}>
-        <span>Conversation only</span>
+        <span>Preview only</span>
         <span>Box canon unchanged</span>
       </div>
     </section>
@@ -1341,13 +1372,13 @@ function FocusedWitnessPanel({ focusedWitness, onBack }) {
   const blocks = Array.isArray(focusedWitness?.excerptBlocks) ? focusedWitness.excerptBlocks : [];
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} data-testid="room-focused-witness">
       <div className={styles.panelHead}>
         <div>
           <Kicker tone="grounded">Witness</Kicker>
           <strong>{focusedWitness.title || "Focused witness"}</strong>
         </div>
-        <button type="button" className={styles.secondaryButton} onClick={onBack}>
+        <button type="button" className={styles.secondaryButton} onClick={onBack} data-testid="room-close-witness">
           Back to Room
         </button>
       </div>
@@ -1362,7 +1393,7 @@ function FocusedWitnessPanel({ focusedWitness, onBack }) {
       <div className={styles.witnessStack}>
         {blocks.length ? (
           blocks.map((block) => (
-            <article key={block.id} className={styles.witnessBlock}>
+            <article key={block.id} className={styles.witnessBlock} data-testid="room-focused-witness-block">
               <span>{block.kind || "paragraph"}</span>
               <p>{block.text}</p>
             </article>
@@ -1394,30 +1425,30 @@ function OperatePanel({
       : null);
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} data-testid="room-operate-panel">
       <div className={styles.panelHead}>
         <div>
           <Kicker tone="neutral">Operate</Kicker>
           <strong>Box-level advisory read</strong>
         </div>
-        <button type="button" className={styles.secondaryButton} onClick={onBack}>
+        <button type="button" className={styles.secondaryButton} onClick={onBack} data-testid="room-close-operate">
           Back to Room
         </button>
       </div>
 
       <div className={styles.operateSummaryGrid}>
-        <div className={styles.operateSummaryCard}>
+        <div className={styles.operateSummaryCard} data-testid="room-operate-source-count">
           <span>Included sources</span>
           <strong>{Number(operateSummary?.includedSourceCount) || 0}</strong>
         </div>
-        <div className={styles.operateSummaryCard}>
+        <div className={styles.operateSummaryCard} data-testid="room-operate-last-run">
           <span>Last run</span>
           <strong>{formatOperateTimestamp(operateSummary?.lastRunAt) || "Not run yet"}</strong>
         </div>
       </div>
 
       {activeResult?.nextMove ? (
-        <div className={styles.operateCallout}>
+        <div className={styles.operateCallout} data-testid="room-operate-next-move">
           <span>Next move</span>
           <p>{activeResult.nextMove}</p>
         </div>
@@ -1434,6 +1465,7 @@ function OperatePanel({
           className={styles.primaryButton}
           onClick={onRun}
           disabled={pending || !operateSummary?.available}
+          data-testid="room-run-operate"
         >
           {pending ? "Operating..." : operateSummary?.hasRun ? "Refresh Operate" : "Run Operate"}
         </button>
@@ -1442,6 +1474,7 @@ function OperatePanel({
           className={styles.secondaryButton}
           onClick={onAskSeven}
           disabled={!summaryResult}
+          data-testid="room-ask-seven-operate-audit"
         >
           Ask Seven to audit
         </button>
@@ -1504,6 +1537,7 @@ function Composer({
               <Paperclip size={16} />
             </button>
             <textarea
+              data-testid="room-composer-input"
               ref={textareaRef}
               value={value}
               onChange={(event) => onChange(event.target.value)}
@@ -1534,13 +1568,14 @@ function Composer({
               className={`${styles.composerSend} ${canSubmit ? styles.composerSendActive : ""}`}
               disabled={!canSubmit}
               aria-label={pending ? "Sending" : "Send"}
+              data-testid="room-composer-send"
             >
               <SendHorizontal size={15} />
             </button>
           </div>
 
           <div className={styles.composerFootnote}>
-            Plain language first. Structure wakes up only when it earns it.
+            Plain language first. Preview stays separate from canon.
           </div>
         </div>
       </div>
@@ -1718,8 +1753,12 @@ function OverlaySurface({
           : "Room controls";
 
   return (
-    <div className={styles.overlayBackdrop} onClick={onClose}>
-      <aside className={styles.overlayPanel} onClick={(event) => event.stopPropagation()}>
+    <div className={styles.overlayBackdrop} onClick={onClose} data-testid="room-overlay-backdrop">
+      <aside
+        className={styles.overlayPanel}
+        onClick={(event) => event.stopPropagation()}
+        data-testid={`room-overlay-${mode}`}
+      >
         <div className={styles.overlayHeader}>
           <div className={styles.overlayHeaderCopy}>
             <Kicker tone="neutral">Room</Kicker>
@@ -1742,15 +1781,15 @@ function OverlaySurface({
         {mode === "instrument" ? (
           <div className={styles.overlayContent}>
             <div className={styles.overlayActions}>
-              <button type="button" className={styles.primaryButton} onClick={() => onOpenMode("source")}>
+              <button type="button" className={styles.primaryButton} onClick={() => onOpenMode("source")} data-testid="room-open-source">
                 <Upload size={14} />
                 Add Source
               </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("boxes")}>
+              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("boxes")} data-testid="room-open-boxes">
                 <Boxes size={14} />
                 Boxes
               </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("create")}>
+              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("create")} data-testid="room-open-create-box">
                 <Plus size={14} />
                 New Box
               </button>
@@ -2248,30 +2287,53 @@ export default function RoomWorkspace({ initialView }) {
     handleCloseOverlay();
   }
 
-  function handleOpenWitness() {
-    const witnessHref = normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader);
+  async function handleOpenWitness(nextDocumentKey = "") {
+    const targetDocumentKey =
+      normalizeText(nextDocumentKey) ||
+      currentFocusedDocumentKey ||
+      extractDocumentKeyFromWorkspaceHref(view?.deepLinks?.reader || "");
+    const witnessHref = targetDocumentKey
+      ? buildWitnessHref(projectKey, activeSessionId, targetDocumentKey)
+      : normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader);
     if (!witnessHref) return;
-    startActionTransition(() => {
-      router.replace(witnessHref, { scroll: false });
-    });
-    if (view?.focusedWitness) {
+    const alreadyFocused = Boolean(
+      targetDocumentKey &&
+        currentFocusedDocumentKey &&
+        targetDocumentKey === currentFocusedDocumentKey &&
+        view?.focusedWitness,
+    );
+    if (alreadyFocused) {
       setOverlayMode("witness");
+      return;
+    }
+    try {
+      await refreshRoom(projectKey, activeSessionId, targetDocumentKey, "witness");
+      startActionTransition(() => {
+        router.replace(witnessHref, { scroll: false });
+      });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not open that witness.");
     }
   }
 
   async function handleOpenOperate() {
     const operateHref = normalizeText(view?.adjacent?.operate?.openHref);
-    if (operateHref) {
-      startActionTransition(() => {
-        router.replace(operateHref, { scroll: false });
-      });
-    }
-    setOverlayMode("operate");
-    if (view?.adjacent?.operate?.hasRun) {
-      await loadOperateSummary();
-    } else {
-      setOperateError("");
-      setOperateResult(null);
+    try {
+      await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey, "operate");
+      if (operateHref) {
+        startActionTransition(() => {
+          router.replace(operateHref, { scroll: false });
+        });
+      }
+      setOverlayMode("operate");
+      if (view?.adjacent?.operate?.hasRun) {
+        await loadOperateSummary();
+      } else {
+        setOperateError("");
+        setOperateResult(null);
+      }
+    } catch (error) {
+      setOperateError(error instanceof Error ? error.message : "Could not open Operate.");
     }
   }
 
@@ -2303,7 +2365,7 @@ export default function RoomWorkspace({ initialView }) {
   }
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-testid="room-workspace">
       {view?.hasStructure ? <StatusChip view={view} floating /> : null}
 
       <button
@@ -2311,6 +2373,7 @@ export default function RoomWorkspace({ initialView }) {
         className={`${styles.instrumentTrigger} ${view?.hasStructure ? styles.instrumentTriggerWithChip : ""}`}
         onClick={() => setOverlayMode(normalizeText(projectKey) ? "instrument" : "create")}
         aria-label="Open room controls"
+        data-testid="room-open-instrument"
       >
         <MoreHorizontal size={18} />
       </button>
@@ -2352,6 +2415,7 @@ export default function RoomWorkspace({ initialView }) {
               highlightedRegion={highlightedRegion}
               collapsed={mirrorCollapsed}
               onToggle={() => setMirrorCollapsed((current) => !current)}
+              onOpenWitness={handleOpenWitness}
             />
           ) : null}
 
