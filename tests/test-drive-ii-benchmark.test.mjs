@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  DRIVE_TAPE_LANE_ORDER,
+  buildDriveTapeReplay,
+  buildWorkingEchoSourceClassification,
+} from "./helpers/build-drive-tape.mjs";
 import { buildSchemaBoardSurface } from "./helpers/build-schema-board-surface.mjs";
 import {
   buildBlindfoldedSurfacedState,
@@ -195,6 +200,232 @@ test("schema board control stays generic and excludes Loegos-only hidden state",
   assert.ok(!serialized.includes("receiptkit"));
   assert.ok(!serialized.includes("runtimewindow"));
   assert.ok(!serialized.includes("\"gate\""));
+});
+
+test("drive tape replay stays purely derived and makes the target scenarios legible", () => {
+  const scenarios = [
+    {
+      scenarioId: "contradictory_return_journey",
+      surfacedState: {
+        assistantAnswer: { text: "CTA copy looks weak; compare the post-SMS failures instead." },
+        previewSurface: {
+          visible: true,
+          bannerSummary: "Preview points at post-SMS AVS failure.",
+          visibleSegments: [{ mirrorRegion: "moves", text: "Compare AVS mismatches against CTA exposure." }],
+        },
+        workingEchoSurface: {
+          status: "contested",
+          aim: "Find what still fails after the SMS fix.",
+          aimRefs: ["mirror:aim"],
+          evidenceBuckets: {
+            supports: [
+              {
+                id: "E3",
+                title: "E3 Replay B",
+                detail: "User passes SMS, then fails on AVS mismatch.",
+                sourceRefs: ["source:E3"],
+              },
+            ],
+            weakens: [
+              {
+                id: "E4",
+                title: "E4 Support Claim",
+                detail: "CTA blame has no cohort evidence.",
+                sourceRefs: ["source:E4"],
+              },
+            ],
+            missing: [
+              {
+                id: "missing_post_sms_handoff",
+                title: "Missing witness",
+                detail: "Post-SMS handoff or AVS logs for the failing cohort.",
+                sourceRefs: ["segment:seg_move"],
+              },
+            ],
+          },
+          openTension: [{ text: "SMS improved but completion stayed flat.", kind: "contradiction", sourceRefs: ["source:E2"] }],
+          whatWouldDecideIt: {
+            text: "Which post-SMS split decides it: AVS mismatch in foreign-card travelers, or CTA exposure that only looks correlated?",
+            sourceRefs: ["segment:seg_move"],
+          },
+          candidateMove: null,
+          uncertainty: {
+            label: "return_shift",
+            detail:
+              "A return changed the read. Reroute around this split: Which post-SMS split decides it: AVS mismatch in foreign-card travelers, or CTA exposure that only looks correlated?",
+          },
+          returnDelta: {
+            summary:
+              "Return bent the read: Timeouts improved, but the affected cohort still fails later on AVS mismatch.",
+            changedRead: [{ text: "Timeouts improved after the SMS fix.", sourceRefs: ["source:E2"] }],
+            weakenedRead: [{ text: "That weakens the CTA-copy explanation.", sourceRefs: ["source:E4"] }],
+            nextMoveShift: { text: "Inspect post-SMS handoff and AVS logs next.", sourceRefs: ["segment:seg_move", "source:E3"] },
+          },
+        },
+        mirrorSurface: {
+          aim: "Find what still fails after the SMS fix.",
+          evidence: [{ title: "E1", detail: "Traveler failures cluster after payment submit." }],
+          story: [{ text: "CTA blame stays unproven.", detail: "" }],
+          moves: [{ text: "Inspect AVS logs", detail: "Foreign-card traveler cohort", status: "candidate" }],
+          returns: [{ label: "Return", actual: "SMS fix helped timeouts only", result: "contradicted" }],
+        },
+        fieldStateLabel: "Open",
+      },
+      check(replay) {
+        const returned = replay.lanes.find((lane) => lane.lane === "returned");
+        assert.ok(returned.events.some((event) => /Return bent the read/i.test(event.text)));
+        assert.equal(replay.replayRead.returnBendVisible, true);
+      },
+    },
+    {
+      scenarioId: "working_echo_correction",
+      surfacedState: {
+        assistantAnswer: { text: "Copy might be the story, but domain verification looks more real." },
+        previewSurface: {
+          visible: true,
+          bannerSummary: "Preview favors the domain-verification checkpoint.",
+          visibleSegments: [{ mirrorRegion: "story", text: "Older copy still fails at the same checkpoint." }],
+        },
+        workingEchoSurface: {
+          status: "contested",
+          aim: "Find why team setup still fails at teammate invite.",
+          aimRefs: ["segment:seg_aim"],
+          evidenceBuckets: {
+            supports: [
+              {
+                id: "E5",
+                title: "E5 Ops Log Excerpt",
+                detail: "Domain-verification retries spike for quarantined company domains.",
+                sourceRefs: ["source:E5"],
+              },
+            ],
+            weakens: [
+              {
+                id: "E4",
+                title: "E4 Replay B",
+                detail: "Older copy still fails at domain verification.",
+                sourceRefs: ["source:E4"],
+              },
+            ],
+            missing: [
+              {
+                id: "missing_domain_logs",
+                title: "Missing witness",
+                detail: "Domain-verification logs segmented by quarantined company domains.",
+                sourceRefs: ["segment:seg_move"],
+              },
+            ],
+          },
+          openTension: [{ text: "The explainer-copy explanation is unsupported.", kind: "contradiction", sourceRefs: ["source:E3"] }],
+          whatWouldDecideIt: {
+            text: "Does the failure track copy exposure, or domain-verification errors in quarantined company domains?",
+            sourceRefs: ["segment:seg_move"],
+          },
+          candidateMove: null,
+          uncertainty: {
+            label: "mixed_signal",
+            detail:
+              "Still open because the explainer-copy explanation is unsupported. Domain-verification logs segmented by quarantined company domains would decide it.",
+          },
+          returnDelta: null,
+        },
+        mirrorSurface: null,
+        fieldStateLabel: "Open",
+      },
+      check(replay) {
+        const surfacedEcho = replay.lanes.find((lane) => lane.lane === "surfaced echo");
+        assert.ok(surfacedEcho.events.some((event) => /Older copy still fails/i.test(event.text)));
+        assert.ok(surfacedEcho.events.some((event) => /domain-verification logs/i.test(event.text)));
+      },
+    },
+    {
+      scenarioId: "no_move_yet",
+      surfacedState: {
+        assistantAnswer: { text: "Pricing blame looks premature; we still need the missing witness." },
+        previewSurface: {
+          visible: true,
+          bannerSummary: "Preview stays open and asks for the failed-step witness.",
+          visibleSegments: [{ mirrorRegion: "moves", text: "Get one step-level replay before changing pricing." }],
+        },
+        workingEchoSurface: {
+          status: "forming",
+          aim: "Find which step actually loses enterprise trials before changing pricing.",
+          aimRefs: ["mirror:aim"],
+          evidenceBuckets: {
+            supports: [
+              {
+                id: "E2",
+                title: "E2 Sales Call Note",
+                detail: "One buyer stalls at legal review before pricing comes up.",
+                sourceRefs: ["source:E2"],
+              },
+            ],
+            weakens: [
+              {
+                id: "E1",
+                title: "E1 Sparse Funnel Snapshot",
+                detail: "The funnel snapshot does not break the failures down by step.",
+                sourceRefs: ["source:E1"],
+              },
+            ],
+            missing: [
+              {
+                id: "missing_step_breakdown",
+                title: "Missing witness",
+                detail: "One step-level replay or breakdown for the failed path.",
+                sourceRefs: ["segment:seg_move"],
+              },
+            ],
+          },
+          openTension: [
+            {
+              text: "The known failures do not happen in one clearly shared step.",
+              kind: "uncertainty",
+              sourceRefs: ["source:E1"],
+            },
+          ],
+          whatWouldDecideIt: {
+            text: "Which missing witness decides it: one step-level replay for a failed trial, or a breakdown showing whether legal review, SSO setup, or pricing exposure diverged first?",
+            sourceRefs: ["segment:seg_move"],
+          },
+          candidateMove: null,
+          uncertainty: {
+            label: "mixed_signal",
+            detail:
+              "Still open because the known failures do not happen in one clearly shared step. One step-level replay or breakdown for the failed path.",
+          },
+          returnDelta: null,
+        },
+        mirrorSurface: null,
+        fieldStateLabel: "Open",
+      },
+      check(replay) {
+        assert.match(replay.replayRead.whyStillOpen, /Still open because/i);
+        const surfacedEcho = replay.lanes.find((lane) => lane.lane === "surfaced echo");
+        assert.ok(surfacedEcho.events.some((event) => /step-level replay/i.test(event.text)));
+      },
+    },
+  ];
+
+  scenarios.forEach(({ scenarioId, surfacedState, check }) => {
+    const replay = buildDriveTapeReplay({
+      scenarioId,
+      arm: "loegos_sighted",
+      surfacedState,
+      secondTurnOutput: "next turn placeholder",
+      secondTurnScore: { total: 65 },
+    });
+    const sourceClassification = buildWorkingEchoSourceClassification(surfacedState);
+
+    assert.deepEqual(replay.lanes.map((lane) => lane.lane), DRIVE_TAPE_LANE_ORDER);
+    assert.equal(replay.lanes.find((lane) => lane.lane === "receipted").available, false);
+    assert.ok(sourceClassification.whatWouldDecideIt.classes.length > 0);
+    assert.ok(
+      sourceClassification.evidenceBuckets.missing[0].classes.includes("bounded provisional state") ||
+        sourceClassification.evidenceBuckets.missing[0].classes.includes("heuristic bridge logic"),
+    );
+    check(replay);
+  });
 });
 
 test("second-turn scorer rewards lawful contradiction-aware steering and catches counterfeit jumps", () => {
@@ -399,6 +630,7 @@ test("report writer emits required sections and a valid headline verdict structu
   assert.equal(verdict.winner, "loegos_sighted");
   assert.match(report, /# Test Drive II Master Report/);
   assert.match(report, /## Surfaced Object Contract/);
+  assert.match(report, /## Drive Tape Replays/);
   assert.match(report, /## Paired First-Turn Records/);
   assert.match(report, /## Per-Run Records/);
   assert.match(report, /## Blind Auditor Appendix/);
@@ -407,5 +639,6 @@ test("report writer emits required sections and a valid headline verdict structu
   assert.match(report, /Mean Evidence Split/);
   assert.match(report, /Return Update/);
   assert.match(report, /Mean Decide/);
+  assert.match(report, /source classification/i);
   assert.match(report, /```json/);
 });

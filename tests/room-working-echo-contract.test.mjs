@@ -245,3 +245,77 @@ test("buildWorkingEcho groups evidence and surfaces return-aware deltas when pri
   assert.ok(result.returnDelta.weakenedRead.length > 0);
   assert.match(result.whatWouldDecideIt.text, /post-SMS|AVS|traveler/i);
 });
+
+test("buildWorkingEcho keeps no-move-yet explicit and prefers artifact-backed aim", () => {
+  const result = buildWorkingEcho({
+    canonicalView: {
+      fieldState: { key: "open", label: "Open" },
+      activePreview: {
+        assistantMessageId: "assistant_fog",
+        status: "active",
+      },
+      interaction: { nextBestAction: "" },
+      pendingMove: null,
+      mirror: {
+        aim: { text: "Find the failed step before changing pricing." },
+      },
+    },
+    messages: [
+      {
+        id: "assistant_fog",
+        role: "assistant",
+        content:
+          "The pricing-table story is unsupported. Which step actually loses them first: legal review, SSO setup, or pricing exposure?",
+        roomPayload: {
+          segments: [
+            { id: "seg_aim", text: "Blame pricing first.", mirrorRegion: "aim" },
+            {
+              id: "seg_story",
+              text: "The known failures do not happen in one clearly shared step.",
+              mirrorRegion: "story",
+            },
+          ],
+        },
+      },
+    ],
+    recentSources: [
+      {
+        documentKey: "E1_sparse",
+        title: "E1 Sparse Funnel Snapshot",
+        operateSummary:
+          "A one-day funnel snapshot shows four enterprise prospects dropping before activation, but it does not break the failures down by step.",
+      },
+      {
+        documentKey: "E2_sales",
+        title: "E2 Sales Call Note",
+        operateSummary:
+          "One buyer paused after procurement asked for legal review of the security addendum, before anyone mentioned pricing.",
+      },
+      {
+        documentKey: "E3_support",
+        title: "E3 Support Thread",
+        operateSummary:
+          "Another prospect reported getting stuck during SSO setup, but there is no replay or step-by-step trace attached.",
+      },
+      {
+        documentKey: "E4_blame",
+        title: "E4 Internal Blame Note",
+        operateSummary:
+          "Internal note says it is definitely the new annual-plan pricing table, but no linked evidence shows the pricing table on the failed path.",
+      },
+    ],
+    focusedWitness: null,
+    activeSession: { id: "session_fog" },
+  });
+
+  assert.ok(result);
+  assert.equal(result.candidateMove, null);
+  assert.equal(result.aim.text, "Find the failed step before changing pricing.");
+  assert.ok(result.aim.sourceRefs.includes("mirror:aim"));
+  assert.match(result.whatWouldDecideIt.text, /replay|legal review|SSO|pricing exposure/i);
+  assert.match(result.uncertainty.detail, /still open because/i);
+  assert.match(result.uncertainty.detail, /replay|breakdown/i);
+  assert.ok(result.evidenceBuckets.supports.some((item) => item.id === "E2"));
+  assert.ok(result.evidenceBuckets.weakens.some((item) => item.id === "E1"));
+  assert.ok(result.evidenceBuckets.missing.length > 0);
+});

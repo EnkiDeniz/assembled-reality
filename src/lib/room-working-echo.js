@@ -1,11 +1,21 @@
 function normalizeText(value = "") {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  return String(value || "")
+    .replace(/\\n/g, " ")
+    .replace(/\\t/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function clipText(value = "", max = 220) {
   const normalized = normalizeText(value);
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, Math.max(0, max - 1)).trim()}…`;
+}
+
+function lowerFirst(value = "") {
+  const normalized = normalizeText(value);
+  if (!normalized) return "";
+  return normalized.charAt(0).toLowerCase() + normalized.slice(1);
 }
 
 function slugify(value = "") {
@@ -91,24 +101,35 @@ function extractEvidenceHandle(...values) {
 
 function buildAim({ canonicalView = null, segments = [] } = {}) {
   const aimSegment = segments.find((segment) => segment.mirrorRegion === "aim");
-  const aimText =
-    normalizeText(canonicalView?.activePreview?.sections?.aim?.text) ||
-    normalizeText(aimSegment?.text) ||
-    "";
-  if (!aimText) return null;
+  const candidates = [
+    {
+      text: normalizeText(canonicalView?.interaction?.aim?.text || canonicalView?.interaction?.aim),
+      source: "lawful_artifact",
+      sourceRefs: [buildSourceRef("interaction", "aim")],
+    },
+    {
+      text: normalizeText(canonicalView?.mirror?.aim?.text),
+      source: "lawful_artifact",
+      sourceRefs: [buildSourceRef("mirror", "aim")],
+    },
+    {
+      text: normalizeText(canonicalView?.activePreview?.sections?.aim?.text),
+      source: "bounded_provisional_state",
+      sourceRefs: [buildSourceRef("preview", canonicalView?.activePreview?.assistantMessageId || "aim")],
+    },
+    {
+      text: normalizeText(aimSegment?.text),
+      source: "bounded_provisional_state",
+      sourceRefs: [buildSourceRef("segment", aimSegment?.id)],
+    },
+  ].filter((candidate) => candidate.text);
+
+  if (!candidates.length) return null;
 
   return {
-    text: aimText,
-    source:
-      normalizeText(canonicalView?.activePreview?.sections?.aim?.text) || normalizeText(aimSegment?.text)
-        ? "conversation"
-        : "mixed",
-    sourceRefs: uniqueBy(
-      [
-        buildSourceRef("segment", aimSegment?.id),
-        buildSourceRef("preview", canonicalView?.activePreview?.assistantMessageId),
-      ].filter(Boolean),
-    ),
+    text: candidates[0].text,
+    source: candidates[0].source,
+    sourceRefs: uniqueBy(candidates.flatMap((candidate) => candidate.sourceRefs).filter(Boolean)),
   };
 }
 
@@ -275,12 +296,20 @@ function isGenericDecisionText(text = "") {
   const normalized = normalizeText(text).toLowerCase();
   if (!normalized) return true;
   return (
+    /^ask:\s*what else changed/.test(normalized) ||
+    /^ask:\s*what changed before/.test(normalized) ||
+    /^ask:\s*which path failed most/.test(normalized) ||
     /^ask for more info/.test(normalized) ||
     /^ask for logs/.test(normalized) ||
     /^need more signal/.test(normalized) ||
     /^wait for/.test(normalized) ||
     /^check the logs/.test(normalized) ||
     /^compare the evidence/.test(normalized) ||
+    /^what else changed/.test(normalized) ||
+    /^what changed before/.test(normalized) ||
+    /^which path failed most/.test(normalized) ||
+    /^what breaks after sms/.test(normalized) ||
+    /^ask:\s*what breaks after sms/.test(normalized) ||
     normalized === "what matters next?"
   );
 }
@@ -317,7 +346,7 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
 
   if (/pricing|annual-plan|legal review|security addendum|sso/.test(corpus)) {
     return {
-      text: "Which step actually loses them first: legal review, SSO setup, or pricing exposure?",
+      text: "Which missing witness decides it: one step-level replay for a failed trial, or a breakdown showing whether legal review, SSO setup, or pricing exposure diverged first?",
       kind: "first_divergence",
     };
   }
@@ -330,7 +359,7 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
   }
 
   return {
-    text: "Which concrete split would separate the leading read from the popular blame story?",
+    text: "Which named witness or log would separate the leading read from the popular blame story?",
     kind: "compare",
   };
 }
@@ -424,7 +453,21 @@ function buildEvidenceBuckets({ evidenceCarried = [], whatWouldDecideIt = null }
     const text = evidenceText(item);
     const supportScore = supportSignalScore(text);
     const weakenScore = weakeningSignalScore(text);
-    if (weakenScore > supportScore) {
+    const normalized = text.toLowerCase();
+    const namesConcreteWitness =
+      /legal review|security addendum|procurement|sso setup|domain could not be verified|invite teammate|avs|postal|clock|expired|billing country mismatch|foreign card|traveler|after sms|later on/.test(
+        normalized,
+      );
+    const isThinOrUnsupported =
+      /unsupported|no linked evidence|no evidence|internal note|slack note|support note says|definitely|does not break.*down|no replay|no step-by-step trace/.test(
+        normalized,
+      );
+
+    if (isThinOrUnsupported && !namesConcreteWitness) {
+      weakens.push(item);
+    } else if (namesConcreteWitness) {
+      supports.push(item);
+    } else if (weakenScore > supportScore) {
       weakens.push(item);
     } else {
       supports.push(item);
@@ -518,22 +561,30 @@ function buildReturnDelta({ evidenceBuckets = null, whatWouldDecideIt = null } =
     .slice(0, 2)
     .map((item) => toReturnClaim(item))
     .filter(Boolean);
+  const fallbackWeakenedRead =
+    !weakenedRead.length && changedRead.length
+      ? weakens
+          .slice(0, 2)
+          .map((item) => toReturnClaim(item))
+          .filter(Boolean)
+      : [];
+  const visibleWeakenedRead = weakenedRead.length ? weakenedRead : fallbackWeakenedRead;
 
-  if (!changedRead.length && !weakenedRead.length) return null;
+  if (!changedRead.length && !visibleWeakenedRead.length) return null;
 
   const changedLead = changedRead[0]?.text || "";
-  const weakenedLead = weakenedRead[0]?.text || "";
+  const weakenedLead = visibleWeakenedRead[0]?.text || "";
   const summary = clipText(
     changedLead && weakenedLead
-      ? `${changedLead} This weakens the earlier read that ${weakenedLead.toLowerCase()}.`
-      : changedLead || weakenedLead,
+      ? `Return bent the read: ${changedLead} This weakens the earlier read that ${lowerFirst(weakenedLead)}.`
+      : `Return bent the read: ${changedLead || weakenedLead}`,
     200,
   );
 
   return {
     summary,
     changedRead,
-    weakenedRead,
+    weakenedRead: visibleWeakenedRead,
     nextMoveShift: normalizeText(whatWouldDecideIt?.text)
       ? {
           text: clipText(whatWouldDecideIt.text, 160),
@@ -552,7 +603,7 @@ function buildCandidateMove({ whatWouldDecideIt = null, canonicalView = null, re
   if (!text || isInternalSystemText(text)) return null;
 
   const ready = !/\?$/.test(text) && !/need more|ask|which|what|where|when/i.test(text);
-  if (!ready && !returnDelta) return null;
+  if (!ready) return null;
 
   return {
     text: clipText(text, 160),
@@ -582,24 +633,42 @@ function buildUncertainty({
   fieldState = "",
   candidateMove = null,
   returnDelta = null,
+  whatWouldDecideIt = null,
+  evidenceBuckets = null,
 } = {}) {
   const normalizedFieldState = normalizeText(fieldState).toLowerCase();
+  const decidingText = normalizeText(whatWouldDecideIt?.text);
+  const missingItems = Array.isArray(evidenceBuckets?.missing) ? evidenceBuckets.missing : [];
+  const firstMissing = normalizeText(missingItems[0]?.detail || missingItems[0]?.title);
+  const firstTension = normalizeText(openTension[0]?.text);
   if (normalizedFieldState === "awaiting") {
     return {
       label: "awaiting_return",
-      detail: "Waiting on reality to answer back.",
+      detail: firstMissing
+        ? `Waiting on reality to answer back. ${firstMissing}`
+        : "Waiting on reality to answer back.",
     };
   }
   if (returnDelta) {
     return {
       label: "return_shift",
-      detail: "A return changed the read, so the next move should tighten around the new split.",
+      detail: decidingText
+        ? `A return changed the read. Reroute around this split: ${decidingText}`
+        : "A return changed the read, so the next move should tighten around the new split.",
     };
   }
   if (openTension.length > 0) {
     return {
       label: evidenceCarried.length > 0 ? "mixed_signal" : "low_signal",
-      detail: "Competing reads are still live.",
+      detail: clipText(
+        [
+          firstTension ? `Still open because ${lowerFirst(firstTension)}` : "Competing reads are still live.",
+          firstMissing || (decidingText ? `This split decides it: ${decidingText}` : ""),
+        ]
+          .filter(Boolean)
+          .join(" "),
+        180,
+      ),
     };
   }
   if (candidateMove?.justified) {
@@ -610,7 +679,16 @@ function buildUncertainty({
   }
   return {
     label: evidenceCarried.length > 0 ? "grounded_but_open" : "low_signal",
-    detail: evidenceCarried.length > 0 ? "A read is forming but remains provisional." : "Not enough grounded signal yet.",
+    detail: evidenceCarried.length > 0
+      ? clipText(
+          firstMissing
+            ? `A read is forming but remains provisional. ${firstMissing}`
+            : decidingText
+              ? `A read is forming but remains provisional. ${decidingText}`
+              : "A read is forming but remains provisional.",
+          180,
+        )
+      : "Not enough grounded signal yet.",
   };
 }
 
@@ -700,6 +778,8 @@ export function buildWorkingEcho({
     fieldState,
     candidateMove,
     returnDelta,
+    whatWouldDecideIt,
+    evidenceBuckets,
   });
   const status = computeStatus({
     fieldState,

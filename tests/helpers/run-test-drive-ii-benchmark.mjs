@@ -9,6 +9,7 @@ import {
 } from "../../src/lib/room-turn-service.js";
 import { WORKING_ECHO_SCENARIOS } from "../fixtures/room-benchmarks/working-echo/index.mjs";
 import { buildSchemaBoardSurface, SCHEMA_BOARD_JSON_SCHEMA } from "./build-schema-board-surface.mjs";
+import { buildDriveTapeReplay, renderDriveTapeReplay } from "./build-drive-tape.mjs";
 import {
   buildBlindfoldedSurfacedState,
   extractCurrentSurfacedRoomState,
@@ -525,6 +526,13 @@ function buildRunRecord({
     (sum, item) => sum + Number(item?.wallClockMs || 0),
     0,
   );
+  const driveTapeReplay = buildDriveTapeReplay({
+    scenarioId: scenario.id,
+    arm,
+    surfacedState,
+    secondTurnOutput: secondTurn?.structuredOutput?.replyText,
+    secondTurnScore,
+  });
 
   return {
     arm,
@@ -548,6 +556,8 @@ function buildRunRecord({
     degraded: Boolean(degraded),
     prompt: clone(prompts),
     rawArtifacts: clone(rawArtifacts),
+    driveTapeReplay: clone(driveTapeReplay),
+    sourceClassification: clone(driveTapeReplay?.sourceClassification),
   };
 }
 
@@ -1168,6 +1178,30 @@ export function buildTestDriveIiReport({
   sections.push("");
   sections.push(renderEfficiencyTable(verdict));
   sections.push("");
+  sections.push("## Drive Tape Replays");
+  sections.push("");
+  runRecords
+    .filter(
+      (record) =>
+        record.arm === "loegos_sighted" &&
+        ["contradictory_return_journey", "working_echo_correction", "no_move_yet"].includes(record.scenarioId),
+    )
+    .forEach((record) => {
+      sections.push(`### ${record.scenarioId}`);
+      sections.push("");
+      sections.push("#### replay");
+      sections.push("");
+      sections.push(renderTextBlock(renderDriveTapeReplay(record.driveTapeReplay)));
+      sections.push("");
+      sections.push("#### source classification");
+      sections.push("");
+      sections.push(renderJsonBlock(record.sourceClassification || {}));
+      sections.push("");
+      sections.push("#### replay json");
+      sections.push("");
+      sections.push(renderJsonBlock(record.driveTapeReplay || {}));
+      sections.push("");
+    });
   sections.push("## Per-Run Records");
   sections.push("");
   runRecords.forEach((record) => {

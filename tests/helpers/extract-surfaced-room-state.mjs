@@ -3,7 +3,11 @@ function clone(value) {
 }
 
 function normalizeText(value = "") {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  return String(value || "")
+    .replace(/\\n/g, " ")
+    .replace(/\\t/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function getLastAssistantMessage(messages = []) {
@@ -285,6 +289,9 @@ export function renderSurfacedStateForEvaluator(surface = null) {
     if (normalizeText(surface.workingEchoSurface?.status)) {
       sections.push(`Status: ${normalizeText(surface.workingEchoSurface.status)}`);
     }
+    if (normalizeText(surface.workingEchoSurface?.uncertainty?.detail)) {
+      sections.push(`Why still open: ${normalizeText(surface.workingEchoSurface.uncertainty.detail)}`);
+    }
     if (normalizeText(surface.workingEchoSurface?.aim)) {
       sections.push(`What seems real: ${normalizeText(surface.workingEchoSurface.aim)}`);
     }
@@ -353,6 +360,9 @@ export function renderSurfacedStateForEvaluator(surface = null) {
       weakenedRead.forEach((item) => {
         sections.push(`- ${normalizeText(item.text)}`);
       });
+    }
+    if (normalizeText(surface.workingEchoSurface?.returnDelta?.nextMoveShift?.text)) {
+      sections.push(`Return reroute: ${normalizeText(surface.workingEchoSurface.returnDelta.nextMoveShift.text)}`);
     }
   }
 

@@ -36,7 +36,11 @@ const RECEIPT_RESULT_OPTIONS = [
 ];
 
 function normalizeText(value = "") {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  return String(value || "")
+    .replace(/\\n/g, " ")
+    .replace(/\\t/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeLongForm(value = "") {
@@ -594,6 +598,10 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
   const candidateMove = workingEcho?.candidateMove || null;
   const previewLink = workingEcho?.previewLink || null;
   const returnDelta = workingEcho?.returnDelta || null;
+  const uncertaintyDetail = normalizeText(workingEcho?.uncertainty?.detail);
+  const aimText =
+    normalizeText(workingEcho?.aim?.text) ||
+    (uncertaintyDetail ? `Current aim is still forming. ${uncertaintyDetail}` : "");
 
   return (
     <section className={styles.workingEchoPanel} data-testid="room-working-echo">
@@ -604,6 +612,7 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
         </div>
         <div className={styles.workingEchoMeta}>
           <span className={styles.workingEchoStatus}>{formatWorkingEchoStatus(workingEcho?.status)}</span>
+          {uncertaintyDetail ? <span className={styles.workingEchoMetaDetail}>{uncertaintyDetail}</span> : null}
           {previewLink?.assistantMessageId ? (
             <span className={styles.workingEchoMetaText}>Linked preview</span>
           ) : null}
@@ -623,7 +632,7 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
       <div className={`${styles.workingEchoGrid} ${collapsed ? styles.workingEchoGridCollapsed : ""}`}>
         <section className={styles.workingEchoCard} data-testid="room-working-echo-real">
           <Kicker tone="grounded">What Seems Real</Kicker>
-          {normalizeText(workingEcho?.aim?.text) ? <p>{workingEcho.aim.text}</p> : <p>Signal is forming, but not settled.</p>}
+          {aimText ? <p>{aimText}</p> : <p>Signal is forming, but not settled.</p>}
           <WorkingEchoRefs refs={workingEcho?.aim?.sourceRefs} />
           <WorkingEchoEvidenceGroup
             title="Supports"
@@ -655,9 +664,15 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
           <Kicker tone="brand">What Would Decide It</Kicker>
           <p>{workingEcho?.whatWouldDecideIt?.text || "No deciding split is visible yet."}</p>
           <WorkingEchoRefs refs={workingEcho?.whatWouldDecideIt?.sourceRefs} />
+          {uncertaintyDetail && normalizeText(workingEcho?.status).toLowerCase() !== "move_ready" ? (
+            <div className={styles.workingEchoItem}>
+              <strong>Why it stays open</strong>
+              <span>{uncertaintyDetail}</span>
+            </div>
+          ) : null}
           {returnDelta?.nextMoveShift?.text ? (
             <div className={styles.workingEchoItem}>
-              <strong>Next move changed</strong>
+              <strong>Return reroute</strong>
               <span>{returnDelta.nextMoveShift.text}</span>
               <WorkingEchoRefs refs={returnDelta.nextMoveShift.sourceRefs} />
             </div>

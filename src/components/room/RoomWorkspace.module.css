@@ -118,6 +118,14 @@
   gap: 6px;
 }
 
+.workingEchoMetaDetail {
+  max-width: 280px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba(198, 204, 212, 0.76);
+  text-align: right;
+}
+
 .workingEchoStatus,
 .workingEchoRef,
 .workingEchoMetaText {
