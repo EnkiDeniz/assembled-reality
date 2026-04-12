@@ -42,13 +42,14 @@ test("integration callback lands on the room", async () => {
   assert.match(callbackRoute, /url\.searchParams\.set\("connected", "getreceipts"\)/);
 });
 
-test("account shell exposes the shared top-bar control menu", async () => {
+test("account shell exposes the shared signed-in shell", async () => {
   const accountShell = await read("src/components/AccountShell.jsx");
-  const controlMenu = await read("src/components/GlobalControlMenu.jsx");
+  const shell = await read("src/components/shell/LoegosShell.jsx");
 
-  assert.match(accountShell, /<GlobalControlMenu/);
-  assert.match(controlMenu, /href: "\/workspace"/);
-  assert.match(controlMenu, /href: "\/account"/);
-  assert.match(controlMenu, /href: "\/intro"/);
-  assert.match(controlMenu, /signOut\(\{ callbackUrl: "\/" \}\)/);
+  assert.match(accountShell, /<LoegosShell/);
+  assert.match(accountShell, /href: "\/workspace"/);
+  assert.match(accountShell, /href: "\/dream"/);
+  assert.match(shell, /Section Dream/);
+  assert.match(shell, /Account/);
+  assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
 });

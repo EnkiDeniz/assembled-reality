@@ -389,3 +389,246 @@
     width: 100%;
   }
 }
+
+.readerMain {
+  height: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+.readerBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 127, 127, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 127, 127, 0.08);
+  color: rgba(255, 224, 224, 0.96);
+}
+
+.readerSurface {
+  min-height: 100%;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.readerToolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.readerIdentity {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.readerIdentity strong {
+  color: var(--dream-ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+}
+
+.readerToolbarActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.readerIconButton,
+.readerPrimaryControl,
+.readerSecondaryControl,
+.readerPasteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease;
+}
+
+.readerIconButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(244, 241, 236, 0.78);
+}
+
+.readerIconButtonActive,
+.readerIconButton:hover,
+.readerIconButton:focus-visible {
+  border-color: rgba(255, 191, 122, 0.26);
+  background: rgba(242, 166, 90, 0.12);
+  color: rgba(255, 238, 223, 0.96);
+  transform: translateY(-1px);
+}
+
+.readerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.readerProgress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  color: rgba(244, 241, 236, 0.86);
+  font-variant-numeric: tabular-nums;
+}
+
+.readerTransport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.readerPrimaryControl {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(242, 166, 90, 0.28), rgba(255, 191, 122, 0.2));
+  color: rgba(255, 247, 236, 0.98);
+}
+
+.readerSecondaryControl,
+.readerPasteButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(244, 241, 236, 0.8);
+}
+
+.readerPrimaryControl:hover,
+.readerPrimaryControl:focus-visible,
+.readerSecondaryControl:hover,
+.readerSecondaryControl:focus-visible,
+.readerPasteButton:hover,
+.readerPasteButton:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 191, 122, 0.28);
+}
+
+.readerDocument {
+  min-height: 0;
+  max-height: min(52vh, 640px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 10px 2px 2px;
+  content-visibility: auto;
+}
+
+.readerChunk {
+  margin: 0;
+  color: rgba(244, 241, 236, 0.58);
+  font-size: 1.05rem;
+  line-height: 1.72;
+  transition:
+    color 220ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.readerChunkActive {
+  color: rgba(244, 241, 236, 0.96);
+  transform: translateX(2px);
+}
+
+.readerControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.readerHint {
+  color: var(--dream-muted);
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.readerEmpty {
+  min-height: min(52vh, 520px);
+  display: grid;
+  place-items: center;
+  gap: 18px;
+  color: rgba(244, 241, 236, 0.42);
+}
+
+.readerEmptyActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.readerMain .pastePanel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  padding: 12px;
+}
+
+.readerMain .textarea {
+  min-height: 150px;
+}
+
+.readerMain .speedControl {
+  min-width: 116px;
+}
+
+.readerMain .speedControl span {
+  margin-bottom: 4px;
+  font-size: 0.68rem;
+}
+
+.readerMain .speedControl select {
+  min-height: 40px;
+}
+
+@media (max-width: 640px) {
+  .readerSurface {
+    padding: 16px;
+  }
+
+  .readerToolbar {
+    align-items: center;
+  }
+
+  .readerIdentity strong {
+    font-size: 1.35rem;
+  }
+
+  .readerProgress {
+    gap: 8px;
+  }
+
+  .readerChunk {
+    font-size: 1rem;
+  }
+
+  .readerControls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .readerMain .pastePanel {
+    grid-template-columns: 1fr;
+  }
+}

@@ -492,12 +492,12 @@ function makeFixtures() {
 }
 
 async function openCreateBox(page) {
-  await page.getByTestId("room-open-instrument").click();
-  const createOverlay = page.getByTestId("room-overlay-create");
-  if (!(await createOverlay.isVisible().catch(() => false))) {
+  await page.getByTestId("room-open-boxes").click();
+  const createInput = page.getByTestId("room-create-box-name");
+  if (!(await createInput.isVisible().catch(() => false))) {
     await page.getByTestId("room-open-create-box").click();
   }
-  await expect(page.getByTestId("room-overlay-create")).toBeVisible();
+  await expect(createInput).toBeVisible();
 }
 
 async function bootstrapRoom(page, context, baseURL) {
@@ -694,7 +694,7 @@ test("room closeout keeps preview non-canonical and adjacent lanes honest", asyn
   );
   await expect(page.getByTestId("room-field-chip")).toContainText("Awaiting");
 
-  await page.getByTestId("room-open-instrument").click();
+  await page.getByTestId("room-open-boxes").click();
   await page.getByTestId("room-session-session_alpha_2").click();
   await expect(page.getByText("Compare two onboarding traces.")).toBeVisible();
   await expect(page.getByTestId("room-mirror-aim")).toContainText(
@@ -710,7 +710,6 @@ test("room closeout keeps preview non-canonical and adjacent lanes honest", asyn
   await page.getByTestId("room-close-witness").click();
   await expect(page.getByTestId("room-focused-witness")).toBeHidden();
 
-  await page.getByTestId("room-open-instrument").click();
   await page.getByTestId("room-open-operate").click();
   await expect(page.getByTestId("room-operate-panel")).toBeVisible();
   await expect(page.getByTestId("room-operate-next-move")).toContainText(
@@ -723,7 +722,6 @@ test("room closeout keeps preview non-canonical and adjacent lanes honest", asyn
   await page.getByTestId("room-ask-seven-operate-audit").click();
   await expect(page.getByTestId("room-composer-input")).toHaveValue(/Audit this Operate read/i);
 
-  await page.getByTestId("room-open-instrument").click();
   await page.getByTestId("room-open-boxes").click();
   await page.getByTestId("room-project-box_beta").click();
   await expect(page.getByTestId("room-starter")).toBeVisible();
@@ -749,14 +747,11 @@ test.describe("mobile", () => {
 
     await expect(page.getByTestId("room-active-preview")).toBeVisible();
     await page.getByTestId("room-mirror-witness-doc_dropoff").click();
-    await expect(page.getByTestId("room-overlay-witness")).toBeVisible();
     await expect(page.getByTestId("room-focused-witness")).toBeVisible();
     await page.getByTestId("room-close-witness").click();
     await expect(page.getByTestId("room-focused-witness")).toBeHidden();
 
-    await page.getByTestId("room-open-instrument").click();
     await page.getByTestId("room-open-operate").click();
-    await expect(page.getByTestId("room-overlay-operate")).toBeVisible();
     await expect(page.getByTestId("room-operate-panel")).toBeVisible();
     await expect(page.getByTestId("room-run-operate")).toBeVisible();
   });

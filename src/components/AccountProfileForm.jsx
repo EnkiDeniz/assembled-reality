@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import styles from "@/components/AccountProfileForm.module.css";
 
 export default function AccountProfileForm({
   displayName = "",
@@ -54,11 +55,11 @@ export default function AccountProfileForm({
   }
 
   return (
-    <form className="account-profile-form" onSubmit={handleSubmit}>
-      <label className="account-profile-form__field">
-        <span className="terminal-label">Display name</span>
+    <form className={styles.form} onSubmit={handleSubmit}>
+      <label className={styles.field}>
+        <span className={styles.label}>Display name</span>
         <input
-          className="terminal-input"
+          className={styles.input}
           type="text"
           name="displayName"
           autoComplete="name"
@@ -68,25 +69,25 @@ export default function AccountProfileForm({
         />
       </label>
 
-      <dl className="account-card__list">
-        <div className="account-card__row">
+      <dl className={styles.metaList}>
+        <div className={styles.metaRow}>
           <dt>Handle</dt>
           <dd>{readerSlug || "Not set"}</dd>
         </div>
-        <div className="account-card__row">
+        <div className={styles.metaRow}>
           <dt>Email</dt>
           <dd>{email || "No email on file"}</dd>
         </div>
       </dl>
 
-      <div className="account-profile-form__footer">
+      <div className={styles.footer}>
         <span
-          className={`account-profile-form__status ${tone ? `is-${tone}` : ""}`}
+          className={`${styles.status} ${tone === "success" ? styles.statusSuccess : ""} ${tone === "error" ? styles.statusError : ""}`}
           aria-live="polite"
         >
           {message || "Used for receipts and ownership labels."}
         </span>
-        <button type="submit" className="terminal-button" disabled={pending}>
+        <button type="submit" className={styles.submit} disabled={pending}>
           {pending ? "Saving…" : "Save name"}
         </button>
       </div>

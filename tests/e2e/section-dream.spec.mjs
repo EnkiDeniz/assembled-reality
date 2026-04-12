@@ -158,13 +158,13 @@ test("section dream uploads markdown, plays, pauses, and restores the last posit
   });
 
   await expect(page.getByTestId("dream-player")).toContainText("field-notes.md");
-  await expect(page.getByTestId("dream-play-toggle")).toContainText("Pause");
+  await expect(page.getByTestId("dream-play-toggle")).toHaveAttribute("aria-label", "Pause playback");
   await expect
     .poll(async () => parseClock(await page.getByTestId("dream-current-time").textContent()))
     .toBeGreaterThan(0);
 
   await page.getByTestId("dream-play-toggle").click();
-  await expect(page.getByTestId("dream-play-toggle")).toContainText("Continue");
+  await expect(page.getByTestId("dream-play-toggle")).toHaveAttribute("aria-label", "Continue playback");
 
   const pausedAt = parseClock(await page.getByTestId("dream-current-time").textContent());
   expect(pausedAt).toBeGreaterThan(0);
@@ -172,13 +172,12 @@ test("section dream uploads markdown, plays, pauses, and restores the last posit
   await page.reload({ waitUntil: "commit" });
 
   await expect(page.getByTestId("dream-player")).toContainText("field-notes.md");
-  await expect(page.getByTestId("dream-notice")).toContainText("Resume ready");
   await expect
     .poll(async () => parseClock(await page.getByTestId("dream-current-time").textContent()))
     .toBeGreaterThan(0);
 
   await page.getByTestId("dream-play-toggle").click();
-  await expect(page.getByTestId("dream-play-toggle")).toContainText("Pause");
+  await expect(page.getByTestId("dream-play-toggle")).toHaveAttribute("aria-label", "Pause playback");
   await expect
     .poll(async () => parseClock(await page.getByTestId("dream-current-time").textContent()))
     .toBeGreaterThan(pausedAt);
@@ -191,15 +190,11 @@ test("section dream is reachable from signed-in menus and remains usable on mobi
   await page.setViewportSize({ width: 390, height: 844 });
 
   await page.goto("/account", { waitUntil: "commit" });
-  await page.getByLabel("Open menu").click();
-  await expect(page.getByRole("link", { name: "Section Dream" })).toBeVisible();
-  await page.getByRole("link", { name: "Section Dream" }).click();
+  await page.getByLabel("Open Section Dream").click();
   await expect(page.getByTestId("dream-screen")).toBeVisible();
-  await expect(page.getByTestId("dream-upload-button")).toBeVisible();
+  await expect(page.getByTestId("dream-player")).toBeVisible();
 
   await page.goto("/workspace", { waitUntil: "commit" });
-  await expect(page.getByTestId("room-open-instrument")).toBeVisible();
-  await page.getByTestId("room-open-instrument").click();
   await expect(page.getByTestId("room-open-dream")).toBeVisible();
   await page.getByTestId("room-open-dream").click();
   await expect(page.getByTestId("dream-screen")).toBeVisible();

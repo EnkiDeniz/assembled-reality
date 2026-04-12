@@ -1,15 +1,17 @@
+"use client";
+
 import Link from "next/link";
-import {
-  AssembledCard,
-  BoxMetric,
-  ShapeNav,
+import { Headphones, Home, UserRound } from "lucide-react";
+import LoegosShell, {
+  Kicker,
   SignalChip,
-  buildStaticShapeNav,
-} from "@/components/LoegosSystem";
+  Surface as ShellSurface,
+} from "@/components/shell/LoegosShell";
+import { buildEchoPulseState } from "@/lib/loegos-shell";
 import { formatVoiceLabel } from "@/lib/listening";
 import AccountProfileForm from "@/components/AccountProfileForm";
 import SignOutButton from "@/components/SignOutButton";
-import GlobalControlMenu from "@/components/GlobalControlMenu";
+import styles from "@/components/AccountShell.module.css";
 
 function formatStatus(value) {
   return String(value || "disconnected")
@@ -43,151 +45,157 @@ export default function AccountShell({
   notice = "",
   noticeTone = "",
 }) {
-  const connectionTone = connectionStatus === "CONNECTED" ? "clear" : "neutral";
+  const listeningRate = formatListeningRate(profile?.preferredListeningRate);
+  const preferredVoice = getPreferredVoiceLabel(profile);
+  const connectionLabel = formatStatus(connectionStatus);
+  const accountEcho = buildEchoPulseState({
+    change: noticeTone === "success" ? notice : "",
+    tension: noticeTone === "error" ? notice : "",
+    survives:
+      connectionStatus === "CONNECTED"
+        ? "Proof line is live."
+        : drafts.length
+          ? `${drafts.length} draft${drafts.length === 1 ? "" : "s"} waiting.`
+          : "",
+  });
+  const dockItems = [
+    {
+      id: "workspace",
+      icon: Home,
+      label: "Open room",
+      href: "/workspace",
+    },
+    {
+      id: "dream",
+      icon: Headphones,
+      label: "Open Section Dream",
+      href: "/dream",
+    },
+    {
+      id: "account",
+      icon: UserRound,
+      label: "Account",
+      active: true,
+      disabled: true,
+    },
+  ];
 
   return (
-    <main className="loegos-account">
-      <GlobalControlMenu
-        title="Control Surface"
-        subtitle="Jump back into the Room, open Section Dream, revisit account controls, or leave cleanly."
-      />
-      <section className="loegos-account__shell">
-        <section className="loegos-account__panel">
-          <div className="loegos-account__masthead">
-            <div className="loegos-account__brandline">
-              <span className="loegos-wordmark">
-                Lœgos <span className="loegos-wordmark__sub">account</span>
-              </span>
-              <span className="loegos-thesis">Navigate by shape. Act by verb.</span>
-            </div>
-
-            <div className="loegos-account__hero">
-              <span className="loegos-kicker">Control surface</span>
-              <h1 className="loegos-display">Account</h1>
-              <p className="loegos-account__lede">
-                Identity, listening defaults, proof connection, and receipt drafts live here. The
-                box work itself stays in the workspace.
-              </p>
-            </div>
-          </div>
-
-          <ShapeNav items={buildStaticShapeNav("seal")} activeShape="seal" compact />
-
-          <div className="loegos-account__metrics">
-            <BoxMetric label="Documents" value={documentCount} detail="Visible inside your current boxes." />
-            <BoxMetric label="Receipt drafts" value={drafts.length} detail="Local and remote proof drafts." />
-            <BoxMetric label="Listening" value={formatListeningRate(profile?.preferredListeningRate)} detail={getPreferredVoiceLabel(profile)} />
-            <BoxMetric label="Connection" value={formatStatus(connectionStatus)} detail="GetReceipts sync posture." />
-          </div>
-
+    <LoegosShell
+      route="account"
+      title="Account"
+      echo={accountEcho}
+      dockItems={dockItems}
+      main={(
+        <div className={styles.main}>
           {notice ? (
-            <SignalChip tone={noticeTone === "error" ? "alert" : "clear"}>{notice}</SignalChip>
+            <div
+              className={`${styles.notice} ${noticeTone === "success" ? styles.noticeSuccess : ""} ${noticeTone === "error" ? styles.noticeError : ""}`}
+            >
+              {notice}
+            </div>
           ) : null}
 
-          <div className="loegos-account__grid">
-            <div className="loegos-account__stack">
-              <section className="loegos-workspace-panel">
-                <div className="loegos-account__section-head">
-                  <h2 className="loegos-account__section-title">Identity</h2>
-                  <div className="terminal-actions">
-                    <Link href="/workspace" className="terminal-link is-primary">
-                      Workspace
-                    </Link>
-                    <Link href="/intro" className="terminal-link">
-                      Intro
-                    </Link>
-                  </div>
-                </div>
-                <p className="loegos-account__section-copy">
-                  Reader identity stays compact so the box, not the profile, remains the center of
-                  gravity.
-                </p>
-                <AccountProfileForm
-                  displayName={profile?.displayName || "Reader"}
-                  readerSlug={profile?.readerSlug || ""}
-                  email={email}
-                />
-              </section>
-
-              <section className="loegos-workspace-panel">
-                <div className="loegos-account__section-head">
-                  <h2 className="loegos-account__section-title">Listening defaults</h2>
-                  <SignalChip tone="neutral">Reality</SignalChip>
-                </div>
-                <dl className="loegos-account__list">
-                  <div className="loegos-account__row">
-                    <dt>Preferred voice</dt>
-                    <dd>{getPreferredVoiceLabel(profile)}</dd>
-                  </div>
-                  <div className="loegos-account__row">
-                    <dt>Listening speed</dt>
-                    <dd>{formatListeningRate(profile?.preferredListeningRate)}</dd>
-                  </div>
-                </dl>
-                <p className="loegos-account__section-copy">
-                  Updated from your latest listening session. Mobile capture and desktop review
-                  share the same voice defaults.
-                </p>
-              </section>
-            </div>
-
-            <div className="loegos-account__stack">
-              <AssembledCard
-                shapeKey="seal"
-                label="Proof connection"
-                title="GetReceipts"
-                body={
-                  connectionStatus === "CONNECTED"
-                    ? "Ready to receive drafts from the workspace."
-                    : "Connect when you want drafts to flow out."
-                }
-                detail="Seal is proof. Seven is resolution. This surface only handles proof transport."
-                signal={formatStatus(connectionStatus)}
-                signalTone={connectionTone}
-                stageCount={connectionStatus === "CONNECTED" ? 5 : 2}
-                footer="Portable proof"
-                action={(
-                  <Link href="/connect/getreceipts" className="terminal-link">
-                    {connectionStatus === "CONNECTED" ? "Manage connection" : "Connect GetReceipts"}
-                  </Link>
-                )}
+          <div className={styles.grid}>
+            <ShellSurface className={styles.card} roomy>
+              <div className={styles.head}>
+                <Kicker tone="brand">Identity</Kicker>
+                <strong>{profile?.displayName || "Reader"}</strong>
+              </div>
+              <div className={styles.metrics}>
+                <SignalChip tone="neutral">{documentCount} docs</SignalChip>
+                <SignalChip tone="neutral">{drafts.length} drafts</SignalChip>
+              </div>
+              <AccountProfileForm
+                displayName={profile?.displayName || "Reader"}
+                readerSlug={profile?.readerSlug || ""}
+                email={email}
               />
+            </ShellSurface>
 
-              <section className="loegos-workspace-panel">
-                <div className="loegos-account__section-head">
-                  <h2 className="loegos-account__section-title">Receipt drafts</h2>
-                  <SignOutButton className="account-shell__signout" />
+            <ShellSurface className={styles.card} roomy>
+              <div className={styles.head}>
+                <Kicker tone="neutral">Listening</Kicker>
+                <strong>{preferredVoice}</strong>
+              </div>
+              <div className={styles.list}>
+                <div className={styles.row}>
+                  <span>Speed</span>
+                  <strong>{listeningRate}</strong>
                 </div>
-                {drafts.length ? (
-                  <div className="receipt-list">
-                    {drafts.map((draft) => (
-                      <article key={draft.id} className="receipt-row">
-                        <div className="receipt-row__meta">
-                          <span>{String(draft.status || "local_draft").toLowerCase()}</span>
-                          <span>{String(draft.stance || "tentative").toLowerCase()}</span>
-                        </div>
-                        <p className="receipt-row__title">{draft.title || "Untitled receipt"}</p>
-                        {draft.interpretation ? (
-                          <p className="receipt-row__body">{draft.interpretation}</p>
-                        ) : null}
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="loegos-account__section-copy">
-                    No receipt drafts yet. Drafts appear here after Weld or Seal work happens in
-                    the workspace.
-                  </p>
-                )}
-              </section>
-            </div>
-          </div>
+                <div className={styles.row}>
+                  <span>Voice</span>
+                  <strong>{preferredVoice}</strong>
+                </div>
+              </div>
+              <div className={styles.linkRow}>
+                <Link href="/dream" className={`${styles.linkButton} ${styles.linkButtonPrimary}`}>
+                  Open Dream
+                </Link>
+              </div>
+            </ShellSurface>
 
-          <footer className="loegos-account__footer">
-            <p>Account remains a compact control surface, not a second workspace.</p>
-          </footer>
-        </section>
-      </section>
-    </main>
+            <ShellSurface className={styles.card} roomy>
+              <div className={styles.head}>
+                <Kicker tone={connectionStatus === "CONNECTED" ? "grounded" : "neutral"}>
+                  Proof
+                </Kicker>
+                <strong>GetReceipts</strong>
+              </div>
+              <div className={styles.metrics}>
+                <SignalChip tone={connectionStatus === "CONNECTED" ? "grounded" : "neutral"}>
+                  {connectionLabel}
+                </SignalChip>
+              </div>
+              <div className={styles.list}>
+                <div className={styles.row}>
+                  <span>Connection</span>
+                  <strong>{connectionLabel}</strong>
+                </div>
+                <div className={styles.row}>
+                  <span>Drafts</span>
+                  <strong>{drafts.length}</strong>
+                </div>
+              </div>
+              <div className={styles.linkRow}>
+                <Link href="/connect/getreceipts" className={styles.linkButton}>
+                  {connectionStatus === "CONNECTED" ? "Manage link" : "Connect"}
+                </Link>
+              </div>
+            </ShellSurface>
+
+            <ShellSurface className={styles.card} roomy>
+              <div className={styles.head}>
+                <Kicker tone="neutral">Receipts</Kicker>
+                <strong>Latest drafts</strong>
+              </div>
+              {drafts.length ? (
+                <div className={styles.draftList}>
+                  {drafts.slice(0, 4).map((draft) => (
+                    <article key={draft.id} className={styles.draft}>
+                      <div className={styles.draftMeta}>
+                        <span>{String(draft.status || "local_draft").toLowerCase()}</span>
+                        <span>{String(draft.stance || "tentative").toLowerCase()}</span>
+                      </div>
+                      <strong>{draft.title || "Untitled receipt"}</strong>
+                      {draft.interpretation ? <p>{draft.interpretation}</p> : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.empty}>No drafts yet.</p>
+              )}
+
+              <div className={styles.footer}>
+                <Link href="/workspace" className={`${styles.linkButton} ${styles.linkButtonPrimary}`}>
+                  Return to Room
+                </Link>
+                <SignOutButton className={styles.signout}>Sign Out</SignOutButton>
+              </div>
+            </ShellSurface>
+          </div>
+        </div>
+      )}
+    />
   );
 }

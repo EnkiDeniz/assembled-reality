@@ -79,6 +79,74 @@
   min-height: calc(100vh - 42px);
 }
 
+.workspaceMain {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.workspaceSurface {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+}
+
+.sectionStack {
+  display: grid;
+  gap: 14px;
+}
+
+.sectionActionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sectionNotice {
+  padding: 18px;
+}
+
+.sectionNotice p {
+  margin: 0;
+  color: rgba(242, 244, 247, 0.9);
+  line-height: 1.55;
+}
+
+.managementMeta {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.managementMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(198, 204, 212, 0.7);
+}
+
+.managementMetaRow span,
+.managementMetaRow strong {
+  margin: 0;
+}
+
+.managementMetaRow span {
+  font-family: var(--room-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.managementMetaRow strong {
+  color: rgba(242, 244, 247, 0.95);
+  font-size: 1rem;
+  font-weight: 560;
+}
+
 .surfaceStack {
   display: grid;
   gap: 12px;
@@ -2212,7 +2280,7 @@
 .composerCapsule {
   width: min(100%, 860px);
   margin: 0 auto;
-  padding: 5px 5px 8px 16px;
+  padding: 6px 8px 6px 14px;
   border: 1px solid var(--room-line);
   border-radius: 18px;
   background:
@@ -2222,7 +2290,7 @@
 }
 
 .composerRow {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   padding: 0;
   border: none;
@@ -2234,7 +2302,8 @@
 .composerTool,
 .composerListenInline {
   min-height: 36px;
-  padding: 0 12px;
+  min-width: 36px;
+  padding: 0;
   border: none;
   border-radius: 12px;
   background: transparent;
@@ -2247,11 +2316,7 @@
 }
 
 .composerListenInline {
-  min-width: 36px;
-  font-family: var(--room-font-mono);
-  font-size: 0.625rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  justify-content: center;
 }
 
 .composerRow textarea {
@@ -2267,16 +2332,12 @@
   color: var(--room-ghost);
 }
 
-.composerFootnote {
-  padding: 0 8px 0 44px;
-  font-family: var(--room-font-mono);
-  font-size: 0.625rem;
-  letter-spacing: 0.04em;
-  color: var(--room-ghost);
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.composerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
 }
 
 .composerSend {

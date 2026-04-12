@@ -3,23 +3,19 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
 import {
   Boxes,
-  ChevronRight,
   FileText,
   Headphones,
-  LogOut,
-  MoreHorizontal,
   Paperclip,
   Play,
   Plus,
   Settings2,
   SendHorizontal,
   Upload,
-  X,
 } from "lucide-react";
 import styles from "@/components/room/RoomWorkspace.module.css";
+import LoegosShell, { Surface as ShellSurface } from "@/components/shell/LoegosShell";
 import {
   deriveRoomTerrainPresentation,
   getMirrorRegionRole,
@@ -27,6 +23,7 @@ import {
   getSegmentShapeRole,
 } from "@/components/room/roomDesignSystem";
 import { buildOperateAuditPrompt } from "@/lib/operate";
+import { buildEchoPulseStateFromRoomView, normalizeSectionId } from "@/lib/loegos-shell";
 
 const DEFAULT_PROJECT_KEY = "default-project";
 
@@ -254,6 +251,23 @@ function RatioBar({ ratio = 0.5, className = "" }) {
       </div>
       <ShapeGlyph role="story" className={`${styles.mirrorRatioGlyph} ${styles.mirrorRatioGlyphStory}`} />
     </div>
+  );
+}
+
+function AimDockIcon({ size = 18 }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        fontSize: `${size + 2}px`,
+        lineHeight: 1,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      △
+    </span>
   );
 }
 
@@ -1441,56 +1455,6 @@ function ThreadMessage({
   );
 }
 
-function AdjacentLinks({ view, onOpenWitness, onOpenOperate }) {
-  const hasWitness = Boolean(normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader));
-  const hasOperate = Boolean(normalizeText(view?.adjacent?.operate?.openHref));
-
-  if (!hasWitness && !hasOperate) return null;
-
-  return (
-    <div className={styles.toolRow}>
-      {hasWitness ? (
-        <button type="button" className={styles.toolLink} onClick={() => onOpenWitness?.()} data-testid="room-open-witness">
-          <FileText size={14} />
-          Witness
-        </button>
-      ) : null}
-      {hasOperate ? (
-        <button type="button" className={styles.toolLinkSubtle} onClick={onOpenOperate} data-testid="room-open-operate">
-          <Play size={14} />
-          Operate
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-function SessionControls({ onClose }) {
-  return (
-    <div className={styles.overlayUtilityRow}>
-      <Link href="/dream" className={styles.secondaryButton} onClick={onClose} data-testid="room-open-dream">
-        <Headphones size={14} />
-        Section Dream
-      </Link>
-      <Link href="/account" className={styles.secondaryButton} onClick={onClose}>
-        <Settings2 size={14} />
-        Account
-      </Link>
-      <button
-        type="button"
-        className={styles.secondaryButton}
-        onClick={() => {
-          onClose?.();
-          void signOut({ callbackUrl: "/" });
-        }}
-      >
-        <LogOut size={14} />
-        Sign Out
-      </button>
-    </div>
-  );
-}
-
 function RoomSessionList({
   sessions,
   activeSessionId,
@@ -1778,30 +1742,37 @@ function Composer({
               rows={1}
               disabled={disabled}
             />
-            {canListen ? (
-              <Link href={listenHref} className={styles.composerListenInline}>
-                <Play size={14} />
-                Listen
-              </Link>
-            ) : (
-              <button type="button" className={styles.composerListenInline} onClick={onOpenAttach}>
-                <Play size={14} />
-                Listen
+            <div className={styles.composerActions}>
+              {canListen ? (
+                <Link
+                  href={listenHref}
+                  className={styles.composerListenInline}
+                  aria-label="Open listening lane"
+                  title="Open listening lane"
+                >
+                  <Play size={14} />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.composerListenInline}
+                  onClick={onOpenAttach}
+                  aria-label="Open source import"
+                  title="Open source import"
+                >
+                  <Play size={14} />
+                </button>
+              )}
+              <button
+                type="submit"
+                className={`${styles.composerSend} ${canSubmit ? styles.composerSendActive : ""}`}
+                disabled={!canSubmit}
+                aria-label={pending ? "Sending" : "Send"}
+                data-testid="room-composer-send"
+              >
+                <SendHorizontal size={15} />
               </button>
-            )}
-            <button
-              type="submit"
-              className={`${styles.composerSend} ${canSubmit ? styles.composerSendActive : ""}`}
-              disabled={!canSubmit}
-              aria-label={pending ? "Sending" : "Send"}
-              data-testid="room-composer-send"
-            >
-              <SendHorizontal size={15} />
-            </button>
-          </div>
-
-          <div className={styles.composerFootnote}>
-            Plain language first. Preview stays separate from canon.
+            </div>
           </div>
         </div>
       </div>
@@ -1942,19 +1913,91 @@ function AuthorityPanel({ authorityContext, roomIdentity }) {
   );
 }
 
-function OverlaySurface({
-  mode,
+function WorkspaceManagementSection({
   view,
   projectKey,
-  onClose,
   onOpenMode,
-  onOpenWitness,
-  onOpenOperate,
   onProjectSelect,
-  onCreateBox,
   onCreateSession,
   onActivateSession,
   onArchiveSession,
+  busy,
+}) {
+  return (
+    <div className={styles.sectionStack}>
+      <div className={styles.sectionActionRow}>
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={() => onOpenMode("source")}
+          disabled={!normalizeText(projectKey)}
+          data-testid="room-open-source"
+        >
+          <Upload size={14} />
+          Add Source
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => onOpenMode("create")}
+          data-testid="room-open-create-box"
+        >
+          <Plus size={14} />
+          New Box
+        </button>
+      </div>
+
+      {normalizeText(projectKey) ? (
+        <RoomSessionList
+          sessions={view?.sessions}
+          activeSessionId={view?.session?.id}
+          onCreate={onCreateSession}
+          onActivate={onActivateSession}
+          onArchive={onArchiveSession}
+          busy={busy}
+        />
+      ) : null}
+
+      <ProjectPicker
+        projects={view?.projects}
+        activeProjectKey={projectKey}
+        onSelect={onProjectSelect}
+        onCreate={() => onOpenMode("create")}
+      />
+
+      {view?.project ? (
+        <ShellSurface className={styles.managementMeta}>
+          <div className={styles.managementMetaRow}>
+            <span>Sources</span>
+            <strong>{Number(view.project.sourceCount) || 0}</strong>
+          </div>
+          <div className={styles.managementMetaRow}>
+            <span>Drafts</span>
+            <strong>{Number(view.project.receiptDraftCount) || 0}</strong>
+          </div>
+        </ShellSurface>
+      ) : null}
+    </div>
+  );
+}
+
+function WorkspaceSectionContent({
+  mode,
+  view,
+  projectKey,
+  highlightedRegion,
+  mirrorCollapsed,
+  workingEchoCollapsed,
+  onToggleMirror,
+  onToggleWorkingEcho,
+  onOpenWitness,
+  onClose,
+  onOpenMode,
+  onProjectSelect,
+  onCreateSession,
+  onActivateSession,
+  onArchiveSession,
+  onCreateBox,
   onSourceComplete,
   onRunOperate,
   onAskSevenAudit,
@@ -1963,118 +2006,79 @@ function OverlaySurface({
   operateResult,
   busy,
 }) {
-  if (!mode) return null;
-
-  const title =
-    mode === "source"
-      ? "Bring witness into the room"
-      : mode === "boxes"
-        ? "Open another room"
-        : mode === "create"
-          ? "Open a fresh room"
-          : mode === "witness"
-            ? "Witness in focus"
-            : mode === "operate"
-              ? "Operate on this box"
-          : "Room controls";
-
-  return (
-    <div className={styles.overlayBackdrop} onClick={onClose} data-testid="room-overlay-backdrop">
-      <aside
-        className={styles.overlayPanel}
-        onClick={(event) => event.stopPropagation()}
-        data-testid={`room-overlay-${mode}`}
-      >
-        <div className={styles.overlayHeader}>
-          <div className={styles.overlayHeaderCopy}>
-            <Kicker tone="neutral">Room</Kicker>
-            <strong>{view?.project?.title || "Room"}</strong>
-            <p>{title}</p>
-          </div>
-          <div className={styles.inlineActions}>
-            {mode !== "instrument" ? (
-              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("instrument")}>
-                <ChevronRight size={14} />
-                Back
-              </button>
-            ) : null}
-            <button type="button" className={styles.secondaryButton} onClick={onClose} aria-label="Close controls">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {mode === "instrument" ? (
-          <div className={styles.overlayContent}>
-            <div className={styles.overlayActions}>
-              <button type="button" className={styles.primaryButton} onClick={() => onOpenMode("source")} data-testid="room-open-source">
-                <Upload size={14} />
-                Add Source
-              </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("boxes")} data-testid="room-open-boxes">
-                <Boxes size={14} />
-                Boxes
-              </button>
-              <button type="button" className={styles.secondaryButton} onClick={() => onOpenMode("create")} data-testid="room-open-create-box">
-                <Plus size={14} />
-                New Box
-              </button>
-            </div>
-
-            <AdjacentLinks view={view} onOpenWitness={onOpenWitness} onOpenOperate={onOpenOperate} />
-            {normalizeText(projectKey) ? (
-              <RoomSessionList
-                sessions={view?.sessions}
-                activeSessionId={view?.session?.id}
-                onCreate={onCreateSession}
-                onActivate={onActivateSession}
-                onArchive={onArchiveSession}
-                busy={busy}
-              />
-            ) : null}
-            <AuthorityPanel authorityContext={view?.authorityContext} roomIdentity={view?.roomIdentity} />
-            <SessionControls onClose={onClose} />
-
-            <div className={styles.overlayMeta}>
-              <span>{Number(view?.project?.sourceCount) || 0} source{Number(view?.project?.sourceCount) === 1 ? "" : "s"}</span>
-              <span>
-                {Number(view?.project?.receiptDraftCount) || 0} receipt draft
-                {Number(view?.project?.receiptDraftCount) === 1 ? "" : "s"}
-              </span>
-            </div>
-          </div>
-        ) : null}
-
-        {mode === "source" ? <SourceTray projectKey={projectKey} onComplete={onSourceComplete} /> : null}
-        {mode === "witness" ? (
-          <FocusedWitnessPanel focusedWitness={view?.focusedWitness} onBack={onClose} />
-        ) : null}
-        {mode === "operate" ? (
-          <OperatePanel
-            operateSummary={view?.adjacent?.operate || null}
-            pending={operatePending}
-            error={operateError}
-            result={operateResult}
-            onRun={onRunOperate}
-            onAskSeven={onAskSevenAudit}
-            onBack={onClose}
+  if (mode === "mirror") {
+    return (
+      <div className={styles.sectionStack}>
+        {view?.hasStructure ? (
+          <MirrorPanel
+            view={view}
+            highlightedRegion={highlightedRegion}
+            collapsed={mirrorCollapsed}
+            onToggle={onToggleMirror}
+            onOpenWitness={onOpenWitness}
+          />
+        ) : (
+          <ShellSurface className={styles.sectionNotice} roomy>
+            <p>No mirror is visible yet. Start with a source and a declared aim.</p>
+          </ShellSurface>
+        )}
+        {view?.workingEcho ? (
+          <WorkingEchoPanel
+            workingEcho={view.workingEcho}
+            collapsed={workingEchoCollapsed}
+            onToggle={onToggleWorkingEcho}
           />
         ) : null}
-        {mode === "boxes" ? (
-          <ProjectPicker
-            projects={view?.projects}
-            activeProjectKey={projectKey}
-            onSelect={onProjectSelect}
-            onCreate={() => onOpenMode("create")}
-          />
-        ) : null}
-        {mode === "create" ? <CreateBoxForm onCreate={onCreateBox} busy={busy} /> : null}
-      </aside>
-    </div>
-  );
+        <AuthorityPanel authorityContext={view?.authorityContext} roomIdentity={view?.roomIdentity} />
+      </div>
+    );
+  }
+
+  if (mode === "witness") {
+    return <FocusedWitnessPanel focusedWitness={view?.focusedWitness} onBack={onClose} />;
+  }
+
+  if (mode === "operate") {
+    return (
+      <OperatePanel
+        operateSummary={view?.adjacent?.operate || null}
+        pending={operatePending}
+        error={operateError}
+        result={operateResult}
+        onRun={onRunOperate}
+        onAskSeven={onAskSevenAudit}
+        onBack={onClose}
+      />
+    );
+  }
+
+  if (mode === "boxes") {
+    return (
+      <WorkspaceManagementSection
+        view={view}
+        projectKey={projectKey}
+        onOpenMode={onOpenMode}
+        onProjectSelect={onProjectSelect}
+        onCreateSession={onCreateSession}
+        onActivateSession={onActivateSession}
+        onArchiveSession={onArchiveSession}
+        busy={busy}
+      />
+    );
+  }
+
+  if (mode === "source") {
+    return <SourceTray projectKey={projectKey} onComplete={onSourceComplete} />;
+  }
+
+  if (mode === "create") {
+    return <CreateBoxForm onCreate={onCreateBox} busy={busy} />;
+  }
+
+  return null;
 }
 
-export default function RoomWorkspace({ initialView }) {
+export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const router = useRouter();
   const [view, setView] = useState(initialView);
   const [composerText, setComposerText] = useState("");
@@ -2083,7 +2087,12 @@ export default function RoomWorkspace({ initialView }) {
   const [messageError, setMessageError] = useState("");
   const [actionError, setActionError] = useState("");
   const [mirrorCollapsed, setMirrorCollapsed] = useState(false);
-  const [overlayMode, setOverlayMode] = useState("");
+  const [overlayMode, setOverlayMode] = useState(() => {
+    const requestedSection = normalizeSectionId(initialSection);
+    if (requestedSection) return requestedSection;
+    const nextIntent = normalizeText(initialView?.overlayIntent).toLowerCase();
+    return nextIntent === "instrument" ? "boxes" : nextIntent;
+  });
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
   const [operatePending, setOperatePending] = useState(false);
@@ -2101,6 +2110,12 @@ export default function RoomWorkspace({ initialView }) {
     setOperateError("");
     setOperateResult(null);
   }, [initialView]);
+
+  useEffect(() => {
+    const requestedSection = normalizeSectionId(initialSection);
+    if (!requestedSection) return;
+    setOverlayMode((current) => current || requestedSection);
+  }, [initialSection]);
 
   useEffect(() => {
     if (!threadRef.current) return;
@@ -2124,7 +2139,8 @@ export default function RoomWorkspace({ initialView }) {
   const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
 
   useEffect(() => {
-    const nextIntent = normalizeText(view?.overlayIntent).toLowerCase();
+    const rawIntent = normalizeText(view?.overlayIntent).toLowerCase();
+    const nextIntent = rawIntent === "instrument" ? "boxes" : rawIntent;
     const intentKey = [nextIntent, projectKey, activeSessionId, currentFocusedDocumentKey].join(":");
     if (!nextIntent || overlayMode || overlayIntentKeyRef.current === intentKey) return;
     overlayIntentKeyRef.current = intentKey;
@@ -2236,7 +2252,7 @@ export default function RoomWorkspace({ initialView }) {
           { scroll: false },
         );
       });
-      setOverlayMode("instrument");
+      setOverlayMode("boxes");
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Could not start a new conversation.",
@@ -2274,7 +2290,7 @@ export default function RoomWorkspace({ initialView }) {
           { scroll: false },
         );
       });
-      setOverlayMode("instrument");
+      setOverlayMode("boxes");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that conversation.");
     }
@@ -2310,7 +2326,7 @@ export default function RoomWorkspace({ initialView }) {
           { scroll: false },
         );
       });
-      setOverlayMode("instrument");
+      setOverlayMode("boxes");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not archive that conversation.");
     }
@@ -2591,134 +2607,200 @@ export default function RoomWorkspace({ initialView }) {
     }
   }
 
-  return (
-    <main className={styles.page} data-testid="room-workspace">
-      {view?.hasStructure ? <StatusChip view={view} floating /> : null}
+  const activeSectionMode = normalizeText(overlayMode).toLowerCase();
+  const echoPulse = useMemo(() => buildEchoPulseStateFromRoomView(view), [view]);
+  const canOpenWitness = Boolean(
+    normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader),
+  );
+  const canOpenOperate = Boolean(
+    normalizeText(view?.adjacent?.operate?.openHref) || view?.adjacent?.operate?.available,
+  );
+  const sectionMeta =
+    activeSectionMode === "mirror"
+      ? { label: "Mirror", title: view?.project?.title || "Room" }
+      : activeSectionMode === "witness"
+        ? { label: "Witness", title: view?.focusedWitness?.title || "Focused witness" }
+        : activeSectionMode === "operate"
+          ? { label: "Operate", title: view?.project?.title || "Box advisory" }
+          : activeSectionMode === "boxes"
+            ? { label: "Rooms", title: view?.project?.title || "Boxes & sessions" }
+            : activeSectionMode === "source"
+              ? { label: "Source", title: "Bring witness in" }
+              : activeSectionMode === "create"
+                ? { label: "Box", title: "Open a fresh room" }
+                : { label: "", title: "" };
+  const dockItems = [
+    {
+      id: "mirror",
+      icon: AimDockIcon,
+      label: "Open mirror",
+      onClick: () => setOverlayMode("mirror"),
+      active: activeSectionMode === "mirror",
+      testId: "room-open-mirror",
+    },
+    {
+      id: "witness",
+      icon: FileText,
+      label: "Open witness",
+      onClick: () => {
+        void handleOpenWitness();
+      },
+      active: activeSectionMode === "witness",
+      disabled: !canOpenWitness,
+      testId: "room-open-witness",
+    },
+    {
+      id: "operate",
+      icon: Play,
+      label: "Open operate",
+      onClick: () => {
+        void handleOpenOperate();
+      },
+      active: activeSectionMode === "operate",
+      disabled: !canOpenOperate,
+      testId: "room-open-operate",
+    },
+    {
+      id: "boxes",
+      icon: Boxes,
+      label: "Open boxes",
+      onClick: () => setOverlayMode("boxes"),
+      active: ["boxes", "source", "create"].includes(activeSectionMode),
+      testId: "room-open-boxes",
+    },
+    {
+      id: "dream",
+      icon: Headphones,
+      label: "Open Section Dream",
+      href: "/dream",
+      testId: "room-open-dream",
+    },
+    {
+      id: "account",
+      icon: Settings2,
+      label: "Open account",
+      href: "/account",
+      testId: "room-open-account",
+    },
+  ];
 
-      <button
-        type="button"
-        className={`${styles.instrumentTrigger} ${view?.hasStructure ? styles.instrumentTriggerWithChip : ""}`}
-        onClick={() => setOverlayMode(normalizeText(projectKey) ? "instrument" : "create")}
-        aria-label="Open room controls"
-        data-testid="room-open-instrument"
-      >
-        <MoreHorizontal size={18} />
-      </button>
+  const workspaceMain = (
+    <div className={styles.workspaceMain} data-testid="room-workspace">
+      {actionError || messageError ? (
+        <div className={styles.bannerStack}>
+          {actionError ? <p className={styles.errorBanner}>{actionError}</p> : null}
+          {messageError ? <p className={styles.errorBanner}>{messageError}</p> : null}
+        </div>
+      ) : null}
 
-      <OverlaySurface
-        mode={overlayMode}
-        view={view}
-        projectKey={projectKey}
-        onClose={handleCloseOverlay}
-        onOpenMode={setOverlayMode}
-        onOpenWitness={handleOpenWitness}
-        onOpenOperate={handleOpenOperate}
-        onProjectSelect={handleProjectSelect}
-        onCreateBox={handleCreateBox}
-        onSourceComplete={handleSourceComplete}
-        onCreateSession={handleCreateSession}
-        onActivateSession={handleActivateSession}
-        onArchiveSession={handleArchiveSession}
-        onRunOperate={handleRunOperate}
-        onAskSevenAudit={handleAskSevenAudit}
-        operatePending={operatePending}
-        operateError={operateError}
-        operateResult={operateResult}
-        busy={actionPending}
-      />
+      <ShellSurface className={styles.workspaceSurface} roomy>
+        {view?.activePreview ? <ActivePreviewBanner activePreview={view.activePreview} /> : null}
 
-      <div className={styles.shell}>
-        {actionError || messageError ? (
-          <div className={styles.bannerStack}>
-            {actionError ? <p className={styles.errorBanner}>{actionError}</p> : null}
-            {messageError ? <p className={styles.errorBanner}>{messageError}</p> : null}
-          </div>
-        ) : null}
+        <div
+          ref={threadRef}
+          className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
+        >
+          {showStarter ? (
+            <StarterView
+              starter={view?.starter}
+              canCreateBox={!normalizeText(projectKey)}
+              onCreateBox={() => setOverlayMode("create")}
+            />
+          ) : null}
 
-        <section className={styles.roomCanvas}>
-          <div className={styles.surfaceStack}>
-            {view?.hasStructure ? (
-              <MirrorPanel
-                view={view}
-                highlightedRegion={highlightedRegion}
-                collapsed={mirrorCollapsed}
-                onToggle={() => setMirrorCollapsed((current) => !current)}
-                onOpenWitness={handleOpenWitness}
-              />
-            ) : null}
-
-            {view?.workingEcho ? (
-              <WorkingEchoPanel
-                workingEcho={view.workingEcho}
-                collapsed={workingEchoCollapsed}
-                onToggle={() => setWorkingEchoCollapsed((current) => !current)}
-              />
-            ) : null}
-
-            {view?.activePreview ? <ActivePreviewBanner activePreview={view.activePreview} /> : null}
-          </div>
-
-          <div
-            ref={threadRef}
-            className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
-          >
-            {showStarter ? (
-              <StarterView
-                starter={view?.starter}
-                canCreateBox={!normalizeText(projectKey)}
-                onCreateBox={() => setOverlayMode("create")}
-              />
-            ) : null}
-
-            <div className={styles.thread}>
-              {optimisticUserMessage ? (
-                <article className={`${styles.messageRow} ${styles.messageRowUser}`}>
-                  <div className={`${styles.messageCard} ${styles.messageUser}`}>
-                    <div className={styles.messageMeta}>
-                      <span>You</span>
-                    </div>
-                    <div className={styles.messageBody}>
-                      <p>{optimisticUserMessage}</p>
-                    </div>
+          <div className={styles.thread}>
+            {optimisticUserMessage ? (
+              <article className={`${styles.messageRow} ${styles.messageRowUser}`}>
+                <div className={`${styles.messageCard} ${styles.messageUser}`}>
+                  <div className={styles.messageMeta}>
+                    <span>You</span>
                   </div>
-                </article>
-              ) : null}
-
-              {messages.map((message) => (
-                <ThreadMessage
-                  key={message.id}
-                  message={message}
-                  view={view}
-                  onApplyProposal={handleApplyProposal}
-                  onCompleteReceiptKit={handleCompleteReceiptKit}
-                  applying={applyingMessageId === message.id}
-                  busyReceiptKitId={busyReceiptKitId}
-                  onHighlight={highlightRegion}
-                />
-              ))}
-
-              {turnPending ? <LoadingMessage /> : null}
-
-              {!messages.length && !showStarter && !view?.hasStructure ? (
-                <div className={styles.emptyThread}>
-                  <FogPlaceholder>Unresolved regions belong here until witness arrives.</FogPlaceholder>
+                  <div className={styles.messageBody}>
+                    <p>{optimisticUserMessage}</p>
+                  </div>
                 </div>
-              ) : null}
-            </div>
-          </div>
+              </article>
+            ) : null}
 
-          <Composer
-            value={composerText}
-            onChange={setComposerText}
-            onSubmit={handleTurnSubmit}
-            pending={turnPending}
-            placeholder={!view?.hasStructure ? "Start talking..." : "Say more..."}
-            disabled={!canSend}
-            onOpenAttach={() => setOverlayMode(normalizeText(projectKey) ? "source" : "create")}
-            listenHref={view?.deepLinks?.reader || ""}
+            {messages.map((message) => (
+              <ThreadMessage
+                key={message.id}
+                message={message}
+                view={view}
+                onApplyProposal={handleApplyProposal}
+                onCompleteReceiptKit={handleCompleteReceiptKit}
+                applying={applyingMessageId === message.id}
+                busyReceiptKitId={busyReceiptKitId}
+                onHighlight={highlightRegion}
+              />
+            ))}
+
+            {turnPending ? <LoadingMessage /> : null}
+
+            {!messages.length && !showStarter && !view?.hasStructure ? (
+              <div className={styles.emptyThread}>
+                <FogPlaceholder>Unresolved regions belong here until witness arrives.</FogPlaceholder>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </ShellSurface>
+    </div>
+  );
+
+  return (
+    <LoegosShell
+      route="workspace"
+      title={view?.project?.title || "Room"}
+      headerAccessory={view?.hasStructure ? <StatusChip view={view} /> : null}
+      main={workspaceMain}
+      echo={echoPulse}
+      composer={
+        <Composer
+          value={composerText}
+          onChange={setComposerText}
+          onSubmit={handleTurnSubmit}
+          pending={turnPending}
+          placeholder={!view?.hasStructure ? "Start talking..." : "Say more..."}
+          disabled={!canSend}
+          onOpenAttach={() => setOverlayMode(normalizeText(projectKey) ? "source" : "create")}
+          listenHref={view?.deepLinks?.reader || ""}
+        />
+      }
+      dockItems={dockItems}
+      sectionLayer={{
+        open: Boolean(activeSectionMode),
+        label: sectionMeta.label,
+        title: sectionMeta.title,
+        onClose: handleCloseOverlay,
+        children: (
+          <WorkspaceSectionContent
+            mode={activeSectionMode}
+            view={view}
+            projectKey={projectKey}
+            highlightedRegion={highlightedRegion}
+            mirrorCollapsed={mirrorCollapsed}
+            workingEchoCollapsed={workingEchoCollapsed}
+            onToggleMirror={() => setMirrorCollapsed((current) => !current)}
+            onToggleWorkingEcho={() => setWorkingEchoCollapsed((current) => !current)}
+            onOpenWitness={handleOpenWitness}
+            onClose={handleCloseOverlay}
+            onOpenMode={setOverlayMode}
+            onProjectSelect={handleProjectSelect}
+            onCreateSession={handleCreateSession}
+            onActivateSession={handleActivateSession}
+            onArchiveSession={handleArchiveSession}
+            onCreateBox={handleCreateBox}
+            onSourceComplete={handleSourceComplete}
+            onRunOperate={handleRunOperate}
+            onAskSevenAudit={handleAskSevenAudit}
+            operatePending={operatePending}
+            operateError={operateError}
+            operateResult={operateResult}
+            busy={actionPending}
           />
-        </section>
-      </div>
-    </main>
+        ),
+      }}
+    />
   );
 }

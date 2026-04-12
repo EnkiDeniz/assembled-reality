@@ -5,6 +5,7 @@ import {
   CircleAlert,
   FileText,
   Headphones,
+  Home,
   LoaderCircle,
   Pause,
   Play,
@@ -12,12 +13,16 @@ import {
   RotateCw,
   Trash2,
   Upload,
+  UserRound,
 } from "lucide-react";
-import GlobalControlMenu from "@/components/GlobalControlMenu";
+import LoegosShell, {
+  Kicker,
+  SignalChip,
+  Surface as ShellSurface,
+} from "@/components/shell/LoegosShell";
 import styles from "@/components/dream/SectionDreamScreen.module.css";
 import {
   buildDreamDocumentRecord,
-  DREAM_AUDIO_TEXT_LIMIT,
   DREAM_DEFAULT_RATE,
   DREAM_PLAYBACK_STATUSES,
   DREAM_SOURCE_KINDS,
@@ -37,6 +42,7 @@ import {
   saveDreamSession,
 } from "@/lib/dream-storage";
 import { clampListeningRate, formatVoiceLabel } from "@/lib/listening";
+import { buildEchoPulseState } from "@/lib/loegos-shell";
 
 const SKIP_BACK_MS = 15_000;
 const SKIP_FORWARD_MS = 30_000;
@@ -804,278 +810,273 @@ export default function SectionDreamScreen({
     setRate(nextRate);
   }
 
+  const dreamEcho = buildEchoPulseState({
+    change: notice,
+    tension: errorMessage,
+    survives: globalOffsetMs > 0 ? `Resume ${formatDreamTime(globalOffsetMs)}` : "",
+  });
+  const dreamDockItems = [
+    {
+      id: "workspace",
+      icon: Home,
+      label: "Open room",
+      href: "/workspace",
+    },
+    {
+      id: "dream",
+      icon: Headphones,
+      label: "Section Dream",
+      active: true,
+      disabled: true,
+    },
+    {
+      id: "account",
+      icon: UserRound,
+      label: "Open account",
+      href: "/account",
+    },
+  ];
+
   return (
-    <main className={styles.page} data-testid="dream-screen">
-      <GlobalControlMenu
-        title="Section Dream"
-        subtitle="Keep the markdown lane isolated, then jump back to the Room or account controls when you need them."
-      />
+    <LoegosShell
+      route="dream"
+      title={dreamDocument?.filename || "Section Dream"}
+      echo={dreamEcho}
+      dockItems={dreamDockItems}
+      main={(
+        <div className={styles.readerMain} data-testid="dream-screen">
+          <audio ref={audioRef} preload="auto" className={styles.hiddenAudio} />
 
-      <audio ref={audioRef} preload="auto" className={styles.hiddenAudio} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".md,.markdown"
+            className={styles.hiddenInput}
+            onChange={handleFileChange}
+            data-testid="dream-upload-input"
+          />
 
-      <section className={styles.shell}>
-        <div className={styles.hero}>
-          <span className={styles.kicker}>Signed-in Utility</span>
-          <h1>Section Dream</h1>
-          <p>
-            Drop in one markdown file, listen in a continuous voice lane, and come back exactly
-            where you stopped.
-          </p>
-        </div>
-
-        <div className={styles.grid}>
-          <section className={styles.panel}>
-            <div className={styles.sectionHead}>
-              <div>
-                <span className={styles.eyebrow}>Source</span>
-                <h2>Markdown in, nothing attached</h2>
-              </div>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => setShowPaste((current) => !current)}
-                data-testid="dream-paste-toggle"
-              >
-                <FileText size={15} />
-                {showPaste ? "Hide Paste" : "Paste Markdown"}
-              </button>
+          {errorMessage ? (
+            <div className={styles.readerBanner} data-testid="dream-error">
+              <CircleAlert size={16} />
+              <span>{errorMessage}</span>
             </div>
+          ) : null}
 
-            <p className={styles.copy}>
-              Section Dream is local-only in v1. It does not create a box, attach to a project, or
-              affect the room state.
-            </p>
+          <div data-testid="dream-player">
+            <ShellSurface className={styles.readerSurface} roomy>
+              <div className={styles.readerToolbar}>
+                <div className={styles.readerIdentity}>
+                  <Kicker tone={dreamDocument ? "brand" : "neutral"}>Dream</Kicker>
+                  <strong>{dreamDocument?.filename || "Section Dream"}</strong>
+                </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".md,.markdown"
-              className={styles.hiddenInput}
-              onChange={handleFileChange}
-              data-testid="dream-upload-input"
-            />
-
-            <div className={styles.actionRow}>
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={() => fileInputRef.current?.click()}
-                data-testid="dream-upload-button"
-              >
-                <Upload size={15} />
-                {dreamDocument ? "Replace Markdown" : "Upload Markdown"}
-              </button>
-
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={handleClear}
-                disabled={!dreamDocument}
-                data-testid="dream-clear"
-              >
-                <Trash2 size={15} />
-                Clear
-              </button>
-            </div>
-
-            {showPaste ? (
-              <div className={styles.pastePanel}>
-                <label className={styles.textareaLabel} htmlFor="dream-paste-input">
-                  Paste raw markdown
-                </label>
-                <textarea
-                  id="dream-paste-input"
-                  className={styles.textarea}
-                  value={pasteValue}
-                  onChange={(event) => setPasteValue(event.target.value)}
-                  placeholder="Paste markdown here."
-                  data-testid="dream-paste-input"
-                />
-                <div className={styles.actionRow}>
+                <div className={styles.readerToolbarActions}>
                   <button
                     type="button"
-                    className={styles.primaryButton}
+                    className={styles.readerIconButton}
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label={dreamDocument ? "Replace markdown" : "Upload markdown"}
+                    title={dreamDocument ? "Replace markdown" : "Upload markdown"}
+                    data-testid="dream-upload-button"
+                  >
+                    <Upload size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.readerIconButton} ${showPaste ? styles.readerIconButtonActive : ""}`}
+                    onClick={() => setShowPaste((current) => !current)}
+                    aria-label={showPaste ? "Hide paste input" : "Paste markdown"}
+                    title={showPaste ? "Hide paste input" : "Paste markdown"}
+                    data-testid="dream-paste-toggle"
+                  >
+                    <FileText size={16} />
+                  </button>
+                  {dreamDocument ? (
+                    <button
+                      type="button"
+                      className={styles.readerIconButton}
+                      onClick={handleClear}
+                      aria-label="Clear markdown"
+                      title="Clear markdown"
+                      data-testid="dream-clear"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {showPaste ? (
+                <div className={styles.pastePanel}>
+                  <textarea
+                    id="dream-paste-input"
+                    className={styles.textarea}
+                    value={pasteValue}
+                    onChange={(event) => setPasteValue(event.target.value)}
+                    placeholder="Paste markdown…"
+                    data-testid="dream-paste-input"
+                  />
+                  <button
+                    type="button"
+                    className={styles.readerPasteButton}
                     onClick={handlePasteSubmit}
                     disabled={!pasteValue.trim()}
                     data-testid="dream-paste-submit"
                   >
                     <Headphones size={15} />
-                    Listen to Paste
                   </button>
                 </div>
+              ) : null}
+
+              <div className={styles.readerMeta}>
+                <SignalChip tone={hasRemoteVoice ? "brand" : "neutral"} data-testid="dream-voice-badge">
+                  {currentVoiceLabel}
+                </SignalChip>
+                <SignalChip tone="neutral">
+                  {dreamDocument ? `${summary?.wordCount || 0} words` : "Markdown only"}
+                </SignalChip>
+                <SignalChip tone="neutral">
+                  {dreamDocument ? formatDreamTime(totalDurationMs) : "Ready"}
+                </SignalChip>
               </div>
-            ) : null}
 
-            <div className={styles.metaList}>
-              <div>
-                <span>Voice stack</span>
-                <strong>{hasRemoteVoice ? "ElevenLabs-first" : "Awaiting provider"}</strong>
-              </div>
-              <div>
-                <span>Chunking</span>
-                <strong>Hidden under {DREAM_AUDIO_TEXT_LIMIT} chars per request</strong>
-              </div>
-              <div>
-                <span>Resume</span>
-                <strong>Local browser restore only</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.panel} data-testid="dream-player">
-            <div className={styles.sectionHead}>
-              <div>
-                <span className={styles.eyebrow}>Player</span>
-                <h2>{dreamDocument?.filename || "Ready for a markdown file"}</h2>
-              </div>
-              <span className={styles.voiceBadge} data-testid="dream-voice-badge">
-                {currentVoiceLabel}
-              </span>
-            </div>
-
-            {dreamDocument ? (
-              <>
-                <div className={styles.summaryRow}>
-                  <div className={styles.summaryCard}>
-                    <span>Words</span>
-                    <strong>{summary?.wordCount || 0}</strong>
-                  </div>
-                  <div className={styles.summaryCard}>
-                    <span>Length</span>
-                    <strong>{formatDreamTime(totalDurationMs)}</strong>
-                  </div>
-                  <div className={styles.summaryCard}>
-                    <span>Restore</span>
-                    <strong>{globalOffsetMs > 0 ? formatDreamTime(globalOffsetMs) : "Start"}</strong>
-                  </div>
-                </div>
-
-                <div className={styles.transport}>
-                  <button
-                    type="button"
-                    className={styles.transportButton}
-                    onClick={() => seekToGlobalOffset(globalOffsetMs - SKIP_BACK_MS)}
-                    disabled={!dreamDocument}
-                    data-testid="dream-rewind"
-                  >
-                    <RotateCcw size={16} />
-                    -15s
-                  </button>
-
-                  <button
-                    type="button"
-                    className={styles.playButton}
-                    onClick={handleTogglePlayback}
-                    disabled={!dreamDocument || isFetchingAudio || !hasRemoteVoice}
-                    data-testid="dream-play-toggle"
-                  >
-                    {isFetchingAudio ? <LoaderCircle size={18} className={styles.spin} /> : null}
-                    {status === DREAM_PLAYBACK_STATUSES.active ? (
-                      <>
-                        <Pause size={18} />
-                        Pause
-                      </>
-                    ) : (
-                      <>
-                        <Play size={18} />
-                        {globalOffsetMs > 0 ? "Continue" : "Play"}
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    className={styles.transportButton}
-                    onClick={() => seekToGlobalOffset(globalOffsetMs + SKIP_FORWARD_MS)}
-                    disabled={!dreamDocument}
-                    data-testid="dream-forward"
-                  >
-                    <RotateCw size={16} />
-                    +30s
-                  </button>
-                </div>
-
-                <div className={styles.scrubberBlock}>
-                  <div className={styles.scrubberLabels}>
+              {dreamDocument ? (
+                <>
+                  <div className={styles.readerProgress}>
                     <span data-testid="dream-current-time">{formatDreamTime(globalOffsetMs)}</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max={Math.max(totalDurationMs, 1)}
+                      step="250"
+                      value={Math.min(globalOffsetMs, Math.max(totalDurationMs, 1))}
+                      onChange={handleScrubberChange}
+                      className={styles.scrubber}
+                      data-testid="dream-scrubber"
+                    />
                     <span data-testid="dream-total-time">{formatDreamTime(totalDurationMs)}</span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max={Math.max(totalDurationMs, 1)}
-                    step="250"
-                    value={Math.min(globalOffsetMs, Math.max(totalDurationMs, 1))}
-                    onChange={handleScrubberChange}
-                    className={styles.scrubber}
-                    data-testid="dream-scrubber"
-                  />
-                </div>
 
-                <div className={styles.bottomRow}>
-                  <label className={styles.speedControl}>
-                    <span>Speed</span>
-                    <select value={String(rate)} onChange={handleRateChange} data-testid="dream-speed">
-                      {SPEED_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}x
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className={styles.readerTransport}>
+                    <button
+                      type="button"
+                      className={styles.readerSecondaryControl}
+                      onClick={() => seekToGlobalOffset(globalOffsetMs - SKIP_BACK_MS)}
+                      disabled={!dreamDocument}
+                      aria-label="Rewind 15 seconds"
+                      title="Rewind 15 seconds"
+                      data-testid="dream-rewind"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
 
-                  <div className={styles.statusPill}>
-                    <span>State</span>
-                    <strong>
-                      {status === DREAM_PLAYBACK_STATUSES.active
-                        ? "Playing"
-                        : globalOffsetMs > 0
-                          ? "Ready to continue"
-                          : "Ready"}
-                    </strong>
+                    <button
+                      type="button"
+                      className={styles.readerPrimaryControl}
+                      onClick={handleTogglePlayback}
+                      disabled={!dreamDocument || isFetchingAudio || !hasRemoteVoice}
+                      aria-label={
+                        status === DREAM_PLAYBACK_STATUSES.active
+                          ? "Pause playback"
+                          : globalOffsetMs > 0
+                            ? "Continue playback"
+                            : "Play markdown"
+                      }
+                      title={
+                        status === DREAM_PLAYBACK_STATUSES.active
+                          ? "Pause playback"
+                          : globalOffsetMs > 0
+                            ? "Continue playback"
+                            : "Play markdown"
+                      }
+                      data-testid="dream-play-toggle"
+                    >
+                      {isFetchingAudio ? (
+                        <LoaderCircle size={20} className={styles.spin} />
+                      ) : status === DREAM_PLAYBACK_STATUSES.active ? (
+                        <Pause size={22} />
+                      ) : (
+                        <Play size={22} />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.readerSecondaryControl}
+                      onClick={() => seekToGlobalOffset(globalOffsetMs + SKIP_FORWARD_MS)}
+                      disabled={!dreamDocument}
+                      aria-label="Forward 30 seconds"
+                      title="Forward 30 seconds"
+                      data-testid="dream-forward"
+                    >
+                      <RotateCw size={16} />
+                    </button>
+                  </div>
+
+                  <div className={styles.readerDocument}>
+                    {chunks.map((chunk, index) => (
+                      <p
+                        key={chunk.id}
+                        className={`${styles.readerChunk} ${index === activeChunkIndex ? styles.readerChunkActive : ""}`}
+                      >
+                        {chunk.text}
+                      </p>
+                    ))}
+                  </div>
+
+                  <div className={styles.readerControls}>
+                    <label className={styles.speedControl}>
+                      <span>Speed</span>
+                      <select value={String(rate)} onChange={handleRateChange} data-testid="dream-speed">
+                        {SPEED_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}x
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {!hasRemoteVoice ? (
+                      <span className={styles.readerHint}>Voice unavailable</span>
+                    ) : isRestoring ? (
+                      <span className={styles.readerHint}>Restoring…</span>
+                    ) : isPending ? (
+                      <span className={styles.readerHint}>Updating…</span>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <div className={styles.readerEmpty}>
+                  <Headphones size={30} />
+                  <div className={styles.readerEmptyActions}>
+                    <button
+                      type="button"
+                      className={styles.readerPrimaryControl}
+                      onClick={() => fileInputRef.current?.click()}
+                      aria-label="Upload markdown"
+                      title="Upload markdown"
+                      data-testid="dream-empty-upload"
+                    >
+                      <Upload size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.readerSecondaryControl}
+                      onClick={() => setShowPaste(true)}
+                      aria-label="Paste markdown"
+                      title="Paste markdown"
+                      data-testid="dream-empty-paste"
+                    >
+                      <FileText size={18} />
+                    </button>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className={styles.emptyState}>
-                <Headphones size={28} />
-                <p>
-                  Upload a markdown file or paste markdown to start a continuous listening session.
-                </p>
-              </div>
-            )}
-
-            {notice ? (
-              <div className={styles.notice} data-testid="dream-notice">
-                {notice}
-              </div>
-            ) : null}
-
-            {errorMessage ? (
-              <div className={styles.error} data-testid="dream-error">
-                <CircleAlert size={16} />
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
-
-            {!hasRemoteVoice ? (
-              <div className={styles.warning}>
-                Remote voice is not configured here yet. Add ElevenLabs or OpenAI to listen inside
-                Section Dream.
-              </div>
-            ) : null}
-
-            <p className={styles.footnote}>
-              {isRestoring
-                ? "Restoring the last Dream session."
-                : isPending
-                  ? "Updating the Dream surface."
-                  : "The player hides chunking and prefetches ahead for smoother listening."}
-            </p>
-          </section>
+              )}
+            </ShellSurface>
+          </div>
         </div>
-      </section>
-
-    </main>
+      )}
+    />
   );
 }

@@ -5,11 +5,17 @@ import { loadRoomWorkspacePageData } from "@/lib/room-server";
 export const dynamic = "force-dynamic";
 
 export default async function WorkspacePage({ searchParams }) {
-  const view = await loadRoomWorkspacePageData({ searchParams });
+  const resolvedSearchParams = await searchParams;
+  const view = await loadRoomWorkspacePageData({ searchParams: resolvedSearchParams });
 
   if (!view) {
     redirect("/");
   }
 
-  return <RoomWorkspace initialView={view} />;
+  return (
+    <RoomWorkspace
+      initialView={view}
+      initialSection={String(resolvedSearchParams?.section || "").trim()}
+    />
+  );
 }
