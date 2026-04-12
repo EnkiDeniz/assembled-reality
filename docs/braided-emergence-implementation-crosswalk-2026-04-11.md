@@ -69,12 +69,17 @@ The strongest current assessment is:
   - local seal
   - accountable trace
 - the first visible braid object is the `workingEcho`
+- the working echo is now a real product object:
+  - visible
+  - non-canonical
+  - steerable
 - Test Drive II has effectively been functioning as an external stabilizer
 - Reverse Trace / Drive Tape now looks like the most natural next place to make the braid visible as a trace rather than as a second narrator
 - the latest Drive Tape reread adds a narrower implementation read:
   - echo and return are often landing correctly
   - but in some return-heavy cases the vector is not yet being fully rewritten by the echo
   - the sharpest current example is `contradictory_return_journey`
+  - the core missing move there is return-authored re-aim
 
 The most important refinement is about the `stabilizer`.
 
@@ -105,6 +110,13 @@ That means the most important current product gap is not simply:
 It is:
 
 - "make stabilization visible enough that both human and model answer to reality in one accountable trace"
+- "let return rewrite the steering vector sharply enough that the next proposal changes with it"
+
+One further caution now feels earned:
+
+- the current system is still a developmental assembly, not a sealed invariant
+- that means human field contact is not a polish step
+- it is part of how this phase earns stronger naming or closure
 
 ## 2.2 Proposal
 
@@ -122,6 +134,10 @@ Based on that assessment, the next-phase proposal is:
    - receipts for proof travel
    - Shape Library for one deciding split, one receipt condition, one disconfirmation line
 5. Test whether clearer rendering of the loop does more than additional advisory machinery before expanding the advisory layer.
+6. Treat the current phase as developmental:
+   - run field contact
+   - expose falsifiers
+   - require settlement checks before stronger sealing language
 
 And make this a standing engineering rule:
 
@@ -141,17 +157,22 @@ And make this a standing engineering rule:
 |---|---|---|---|
 | `Presence` | conversational scoping and narrow-before-structure behavior in `room-turn-service.js` | `weak / partial` | The system respects presence a little, but does not model it explicitly. |
 | `Declaration` | `DIR aim`, proposal segments, `workingEcho.aim` | `strong` | Aim is already a real language and product object. |
+| `Working Echo` | visible `workingEcho` surface in Room and benchmark artifacts | `strong` | This is now the first visible, non-canonical steering object in the product. |
 | `Monolith` | Box as primary truth-bearing object | `strong` | The Box is the standing unit at the current resolution. |
 | `Polarity` | `openTension`, contradictions, supports / weakens / missing | `partial to strong` | Tension is visible, but not yet treated as a first-class primitive across all layers. |
 | `Vector` | `whatWouldDecideIt`, `candidateMove`, `MOV + TST` | `strong` | The system already increasingly organizes around a deciding split plus next move. |
 | `Echo / Return` | `RTN`, runtime receipts, `returnDelta`, field state shifts | `strong` | This is one of the most embodied parts of the current system. |
+| `Return-authored re-aim` | return-heavy `aim`, `whatWouldDecideIt`, and reroute logic in `room-working-echo.js` | `partial` | The system now carries return strongly, but the vector is not yet always rewritten sharply enough by return itself. |
 | `Braid` | repeated conversation -> proposal -> return -> reroute loops | `partial` | Real in behavior, but not yet an explicit data structure beyond history/trace. |
 | `Truth as bounded holding` | local closure law, preview/apply boundary, grounded/actionable field states | `strong` | The system already rejects total closure and works in bounded windows. |
 | `Stabilizer` | the measured relation created by AI inference, human interpretation, return from reality, and lawful closure; currently distributed across gate, field state, benchmark, and return logic | `partial` | There are stabilizer-like mechanisms, but not yet one explicit measured relation or visible trace surface for them. |
+| `Visible stabilizer` | Drive Tape / replay surfaces that show what survived and what rerouted | `partial` | Replay is the first real candidate for making holding vs drifting legible without adding a second narrator. |
 | `Observer as accountable trace` | distributed across human + Seven + compiler/runtime + receipts | `strong` | The current architecture is already observer-as-trace, not observer-as-reality-author. |
 | `Witness layer` | sources, focused witness, recent sources, `GND witness` | `strong` | This is deeply embodied already. |
 | `Receipt / portable trace` | local-first receipts + courthouse sync outside Room | `partial` | Strong in workspace receipts, weaker inside the Room loop. |
 | `Seal as local pause` | `sealed`, `flagged`, `rerouted`, `stopped`, local window states | `strong` | This maps very cleanly. |
+| `Language-first instrumentation` | source classification, replay-only trace, and artifact-first sourcing rules | `strong` | The machine is increasingly being used to surface, preserve, and annotate meaning rather than author a parallel layer. |
+| `Developmental assembly / field contact` | Shape Library `developmental_embodied` read plus pending human drive | `partial` | The current system is promising but still requires bounded real-world contact before stronger sealing claims are warranted. |
 | `Grace / no shame only signal` | reroute, reversible/non-canonical working echo, local-first drafting | `partial` | The spirit is present, but it is not yet formalized as a product primitive. |
 | `AI proposes bridges, humans assign meaning` | Seven/Shape bounded roles, no silent canon mutation | `partial to strong` | The architecture points this way, though not all UX flows fully enforce it yet. |
 | `First build, then break, then name` | benchmark discipline, shape/BAT design, reverse-trace thinking | `partial` | Strong as team method; less explicit as live system behavior. |

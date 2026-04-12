@@ -28,6 +28,10 @@ That means the machine's next job is even more clearly:
 
 before it tries to "help" with more interpretation.
 
+The practical ambition here is narrower than total software embodiment:
+
+> we are not building the whole theory as software. we are building the first instrument that lets people steer by part of it.
+
 This now has a companion engineering rule:
 
 before major product, testing, or runtime design changes, reread:
@@ -95,6 +99,10 @@ So the language already owns:
 
 That is the first place we should look for truth.
 
+A product-scale compression that now feels earned in code and tests is:
+
+> Aim -> Echo -> Split -> Witness/Test -> Return -> Receipt -> Re-aim -> Canon
+
 ---
 
 ## 3. What The Machine Is Still For
@@ -160,6 +168,9 @@ Pay special attention to return-heavy cases.
 If return evidence is strong but `aim` or `whatWouldDecideIt` still reads mostly like assistant phrasing, the machine is preserving the evidence map without fully surfacing the corrected vector.
 That is now a first-class engineering smell.
 
+Return should not only annotate the prior read.
+It should be able to re-aim the next move.
+
 Every important surfaced field should eventually answer:
 
 - did this come from lawful artifact?
@@ -168,6 +179,9 @@ Every important surfaced field should eventually answer:
 - from bounded advisory?
 
 If we cannot answer that, the echo is drifting.
+
+Some structures will still be developmental rather than settled.
+When that is true, the next honest move is field contact and settlement checking, not stronger sealing language.
 
 ---
 

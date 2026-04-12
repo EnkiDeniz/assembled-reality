@@ -88,6 +88,12 @@ The latest founder and engineer reverse-trace reads now add a stronger thesis:
 - the product is catching up to the language
 - the next phase should make that survival structure more legible before adding heavier machinery
 - the current phase gate for that work is the final next-phase proposal linked above
+- the braid canon now explicitly includes the repo-earned additions:
+  - Working Echo
+  - return-authored re-aim
+  - visible stabilizer as trace, not narrator
+  - language-first instrumentation
+  - developmental assembly and field contact
 
 ## Language First
 
@@ -113,6 +119,10 @@ Use them as a design constitution and audit lens. Ask:
 > did correction actually alter the next proposal, or only the explanation around it?
 
 Do not translate the theory directly into runtime ontology.
+
+The narrow constitutional reminder is:
+
+> We are not building the whole theory as software. We are building the first instrument that lets people steer by part of it.
 
 Then do the second check:
 

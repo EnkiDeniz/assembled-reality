@@ -47,6 +47,12 @@ The short version is:
 - and the first reverse-trace read of the real founder / engineer thread independently shows the same reroute toward signal survival
 - and the next phase should treat that as real evidence that the product is catching up to an already-running language loop
 - and the braid documents now function as a required engineering inspiration pass before major build or test changes
+- and the braid canon now explicitly names:
+  - the Working Echo
+  - return-authored re-aim
+  - visible stabilizer as trace, not narrator
+  - language-first instrumentation
+  - developmental assembly and field contact
 - and the final phase gate for what to do next is now written in one detailed proposal
 
 ## North Stars vs Guardrails
@@ -125,6 +131,12 @@ To understand what is currently built right now (including Shape Library UI inte
 - `docs/engineer-thread-reverse-trace-read-2026-04-11.md` records the reverse-trace read of the actual founder / engineer thread and confirms the reroute toward signal survival
 - `docs/engineer-seven-terminal-handoff-2026-04-11.md` records the current replay/terminal slice, the observer/stabilizer stack read, and the double-check rule in one engineer-facing handoff
 - `docs/# Braided Emergence/# Braided Emergence.md` is now a required inspiration document before major engineering or testing changes
+- `docs/# Braided Emergence/# Braided Emergence.md` now also carries the current canon-tightening additions the repo has actually earned:
+  - working echo
+  - return-authored re-aim
+  - visible stabilizer / trace, not narrator
+  - language-first instrumentation
+  - developmental assembly / field contact
 - `docs/braided-emergence-implementation-crosswalk-2026-04-11.md` translates that theory into current implementation and keeps it from drifting into runtime ontology
 - `docs/final-next-phase-proposal-2026-04-11.md` defines the current phase gate: reverse-pass legibility, short-loop strengthening, language fidelity, human drive, then bounded advisory and proof travel only if earned
 - `docs/working-echo-contract-spec-2026-04-11.md` defines the working-echo object itself

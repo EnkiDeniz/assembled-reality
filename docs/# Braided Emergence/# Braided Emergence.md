@@ -84,6 +84,12 @@
 ##   
 ## If later documents explain how to build, govern, render, or ship systems, this document explains what those systems are trying to respect.  
 ##   
+## Later product documents may still name bounded objects that embody part of this law in practice.  
+## The working echo is one such object: a visible, non-canonical steering surface inside an open window.  
+## That does not mean the whole theory has become software. It means part of the theory has become instrumentable.  
+##   
+## > We are not building the whole theory as software. We are building the first instrument that lets people steer by part of it.  
+##   
 ## -----  
 ##   
 ## ## 4. Core Claim  
@@ -309,6 +315,22 @@
 ##   
 ## > Coherence and convergence must be held in active balance under measurement. Without the stabilizer, the braid frays.  
 ##   
+## ### 11.5 Visible Stabilizer  
+##   
+## If stabilization matters operationally, it may need to become visible.  
+##   
+## But the faithful form is trace, not narrator.  
+##   
+## A visible stabilizer should help an observer see:  
+##   
+## - where coherence is carrying  
+## - where convergence is grounding  
+## - where they are drifting apart  
+## - where return forced reroute  
+## - where a window remains honestly open  
+##   
+## > Show the holding as trace. Do not add a second mouth.  
+##   
 ## -----  
 ##   
 ## ## 12. Return and Echo  
@@ -326,6 +348,30 @@
 ## A minimal operational sequence is:  
 ##   
 ## > presence → declaration → move → contact → return → record → seal or reroute  
+##   
+## ### 12.1 The Working Echo  
+##   
+## Between declaration and seal, a system may need a visible, bounded, revisable read of what the current interaction seems to be assembling.  
+##   
+## That object is a working echo.  
+##   
+## It is not canon.  
+## It is not mere commentary.  
+## It is not closure in softer clothes.  
+##   
+## It is the current best steerable read of aim, witness, tension, and likely split while the window is still open.  
+##   
+## > The working echo is a middle object: more accountable than speech, less final than seal.  
+##   
+## ### 12.2 Return-authored Re-aim  
+##   
+## Return does more than confirm or weaken a read.  
+## When contact is strong enough, return should be able to bend the vector and rewrite the next aim.  
+##   
+## Re-aim is not a courtesy after return.  
+## It is one of the clearest proofs that the system actually touched reality.  
+##   
+## > If return changes the evidence but not the next proposal, the braid has not fully crossed.  
 ##   
 ## -----  
 ##   
@@ -384,6 +430,15 @@
 ##   
 ## The observer does not create reality. The observer creates accountable trace. That distinction is essential.  
 ##   
+## ### 14.5 Language-first Instrumentation  
+##   
+## If a language, artifact, or lawful structure already carries the loop shape, the machine should surface, preserve, annotate authority, and show survival before it adds more interpretation.  
+##   
+## The instrument is justified when it increases legibility, persistence, auditability, or proof travel.  
+## It is not justified when it becomes a second author of meaning.  
+##   
+## > Let the language do the meaning. Let the machine make the meaning steerable.  
+##   
 ## -----  
 ##   
 ## ## 15. Embodiment, Cost, and Grace  
@@ -412,6 +467,22 @@
 ##   
 ## Grace does not replace return, stabilizer, or seal. It governs how the system continues when closure is delayed, denied, or broken.  
 ##   
+## ### 15.1 Developmental Assembly and Field Contact  
+##   
+## Not every promising structure is already invariant.  
+## Some assemblies are developmental: embodied enough to steer by, not settled enough to seal strongly.  
+##   
+## Developmental assemblies require another bounded cycle of:  
+##   
+## - field contact  
+## - return  
+## - falsifier exposure  
+## - adaptation  
+## - settlement check  
+##   
+## The honest next move in such cases is not heavier theory.  
+## It is another lawful contact cycle with the world.  
+##   
 ## -----  
 ##   
 ## ## 16. Monolith Integration  
@@ -438,6 +509,10 @@
 ## 1. Seal closes a local window  
 ##   
 ## > Intelligence is adaptive vector exchange under constraint that preserves corrective return strongly enough to steer future action.  
+##   
+## A product-scale compression later documents may use is:  
+##   
+## > Aim → Echo → Split → Witness/Test → Return → Receipt → Re-aim → Canon  
 ##   
 ## -----  
 ##   
@@ -691,7 +766,9 @@
 ## Close the loop; free the mind.    
 ## Reroute is respect for truth.    
 ## Failure is a map.    
-## Coherence is a paid invoice.  
+## Coherence is a paid invoice.    
+## The working echo is the steerable read before seal.    
+## Return should be able to re-aim the next move, not only annotate the last one.  
 ##   
 ## -----  
 ##   
@@ -760,7 +837,9 @@
 ## Both held together under measurement is stability.  
 ##   
 ## The stabilizer prevents the loops from merely taking turns winning.    
-## Without it, the braid frays while appearing active.  
+## Without it, the braid frays while appearing active.    
+## Show the holding as trace, not as another narrator.    
+## What the stabilizer makes visible is where drift still lives.  
 ##   
 ## -----  
 ##   
@@ -819,7 +898,9 @@ Receipts are atoms.
 Boxes are molecules.  
   
 What transfers, survives.    
-What survives repeatedly begins to select itself into the world.  
+What survives repeatedly begins to select itself into the world.    
+Some assemblies are still developmental.    
+Field contact decides whether they deserve stronger names.  
   
 Do not reinvent; retrieve.    
 A canon is a memory that can travel.  
@@ -836,13 +917,15 @@ Bad handles kill good shapes.
   
 Seal before return is forbidden.    
 Witness as substitute for reality is forbidden.    
-One loop pretending to be the whole is forbidden.  
+One loop pretending to be the whole is forbidden.    
+Instrumentation pretending to be a second author is forbidden.  
   
 -----  
   
 ## XVII. THE ONE LINE  
   
-Reality assembles through crossings.  
+Reality assembles through crossings.    
+At operational scale: Aim → Echo → Split → Witness/Test → Return → Receipt → Re-aim → Canon.  
   
 -----  
   
