@@ -927,35 +927,51 @@ function VoicePlayerPanel({ sourceText = "", documentKey = "", onStatus }) {
 
 function SettingsProfileHelpPanel({ projectKey = "", documentKey = "", onStatus }) {
   const storageKey = getUtilityStorageKey(projectKey, documentKey);
-  const [activeTab, setActiveTab] = useState("settings");
-  const [settings, setSettings] = useState({
+  const defaultSettings = {
     themeMode: "system",
     density: "comfortable",
     hotkeysEnabled: true,
-  });
-  const [profile, setProfile] = useState({
+  };
+  const defaultProfile = {
     displayName: "",
     role: "",
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  };
+  const initialUtilityPrefs = (() => {
+    if (typeof window === "undefined") {
+      return {
+        settings: defaultSettings,
+        profile: defaultProfile,
+      };
+    }
     try {
       const raw = window.localStorage.getItem(storageKey);
-      if (!raw) return;
+      if (!raw) {
+        return {
+          settings: defaultSettings,
+          profile: defaultProfile,
+        };
+      }
       const parsed = JSON.parse(raw);
-      setSettings((current) => ({
-        ...current,
-        ...(parsed?.settings || {}),
-      }));
-      setProfile((current) => ({
-        ...current,
-        ...(parsed?.profile || {}),
-      }));
+      return {
+        settings: {
+          ...defaultSettings,
+          ...(parsed?.settings || {}),
+        },
+        profile: {
+          ...defaultProfile,
+          ...(parsed?.profile || {}),
+        },
+      };
     } catch {
-      // Ignore broken local preference payloads.
+      return {
+        settings: defaultSettings,
+        profile: defaultProfile,
+      };
     }
-  }, [storageKey]);
+  })();
+  const [activeTab, setActiveTab] = useState("settings");
+  const [settings, setSettings] = useState(initialUtilityPrefs.settings);
+  const [profile, setProfile] = useState(initialUtilityPrefs.profile);
 
   function persist(nextSettings, nextProfile) {
     if (typeof window === "undefined") return;
@@ -1836,6 +1852,7 @@ function MirrorView({
       {supportOpen ? (
       <div className="phase2-side-column">
         <SettingsProfileHelpPanel
+          key={`${projectKey}:${documentKey}`}
           projectKey={projectKey}
           documentKey={documentKey}
           onStatus={onStatus}

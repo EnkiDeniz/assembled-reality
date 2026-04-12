@@ -116,7 +116,7 @@ const Compiler = {
     const has = (h, v) => ap.some(n => n.head === h && (!v || (Array.isArray(v) ? v.includes(n.verb) : n.verb === v)));
     const get = (h, v) => ap.filter(n => n.head === h && (!v || (Array.isArray(v) ? v.includes(n.verb) : n.verb === v)));
     const hasAim = has("DIR", "aim"), hasGnd = get("GND", ["witness", "constraint", "measure", "require"]).length > 0;
-    const hasRtn = has("RTN"), hasMov = has("MOV"), hasTst = has("TST"), hasInt = has("INT");
+    const hasMov = has("MOV"), hasTst = has("TST"), hasInt = has("INT");
     const seals = get("CLS", "seal"), hasSeal = seals.length > 0, closureAttempt = ac !== null;
     if (!hasAim && ap.length > 0) d.push({ id: "SH001", sev: "error", msg: "Program has no declared aim", line: ap[0]?.line });
     seals.forEach(sc => { if (!ap.some(n => n.head === "RTN" && n.line < sc.line)) d.push({ id: "SH002", sev: "error", msg: "Seal requires at least one prior return", line: sc.line }); });
@@ -175,7 +175,7 @@ async function sevenRespond(msg, history, box) {
     });
     const d = await r.json();
     return JSON.parse((d.content?.map(c=>c.text||"").join("")||"").replace(/```json|```/g,"").trim());
-  } catch(e) { return { segments: [{ text: "Could you say that again?", domain: "neutral", loe: "", boxRegion: "", boxAction: "", boxValue: "" }] }; }
+  } catch { return { segments: [{ text: "Could you say that again?", domain: "neutral", loe: "", boxRegion: "", boxAction: "", boxValue: "" }] }; }
 }
 
 // ═══════════════════════════════════════════════════════════

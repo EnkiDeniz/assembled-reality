@@ -243,7 +243,12 @@ test("buildWorkingEcho groups evidence and surfaces return-aware deltas when pri
   assert.ok(result.returnDelta);
   assert.ok(result.returnDelta.changedRead.length > 0);
   assert.ok(result.returnDelta.weakenedRead.length > 0);
+  assert.match(result.aim.text, /post-SMS blocker|foreign-card travelers/i);
+  assert.ok(result.aim.sourceRefs.some((ref) => /^source:/i.test(ref)));
   assert.match(result.whatWouldDecideIt.text, /post-SMS|AVS|traveler/i);
+  assert.ok(result.whatWouldDecideIt.sourceRefs.some((ref) => /^source:/i.test(ref)));
+  assert.match(result.returnDelta.nextMoveShift.text, /Reroute|AVS|foreign-card travelers/i);
+  assert.ok(result.returnDelta.nextMoveShift.sourceRefs.some((ref) => /^source:/i.test(ref)));
 });
 
 test("buildWorkingEcho keeps no-move-yet explicit and prefers artifact-backed aim", () => {

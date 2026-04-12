@@ -308,9 +308,51 @@ function isGenericDecisionText(text = "") {
     /^what else changed/.test(normalized) ||
     /^what changed before/.test(normalized) ||
     /^which path failed most/.test(normalized) ||
+    /^where does failure shift/.test(normalized) ||
+    /^ask:\s*where does failure shift/.test(normalized) ||
+    /^where did failure shift/.test(normalized) ||
+    /^ask:\s*where did failure shift/.test(normalized) ||
+    /^what shifted after/.test(normalized) ||
+    /^ask:\s*what shifted after/.test(normalized) ||
     /^what breaks after sms/.test(normalized) ||
     /^ask:\s*what breaks after sms/.test(normalized) ||
     normalized === "what matters next?"
+  );
+}
+
+function textHasConcreteWitness(text = "") {
+  const normalized = normalizeText(text).toLowerCase();
+  return /avs|postal|traveler|foreign card|timestamp|verifier|clock|replay|handoff|legal review|sso|pricing exposure|domain verification|quarantined|step-level|cohort|copy exposure/.test(
+    normalized,
+  );
+}
+
+function collectSourceRefs(items = []) {
+  return uniqueBy(
+    (Array.isArray(items) ? items : []).flatMap((item) =>
+      Array.isArray(item?.sourceRefs) ? item.sourceRefs.filter(Boolean) : [],
+    ),
+  );
+}
+
+function collectItemsByKeywords(items = [], keywords = []) {
+  const loweredKeywords = (Array.isArray(keywords) ? keywords : [])
+    .map((keyword) => normalizeText(keyword).toLowerCase())
+    .filter(Boolean);
+
+  if (!loweredKeywords.length) return [];
+
+  return (Array.isArray(items) ? items : []).filter((item) => {
+    const text = evidenceText(item).toLowerCase();
+    return loweredKeywords.some((keyword) => text.includes(keyword));
+  });
+}
+
+function countKeywordHits(text = "", keywords = []) {
+  const normalized = normalizeText(text).toLowerCase();
+  return (Array.isArray(keywords) ? keywords : []).reduce(
+    (count, keyword) => (normalized.includes(normalizeText(keyword).toLowerCase()) ? count + 1 : count),
+    0,
   );
 }
 
@@ -327,6 +369,7 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
     return {
       text: "Which return would actually settle the leading read?",
       kind: "compare",
+      keywords: ["return"],
     };
   }
 
@@ -334,6 +377,7 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
     return {
       text: "Which split decides it: clock-skew expiry on affected Safari sessions, or a later blocker that only looks related?",
       kind: "timeline",
+      keywords: ["clock", "expiry", "verifier", "safari"],
     };
   }
 
@@ -341,6 +385,7 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
     return {
       text: "Which post-SMS split decides it: AVS mismatch in foreign-card travelers, or CTA exposure that only looks correlated?",
       kind: "cohort_split",
+      keywords: ["avs", "postal", "foreign card", "traveler", "sms", "cta", "copy"],
     };
   }
 
@@ -348,6 +393,7 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
     return {
       text: "Which missing witness decides it: one step-level replay for a failed trial, or a breakdown showing whether legal review, SSO setup, or pricing exposure diverged first?",
       kind: "first_divergence",
+      keywords: ["pricing", "legal review", "security addendum", "sso", "step-level replay", "breakdown"],
     };
   }
 
@@ -355,12 +401,14 @@ function inferDecisionSplitFromEvidence({ evidenceCarried = [], openTension = []
     return {
       text: "Does the failure track copy exposure, or domain-verification errors in quarantined company domains?",
       kind: "cohort_split",
+      keywords: ["domain verification", "dmarc", "quarantined", "company domains", "copy exposure"],
     };
   }
 
   return {
     text: "Which named witness or log would separate the leading read from the popular blame story?",
     kind: "compare",
+    keywords: ["witness", "log"],
   };
 }
 
@@ -383,12 +431,28 @@ function buildWhatWouldDecideIt({ segments = [], assistantText = "", canonicalVi
     assistantText,
     fieldState,
   });
+  const moveSegmentText = normalizeText(moveSegment?.text);
   const rawText =
-    normalizeText(moveSegment?.text) ||
+    moveSegmentText ||
     pendingMoveText ||
     questionSentence ||
     fallback.text;
-  const text = isGenericDecisionText(rawText) ? fallback.text : rawText;
+  const canUpgradeFromEvidence = evidenceCarried.length > 1 || openTension.length > 1;
+  const rawKeywordHits = countKeywordHits(rawText, fallback.keywords);
+  const fallbackKeywordHits = countKeywordHits(fallback.text, fallback.keywords);
+  const rawFromWeakSurface = !moveSegmentText && !pendingMoveText;
+  const shouldUseFallback =
+    isGenericDecisionText(rawText) ||
+    (canUpgradeFromEvidence &&
+      textHasConcreteWitness(fallback.text) &&
+      (!textHasConcreteWitness(rawText) || (rawFromWeakSurface && rawKeywordHits < fallbackKeywordHits)));
+  const text = shouldUseFallback ? fallback.text : rawText;
+  const fallbackSourceRefs = collectSourceRefs([
+    ...collectItemsByKeywords(evidenceCarried, fallback.keywords),
+    ...collectItemsByKeywords(openTension, fallback.keywords),
+  ]);
+  const shouldAttachEvidenceRefs =
+    shouldUseFallback || (canUpgradeFromEvidence && textHasConcreteWitness(text) && fallbackSourceRefs.length > 0);
 
   return {
     text: clipText(text, 180),
@@ -398,6 +462,7 @@ function buildWhatWouldDecideIt({ segments = [], assistantText = "", canonicalVi
         buildSourceRef("segment", moveSegment?.id),
         buildSourceRef("pending_move", canonicalView?.pendingMove?.id || canonicalView?.pendingMove?.text),
         buildSourceRef("assistant", questionSentence ? "latest_turn" : ""),
+        ...(shouldAttachEvidenceRefs ? fallbackSourceRefs : []),
       ].filter(Boolean),
     ),
   };
@@ -580,15 +645,40 @@ function buildReturnDelta({ evidenceBuckets = null, whatWouldDecideIt = null } =
       : `Return bent the read: ${changedLead || weakenedLead}`,
     200,
   );
+  const rerouteSourceRefs = uniqueBy(
+    [
+      ...changedRead.flatMap((item) => (Array.isArray(item?.sourceRefs) ? item.sourceRefs : [])),
+      ...visibleWeakenedRead.flatMap((item) => (Array.isArray(item?.sourceRefs) ? item.sourceRefs : [])),
+      ...(Array.isArray(whatWouldDecideIt?.sourceRefs) ? whatWouldDecideIt.sourceRefs : []),
+    ].filter(Boolean),
+  );
+  const rerouteCorpus = normalizeText([changedLead, weakenedLead, whatWouldDecideIt?.text].join(" ")).toLowerCase();
+  let nextMoveShiftText = "";
+
+  if (/avs|postal|foreign card|traveler|sms|cta/.test(rerouteCorpus)) {
+    nextMoveShiftText =
+      "Reroute toward the post-SMS AVS handoff for foreign-card travelers before touching CTA copy.";
+  } else if (/clock|expired|expiry|verifier|safari/.test(rerouteCorpus)) {
+    nextMoveShiftText =
+      "Reroute toward verifier timestamps and client clock skew before blaming a later blocker.";
+  } else if (/pricing|legal review|sso|security addendum/.test(rerouteCorpus)) {
+    nextMoveShiftText =
+      "Reroute toward one failed-path replay that shows whether legal review, SSO setup, or pricing diverges first.";
+  } else if (/domain verification|dmarc|quarantined|company domains/.test(rerouteCorpus)) {
+    nextMoveShiftText =
+      "Reroute toward domain-verification failures in quarantined company domains before changing copy.";
+  } else if (normalizeText(whatWouldDecideIt?.text)) {
+    nextMoveShiftText = `Reroute around this split: ${whatWouldDecideIt.text}`;
+  }
 
   return {
     summary,
     changedRead,
     weakenedRead: visibleWeakenedRead,
-    nextMoveShift: normalizeText(whatWouldDecideIt?.text)
+    nextMoveShift: normalizeText(nextMoveShiftText)
       ? {
-          text: clipText(whatWouldDecideIt.text, 160),
-          sourceRefs: uniqueBy((Array.isArray(whatWouldDecideIt?.sourceRefs) ? whatWouldDecideIt.sourceRefs : []).filter(Boolean)),
+          text: clipText(nextMoveShiftText, 160),
+          sourceRefs: rerouteSourceRefs,
         }
       : null,
   };
@@ -598,6 +688,7 @@ function buildCandidateMove({ whatWouldDecideIt = null, canonicalView = null, re
   const fieldState = normalizeText(canonicalView?.fieldState?.key || canonicalView?.fieldState?.label).toLowerCase();
   if (fieldState === "awaiting") return null;
   const pendingMove = canonicalView?.pendingMove || null;
+  if (returnDelta && !normalizeText(pendingMove?.text)) return null;
   const text = normalizeText(pendingMove?.text) || normalizeText(whatWouldDecideIt?.text);
 
   if (!text || isInternalSystemText(text)) return null;
@@ -627,6 +718,62 @@ function buildCandidateMove({ whatWouldDecideIt = null, canonicalView = null, re
   };
 }
 
+function aimNeedsReturnRewrite(aim = null, whatWouldDecideIt = null) {
+  const aimText = normalizeText(aim?.text);
+  if (!aimText) return true;
+  if (!textHasConcreteWitness(aimText) && textHasConcreteWitness(whatWouldDecideIt?.text)) return true;
+  return /figure out|real blocker|what still fails|what is going on|find the truth|blame .* first/i.test(aimText);
+}
+
+function rewriteAimFromReturn({ aim = null, evidenceBuckets = null, returnDelta = null, whatWouldDecideIt = null } = {}) {
+  if (!returnDelta) return aim;
+  if (!aimNeedsReturnRewrite(aim, whatWouldDecideIt)) return aim;
+
+  const supportItems = Array.isArray(evidenceBuckets?.supports) ? evidenceBuckets.supports : [];
+  const weakenItems = Array.isArray(evidenceBuckets?.weakens) ? evidenceBuckets.weakens : [];
+  const corpus = normalizeText(
+    [
+      whatWouldDecideIt?.text,
+      returnDelta?.summary,
+      ...supportItems.flatMap((item) => [item?.title, item?.detail]),
+      ...weakenItems.flatMap((item) => [item?.title, item?.detail]),
+    ].join(" "),
+  ).toLowerCase();
+  const rewrittenSourceRefs = uniqueBy(
+    [
+      ...(Array.isArray(aim?.sourceRefs) ? aim.sourceRefs : []),
+      ...collectSourceRefs(supportItems),
+      ...collectSourceRefs(weakenItems),
+      ...(Array.isArray(returnDelta?.changedRead)
+        ? returnDelta.changedRead.flatMap((item) => item?.sourceRefs || [])
+        : []),
+      ...(Array.isArray(returnDelta?.weakenedRead)
+        ? returnDelta.weakenedRead.flatMap((item) => item?.sourceRefs || [])
+        : []),
+      ...(Array.isArray(whatWouldDecideIt?.sourceRefs) ? whatWouldDecideIt.sourceRefs : []),
+    ].filter(Boolean),
+  );
+
+  let text = normalizeText(aim?.text);
+  if (/avs|postal|foreign card|traveler|sms|cta/.test(corpus)) {
+    text = "Find the post-SMS blocker still hitting foreign-card travelers before touching CTA copy.";
+  } else if (/clock|expired|expiry|verifier|safari/.test(corpus)) {
+    text = "Find whether verifier timing drift, not a later blocker, is expiring affected Safari sessions.";
+  } else if (/pricing|legal review|sso|security addendum/.test(corpus)) {
+    text = "Find the first failed step before changing pricing, especially around legal review or SSO setup.";
+  } else if (/domain verification|dmarc|quarantined|company domains/.test(corpus)) {
+    text = "Find whether domain verification, not copy, is blocking quarantined company domains.";
+  }
+
+  return text
+    ? {
+        text: clipText(text, 180),
+        source: "runtime_return",
+        sourceRefs: rewrittenSourceRefs,
+      }
+    : aim;
+}
+
 function buildUncertainty({
   evidenceCarried = [],
   openTension = [],
@@ -650,11 +797,19 @@ function buildUncertainty({
     };
   }
   if (returnDelta) {
+    const rerouteText = normalizeText(returnDelta?.nextMoveShift?.text || decidingText);
     return {
       label: "return_shift",
-      detail: decidingText
-        ? `A return changed the read. Reroute around this split: ${decidingText}`
-        : "A return changed the read, so the next move should tighten around the new split.",
+      detail: clipText(
+        [
+          "A return changed the read.",
+          firstMissing ? `Stay open until ${lowerFirst(firstMissing)}` : "",
+          rerouteText || "The next move should tighten around the new split.",
+        ]
+          .filter(Boolean)
+          .join(" "),
+        180,
+      ),
     };
   }
   if (openTension.length > 0) {
@@ -736,7 +891,7 @@ export function buildWorkingEcho({
   const lastAssistant = getLastAssistantMessage(messages);
   const assistantText = normalizeText(lastAssistant?.content || canonicalView?.activePreview?.assistantText);
   const segments = collectSegments({ canonicalView, messages });
-  const aim = buildAim({ canonicalView, segments });
+  const baseAim = buildAim({ canonicalView, segments });
   const evidenceCarried = buildEvidenceCarried({ segments, focusedWitness, recentSources });
   const openTension = buildOpenTension({ segments, assistantText, canonicalView });
   const whatWouldDecideIt = buildWhatWouldDecideIt({
@@ -751,7 +906,7 @@ export function buildWorkingEcho({
     !shouldShowWorkingEcho({
       fieldState,
       evidenceCarried,
-      aim,
+      aim: baseAim,
       openTension,
       whatWouldDecideIt,
     })
@@ -765,6 +920,12 @@ export function buildWorkingEcho({
   });
   const returnDelta = buildReturnDelta({
     evidenceBuckets,
+    whatWouldDecideIt,
+  });
+  const aim = rewriteAimFromReturn({
+    aim: baseAim,
+    evidenceBuckets,
+    returnDelta,
     whatWouldDecideIt,
   });
   const candidateMove = buildCandidateMove({
