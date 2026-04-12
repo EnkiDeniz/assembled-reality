@@ -76,7 +76,7 @@ Questions:
 - does it beat strong structured chat on:
   - deciding split
   - missing witness
-  - honest fog
+  - return-heavy correction
 - does it show aim and re-aim, not just a better summary?
 
 ### Lane D: Product Long Loop
@@ -118,6 +118,9 @@ These are the open questions that should steer the next test wave:
 6. Can later Shape Library improve the deciding split without becoming another authority mouth?
 7. Can later receipt provenance improve steering and handoff without becoming more chatter?
 8. Can a reverse-pass read of a real thread make the loop legible enough that the same reroute appears independently?
+9. Can we see what is actually doing stabilizer work today, and where that relation is still invisible?
+10. When return lands, which surfaced fields become reality-authored and which remain too assistant-authored?
+11. Does correction actually alter the next proposal, or only the explanation around it?
 
 ---
 
@@ -138,10 +141,12 @@ The next rerun should focus on:
 - does the echo nominate the right next witness?
 - not just the next topic
 
-### 4.3 Evidence explicitness in fog
+### 4.3 Return-native vector authorship
 
-- stronger `supports / weakens / missing`
-- especially in `no_move_yet`
+- stronger `whatWouldDecideIt`
+- stronger `aim`
+- especially in return-heavy scenarios like `contradictory_return_journey`
+- measured not just by score, but by visible source classification
 
 ### 4.4 Artifact faithfulness
 
@@ -173,8 +178,18 @@ Questions:
 - what survived?
 - where did re-aim happen?
 - does the same reroute emerge?
+- where does the system look stable because it is measured, and where does it only look coherent?
 
 If the same signal-survival reroute appears independently in both the benchmark corpus and the real thread, that is evidence that the product is exposing a real structure rather than fabricating a clever summary.
+
+If replay also helps us see where coherence and convergence are or are not being held together, that gives us a practical early read on the stabilizer without over-ontologizing it.
+
+Before adding a major new test wave, reread:
+
+- [# Braided Emergence.md](/Users/denizsengun/Projects/AR/docs/#%20Braided%20Emergence/#%20Braided%20Emergence.md)
+- [braided-emergence-implementation-crosswalk-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/braided-emergence-implementation-crosswalk-2026-04-11.md)
+
+Use them to generate test questions, especially around whether correction really changed the next proposal.
 
 ---
 
@@ -185,7 +200,8 @@ Even with the latest product win, these still need work:
 - `aim` must become first-class on the surface
 - `re-aim` after return must be visible
 - `supports / weakens / missing` need harder provenance
-- `no_move_yet` is still the weak corner
+- `contradictory_return_journey` still needs a sharper return-authored deciding split
+- `no_move_yet` should now be preserved as a gain, not treated as the main miss
 - `workingEcho` should derive more from lawful artifact/runtime state and less from prose heuristics
 - receipts should later strengthen the echo as proof status, not as more chatter
 - Shape Library should later strengthen `whatWouldDecideIt`, but only as bounded advisory
@@ -216,6 +232,18 @@ The real next testing question is not:
 It is:
 
 > is the product letting the language do its job, and is it showing that job clearly enough for a human to steer with it?
+
+And for human-facing or replay-facing tests, add a second check:
+
+> what is the Elden Ring equivalent?
+
+That means the test should be able to answer:
+
+- what is the boss?
+- what counts as death / failed run?
+- what is the bonfire?
+- what is the lore on the wall?
+- what gets sharper after return?
 
 ---
 

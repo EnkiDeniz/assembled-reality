@@ -50,6 +50,18 @@ If no:
 - add the smallest bounded helper that improves steering
 - then prove it helped beyond rendering alone
 
+Then run the second filter:
+
+> what is the Elden Ring equivalent?
+
+For human-drive planning, that means:
+
+- what is the boss the user is actually trying to beat?
+- what counts as death / failed run?
+- what is the bonfire or site of grace they return to honestly?
+- what is the lore on the wall that only becomes readable after enough return?
+- what gets sharper after failure instead of just feeling smoother?
+
 ---
 
 ## 3. What We Already Know
@@ -60,7 +72,7 @@ From the current repo state and latest Test Drive II run:
 - the visible working echo now matters
 - `loegos_sighted` is the current official Test Drive II winner
 - the remaining miss is not safety law
-- the remaining miss is thinner receipts, especially in honest fog
+- the remaining miss is thinner return-authored steering, especially when correction should rewrite the next proposal
 - `schema_board` still teaches us that harder evidence maps are valuable
 - Shape Library has not yet earned centrality
 - Lœgos itself already owns the core loop:
@@ -118,7 +130,7 @@ Check whether replaying the loop reveals enough truth to steer the next phase mo
 
 - can we independently recover the same reroute toward signal survival?
 - can we see what was only spoken, what survived, and where re-aim happened?
-- does the tape expose misses like `no_move_yet` faster than prose review alone?
+- does the tape expose where return bent the evidence map but not yet the steering vector?
 
 #### Exit condition
 
@@ -134,7 +146,8 @@ Do this first.
 - make `re-aim` visible after return
 - make `supports / weakens / missing` harder and more explicit
 - make `whatWouldDecideIt` sharper
-- improve `no_move_yet`
+- preserve the `no_move_yet` gain
+- improve return-heavy deciding-split authorship
 - reduce heuristic authorship where lawful artifact can already provide the answer
 
 #### Test goals
@@ -145,14 +158,15 @@ Do this first.
   - aim visibility
   - missing witness quality
   - artifact faithfulness
-  - honest fog
+  - return-heavy correction
 
 #### Exit condition
 
 We move on only when:
 
 - Test Drive II still stays green
-- `no_move_yet` materially improves
+- `contradictory_return_journey` materially improves
+- `no_move_yet` stays strong
 - key `workingEcho` fields are more clearly traceable to lawful artifact or runtime state
 - the surface shows aim and re-aim clearly enough to steer with
 
@@ -171,6 +185,9 @@ Run a bounded human-in-chair drive against the current stronger loop.
 - can they choose the next witness more sharply than from chat alone?
 - can they tell when not to move yet?
 - can they see return re-aim the work?
+- can they tell what the boss is?
+- can they tell where the bonfire is?
+- can they tell what the world is teaching them after return?
 
 #### What to compare
 
@@ -282,9 +299,10 @@ These are the real unanswered questions for the next wave:
 3. Does return visibly re-aim the work?
 4. Can the system nominate the next witness better than the competition?
 5. Can it produce a more receiptable next check?
-6. Does clearer rendering alone recover most of the missing value?
-7. If not, does bounded Shape Library advisory add value beyond rendering alone?
-8. Does receipt provenance later improve handoff and trust without becoming chatter?
+6. In return-heavy cases, does correction actually alter the next proposal?
+7. Does clearer rendering alone recover most of the missing value?
+8. If not, does bounded Shape Library advisory add value beyond rendering alone?
+9. Does receipt provenance later improve handoff and trust without becoming chatter?
 
 ---
 
@@ -296,7 +314,8 @@ These are the real unanswered questions for the next wave:
 - strengthen re-aim visibility
 - strengthen evidence handles
 - strengthen missing witness quality
-- strengthen `no_move_yet`
+- preserve `no_move_yet`
+- strengthen return-heavy deciding split authorship
 - add language-fidelity tests
 
 ### Then

@@ -28,6 +28,51 @@ That means the machine's next job is even more clearly:
 
 before it tries to "help" with more interpretation.
 
+This now has a companion engineering rule:
+
+before major product, testing, or runtime design changes, reread:
+
+- [# Braided Emergence.md](/Users/denizsengun/Projects/AR/docs/#%20Braided%20Emergence/#%20Braided%20Emergence.md)
+- [braided-emergence-implementation-crosswalk-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/braided-emergence-implementation-crosswalk-2026-04-11.md)
+
+Use them as an inspiration and audit pass, not as permission to add new ontology.
+The standing engineering question is:
+
+> did correction actually alter the next proposal, or only the surrounding explanation?
+
+This now also has a second companion rule:
+
+before major product, testing, or runtime changes, ask two questions:
+
+1. does this fit the Braided Emergence law?
+2. what is the Elden Ring equivalent of this?
+
+The point of the second question is not style.
+It is contact.
+
+If we cannot answer what the equivalent is in Elden Ring terms, the idea may be:
+
+- ornamental
+- overexplained
+- protecting the user from contact instead of making contact legible
+- making the machine feel nicer without making the run more truthful
+
+The practical Elden Ring translations are:
+
+- the world = the problem field
+- the player = the human / agent in the loop
+- the boss = the real discriminating difficulty
+- dying = return that disproves the current read
+- the bonfire / site of grace = the echo / replay point that lets you re-enter without lying
+- the lore on the walls = the deeper system law that only becomes readable after enough returns
+- getting better = sharper reads, better timing, more honest contact
+
+So the rule becomes:
+
+> if it fits Braided Emergence but has no Elden Ring equivalent, it may still be too abstract.  
+> if it has an Elden Ring equivalent but does not fit Braided Emergence, it may be a seductive metaphor without law.  
+> we want both.
+
 ---
 
 ## 2. What The Language Already Does
@@ -110,6 +155,11 @@ That means:
 - evidence buckets should privilege grounded witness and returns over summary prose
 - heuristics should stay clearly transitional
 
+Pay special attention to return-heavy cases.
+
+If return evidence is strong but `aim` or `whatWouldDecideIt` still reads mostly like assistant phrasing, the machine is preserving the evidence map without fully surfacing the corrected vector.
+That is now a first-class engineering smell.
+
 Every important surfaced field should eventually answer:
 
 - did this come from lawful artifact?
@@ -189,6 +239,11 @@ The next implementation wave should audit each important `workingEcho` field and
 - can this be sourced directly from Lœgos or compiled artifact today?
 - if not, what bridge logic is still needed?
 - how do we mark that field so we know whether it is lawful, provisional, returned, or advisory?
+
+The current highest-signal place to apply this rule is:
+
+- return-heavy scenarios where `returnDelta` is strong
+- but `aim` or `whatWouldDecideIt` is still too assistant-derived
 
 The right direction is not:
 

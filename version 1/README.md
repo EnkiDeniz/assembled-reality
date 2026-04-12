@@ -29,6 +29,10 @@ External steering notes that now matter for the next wave:
 - `../docs/drive-tape-v0-spec-2026-04-11.md`
 - `../docs/we-were-already-running-the-loop-2026-04-11.md`
 - `../docs/engineer-thread-reverse-trace-read-2026-04-11.md`
+- `../docs/engineer-seven-terminal-handoff-2026-04-11.md`
+- `../docs/# Braided Emergence/# Braided Emergence.md`
+- `../docs/braided-emergence-implementation-crosswalk-2026-04-11.md`
+- `../docs/final-next-phase-proposal-2026-04-11.md`
 
 ## What these documents do
 
@@ -91,6 +95,22 @@ The founder / driver note that names the new realization: the thread was already
 ### `../docs/engineer-thread-reverse-trace-read-2026-04-11.md`
 
 The independent reverse-trace read of the real founder / engineer thread, confirming the same reroute toward signal survival and away from parallel machine-authored meaning.
+
+### `../docs/engineer-seven-terminal-handoff-2026-04-11.md`
+
+The engineer-facing replay and Seven Terminal handoff. Use it for the current observer/trace layer, the replay contract, and the latest practical steering rules.
+
+### `../docs/# Braided Emergence/# Braided Emergence.md`
+
+The upstream theory document. Use it for engineering inspiration, especially when we need to ask whether correction should be rewriting the next proposal more strongly than the current surface allows.
+
+### `../docs/braided-emergence-implementation-crosswalk-2026-04-11.md`
+
+The implementation-facing translation of the braid theory. Use it to keep theory generative without turning it into runtime ontology.
+
+### `../docs/final-next-phase-proposal-2026-04-11.md`
+
+The detailed phase-gate plan for the next phase: reverse-pass legibility first, short-loop strengthening second, human drive third, then only bounded advisory and proof travel if they earn their place.
 
 ## The current backbone
 
@@ -166,3 +186,26 @@ Do not treat the older shell shape as the product.
 Treat the existing backend, intake, listening, language, Operate, override, and receipt substrate as reusable parts for the new product definition.
 
 Also do not let machine bridge logic quietly replace what Lœgos itself already knows. Surface lawful meaning first, then use the machine only for legibility, persistence, and proof binding.
+
+Before substantial product, testing, or runtime changes, reread:
+
+- [# Braided Emergence.md](/Users/denizsengun/Projects/AR/docs/#%20Braided%20Emergence/#%20Braided%20Emergence.md)
+- [braided-emergence-implementation-crosswalk-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/braided-emergence-implementation-crosswalk-2026-04-11.md)
+
+Then ask:
+
+> did correction alter the next proposal, or only the story around it?
+
+And then ask:
+
+> what is the Elden Ring equivalent?
+
+Meaning:
+
+- what is the boss?
+- what counts as death / failed run?
+- what is the bonfire?
+- what is the lore on the wall?
+- what gets sharper after return?
+
+If a proposal fits the braid but has no playable equivalent, it is probably still too abstract.

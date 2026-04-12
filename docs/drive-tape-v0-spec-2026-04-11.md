@@ -79,6 +79,15 @@ to:
 
 - `better signal survival`
 
+The first implemented rerun adds a sharper baseline:
+
+- Drive Tape is already good at making `no_move_yet` legible
+- the sharper remaining exposure case is now `contradictory_return_journey`
+- the key new question is field authorship under return pressure:
+  - which surfaced fields are runtime-return driven?
+  - which are still bounded provisional state?
+  - which still feel too assistant-shaped after correction lands?
+
 ---
 
 ## 5. Inputs We Already Have
@@ -97,6 +106,9 @@ Current sources already available in the live report include:
 - second-turn score and flags
 
 This means we can do a meaningful pre-test without building any new intelligence layer first.
+
+Drive Tape v0 must treat `DriveTapeEvent` as a pure derived view model.
+If extra interpretation is needed, it belongs in an explicit replay helper and should be labeled there.
 
 ---
 
@@ -370,24 +382,41 @@ What this tape should make obvious:
 
 ---
 
-## 12. Exposure Case: `no_move_yet`
+## 12. Exposure Cases
 
-Drive Tape v0 should also be able to show where we are still weak.
+Drive Tape v0 should show both:
 
-This is the key exposure case:
+- where the system is now genuinely stronger
+- where the remaining weakness still lives
 
-- `loegos_sighted` ties `loegos_blindfolded`
-- `Evidence Split` stays `0`
-- caution is present, but missing-witness discrimination is thin
+### 12.1 Positive control: `no_move_yet`
+
+This is now a positive control, not the main miss.
+
+The tape should make clear that:
+
+- the loop stays open for a visible reason
+- the deciding split is legible
+- the blame story is weakened
+- the next witness is clearer than in the blindfolded arm
+
+If the tape cannot show why this scenario is now stronger, it is leaving value on the table.
+
+### 12.2 Main remaining exposure: `contradictory_return_journey`
+
+This is the current sharper exposure case.
+
+- return and evidence are strong
+- `returnDelta` is visible
+- but the deciding split is still thinner than it should be
+- and source classification reveals that the vector is still more bounded-provisional than runtime-return-authored
 
 That means a good tape should not flatter the run.
 It should make the miss obvious:
 
-- plenty of restraint
-- not enough hard separation of:
-  - supports
-  - weakens
-  - missing witness
+- return bent the read
+- the weak story lost signal
+- but the next steering object did not fully sharpen into the strongest return-native split available
 
 If the tape cannot make that visible quickly, it is not doing its job.
 
@@ -444,7 +473,9 @@ Drive Tape v0 is successful if:
 3. a reviewer can tell what signal strengthened and what signal died
 4. a reviewer can tell whether return bent the read
 5. a reviewer can tell whether the next step became more receiptable
-6. `no_move_yet` visibly reads as a miss in evidence discrimination
+6. source classification for `aim`, `whatWouldDecideIt`, `evidenceBuckets`, and `returnDelta` is visible in the artifact, not hidden
+7. `no_move_yet` visibly reads as a stronger open-loop case
+8. `contradictory_return_journey` visibly reads as the main remaining authorship gap
 
 ---
 

@@ -65,6 +65,12 @@ That means:
 - forward pass decides what is lawful
 - reverse pass shows what earned signal
 
+One of the most important engineering uses of that reverse pass is now specific:
+
+- check whether correction actually altered the next proposal
+- not just whether the evidence map got better
+- and not just whether the assistant explanation sounded smarter
+
 ---
 
 ## 4. Product Goal
@@ -86,6 +92,12 @@ The feature should help both:
 
 - humans steer better
 - future agents inherit the loop more honestly
+
+It should also help engineering see a subtle but important miss:
+
+- when return is strong
+- but the surfaced vector is still too assistant-shaped
+- even though the corrected split is already latent in the trace
 
 ---
 

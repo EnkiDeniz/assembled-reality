@@ -14,6 +14,10 @@ This repository now has active navigation docs for the current product direction
 - [drive-tape-v0-spec-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/drive-tape-v0-spec-2026-04-11.md)
 - [we-were-already-running-the-loop-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/we-were-already-running-the-loop-2026-04-11.md)
 - [engineer-thread-reverse-trace-read-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/engineer-thread-reverse-trace-read-2026-04-11.md)
+- [engineer-seven-terminal-handoff-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/engineer-seven-terminal-handoff-2026-04-11.md)
+- [# Braided Emergence.md](/Users/denizsengun/Projects/AR/docs/#%20Braided%20Emergence/#%20Braided%20Emergence.md)
+- [braided-emergence-implementation-crosswalk-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/braided-emergence-implementation-crosswalk-2026-04-11.md)
+- [final-next-phase-proposal-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/final-next-phase-proposal-2026-04-11.md)
 
 This repository is in an intentional product pivot.
 
@@ -65,14 +69,14 @@ They are not the reason this machine exists.
 The latest clean Test Drive II run now says:
 
 - benchmark valid: `yes`
-- headline valid: `yes`
-- official winner under current acceptance rules: `loegos_sighted`
-- strongest remaining control pressure: `schema_board` still has the highest raw mean score (`85` vs `81.25`)
-- strongest remaining product miss: honest fog and thinner receipts, especially in `no_move_yet`
+- headline valid: `no`
+- official winner in the latest rerun: `loegos_sighted`
+- strongest recent gain: `no_move_yet` is now a real product strength rather than the main weak corner
+- strongest remaining product miss: in return-heavy cases like `contradictory_return_journey`, the evidence and return map are strong but the deciding split is still too assistant-shaped and not yet rewritten sharply enough by return
 
 So the next lap is not about proving the visible echo matters at all. It does.
 
-The next lap is about making the visible echo carry harder receipts and sharper deciding splits than excellent structured chat or a generic external board.
+The next lap is about making the visible echo carry harder receipts and more return-native deciding splits, especially when correction should alter the next proposal rather than just the story around it.
 
 One promising future legibility mode is a reverse trace that renders the whole interaction as a Lœgos signal field and gives stronger signal to what survived more law and reality contact.
 
@@ -83,6 +87,7 @@ The latest founder and engineer reverse-trace reads now add a stronger thesis:
 - we were already running the loop in natural language
 - the product is catching up to the language
 - the next phase should make that survival structure more legible before adding heavier machinery
+- the current phase gate for that work is the final next-phase proposal linked above
 
 ## Language First
 
@@ -98,6 +103,32 @@ The steering rule now is:
 
 If the lawful artifact already knows something, surface that before adding a new heuristic layer to infer it again.
 
+Before any substantial engineering or testing wave, do a quick reread of:
+
+- [# Braided Emergence.md](/Users/denizsengun/Projects/AR/docs/#%20Braided%20Emergence/#%20Braided%20Emergence.md)
+- [braided-emergence-implementation-crosswalk-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/braided-emergence-implementation-crosswalk-2026-04-11.md)
+
+Use them as a design constitution and audit lens. Ask:
+
+> did correction actually alter the next proposal, or only the explanation around it?
+
+Do not translate the theory directly into runtime ontology.
+
+Then do the second check:
+
+> what is the Elden Ring equivalent?
+
+Use that to force contact, not style:
+
+- what is the boss?
+- what counts as death / failed run?
+- what is the bonfire?
+- what is the lore on the wall?
+- what gets sharper after return?
+
+Braided Emergence tests structural law.
+Elden Ring tests whether the thing is actually playable, not ornamental.
+
 ## Testing Lanes
 
 The next testing architecture now has four lanes:
@@ -107,7 +138,7 @@ The next testing architecture now has four lanes:
 2. `Language Fidelity`
    - is the machine surfacing what Lœgos already knows, or inventing a parallel layer?
 3. `Product Short Loop`
-   - current Test Drive II, focused on deciding split, missing witness, honest fog, aim, and re-aim
+   - current Test Drive II, focused on deciding split, missing witness, return-native field authorship, aim, and re-aim
 4. `Product Long Loop`
    - delayed Test Drive III after the short loop is clearly ours
 
@@ -123,12 +154,16 @@ The kickoff canon for the pivot is now:
 6. `docs/drive-tape-v0-spec-2026-04-11.md`
 7. `docs/we-were-already-running-the-loop-2026-04-11.md`
 8. `docs/engineer-thread-reverse-trace-read-2026-04-11.md`
-9. `version 1/README.md`
-10. `version 1/loegos-aim-brief-final-v1.0.md`
-11. `version 1/loegos-language-spec-final-v1.0.md`
-12. `version 1/loegos-as-a-reality-assembly-language.md`
-13. `version 1/loegos-v1-product-redefinition.md`
-14. `version 1/loegos-v1-kickoff-build-plan.md`
+9. `docs/engineer-seven-terminal-handoff-2026-04-11.md`
+10. `docs/# Braided Emergence/# Braided Emergence.md`
+11. `docs/braided-emergence-implementation-crosswalk-2026-04-11.md`
+12. `docs/final-next-phase-proposal-2026-04-11.md`
+13. `version 1/README.md`
+14. `version 1/loegos-aim-brief-final-v1.0.md`
+15. `version 1/loegos-language-spec-final-v1.0.md`
+16. `version 1/loegos-as-a-reality-assembly-language.md`
+17. `version 1/loegos-v1-product-redefinition.md`
+18. `version 1/loegos-v1-kickoff-build-plan.md`
 
 Use `version 1/` when defining the next product, shell, agent behavior, and build sequence.
 
@@ -139,6 +174,8 @@ Use the learning note above when deciding what the next benchmark or next implem
 Use the language-first rule above when deciding whether a new behavior belongs in Lœgos itself, in the machine that surfaces it, or in the proof layer that verifies it.
 
 Use the testing-lanes note above when deciding which test class a new question actually belongs to.
+
+Use the Braided Emergence documents above whenever a new engineering idea appears. They are now a required inspiration and audit pass before adding new mechanics.
 
 ## Current Backbone
 

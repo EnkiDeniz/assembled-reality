@@ -23,6 +23,12 @@ That middle object is the **working echo**.
 
 If the product does not make that visible and useful, then the main advantage stays hidden inside the engine bay.
 
+The Braided Emergence crosswalk sharpens this further:
+
+- the `workingEcho` is the first visible braid object
+- Test Drive II has effectively been acting as an external stabilizer
+- the next likely product seam is making stabilization visible without turning it into a fake second narrator
+
 ---
 
 ## 2. The Product In One Sentence
@@ -87,15 +93,15 @@ This is the point where engineering becomes product.
 The latest clean Test Drive II run says:
 
 - benchmark valid: `yes`
-- headline valid: `yes`
-- official winner under the current acceptance rules: `loegos_sighted`
-- strongest remaining control pressure: `schema_board` still has the highest raw mean score (`85` vs `81.25`)
-- strongest remaining product miss: honest fog and thinner receipts, especially in `no_move_yet`
+- headline valid: `no`
+- official winner in the latest rerun: `loegos_sighted`
+- `no_move_yet` is now a real product strength rather than the main weak corner
+- strongest remaining product miss: in `contradictory_return_journey`, return and evidence are strong but the deciding split is still too assistant-shaped and not yet rewritten sharply enough by return
 
 That means three things:
 
 1. the visible echo now matters in a real product way
-2. the current surfaced echo is not yet the clearest possible evidence map
+2. the current surfaced echo still does not always let return rewrite the steering object sharply enough
 3. the next question is no longer "does showing the echo matter?"
 
 The next question is:
@@ -105,6 +111,14 @@ The next question is:
 And the next phase adds a second question:
 
 > can we render a real thread back through the system and see the survival structure clearly enough to confirm the loop is real?
+
+And a third:
+
+> can we make the stabilizing relation between coherence and convergence legible enough that human and model both answer to reality in one trace?
+
+And a fourth:
+
+> when correction lands, does it actually rewrite the vector, or only improve the surrounding explanation?
 
 ---
 
@@ -136,6 +150,10 @@ Do returns visibly change the read?
 ### 6.5 Proof travel
 
 Can the read carry proof and trust cleanly across time and handoff?
+
+### 6.6 Visible stabilization
+
+Can the operator tell when the system is holding because coherence and convergence are actually being kept together, rather than just taking turns sounding plausible?
 
 ---
 
@@ -171,14 +189,16 @@ If a change makes the cabin nicer but does not help the operator steer better, t
 
 Engineering should optimize for:
 
-1. `whatWouldDecideIt` becoming brutally strong
+1. `whatWouldDecideIt` becoming brutally strong, especially in return-heavy cases
 2. evidence becoming harder, not prettier
    - `supports`
    - `weakens`
    - `missing`
-3. returns changing the visible echo unmistakably
-4. lightweight correction so the operator can place the car
-5. proof travel and bounded advisory help without adding another authority mouth
+3. `aim` becoming more artifact- or return-authored when the loop already knows more than the assistant sentence does
+4. returns changing the visible echo unmistakably
+5. lightweight correction so the operator can place the car
+6. proof travel and bounded advisory help without adding another authority mouth
+7. visible stabilization through trace, return, and lawful state rather than through a new hidden reasoning layer
 
 The first steering surface should stay strongest on:
 
@@ -224,6 +244,12 @@ If a replay surface can show:
 
 then it becomes part of the driver's feel of the machine.
 
+The best current candidate for this is:
+
+- Reverse Trace / Drive Tape as the first visible stabilizer candidate
+
+Not because it becomes the truth path, but because it may let the driver see where truth is or is not being held.
+
 ---
 
 ## 11. What This Means For Testing
@@ -247,15 +273,37 @@ The short loop is still Test Drive II.
 
 The next decisive short-loop target is still:
 
-- stronger evidence explicitness
-- stronger deciding split quality
+- stronger return-authored deciding split quality
 - stronger aim visibility
 - stronger re-aim after return
-- better honest-fog restraint in `no_move_yet`
+- preserving the `no_move_yet` gain while hardening `contradictory_return_journey`
 
 And the first legibility-side test of the next phase should be:
 
 - does reverse-pass replay help us see signal survival more truthfully than prose review alone?
+
+Before substantial engineering changes, reread:
+
+- [# Braided Emergence.md](/Users/denizsengun/Projects/AR/docs/#%20Braided%20Emergence/#%20Braided%20Emergence.md)
+- [braided-emergence-implementation-crosswalk-2026-04-11.md](/Users/denizsengun/Projects/AR/docs/braided-emergence-implementation-crosswalk-2026-04-11.md)
+
+The braid rule for this phase is:
+
+> correction should alter the next proposal, not just the tone of the summary.
+
+Then run the playability rule:
+
+> what is the Elden Ring equivalent?
+
+If we cannot name:
+
+- the boss
+- the failed run
+- the bonfire
+- the lore on the wall
+- what gets sharper after return
+
+then the product may still be too polished, too abstract, or too protected from real contact.
 
 Test Drive III stays blocked until the short loop is stronger there, and the language-fidelity lane is telling us the machine is surfacing lawful meaning instead of inventing a parallel narrator.
 

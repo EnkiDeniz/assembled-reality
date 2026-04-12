@@ -16,7 +16,11 @@ If you want the clearest current statement of what the product is trying to beco
 6. `docs/drive-tape-v0-spec-2026-04-11.md`
 7. `docs/we-were-already-running-the-loop-2026-04-11.md`
 8. `docs/engineer-thread-reverse-trace-read-2026-04-11.md`
-9. `version 1/README.md`
+9. `docs/engineer-seven-terminal-handoff-2026-04-11.md`
+10. `docs/# Braided Emergence/# Braided Emergence.md`
+11. `docs/braided-emergence-implementation-crosswalk-2026-04-11.md`
+12. `docs/final-next-phase-proposal-2026-04-11.md`
+13. `version 1/README.md`
 
 The short version is:
 
@@ -30,6 +34,8 @@ The short version is:
 - the benchmark must consume the same surfaced object the product renders
 - the next product question is no longer "does the echo matter?"
 - it is now "what kind of echo carries harder receipts than excellent structured chat and a strong external board?"
+- the latest reread adds a sharper engineering question:
+  - when return arrives, which fields become reality-authored and which stay too assistant-shaped?
 - and the testing stack now needs four distinct lanes:
   - law
   - language fidelity
@@ -40,6 +46,8 @@ The short version is:
 - and the first practical pre-test for that idea is Drive Tape v0, a replay instrument built from the current Test Drive II corpus
 - and the first reverse-trace read of the real founder / engineer thread independently shows the same reroute toward signal survival
 - and the next phase should treat that as real evidence that the product is catching up to an already-running language loop
+- and the braid documents now function as a required engineering inspiration pass before major build or test changes
+- and the final phase gate for what to do next is now written in one detailed proposal
 
 ## North Stars vs Guardrails
 
@@ -75,12 +83,16 @@ If you are defining or rebuilding the next product shape, start in:
 6. `docs/drive-tape-v0-spec-2026-04-11.md`
 7. `docs/we-were-already-running-the-loop-2026-04-11.md`
 8. `docs/engineer-thread-reverse-trace-read-2026-04-11.md`
-9. `version 1/README.md`
-10. `version 1/loegos-as-a-reality-assembly-language.md`
-11. `version 1/loegos-v1-product-redefinition.md`
-12. `version 1/seven-governance-protocol-for-loegos-v1.md`
-13. `version 1/loegos-v1-capability-assembly-map.md`
-14. `version 1/loegos-v1-kickoff-build-plan.md`
+9. `docs/engineer-seven-terminal-handoff-2026-04-11.md`
+10. `docs/# Braided Emergence/# Braided Emergence.md`
+11. `docs/braided-emergence-implementation-crosswalk-2026-04-11.md`
+12. `docs/final-next-phase-proposal-2026-04-11.md`
+13. `version 1/README.md`
+14. `version 1/loegos-as-a-reality-assembly-language.md`
+15. `version 1/loegos-v1-product-redefinition.md`
+16. `version 1/seven-governance-protocol-for-loegos-v1.md`
+17. `version 1/loegos-v1-capability-assembly-map.md`
+18. `version 1/loegos-v1-kickoff-build-plan.md`
 
 ## Use This Folder For
 
@@ -111,11 +123,34 @@ To understand what is currently built right now (including Shape Library UI inte
 - `docs/drive-tape-v0-spec-2026-04-11.md` defines the first replay-only instrument build of that trace idea using the existing benchmark corpus
 - `docs/we-were-already-running-the-loop-2026-04-11.md` states the new discovery that the real thread was already behaving like the aimed reality loop in natural language
 - `docs/engineer-thread-reverse-trace-read-2026-04-11.md` records the reverse-trace read of the actual founder / engineer thread and confirms the reroute toward signal survival
+- `docs/engineer-seven-terminal-handoff-2026-04-11.md` records the current replay/terminal slice, the observer/stabilizer stack read, and the double-check rule in one engineer-facing handoff
+- `docs/# Braided Emergence/# Braided Emergence.md` is now a required inspiration document before major engineering or testing changes
+- `docs/braided-emergence-implementation-crosswalk-2026-04-11.md` translates that theory into current implementation and keeps it from drifting into runtime ontology
+- `docs/final-next-phase-proposal-2026-04-11.md` defines the current phase gate: reverse-pass legibility, short-loop strengthening, language fidelity, human drive, then bounded advisory and proof travel only if earned
 - `docs/working-echo-contract-spec-2026-04-11.md` defines the working-echo object itself
 - `docs/working-echo-build-and-test-proposal-2026-04-11.md` defines the next build-first sequence
 - `docs/learning-so-far-working-echo-2026-04-11.md` records what the latest clean Test Drive II run actually taught us
 
 Both matter, but they are not the same layer.
+
+Before major engineering work, reread the braid doc and its crosswalk, then ask:
+
+> did correction alter the next proposal, or only the explanation around it?
+
+Then ask:
+
+> what is the Elden Ring equivalent?
+
+Translate that into concrete review questions:
+
+- what is the boss?
+- what counts as death / failed run?
+- what is the bonfire?
+- what is the lore on the wall?
+- what gets sharper after return?
+
+Use the braid documents to check structure.
+Use the Elden Ring check to make sure the thing is actually playable and contact-rich.
 
 ## History
 
