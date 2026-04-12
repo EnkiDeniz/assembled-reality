@@ -49,7 +49,7 @@ export default function AccountShell({
     <main className="loegos-account">
       <GlobalControlMenu
         title="Control Surface"
-        subtitle="Jump back into the Room, revisit account controls, or leave cleanly."
+        subtitle="Jump back into the Room, open Section Dream, revisit account controls, or leave cleanly."
       />
       <section className="loegos-account__shell">
         <section className="loegos-account__panel">

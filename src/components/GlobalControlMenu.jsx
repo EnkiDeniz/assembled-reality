@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Home, MoreHorizontal, UserRound, LogOut, Sparkles, X } from "lucide-react";
+import { Headphones, Home, MoreHorizontal, UserRound, LogOut, Sparkles, X } from "lucide-react";
 import styles from "@/components/GlobalControlMenu.module.css";
 
 const DEFAULT_ITEMS = [
@@ -12,6 +12,11 @@ const DEFAULT_ITEMS = [
     href: "/workspace",
     label: "Room",
     icon: Home,
+  },
+  {
+    href: "/dream",
+    label: "Section Dream",
+    icon: Headphones,
   },
   {
     href: "/account",
@@ -27,7 +32,7 @@ const DEFAULT_ITEMS = [
 
 export default function GlobalControlMenu({
   title = "Menu",
-  subtitle = "Move between the Room and account controls.",
+  subtitle = "Move between the Room, Section Dream, and account controls.",
   items = DEFAULT_ITEMS,
 }) {
   const pathname = usePathname();

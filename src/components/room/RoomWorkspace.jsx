@@ -8,6 +8,7 @@ import {
   Boxes,
   ChevronRight,
   FileText,
+  Headphones,
   LogOut,
   MoreHorizontal,
   Paperclip,
@@ -1467,6 +1468,10 @@ function AdjacentLinks({ view, onOpenWitness, onOpenOperate }) {
 function SessionControls({ onClose }) {
   return (
     <div className={styles.overlayUtilityRow}>
+      <Link href="/dream" className={styles.secondaryButton} onClick={onClose} data-testid="room-open-dream">
+        <Headphones size={14} />
+        Section Dream
+      </Link>
       <Link href="/account" className={styles.secondaryButton} onClick={onClose}>
         <Settings2 size={14} />
         Account
