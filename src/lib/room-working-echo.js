@@ -451,8 +451,7 @@ function buildWhatWouldDecideIt({ segments = [], assistantText = "", canonicalVi
     ...collectItemsByKeywords(evidenceCarried, fallback.keywords),
     ...collectItemsByKeywords(openTension, fallback.keywords),
   ]);
-  const shouldAttachEvidenceRefs =
-    shouldUseFallback || (canUpgradeFromEvidence && textHasConcreteWitness(text) && fallbackSourceRefs.length > 0);
+  const shouldAttachEvidenceRefs = shouldUseFallback;
 
   return {
     text: clipText(text, 180),
@@ -768,7 +767,7 @@ function rewriteAimFromReturn({ aim = null, evidenceBuckets = null, returnDelta 
   return text
     ? {
         text: clipText(text, 180),
-        source: "runtime_return",
+        source: "heuristic_bridge_logic",
         sourceRefs: rewrittenSourceRefs,
       }
     : aim;

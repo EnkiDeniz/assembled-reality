@@ -244,11 +244,72 @@ test("buildWorkingEcho groups evidence and surfaces return-aware deltas when pri
   assert.ok(result.returnDelta.changedRead.length > 0);
   assert.ok(result.returnDelta.weakenedRead.length > 0);
   assert.match(result.aim.text, /post-SMS blocker|foreign-card travelers/i);
+  assert.equal(result.aim.source, "heuristic_bridge_logic");
   assert.ok(result.aim.sourceRefs.some((ref) => /^source:/i.test(ref)));
   assert.match(result.whatWouldDecideIt.text, /post-SMS|AVS|traveler/i);
-  assert.ok(result.whatWouldDecideIt.sourceRefs.some((ref) => /^source:/i.test(ref)));
+  assert.ok(result.whatWouldDecideIt.sourceRefs.includes("segment:seg_move"));
+  assert.ok(!result.whatWouldDecideIt.sourceRefs.some((ref) => /^source:/i.test(ref)));
   assert.match(result.returnDelta.nextMoveShift.text, /Reroute|AVS|foreign-card travelers/i);
   assert.ok(result.returnDelta.nextMoveShift.sourceRefs.some((ref) => /^source:/i.test(ref)));
+});
+
+test("buildWorkingEcho does not overstate return authorship when the deciding split stays segment-authored", () => {
+  const result = buildWorkingEcho({
+    canonicalView: {
+      fieldState: { key: "open", label: "Open" },
+      activePreview: {
+        assistantMessageId: "assistant_specific_move",
+        status: "active",
+      },
+      interaction: {
+        nextBestAction: "Inspect the post-SMS AVS handoff logs for foreign-card travelers.",
+      },
+      pendingMove: {
+        id: "move_specific",
+        text: "Inspect the post-SMS AVS handoff logs for foreign-card travelers.",
+      },
+    },
+    messages: [
+      {
+        id: "assistant_specific_move",
+        role: "assistant",
+        content:
+          "The SMS fix changed the failure shape. The remaining traveler failures still look post-SMS, so inspect the AVS handoff logs for foreign-card travelers before touching CTA copy.",
+        roomPayload: {
+          segments: [
+            { id: "seg_aim", text: "Find what still fails after the SMS fix.", mirrorRegion: "aim" },
+            { id: "seg_move", text: "Inspect the post-SMS AVS handoff logs for foreign-card travelers.", mirrorRegion: "moves" },
+            { id: "seg_story", text: "The CTA-copy explanation still lacks cohort evidence.", mirrorRegion: "story" },
+          ],
+        },
+      },
+    ],
+    recentSources: [
+      {
+        documentKey: "E2_return_after_fix",
+        title: "E2 Return After SMS Fix",
+        operateSummary:
+          "After the SMS timeout fix, timeout errors drop 80%, but completion rate stays flat for travelers using foreign cards.",
+      },
+      {
+        documentKey: "E3_trace_b",
+        title: "E3 Replay B",
+        operateSummary:
+          "Trace B shows a user passing SMS verification, then failing later on AVS postal-code mismatch.",
+      },
+    ],
+    focusedWitness: null,
+    activeSession: { id: "session_specific_move" },
+  });
+
+  assert.ok(result);
+  assert.equal(
+    result.whatWouldDecideIt.text,
+    "Inspect the post-SMS AVS handoff logs for foreign-card travelers.",
+  );
+  assert.ok(result.whatWouldDecideIt.sourceRefs.includes("segment:seg_move"));
+  assert.ok(result.whatWouldDecideIt.sourceRefs.includes("pending_move:move_specific"));
+  assert.ok(!result.whatWouldDecideIt.sourceRefs.some((ref) => /^source:/i.test(ref)));
 });
 
 test("buildWorkingEcho keeps no-move-yet explicit and prefers artifact-backed aim", () => {
