@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Headphones,
   Paperclip,
-  Play,
   Plus,
   SendHorizontal,
   Upload,
@@ -918,7 +918,7 @@ function SourceTray({ projectKey, onComplete }) {
       <div className={styles.panelHead}>
         <div>
           <Kicker tone="grounded">Source</Kicker>
-          <strong>Bring witness into the room</strong>
+          <strong>Add source</strong>
         </div>
       </div>
 
@@ -962,7 +962,7 @@ function SourceTray({ projectKey, onComplete }) {
             <textarea
               value={text}
               onChange={(event) => setText(event.target.value)}
-              placeholder="Paste text, notes, or witness."
+              placeholder="Paste text, notes, or source."
               rows={6}
             />
           </label>
@@ -1663,7 +1663,7 @@ function Composer({
   onSubmit,
   pending,
   disabled = false,
-  placeholder = "Start talking...",
+  placeholder = "Your word",
   onOpenAttach,
   listenHref,
 }) {
@@ -1734,19 +1734,9 @@ function Composer({
                   aria-label="Open listening lane"
                   title="Open listening lane"
                 >
-                  <Play size={14} />
+                  <Headphones size={14} />
                 </Link>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.composerListenInline}
-                  onClick={onOpenAttach}
-                  aria-label="Open source import"
-                  title="Open source import"
-                >
-                  <Play size={14} />
-                </button>
-              )}
+              ) : null}
               <button
                 type="submit"
                 className={`${styles.composerSend} ${canSubmit ? styles.composerSendActive : ""}`}
@@ -2772,7 +2762,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           : activeSectionMode === "context" || activeSectionMode === "boxes"
             ? { label: "Context", title: view?.project?.title || "Room context" }
             : activeSectionMode === "source"
-              ? { label: "Source", title: "Bring witness in" }
+              ? { label: "Source", title: "Add source" }
               : activeSectionMode === "create"
                 ? { label: "Box", title: "Open a fresh room" }
                 : { label: "", title: "" };
@@ -2864,7 +2854,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           onChange={setComposerText}
           onSubmit={handleTurnSubmit}
           pending={turnPending}
-          placeholder={!view?.hasStructure ? "Start talking..." : "Say more..."}
+          placeholder="Your word"
           disabled={!canSend}
           onOpenAttach={() => setOverlayMode(normalizeText(projectKey) ? "source" : "create")}
           listenHref={view?.deepLinks?.reader || ""}
