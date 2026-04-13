@@ -100,6 +100,9 @@ test("section dream document records and sessions stay stable for local restore"
   assert.match(document.id, /^[a-f0-9]{64}$/);
   assert.equal(document.filename, "resume.md");
   assert.equal(document.chunkMap[0].id.startsWith(`${document.id}:`), true);
+  assert.equal(document.wordCount > 0, true);
+  assert.equal(document.totalDurationMs > 0, true);
+  assert.equal(document.progressMs, 0);
   assert.equal(session.documentId, document.id);
   assert.equal(session.provider, "elevenlabs");
   assert.equal(session.status, "paused");

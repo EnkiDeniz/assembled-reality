@@ -1,19 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CircleAlert,
   FileText,
+  FolderOpen,
   Headphones,
-  Home,
+  Library,
   LoaderCircle,
   Pause,
   Play,
   RotateCcw,
   RotateCw,
+  Send,
   Trash2,
   Upload,
-  UserRound,
 } from "lucide-react";
 import LoegosShell, {
   Kicker,
@@ -35,12 +44,16 @@ import {
   normalizeDreamSession,
 } from "@/lib/dream";
 import {
-  clearDreamPersistence,
+  deleteDreamDocument,
+  listDreamDocuments,
   loadActiveDreamDocument,
   loadDreamSession,
   replaceActiveDreamDocument,
+  saveDreamDocument,
   saveDreamSession,
+  setActiveDreamDocument,
 } from "@/lib/dream-storage";
+import { saveDreamBridgePayload } from "@/lib/dream-bridge";
 import { clampListeningRate, formatVoiceLabel } from "@/lib/listening";
 import { buildEchoPulseState } from "@/lib/loegos-shell";
 
@@ -64,11 +77,30 @@ function getChunkDurationMs(chunk, durationMap) {
   return durationMap?.[chunk.id] || chunk.estimatedDurationMs || 0;
 }
 
+function sortDreamDocuments(documents = []) {
+  return [...documents].sort((left, right) => {
+    const leftDate = Date.parse(left?.lastOpenedAt || left?.updatedAt || left?.createdAt || "") || 0;
+    const rightDate = Date.parse(right?.lastOpenedAt || right?.updatedAt || right?.createdAt || "") || 0;
+    return rightDate - leftDate;
+  });
+}
+
+function upsertDocument(documents = [], nextDocument) {
+  const filtered = documents.filter((document) => document.id !== nextDocument.id);
+  return sortDreamDocuments([nextDocument, ...filtered]);
+}
+
+function removeDocument(documents = [], documentId = "") {
+  return documents.filter((document) => document.id !== documentId);
+}
+
 export default function SectionDreamScreen({
   initialVoiceChoice = null,
   voiceCatalog = [],
   initialRate = DREAM_DEFAULT_RATE,
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const requestVoiceChoice = initialVoiceChoice || {
     provider: null,
     voiceId: null,
@@ -92,7 +124,9 @@ export default function SectionDreamScreen({
     resolvedProvider: requestVoiceChoice.provider || null,
     resolvedVoiceId: requestVoiceChoice.voiceId || null,
   });
+  const [dreamLibrary, setDreamLibrary] = useState([]);
   const [dreamDocument, setDreamDocument] = useState(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [status, setStatus] = useState(DREAM_PLAYBACK_STATUSES.idle);
   const [activeChunkIndex, setActiveChunkIndex] = useState(0);
   const [chunkOffsetMs, setChunkOffsetMs] = useState(0);
@@ -101,6 +135,7 @@ export default function SectionDreamScreen({
   const [resolvedProvider, setResolvedProvider] = useState(requestVoiceChoice.provider || null);
   const [resolvedVoiceId, setResolvedVoiceId] = useState(requestVoiceChoice.voiceId || null);
   const [showPaste, setShowPaste] = useState(false);
+  const [showLibrarySheet, setShowLibrarySheet] = useState(false);
   const [pasteValue, setPasteValue] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [notice, setNotice] = useState("");
@@ -133,6 +168,9 @@ export default function SectionDreamScreen({
         )
       : requestVoiceChoice.label || "Voice";
   const hasRemoteVoice = voiceCatalog.length > 0;
+  const currentChunk = chunks[activeChunkIndex] || null;
+  const requestedDocumentId = String(searchParams?.get("document") || "").trim();
+  const requestedAnchor = String(searchParams?.get("anchor") || "").trim();
 
   const cleanupChunkCache = useCallback(() => {
     for (const entry of chunkCacheRef.current.values()) {
@@ -166,6 +204,18 @@ export default function SectionDreamScreen({
     );
   }, []);
 
+  const updateDocumentInState = useCallback((documentRecord, overrides = {}) => {
+    const nextDocument = {
+      ...documentRecord,
+      ...overrides,
+    };
+    setDreamLibrary((current) => upsertDocument(current, nextDocument));
+    if (dreamDocument?.id === nextDocument.id) {
+      setDreamDocument(nextDocument);
+    }
+    return nextDocument;
+  }, [dreamDocument?.id]);
+
   function applyDocumentState(documentRecord, sessionOverride = null, nextNotice = "") {
     const baseSession = normalizeDreamSession(sessionOverride, {
       documentId: documentRecord.id,
@@ -192,6 +242,7 @@ export default function SectionDreamScreen({
 
     durationMapRef.current = buildDurationMap(documentRecord);
     setDurationVersion((version) => version + 1);
+    setSelectedDocumentId(documentRecord.id);
     setDreamDocument(documentRecord);
     setStatus(nextStatus);
     setRate(clampListeningRate(baseSession.rate, DREAM_DEFAULT_RATE));
@@ -245,7 +296,19 @@ export default function SectionDreamScreen({
     );
 
     saveDreamSession(snapshot);
-  }, [requestVoiceChoice.provider, requestVoiceChoice.voiceId]);
+
+    const persistedDocument = {
+      ...documentRecord,
+      progressMs: snapshot.globalOffsetMs,
+      lastOpenedAt: snapshot.lastOpenedAt,
+      totalDurationMs:
+        Number(documentRecord.totalDurationMs) ||
+        getDreamQueueDurationMs(documentRecord.chunkMap, durationMapRef.current),
+    };
+
+    updateDocumentInState(persistedDocument);
+    void saveDreamDocument(persistedDocument).catch(() => {});
+  }, [requestVoiceChoice.provider, requestVoiceChoice.voiceId, updateDocumentInState]);
 
   const resetAudioRuntime = useCallback(() => {
     generationRef.current += 1;
@@ -302,7 +365,7 @@ export default function SectionDreamScreen({
 
       if (!response.ok) {
         throw new Error(
-          payload?.error || "Section Dream could not fetch voice audio for this markdown chunk.",
+          payload?.error || "Dream Library could not fetch voice audio for this markdown chunk.",
         );
       }
 
@@ -400,7 +463,7 @@ export default function SectionDreamScreen({
       } catch (error) {
         setStatus(DREAM_PLAYBACK_STATUSES.paused);
         setErrorMessage(
-          error instanceof Error ? error.message : "Section Dream could not continue playback.",
+          error instanceof Error ? error.message : "Dream Library could not continue playback.",
         );
       } finally {
         setIsFetchingAudio(false);
@@ -417,30 +480,52 @@ export default function SectionDreamScreen({
 
   const restorePersistedDocument = useEffectEvent(async () => {
     try {
-      const [storedDocument, storedSession] = await Promise.all([
+      const [documents, storedDocument] = await Promise.all([
+        listDreamDocuments(),
         loadActiveDreamDocument(),
-        Promise.resolve(loadDreamSession()),
       ]);
+      const nextLibrary = sortDreamDocuments(documents);
 
-      if (!storedDocument?.id) {
+      startTransition(() => {
+        setDreamLibrary(nextLibrary);
+      });
+
+      const queryDocument =
+        requestedDocumentId
+          ? nextLibrary.find((document) => document.id === requestedDocumentId) || null
+          : null;
+      const initialDocument =
+        queryDocument ||
+        (storedDocument?.id ? storedDocument : nextLibrary[0] || null);
+      if (!initialDocument?.id) {
         return;
       }
 
+      const storedSession = loadDreamSession(initialDocument.id);
       resetAudioRuntime();
       startTransition(() => {
         applyDocumentState(
-          storedDocument,
+          initialDocument,
           storedSession,
           storedSession?.globalOffsetMs
             ? `Resume ready from ${formatDreamTime(storedSession.globalOffsetMs)}.`
-            : "Most recent markdown restored.",
+            : "Dream Library restored.",
         );
       });
+
+      if (requestedAnchor) {
+        const anchorIndex = initialDocument.chunkMap.findIndex((chunk) => chunk.id === requestedAnchor);
+        if (anchorIndex >= 0) {
+          startTransition(() => {
+            setPlaybackPosition(initialDocument, anchorIndex, 0);
+          });
+        }
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Section Dream could not restore the last markdown session.",
+          : "Dream Library could not restore the last listening state.",
       );
     } finally {
       setIsRestoring(false);
@@ -452,7 +537,7 @@ export default function SectionDreamScreen({
     return () => {
       resetAudioRuntime();
     };
-  }, [resetAudioRuntime]);
+  }, [requestedAnchor, requestedDocumentId, resetAudioRuntime, setPlaybackPosition]);
 
   useEffect(() => {
     if (!dreamDocument?.chunkMap?.length) {
@@ -626,13 +711,13 @@ export default function SectionDreamScreen({
     autoPlay = true,
   }) {
     if (!String(rawMarkdown || "").trim()) {
-      setErrorMessage("Section Dream needs markdown before it can start listening.");
+      setErrorMessage("Dream Library needs markdown before it can start listening.");
       return;
     }
 
     try {
       setErrorMessage("");
-      setNotice("Preparing markdown for continuous listening.");
+      setNotice("Preparing markdown for listening.");
       const documentRecord = await buildDreamDocumentRecord({
         filename,
         rawMarkdown,
@@ -661,26 +746,28 @@ export default function SectionDreamScreen({
       resetAudioRuntime();
       await replaceActiveDreamDocument(documentRecord);
       saveDreamSession(nextSession);
+      setDreamLibrary((current) => upsertDocument(current, documentRecord));
 
       startTransition(() => {
         applyDocumentState(
           documentRecord,
           nextSession,
-          autoPlay ? "Loading voice for your markdown." : "Ready to play.",
+          autoPlay ? "Loading voice." : "Ready to play.",
         );
+        setShowLibrarySheet(false);
       });
 
       if (autoPlay && hasRemoteVoice) {
         await loadChunkIntoAudio(documentRecord, 0, 0, { autoPlay: true });
       } else if (!hasRemoteVoice) {
         setStatus(DREAM_PLAYBACK_STATUSES.paused);
-        setNotice("Markdown is ready. Add a remote voice provider to start playback.");
+        setNotice("Markdown is ready. Add a remote voice provider to listen.");
       }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Section Dream could not prepare that markdown file.",
+          : "Dream Library could not prepare that markdown file.",
       );
       setNotice("");
     }
@@ -695,13 +782,13 @@ export default function SectionDreamScreen({
     }
 
     if (!isDreamMarkdownFilename(file.name)) {
-      setErrorMessage("Section Dream accepts only .md or .markdown files right now.");
+      setErrorMessage("Dream Library accepts only .md or .markdown files right now.");
       return;
     }
 
     const rawMarkdown = await file.text();
     startTransition(() => {
-      setNotice("Preparing markdown for continuous listening.");
+      setNotice("Preparing markdown for listening.");
     });
     await ingestMarkdown({
       rawMarkdown,
@@ -714,28 +801,90 @@ export default function SectionDreamScreen({
   async function handlePasteSubmit() {
     await ingestMarkdown({
       rawMarkdown: pasteValue,
-      filename: "section-dream-paste.md",
+      filename: "dream-library-paste.md",
       sourceKind: DREAM_SOURCE_KINDS.paste,
       autoPlay: true,
     });
   }
 
+  async function handleSelectDocument(documentId) {
+    const normalizedDocumentId = String(documentId || "").trim();
+    if (!normalizedDocumentId || normalizedDocumentId === selectedDocumentId) {
+      setShowLibrarySheet(false);
+      return;
+    }
+
+    try {
+      persistLatestSession();
+      resetAudioRuntime();
+
+      const nextDocument =
+        dreamLibrary.find((document) => document.id === normalizedDocumentId) ||
+        (await loadActiveDreamDocument()) ||
+        null;
+      const resolvedDocument =
+        nextDocument?.id === normalizedDocumentId
+          ? nextDocument
+          : await listDreamDocuments().then((documents) =>
+              documents.find((document) => document.id === normalizedDocumentId) || null,
+            );
+
+      if (!resolvedDocument?.id) {
+        return;
+      }
+
+      setActiveDreamDocument(resolvedDocument);
+      const storedSession = loadDreamSession(resolvedDocument.id);
+      startTransition(() => {
+        applyDocumentState(resolvedDocument, storedSession, "");
+        setShowLibrarySheet(false);
+      });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Dream Library could not open that document.",
+      );
+    }
+  }
+
   async function handleClear() {
+    if (!dreamDocument?.id) {
+      return;
+    }
+
+    const currentId = dreamDocument.id;
     resetAudioRuntime();
-    await clearDreamPersistence();
+    await deleteDreamDocument(currentId);
+    const nextLibrary = removeDocument(dreamLibrary, currentId);
+    const fallbackDocument = nextLibrary[0] || null;
 
     startTransition(() => {
-      setDreamDocument(null);
-      setStatus(DREAM_PLAYBACK_STATUSES.idle);
-      setActiveChunkIndex(0);
-      setChunkOffsetMs(0);
-      setGlobalOffsetMs(0);
-      setResolvedProvider(requestVoiceChoice.provider || null);
-      setResolvedVoiceId(requestVoiceChoice.voiceId || null);
-      setPasteValue("");
-      setShowPaste(false);
-      setNotice("Section Dream cleared.");
-      setErrorMessage("");
+      setDreamLibrary(nextLibrary);
+    });
+
+    if (!fallbackDocument?.id) {
+      startTransition(() => {
+        setDreamDocument(null);
+        setSelectedDocumentId("");
+        setStatus(DREAM_PLAYBACK_STATUSES.idle);
+        setActiveChunkIndex(0);
+        setChunkOffsetMs(0);
+        setGlobalOffsetMs(0);
+        setResolvedProvider(requestVoiceChoice.provider || null);
+        setResolvedVoiceId(requestVoiceChoice.voiceId || null);
+        setPasteValue("");
+        setShowPaste(false);
+        setNotice("Dream Library cleared.");
+        setErrorMessage("");
+      });
+      return;
+    }
+
+    setActiveDreamDocument(fallbackDocument);
+    const fallbackSession = loadDreamSession(fallbackDocument.id);
+    startTransition(() => {
+      applyDocumentState(fallbackDocument, fallbackSession, "Opened the next document.");
     });
   }
 
@@ -745,7 +894,7 @@ export default function SectionDreamScreen({
     }
 
     if (!hasRemoteVoice) {
-      setErrorMessage("Section Dream needs ElevenLabs or OpenAI voice configured to listen.");
+      setErrorMessage("Dream Library needs ElevenLabs or OpenAI voice configured to listen.");
       return;
     }
 
@@ -810,273 +959,353 @@ export default function SectionDreamScreen({
     setRate(nextRate);
   }
 
+  function handleSendToRoom() {
+    if (!dreamDocument?.id) {
+      return;
+    }
+
+    saveDreamBridgePayload({
+      documentId: dreamDocument.id,
+      anchor: currentChunk?.id || "",
+      excerpt: currentChunk?.text || dreamDocument.normalizedText.slice(0, 220),
+      action: "witness",
+    });
+    router.push("/workspace");
+  }
+
   const dreamEcho = buildEchoPulseState({
     change: notice,
     tension: errorMessage,
     survives: globalOffsetMs > 0 ? `Resume ${formatDreamTime(globalOffsetMs)}` : "",
   });
-  const dreamDockItems = [
-    {
-      id: "workspace",
-      icon: Home,
-      label: "Open room",
-      href: "/workspace",
-    },
-    {
-      id: "dream",
-      icon: Headphones,
-      label: "Section Dream",
-      active: true,
-      disabled: true,
-    },
-    {
-      id: "account",
-      icon: UserRound,
-      label: "Open account",
-      href: "/account",
-    },
-  ];
 
-  return (
-    <LoegosShell
-      route="dream"
-      title={dreamDocument?.filename || "Section Dream"}
-      echo={dreamEcho}
-      dockItems={dreamDockItems}
-      main={(
-        <div className={styles.readerMain} data-testid="dream-screen">
-          <audio ref={audioRef} preload="auto" className={styles.hiddenAudio} />
+  const libraryControl = (
+    <button
+      type="button"
+      className={styles.libraryToggle}
+      onClick={() => setShowLibrarySheet(true)}
+      aria-label="Open Dream Library"
+      title="Open Dream Library"
+      data-testid="dream-library-toggle"
+    >
+      <Library size={16} aria-hidden="true" />
+      <span>{dreamLibrary.length}</span>
+    </button>
+  );
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".md,.markdown"
-            className={styles.hiddenInput}
-            onChange={handleFileChange}
-            data-testid="dream-upload-input"
-          />
+  const libraryPanel = (
+    <div className={styles.libraryPanel}>
+      <div className={styles.libraryPanelHead}>
+        <div className={styles.libraryPanelIdentity}>
+          <Kicker tone="brand">Dream Library</Kicker>
+          <strong>{dreamLibrary.length ? `${dreamLibrary.length} documents` : "Empty"}</strong>
+        </div>
+        <div className={styles.libraryPanelActions}>
+          <button
+            type="button"
+            className={styles.iconAction}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Upload markdown"
+            title="Upload markdown"
+            data-testid="dream-upload-button"
+          >
+            <Upload size={16} />
+          </button>
+          <button
+            type="button"
+            className={`${styles.iconAction} ${showPaste ? styles.iconActionActive : ""}`}
+            onClick={() => setShowPaste((current) => !current)}
+            aria-label={showPaste ? "Hide paste input" : "Paste markdown"}
+            title={showPaste ? "Hide paste input" : "Paste markdown"}
+            data-testid="dream-paste-toggle"
+          >
+            <FileText size={16} />
+          </button>
+        </div>
+      </div>
 
-          {errorMessage ? (
-            <div className={styles.readerBanner} data-testid="dream-error">
-              <CircleAlert size={16} />
-              <span>{errorMessage}</span>
-            </div>
-          ) : null}
-
-          <div data-testid="dream-player">
-            <ShellSurface className={styles.readerSurface} roomy>
-              <div className={styles.readerToolbar}>
-                <div className={styles.readerIdentity}>
-                  <Kicker tone={dreamDocument ? "brand" : "neutral"}>Dream</Kicker>
-                  <strong>{dreamDocument?.filename || "Section Dream"}</strong>
+      {dreamLibrary.length ? (
+        <div className={styles.libraryList}>
+          {dreamLibrary.map((document) => {
+            const documentSummary = getDreamDocumentSummary(document);
+            const isActive = document.id === selectedDocumentId;
+            return (
+              <button
+                key={document.id}
+                type="button"
+                className={`${styles.libraryItem} ${isActive ? styles.libraryItemActive : ""}`}
+                onClick={() => void handleSelectDocument(document.id)}
+                data-testid="dream-library-item"
+              >
+                <div className={styles.libraryItemCopy}>
+                  <strong>{document.filename}</strong>
+                  <span>{documentSummary.wordCount} words</span>
                 </div>
+                <span className={styles.libraryItemMeta}>
+                  {formatDreamTime(document.progressMs || 0)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={styles.libraryEmpty}>
+          <FolderOpen size={20} />
+          <p>No documents yet.</p>
+        </div>
+      )}
+    </div>
+  );
 
-                <div className={styles.readerToolbarActions}>
-                  <button
-                    type="button"
-                    className={styles.readerIconButton}
-                    onClick={() => fileInputRef.current?.click()}
-                    aria-label={dreamDocument ? "Replace markdown" : "Upload markdown"}
-                    title={dreamDocument ? "Replace markdown" : "Upload markdown"}
-                    data-testid="dream-upload-button"
-                  >
-                    <Upload size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.readerIconButton} ${showPaste ? styles.readerIconButtonActive : ""}`}
-                    onClick={() => setShowPaste((current) => !current)}
-                    aria-label={showPaste ? "Hide paste input" : "Paste markdown"}
-                    title={showPaste ? "Hide paste input" : "Paste markdown"}
-                    data-testid="dream-paste-toggle"
-                  >
-                    <FileText size={16} />
-                  </button>
-                  {dreamDocument ? (
+  const main = (
+    <div className={styles.readerMain} data-testid="dream-screen">
+      <audio ref={audioRef} preload="auto" className={styles.hiddenAudio} />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".md,.markdown"
+        className={styles.hiddenInput}
+        onChange={handleFileChange}
+        data-testid="dream-upload-input"
+      />
+
+      {errorMessage ? (
+        <div className={styles.readerBanner} data-testid="dream-error">
+          <CircleAlert size={16} />
+          <span>{errorMessage}</span>
+        </div>
+      ) : null}
+
+      <div className={styles.layout}>
+        <aside className={styles.libraryRail}>{libraryPanel}</aside>
+
+        <div data-testid="dream-player" className={styles.stageWrap}>
+          <ShellSurface className={styles.stage} roomy>
+            <div className={styles.stageHead}>
+              <div className={styles.stageIdentity}>
+                <Kicker tone={dreamDocument ? "brand" : "neutral"}>Dream Library</Kicker>
+                <strong>{dreamDocument?.filename || "Dream Library"}</strong>
+              </div>
+
+              <div className={styles.stageActions}>
+                <button
+                  type="button"
+                  className={styles.iconAction}
+                  onClick={() => setShowLibrarySheet(true)}
+                  aria-label="Browse library"
+                  title="Browse library"
+                >
+                  <Library size={16} />
+                </button>
+                {dreamDocument ? (
+                  <>
                     <button
                       type="button"
-                      className={styles.readerIconButton}
+                      className={styles.iconAction}
+                      onClick={handleSendToRoom}
+                      aria-label="Send to Room"
+                      title="Send to Room"
+                      data-testid="dream-send-to-room"
+                    >
+                      <Send size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.iconAction}
                       onClick={handleClear}
-                      aria-label="Clear markdown"
-                      title="Clear markdown"
+                      aria-label="Remove document"
+                      title="Remove document"
                       data-testid="dream-clear"
                     >
                       <Trash2 size={16} />
                     </button>
-                  ) : null}
-                </div>
+                  </>
+                ) : null}
               </div>
+            </div>
 
-              {showPaste ? (
-                <div className={styles.pastePanel}>
-                  <textarea
-                    id="dream-paste-input"
-                    className={styles.textarea}
-                    value={pasteValue}
-                    onChange={(event) => setPasteValue(event.target.value)}
-                    placeholder="Paste markdown…"
-                    data-testid="dream-paste-input"
+            {showPaste ? (
+              <div className={styles.pastePanel}>
+                <textarea
+                  id="dream-paste-input"
+                  className={styles.textarea}
+                  value={pasteValue}
+                  onChange={(event) => setPasteValue(event.target.value)}
+                  placeholder="Paste markdown…"
+                  data-testid="dream-paste-input"
+                />
+                <button
+                  type="button"
+                  className={styles.pasteSubmit}
+                  onClick={handlePasteSubmit}
+                  disabled={!pasteValue.trim()}
+                  data-testid="dream-paste-submit"
+                >
+                  <Headphones size={15} />
+                </button>
+              </div>
+            ) : null}
+
+            {dreamDocument ? (
+              <>
+                <div className={styles.stageMeta}>
+                  <SignalChip tone={hasRemoteVoice ? "brand" : "neutral"} data-testid="dream-voice-badge">
+                    {currentVoiceLabel}
+                  </SignalChip>
+                  <SignalChip tone="neutral">
+                    {summary?.wordCount || 0} words
+                  </SignalChip>
+                </div>
+
+                <div className={styles.scrubRow}>
+                  <span data-testid="dream-current-time">{formatDreamTime(globalOffsetMs)}</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(totalDurationMs, 1)}
+                    step="250"
+                    value={Math.min(globalOffsetMs, Math.max(totalDurationMs, 1))}
+                    onChange={handleScrubberChange}
+                    className={styles.scrubber}
+                    data-testid="dream-scrubber"
                   />
+                  <span data-testid="dream-total-time">{formatDreamTime(totalDurationMs)}</span>
+                </div>
+
+                <div className={styles.transportRow}>
                   <button
                     type="button"
-                    className={styles.readerPasteButton}
-                    onClick={handlePasteSubmit}
-                    disabled={!pasteValue.trim()}
-                    data-testid="dream-paste-submit"
+                    className={styles.secondaryControl}
+                    onClick={() => seekToGlobalOffset(globalOffsetMs - SKIP_BACK_MS)}
+                    disabled={!dreamDocument}
+                    aria-label="Rewind 15 seconds"
+                    title="Rewind 15 seconds"
+                    data-testid="dream-rewind"
                   >
-                    <Headphones size={15} />
+                    <RotateCcw size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.primaryControl}
+                    onClick={handleTogglePlayback}
+                    disabled={!dreamDocument || isFetchingAudio || !hasRemoteVoice}
+                    aria-label={
+                      status === DREAM_PLAYBACK_STATUSES.active
+                        ? "Pause playback"
+                        : globalOffsetMs > 0
+                          ? "Continue playback"
+                          : "Play markdown"
+                    }
+                    title={
+                      status === DREAM_PLAYBACK_STATUSES.active
+                        ? "Pause playback"
+                        : globalOffsetMs > 0
+                          ? "Continue playback"
+                          : "Play markdown"
+                    }
+                    data-testid="dream-play-toggle"
+                  >
+                    {isFetchingAudio ? (
+                      <LoaderCircle size={22} className={styles.spin} />
+                    ) : status === DREAM_PLAYBACK_STATUSES.active ? (
+                      <Pause size={24} />
+                    ) : (
+                      <Play size={24} />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.secondaryControl}
+                    onClick={() => seekToGlobalOffset(globalOffsetMs + SKIP_FORWARD_MS)}
+                    disabled={!dreamDocument}
+                    aria-label="Forward 30 seconds"
+                    title="Forward 30 seconds"
+                    data-testid="dream-forward"
+                  >
+                    <RotateCw size={16} />
+                  </button>
+
+                  <label className={styles.speedControl}>
+                    <span>Speed</span>
+                    <select value={String(rate)} onChange={handleRateChange} data-testid="dream-speed">
+                      {SPEED_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}x
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className={styles.documentStage}>
+                  {chunks.map((chunk, index) => (
+                    <p
+                      key={chunk.id}
+                      className={`${styles.chunk} ${index === activeChunkIndex ? styles.chunkActive : ""}`}
+                    >
+                      {chunk.text}
+                    </p>
+                  ))}
+                </div>
+
+                {!hasRemoteVoice ? (
+                  <p className={styles.stageHint}>Voice unavailable</p>
+                ) : isRestoring ? (
+                  <p className={styles.stageHint}>Restoring…</p>
+                ) : isPending ? (
+                  <p className={styles.stageHint}>Updating…</p>
+                ) : null}
+              </>
+            ) : (
+              <div className={styles.emptyStage}>
+                <Headphones size={30} />
+                <div className={styles.emptyStageActions}>
+                  <button
+                    type="button"
+                    className={styles.primaryControl}
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Upload markdown"
+                    title="Upload markdown"
+                    data-testid="dream-empty-upload"
+                  >
+                    <Upload size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryControl}
+                    onClick={() => setShowPaste(true)}
+                    aria-label="Paste markdown"
+                    title="Paste markdown"
+                    data-testid="dream-empty-paste"
+                  >
+                    <FileText size={18} />
                   </button>
                 </div>
-              ) : null}
-
-              <div className={styles.readerMeta}>
-                <SignalChip tone={hasRemoteVoice ? "brand" : "neutral"} data-testid="dream-voice-badge">
-                  {currentVoiceLabel}
-                </SignalChip>
-                <SignalChip tone="neutral">
-                  {dreamDocument ? `${summary?.wordCount || 0} words` : "Markdown only"}
-                </SignalChip>
-                <SignalChip tone="neutral">
-                  {dreamDocument ? formatDreamTime(totalDurationMs) : "Ready"}
-                </SignalChip>
               </div>
-
-              {dreamDocument ? (
-                <>
-                  <div className={styles.readerProgress}>
-                    <span data-testid="dream-current-time">{formatDreamTime(globalOffsetMs)}</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max={Math.max(totalDurationMs, 1)}
-                      step="250"
-                      value={Math.min(globalOffsetMs, Math.max(totalDurationMs, 1))}
-                      onChange={handleScrubberChange}
-                      className={styles.scrubber}
-                      data-testid="dream-scrubber"
-                    />
-                    <span data-testid="dream-total-time">{formatDreamTime(totalDurationMs)}</span>
-                  </div>
-
-                  <div className={styles.readerTransport}>
-                    <button
-                      type="button"
-                      className={styles.readerSecondaryControl}
-                      onClick={() => seekToGlobalOffset(globalOffsetMs - SKIP_BACK_MS)}
-                      disabled={!dreamDocument}
-                      aria-label="Rewind 15 seconds"
-                      title="Rewind 15 seconds"
-                      data-testid="dream-rewind"
-                    >
-                      <RotateCcw size={16} />
-                    </button>
-
-                    <button
-                      type="button"
-                      className={styles.readerPrimaryControl}
-                      onClick={handleTogglePlayback}
-                      disabled={!dreamDocument || isFetchingAudio || !hasRemoteVoice}
-                      aria-label={
-                        status === DREAM_PLAYBACK_STATUSES.active
-                          ? "Pause playback"
-                          : globalOffsetMs > 0
-                            ? "Continue playback"
-                            : "Play markdown"
-                      }
-                      title={
-                        status === DREAM_PLAYBACK_STATUSES.active
-                          ? "Pause playback"
-                          : globalOffsetMs > 0
-                            ? "Continue playback"
-                            : "Play markdown"
-                      }
-                      data-testid="dream-play-toggle"
-                    >
-                      {isFetchingAudio ? (
-                        <LoaderCircle size={20} className={styles.spin} />
-                      ) : status === DREAM_PLAYBACK_STATUSES.active ? (
-                        <Pause size={22} />
-                      ) : (
-                        <Play size={22} />
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      className={styles.readerSecondaryControl}
-                      onClick={() => seekToGlobalOffset(globalOffsetMs + SKIP_FORWARD_MS)}
-                      disabled={!dreamDocument}
-                      aria-label="Forward 30 seconds"
-                      title="Forward 30 seconds"
-                      data-testid="dream-forward"
-                    >
-                      <RotateCw size={16} />
-                    </button>
-                  </div>
-
-                  <div className={styles.readerDocument}>
-                    {chunks.map((chunk, index) => (
-                      <p
-                        key={chunk.id}
-                        className={`${styles.readerChunk} ${index === activeChunkIndex ? styles.readerChunkActive : ""}`}
-                      >
-                        {chunk.text}
-                      </p>
-                    ))}
-                  </div>
-
-                  <div className={styles.readerControls}>
-                    <label className={styles.speedControl}>
-                      <span>Speed</span>
-                      <select value={String(rate)} onChange={handleRateChange} data-testid="dream-speed">
-                        {SPEED_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}x
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    {!hasRemoteVoice ? (
-                      <span className={styles.readerHint}>Voice unavailable</span>
-                    ) : isRestoring ? (
-                      <span className={styles.readerHint}>Restoring…</span>
-                    ) : isPending ? (
-                      <span className={styles.readerHint}>Updating…</span>
-                    ) : null}
-                  </div>
-                </>
-              ) : (
-                <div className={styles.readerEmpty}>
-                  <Headphones size={30} />
-                  <div className={styles.readerEmptyActions}>
-                    <button
-                      type="button"
-                      className={styles.readerPrimaryControl}
-                      onClick={() => fileInputRef.current?.click()}
-                      aria-label="Upload markdown"
-                      title="Upload markdown"
-                      data-testid="dream-empty-upload"
-                    >
-                      <Upload size={20} />
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.readerSecondaryControl}
-                      onClick={() => setShowPaste(true)}
-                      aria-label="Paste markdown"
-                      title="Paste markdown"
-                      data-testid="dream-empty-paste"
-                    >
-                      <FileText size={18} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </ShellSurface>
-          </div>
+            )}
+          </ShellSurface>
         </div>
-      )}
+      </div>
+    </div>
+  );
+
+  return (
+    <LoegosShell
+      route="dream"
+      title={dreamDocument?.filename || "Dream Library"}
+      contextControl={libraryControl}
+      pulse={dreamEcho.pulse}
+      main={main}
+      sheet={{
+        open: showLibrarySheet,
+        label: "Dream Library",
+        title: dreamDocument?.filename || "Documents",
+        onClose: () => setShowLibrarySheet(false),
+        children: libraryPanel,
+      }}
     />
   );
 }

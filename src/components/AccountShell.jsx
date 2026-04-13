@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Headphones, Home, UserRound } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 import LoegosShell, {
   Kicker,
   SignalChip,
@@ -58,34 +58,18 @@ export default function AccountShell({
           ? `${drafts.length} draft${drafts.length === 1 ? "" : "s"} waiting.`
           : "",
   });
-  const dockItems = [
-    {
-      id: "workspace",
-      icon: Home,
-      label: "Open room",
-      href: "/workspace",
-    },
-    {
-      id: "dream",
-      icon: Headphones,
-      label: "Open Section Dream",
-      href: "/dream",
-    },
-    {
-      id: "account",
-      icon: UserRound,
-      label: "Account",
-      active: true,
-      disabled: true,
-    },
-  ];
 
   return (
     <LoegosShell
       route="account"
       title="Account"
-      echo={accountEcho}
-      dockItems={dockItems}
+      pulse={accountEcho.pulse}
+      contextControl={(
+        <Link href="/workspace" className={styles.headerLink}>
+          <ArrowLeftRight size={14} />
+          <span>Utility</span>
+        </Link>
+      )}
       main={(
         <div className={styles.main}>
           {notice ? (

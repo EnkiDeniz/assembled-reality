@@ -139,7 +139,7 @@ async function mockDreamAudio(page) {
   });
 }
 
-test("section dream uploads markdown, plays, pauses, and restores the last position", async ({
+test("dream library uploads markdown, plays, pauses, and restores the last position", async ({
   page,
 }) => {
   await bootstrapGuardian(page);
@@ -153,7 +153,7 @@ test("section dream uploads markdown, plays, pauses, and restores the last posit
     name: "field-notes.md",
     mimeType: "text/markdown",
     buffer: Buffer.from(
-      "# Opening\n\nThis is the first paragraph for Section Dream.\n\nThis is the second paragraph so the player has enough text to continue.",
+      "# Opening\n\nThis is the first paragraph for Dream Library.\n\nThis is the second paragraph so the player has enough text to continue.",
     ),
   });
 
@@ -190,12 +190,12 @@ test("section dream is reachable from signed-in menus and remains usable on mobi
   await page.setViewportSize({ width: 390, height: 844 });
 
   await page.goto("/account", { waitUntil: "commit" });
-  await page.getByLabel("Open Section Dream").click();
+  await page.getByTestId("shell-mode-dream").click();
   await expect(page.getByTestId("dream-screen")).toBeVisible();
   await expect(page.getByTestId("dream-player")).toBeVisible();
 
   await page.goto("/workspace", { waitUntil: "commit" });
-  await expect(page.getByTestId("room-open-dream")).toBeVisible();
-  await page.getByTestId("room-open-dream").click();
+  await expect(page.getByTestId("shell-mode-dream")).toBeVisible();
+  await page.getByTestId("shell-mode-dream").click();
   await expect(page.getByTestId("dream-screen")).toBeVisible();
 });

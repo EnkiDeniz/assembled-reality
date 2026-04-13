@@ -15,6 +15,13 @@ export const DREAM_PLAYBACK_STATUSES = Object.freeze({
 export const DREAM_DEFAULT_RATE = 1;
 export const DREAM_ALLOWED_EXTENSIONS = Object.freeze([".md", ".markdown"]);
 
+function countWords(value = "") {
+  return String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
 function normalizeWhitespace(value = "") {
   return String(value || "")
     .replace(/\r\n?/g, "\n")
@@ -412,6 +419,8 @@ export async function buildDreamDocumentRecord({
     id: `${id}:${index}`,
     index,
   }));
+  const wordCount = countWords(normalizedText);
+  const totalDurationMs = getDreamQueueDurationMs(chunkMap);
 
   return {
     id,
@@ -420,6 +429,10 @@ export async function buildDreamDocumentRecord({
     rawMarkdown: String(rawMarkdown || ""),
     normalizedText,
     chunkMap,
+    wordCount,
+    progressMs: 0,
+    totalDurationMs,
+    lastOpenedAt: timestamp,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -427,11 +440,8 @@ export async function buildDreamDocumentRecord({
 
 export function getDreamDocumentSummary(document = null) {
   const chunkMap = Array.isArray(document?.chunkMap) ? document.chunkMap : [];
-  const totalDurationMs = getDreamQueueDurationMs(chunkMap);
-  const wordCount = String(document?.normalizedText || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+  const totalDurationMs = Number(document?.totalDurationMs) || getDreamQueueDurationMs(chunkMap);
+  const wordCount = Number(document?.wordCount) || countWords(document?.normalizedText);
 
   return {
     chunkCount: chunkMap.length,

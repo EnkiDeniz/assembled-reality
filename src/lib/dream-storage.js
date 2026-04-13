@@ -4,7 +4,8 @@ const DB_NAME = "loegos-section-dream";
 const STORE_NAME = "documents";
 const DB_VERSION = 1;
 const ACTIVE_DOCUMENT_KEY = `assembled-reality:dream-active-document:v${DREAM_STORAGE_VERSION}`;
-const SESSION_KEY = `assembled-reality:dream-session:v${DREAM_STORAGE_VERSION}`;
+const LEGACY_SESSION_KEY = `assembled-reality:dream-session:v${DREAM_STORAGE_VERSION}`;
+const SESSIONS_KEY = `assembled-reality:dream-sessions:v${DREAM_STORAGE_VERSION}`;
 
 function supportsIndexedDb() {
   return typeof window !== "undefined" && "indexedDB" in window;
@@ -13,7 +14,7 @@ function supportsIndexedDb() {
 function openDatabase() {
   return new Promise((resolve, reject) => {
     if (!supportsIndexedDb()) {
-      reject(new Error("This browser cannot preserve Section Dream documents locally."));
+      reject(new Error("This browser cannot preserve Dream Library documents locally."));
       return;
     }
 
@@ -28,7 +29,7 @@ function openDatabase() {
 
     request.onsuccess = () => resolve(request.result);
     request.onerror = () =>
-      reject(request.error || new Error("Could not open Section Dream storage."));
+      reject(request.error || new Error("Could not open Dream Library storage."));
   });
 }
 
@@ -43,7 +44,7 @@ async function withStore(mode, callback) {
       database.close();
     };
     transaction.onerror = () => {
-      reject(transaction.error || new Error("Section Dream storage failed."));
+      reject(transaction.error || new Error("Dream Library storage failed."));
       database.close();
     };
 
@@ -73,9 +74,42 @@ function saveJson(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+function removeJson(key) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(key);
+}
+
+function normalizeDocumentSort(document) {
+  const updatedAt = Date.parse(document?.updatedAt || document?.lastOpenedAt || "") || 0;
+  const createdAt = Date.parse(document?.createdAt || "") || 0;
+  return Math.max(updatedAt, createdAt);
+}
+
+function loadDreamSessionsFromStorage() {
+  const current = loadJson(SESSIONS_KEY);
+  if (current && typeof current === "object") {
+    return current;
+  }
+
+  const legacy = loadJson(LEGACY_SESSION_KEY);
+  if (legacy?.documentId) {
+    const migrated = { [legacy.documentId]: legacy };
+    saveJson(SESSIONS_KEY, migrated);
+    removeJson(LEGACY_SESSION_KEY);
+    return migrated;
+  }
+
+  return {};
+}
+
+function saveDreamSessionsToStorage(sessions) {
+  saveJson(SESSIONS_KEY, sessions);
+  removeJson(LEGACY_SESSION_KEY);
+}
+
 export async function saveDreamDocument(document) {
   if (!document?.id) {
-    throw new Error("Section Dream document is incomplete.");
+    throw new Error("Dream Library document is incomplete.");
   }
 
   await withStore("readwrite", (store) => {
@@ -88,6 +122,18 @@ export async function saveDreamDocument(document) {
   return document;
 }
 
+export async function listDreamDocuments() {
+  return withStore("readonly", (store) => new Promise((resolve, reject) => {
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const results = Array.isArray(request.result) ? request.result : [];
+      resolve(results.sort((left, right) => normalizeDocumentSort(right) - normalizeDocumentSort(left)));
+    };
+    request.onerror = () =>
+      reject(request.error || new Error("Could not read Dream Library documents."));
+  }));
+}
+
 export async function loadDreamDocument(documentId) {
   if (!documentId) return null;
 
@@ -95,7 +141,7 @@ export async function loadDreamDocument(documentId) {
     const request = store.get(documentId);
     request.onsuccess = () => resolve(request.result || null);
     request.onerror = () =>
-      reject(request.error || new Error("Could not read the Section Dream document."));
+      reject(request.error || new Error("Could not read the Dream Library document."));
   }));
 }
 
@@ -105,20 +151,50 @@ export async function deleteDreamDocument(documentId) {
   await withStore("readwrite", (store) => {
     store.delete(documentId);
   });
+
+  clearDreamSession(documentId);
+
+  const reference = loadActiveDreamDocumentRef();
+  if (String(reference?.documentId || "").trim() === String(documentId).trim()) {
+    clearActiveDreamDocumentRef();
+  }
 }
 
-export function loadDreamSession() {
-  return loadJson(SESSION_KEY);
+export function loadDreamSession(documentId = "") {
+  const sessions = loadDreamSessionsFromStorage();
+  const normalizedDocumentId = String(documentId || "").trim();
+
+  if (normalizedDocumentId) {
+    return sessions[normalizedDocumentId] || null;
+  }
+
+  const activeDocumentId = String(loadActiveDreamDocumentRef()?.documentId || "").trim();
+  if (activeDocumentId && sessions[activeDocumentId]) {
+    return sessions[activeDocumentId];
+  }
+
+  return Object.values(sessions)[0] || null;
 }
 
 export function saveDreamSession(session) {
   if (typeof window === "undefined" || !session?.documentId) return;
-  saveJson(SESSION_KEY, session);
+  const sessions = loadDreamSessionsFromStorage();
+  sessions[session.documentId] = session;
+  saveDreamSessionsToStorage(sessions);
 }
 
-export function clearDreamSession() {
+export function clearDreamSession(documentId = "") {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(SESSION_KEY);
+
+  if (!documentId) {
+    removeJson(SESSIONS_KEY);
+    removeJson(LEGACY_SESSION_KEY);
+    return;
+  }
+
+  const sessions = loadDreamSessionsFromStorage();
+  delete sessions[String(documentId).trim()];
+  saveDreamSessionsToStorage(sessions);
 }
 
 export function loadActiveDreamDocumentRef() {
@@ -131,47 +207,55 @@ export function saveActiveDreamDocumentRef(value) {
 }
 
 export function clearActiveDreamDocumentRef() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(ACTIVE_DOCUMENT_KEY);
+  removeJson(ACTIVE_DOCUMENT_KEY);
+}
+
+export function setActiveDreamDocument(documentOrId, filename = "") {
+  const documentId =
+    typeof documentOrId === "string"
+      ? String(documentOrId || "").trim()
+      : String(documentOrId?.id || "").trim();
+  if (!documentId) return;
+
+  saveActiveDreamDocumentRef({
+    version: DREAM_STORAGE_VERSION,
+    documentId,
+    filename:
+      typeof documentOrId === "string"
+        ? String(filename || "").trim()
+        : documentOrId?.filename || String(filename || "").trim(),
+    updatedAt:
+      typeof documentOrId === "string"
+        ? new Date().toISOString()
+        : documentOrId?.updatedAt || new Date().toISOString(),
+  });
 }
 
 export async function loadActiveDreamDocument() {
   const reference = loadActiveDreamDocumentRef();
   const documentId = String(reference?.documentId || "").trim();
-  if (!documentId) {
+  if (documentId) {
+    return loadDreamDocument(documentId);
+  }
+
+  const documents = await listDreamDocuments();
+  if (!documents.length) {
     return null;
   }
 
-  return loadDreamDocument(documentId);
+  setActiveDreamDocument(documents[0]);
+  return documents[0];
 }
 
 export async function replaceActiveDreamDocument(document) {
-  const previous = loadActiveDreamDocumentRef();
-  const previousDocumentId = String(previous?.documentId || "").trim();
-
   await saveDreamDocument(document);
-  saveActiveDreamDocumentRef({
-    version: DREAM_STORAGE_VERSION,
-    documentId: document.id,
-    filename: document.filename,
-    updatedAt: document.updatedAt || new Date().toISOString(),
-  });
-
-  if (previousDocumentId && previousDocumentId !== document.id) {
-    await deleteDreamDocument(previousDocumentId).catch(() => {});
-  }
-
+  setActiveDreamDocument(document);
   return document;
 }
 
 export async function clearDreamPersistence() {
-  const reference = loadActiveDreamDocumentRef();
-  const documentId = String(reference?.documentId || "").trim();
-
-  if (documentId) {
-    await deleteDreamDocument(documentId).catch(() => {});
-  }
-
+  const documents = await listDreamDocuments().catch(() => []);
+  await Promise.all(documents.map((document) => deleteDreamDocument(document.id).catch(() => {})));
   clearActiveDreamDocumentRef();
   clearDreamSession();
 }

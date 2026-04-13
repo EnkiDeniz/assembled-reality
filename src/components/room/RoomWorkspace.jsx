@@ -4,13 +4,9 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Boxes,
-  FileText,
-  Headphones,
   Paperclip,
   Play,
   Plus,
-  Settings2,
   SendHorizontal,
   Upload,
 } from "lucide-react";
@@ -23,7 +19,12 @@ import {
   getSegmentShapeRole,
 } from "@/components/room/roomDesignSystem";
 import { buildOperateAuditPrompt } from "@/lib/operate";
-import { buildEchoPulseStateFromRoomView, normalizeSectionId } from "@/lib/loegos-shell";
+import { clearDreamBridgePayload, loadDreamBridgePayload } from "@/lib/dream-bridge";
+import {
+  buildContextCardsFromRoomView,
+  buildEchoPulseStateFromRoomView,
+  normalizeSectionId,
+} from "@/lib/loegos-shell";
 
 const DEFAULT_PROJECT_KEY = "default-project";
 
@@ -251,23 +252,6 @@ function RatioBar({ ratio = 0.5, className = "" }) {
       </div>
       <ShapeGlyph role="story" className={`${styles.mirrorRatioGlyph} ${styles.mirrorRatioGlyphStory}`} />
     </div>
-  );
-}
-
-function AimDockIcon({ size = 18 }) {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        fontSize: `${size + 2}px`,
-        lineHeight: 1,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      △
-    </span>
   );
 }
 
@@ -1917,10 +1901,14 @@ function WorkspaceManagementSection({
   view,
   projectKey,
   onOpenMode,
+  onOpenWitness,
+  onOpenOperate,
   onProjectSelect,
   onCreateSession,
   onActivateSession,
   onArchiveSession,
+  canOpenWitness,
+  canOpenOperate,
   busy,
 }) {
   return (
@@ -1944,6 +1932,28 @@ function WorkspaceManagementSection({
         >
           <Plus size={14} />
           New Box
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => {
+            void onOpenWitness();
+          }}
+          disabled={!canOpenWitness}
+          data-testid="room-open-witness"
+        >
+          Witness
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => {
+            void onOpenOperate();
+          }}
+          disabled={!canOpenOperate}
+          data-testid="room-open-operate"
+        >
+          Operate
         </button>
       </div>
 
@@ -1991,6 +2001,7 @@ function WorkspaceSectionContent({
   onToggleMirror,
   onToggleWorkingEcho,
   onOpenWitness,
+  onOpenOperate,
   onClose,
   onOpenMode,
   onProjectSelect,
@@ -2052,16 +2063,22 @@ function WorkspaceSectionContent({
     );
   }
 
-  if (mode === "boxes") {
+  if (mode === "context" || mode === "boxes") {
     return (
       <WorkspaceManagementSection
         view={view}
         projectKey={projectKey}
         onOpenMode={onOpenMode}
+        onOpenWitness={onOpenWitness}
+        onOpenOperate={onOpenOperate}
         onProjectSelect={onProjectSelect}
         onCreateSession={onCreateSession}
         onActivateSession={onActivateSession}
         onArchiveSession={onArchiveSession}
+        canOpenWitness={Boolean(normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader))}
+        canOpenOperate={Boolean(
+          normalizeText(view?.adjacent?.operate?.openHref) || view?.adjacent?.operate?.available,
+        )}
         busy={busy}
       />
     );
@@ -2078,6 +2095,92 @@ function WorkspaceSectionContent({
   return null;
 }
 
+function buildDreamHref(documentId = "", anchor = "") {
+  const params = new URLSearchParams();
+  if (normalizeText(documentId)) {
+    params.set("document", normalizeText(documentId));
+  }
+  if (normalizeText(anchor)) {
+    params.set("anchor", normalizeText(anchor));
+  }
+  const query = params.toString();
+  return query ? `/dream?${query}` : "/dream";
+}
+
+function buildRoomContextCards({
+  view,
+  dreamBridgePayload,
+  onOpenWitness,
+  onOpenOperate,
+  dismissedCardIds = [],
+}) {
+  const cards = buildContextCardsFromRoomView(view).map((card) => {
+    if (card.kind === "witness" && card.href) {
+      return {
+        ...card,
+        actions: [
+          {
+            label: "Open",
+            onClick: () => {
+              void onOpenWitness();
+            },
+          },
+        ],
+      };
+    }
+
+    if (card.kind === "preview") {
+      return {
+        ...card,
+        meta: [...(card.meta || []), "Preview"],
+      };
+    }
+
+    if (card.kind === "decide" && view?.adjacent?.operate?.available) {
+      return {
+        ...card,
+        actions: [
+          {
+            label: "Operate",
+            onClick: () => {
+              void onOpenOperate();
+            },
+          },
+        ],
+      };
+    }
+
+    return card;
+  });
+
+  if (dreamBridgePayload?.documentId) {
+    cards.unshift({
+      id: `dream-bridge-${dreamBridgePayload.documentId}`,
+      kind: "witness",
+      label: "Witness",
+      tone: "brand",
+      title: "Dream Library passage",
+      verdict: dreamBridgePayload.excerpt || "Passage moved from Dream Library.",
+      detail: "Ready in the room. Reality still closes here.",
+      actions: [
+        {
+          label: "Open Dream",
+          href: buildDreamHref(dreamBridgePayload.documentId, dreamBridgePayload.anchor),
+        },
+      ],
+      lifecycle: "active",
+      updatedAt: dreamBridgePayload.savedAt || new Date().toISOString(),
+    });
+  }
+
+  const filtered = cards.filter((card) => !dismissedCardIds.includes(card.id));
+
+  return filtered.map((card, index) => ({
+    ...card,
+    lifecycle: index < 3 ? "active" : "settled",
+  }));
+}
+
 export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const router = useRouter();
   const [view, setView] = useState(initialView);
@@ -2089,9 +2192,10 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const [mirrorCollapsed, setMirrorCollapsed] = useState(false);
   const [overlayMode, setOverlayMode] = useState(() => {
     const requestedSection = normalizeSectionId(initialSection);
+    if (requestedSection === "boxes" || requestedSection === "mirror") return "context";
     if (requestedSection) return requestedSection;
     const nextIntent = normalizeText(initialView?.overlayIntent).toLowerCase();
-    return nextIntent === "instrument" ? "boxes" : nextIntent;
+    return nextIntent === "instrument" ? "context" : nextIntent === "boxes" ? "context" : nextIntent;
   });
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
@@ -2101,6 +2205,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const [highlightedRegion, setHighlightedRegion] = useState("");
   const [workingEchoCollapsed, setWorkingEchoCollapsed] = useState(false);
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
+  const [dismissedCardIds, setDismissedCardIds] = useState([]);
+  const [dreamBridgePayload, setDreamBridgePayload] = useState(null);
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
   const overlayIntentKeyRef = useRef("");
@@ -2114,7 +2220,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   useEffect(() => {
     const requestedSection = normalizeSectionId(initialSection);
     if (!requestedSection) return;
-    setOverlayMode((current) => current || requestedSection);
+    const nextSection =
+      requestedSection === "boxes" || requestedSection === "mirror"
+        ? "context"
+        : requestedSection;
+    setOverlayMode((current) => current || nextSection);
   }, [initialSection]);
 
   useEffect(() => {
@@ -2130,6 +2240,17 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     };
   }, []);
 
+  useEffect(() => {
+    const incomingPayload = loadDreamBridgePayload();
+    if (!incomingPayload?.documentId) {
+      return;
+    }
+
+    setDreamBridgePayload(incomingPayload);
+    clearDreamBridgePayload();
+    setComposerText((current) => current || incomingPayload.excerpt || "");
+  }, []);
+
   const projectKey = view?.project?.projectKey || "";
   const activeSessionId = view?.session?.id || "";
   const currentFocusedDocumentKey = view?.focusedWitness?.documentKey || "";
@@ -2140,7 +2261,10 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
 
   useEffect(() => {
     const rawIntent = normalizeText(view?.overlayIntent).toLowerCase();
-    const nextIntent = rawIntent === "instrument" ? "boxes" : rawIntent;
+    const nextIntent =
+      rawIntent === "instrument" || rawIntent === "boxes"
+        ? "context"
+        : rawIntent;
     const intentKey = [nextIntent, projectKey, activeSessionId, currentFocusedDocumentKey].join(":");
     if (!nextIntent || overlayMode || overlayIntentKeyRef.current === intentKey) return;
     overlayIntentKeyRef.current = intentKey;
@@ -2252,7 +2376,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           { scroll: false },
         );
       });
-      setOverlayMode("boxes");
+      setOverlayMode("context");
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Could not start a new conversation.",
@@ -2290,7 +2414,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           { scroll: false },
         );
       });
-      setOverlayMode("boxes");
+      setOverlayMode("context");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that conversation.");
     }
@@ -2326,7 +2450,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           { scroll: false },
         );
       });
-      setOverlayMode("boxes");
+      setOverlayMode("context");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not archive that conversation.");
     }
@@ -2335,7 +2459,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   async function handleTurnSubmit(event) {
     event.preventDefault();
     if (!normalizeText(projectKey) || !normalizeText(activeSessionId)) {
-      setMessageError("Create a box to start talking.");
+      setMessageError("Open a room to start talking.");
       return;
     }
     const message = normalizeLongForm(composerText);
@@ -2609,11 +2733,34 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
 
   const activeSectionMode = normalizeText(overlayMode).toLowerCase();
   const echoPulse = useMemo(() => buildEchoPulseStateFromRoomView(view), [view]);
-  const canOpenWitness = Boolean(
-    normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader),
-  );
-  const canOpenOperate = Boolean(
-    normalizeText(view?.adjacent?.operate?.openHref) || view?.adjacent?.operate?.available,
+  const roomCards = buildRoomContextCards({
+    view,
+    dreamBridgePayload,
+    onOpenWitness: handleOpenWitness,
+    onOpenOperate: handleOpenOperate,
+    dismissedCardIds,
+  });
+  const contextSummary = normalizeText(view?.project?.title)
+    ? `${view?.project?.title || "Room"}`
+    : "Open a room";
+  const contextDetail = normalizeText(view?.session?.title)
+    ? view.session.title
+    : normalizeText(activeSessionId)
+      ? "Conversation"
+      : "No active conversation";
+  const contextControl = (
+    <div className={styles.contextControlCluster}>
+      {view?.hasStructure ? <StatusChip view={view} /> : null}
+      <button
+        type="button"
+        className={styles.contextButton}
+        onClick={() => setOverlayMode("context")}
+        data-testid="room-open-context"
+      >
+        <span>{contextSummary}</span>
+        <small>{contextDetail}</small>
+      </button>
+    </div>
   );
   const sectionMeta =
     activeSectionMode === "mirror"
@@ -2622,67 +2769,18 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
         ? { label: "Witness", title: view?.focusedWitness?.title || "Focused witness" }
         : activeSectionMode === "operate"
           ? { label: "Operate", title: view?.project?.title || "Box advisory" }
-          : activeSectionMode === "boxes"
-            ? { label: "Rooms", title: view?.project?.title || "Boxes & sessions" }
+          : activeSectionMode === "context" || activeSectionMode === "boxes"
+            ? { label: "Context", title: view?.project?.title || "Room context" }
             : activeSectionMode === "source"
               ? { label: "Source", title: "Bring witness in" }
               : activeSectionMode === "create"
                 ? { label: "Box", title: "Open a fresh room" }
                 : { label: "", title: "" };
-  const dockItems = [
-    {
-      id: "mirror",
-      icon: AimDockIcon,
-      label: "Open mirror",
-      onClick: () => setOverlayMode("mirror"),
-      active: activeSectionMode === "mirror",
-      testId: "room-open-mirror",
-    },
-    {
-      id: "witness",
-      icon: FileText,
-      label: "Open witness",
-      onClick: () => {
-        void handleOpenWitness();
-      },
-      active: activeSectionMode === "witness",
-      disabled: !canOpenWitness,
-      testId: "room-open-witness",
-    },
-    {
-      id: "operate",
-      icon: Play,
-      label: "Open operate",
-      onClick: () => {
-        void handleOpenOperate();
-      },
-      active: activeSectionMode === "operate",
-      disabled: !canOpenOperate,
-      testId: "room-open-operate",
-    },
-    {
-      id: "boxes",
-      icon: Boxes,
-      label: "Open boxes",
-      onClick: () => setOverlayMode("boxes"),
-      active: ["boxes", "source", "create"].includes(activeSectionMode),
-      testId: "room-open-boxes",
-    },
-    {
-      id: "dream",
-      icon: Headphones,
-      label: "Open Section Dream",
-      href: "/dream",
-      testId: "room-open-dream",
-    },
-    {
-      id: "account",
-      icon: Settings2,
-      label: "Open account",
-      href: "/account",
-      testId: "room-open-account",
-    },
-  ];
+
+  useEffect(() => {
+    const activeIds = new Set(roomCards.map((card) => card.id));
+    setDismissedCardIds((current) => current.filter((cardId) => activeIds.has(cardId)));
+  }, [roomCards]);
 
   const workspaceMain = (
     <div className={styles.workspaceMain} data-testid="room-workspace">
@@ -2703,8 +2801,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           {showStarter ? (
             <StarterView
               starter={view?.starter}
-              canCreateBox={!normalizeText(projectKey)}
-              onCreateBox={() => setOverlayMode("create")}
+              canCreateBox={false}
             />
           ) : null}
 
@@ -2752,9 +2849,15 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     <LoegosShell
       route="workspace"
       title={view?.project?.title || "Room"}
-      headerAccessory={view?.hasStructure ? <StatusChip view={view} /> : null}
+      contextControl={contextControl}
       main={workspaceMain}
-      echo={echoPulse}
+      cards={roomCards}
+      onDismissCard={(card) => {
+        setDismissedCardIds((current) =>
+          current.includes(card.id) ? current : [...current, card.id],
+        );
+      }}
+      pulse={echoPulse.pulse}
       composer={
         <Composer
           value={composerText}
@@ -2767,8 +2870,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           listenHref={view?.deepLinks?.reader || ""}
         />
       }
-      dockItems={dockItems}
-      sectionLayer={{
+      sheet={{
         open: Boolean(activeSectionMode),
         label: sectionMeta.label,
         title: sectionMeta.title,
@@ -2784,6 +2886,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
             onToggleMirror={() => setMirrorCollapsed((current) => !current)}
             onToggleWorkingEcho={() => setWorkingEchoCollapsed((current) => !current)}
             onOpenWitness={handleOpenWitness}
+            onOpenOperate={handleOpenOperate}
             onClose={handleCloseOverlay}
             onOpenMode={setOverlayMode}
             onProjectSelect={handleProjectSelect}

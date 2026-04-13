@@ -47,9 +47,9 @@ test("account shell exposes the shared signed-in shell", async () => {
   const shell = await read("src/components/shell/LoegosShell.jsx");
 
   assert.match(accountShell, /<LoegosShell/);
-  assert.match(accountShell, /href: "\/workspace"/);
-  assert.match(accountShell, /href: "\/dream"/);
-  assert.match(shell, /Section Dream/);
+  assert.match(accountShell, /href="\/workspace"/);
+  assert.match(accountShell, /href="\/dream"/);
+  assert.match(shell, /Dream Library/);
   assert.match(shell, /Account/);
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
 });

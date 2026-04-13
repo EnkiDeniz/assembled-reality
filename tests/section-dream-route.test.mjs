@@ -15,18 +15,20 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   const roomServer = await read("src/lib/room-server.js");
 
   assert.match(dreamPage, /SectionDreamScreen/);
+  assert.match(dreamPage, /Dream Library/);
   assert.match(dreamPage, /getRequiredSession/);
   assert.match(dreamPage, /redirect\("\/"\)/);
   assert.match(dreamPage, /includeDevice:\s*false/);
 
   assert.match(dreamScreen, /LoegosShell/);
-  assert.match(dreamScreen, /label:\s*"Section Dream"/);
-  assert.match(shell, /Workspace/);
-  assert.match(shell, /Section Dream/);
+  assert.match(dreamScreen, /Dream Library/);
+  assert.match(dreamScreen, /dream-library-toggle/);
+  assert.match(shell, /shell-mode-room/);
+  assert.match(shell, /shell-mode-dream/);
   assert.match(shell, /Account/);
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
-  assert.match(roomWorkspace, /href:\s*"\/dream"/);
-  assert.match(roomWorkspace, /label:\s*"Open Section Dream"/);
+  assert.match(roomWorkspace, /room-open-context/);
+  assert.match(roomWorkspace, /Dream Library passage/);
 
   assert.doesNotMatch(publicSite, /\/dream/);
   assert.doesNotMatch(roomServer, /\/dream/);

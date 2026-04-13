@@ -1,393 +1,6 @@
-.page {
-  --dream-ink: rgba(244, 241, 236, 0.96);
-  --dream-muted: rgba(244, 241, 236, 0.66);
-  --dream-line: rgba(255, 255, 255, 0.08);
-  --dream-accent: #f2a65a;
-  --dream-accent-strong: #ffbf7a;
-  --dream-panel: rgba(18, 18, 21, 0.84);
-  --dream-panel-alt: rgba(24, 23, 28, 0.92);
-  min-height: 100vh;
-  padding: 80px 20px 32px;
-  background:
-    radial-gradient(circle at top left, rgba(242, 166, 90, 0.17), transparent 28%),
-    radial-gradient(circle at top right, rgba(88, 133, 255, 0.14), transparent 24%),
-    linear-gradient(180deg, #090a0d 0%, #0f1117 52%, #10131a 100%);
-  color: var(--dream-ink);
-}
-
 .hiddenAudio,
 .hiddenInput {
   display: none;
-}
-
-.shell {
-  width: min(1180px, 100%);
-  margin: 0 auto;
-}
-
-.hero {
-  max-width: 720px;
-  margin-bottom: 24px;
-}
-
-.hero h1 {
-  margin: 10px 0 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
-  font-size: clamp(2.4rem, 4vw, 4rem);
-  font-weight: 600;
-  line-height: 0.94;
-  letter-spacing: -0.04em;
-}
-
-.hero p {
-  max-width: 58ch;
-  margin: 14px 0 0;
-  color: var(--dream-muted);
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-.kicker,
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.kicker {
-  color: rgba(255, 214, 172, 0.86);
-}
-
-.eyebrow {
-  color: rgba(255, 255, 255, 0.52);
-}
-
-.grid {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.2fr);
-}
-
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-height: 100%;
-  padding: 22px;
-  border: 1px solid var(--dream-line);
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 38%),
-    var(--dream-panel);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(12px);
-}
-
-.sectionHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.sectionHead h2 {
-  margin: 8px 0 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
-  font-size: 1.6rem;
-  font-weight: 600;
-  line-height: 1.05;
-}
-
-.copy,
-.footnote {
-  color: var(--dream-muted);
-  line-height: 1.65;
-}
-
-.actionRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.primaryButton,
-.secondaryButton,
-.transportButton,
-.playButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid var(--dream-line);
-  font: inherit;
-  cursor: pointer;
-  transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease,
-    color 180ms ease,
-    opacity 180ms ease;
-}
-
-.primaryButton,
-.playButton {
-  background: linear-gradient(135deg, rgba(242, 166, 90, 0.28), rgba(255, 191, 122, 0.18));
-  color: rgba(255, 246, 232, 0.98);
-}
-
-.secondaryButton,
-.transportButton {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(244, 241, 236, 0.9);
-}
-
-.primaryButton:hover,
-.primaryButton:focus-visible,
-.secondaryButton:hover,
-.secondaryButton:focus-visible,
-.transportButton:hover,
-.transportButton:focus-visible,
-.playButton:hover,
-.playButton:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(255, 191, 122, 0.34);
-}
-
-.primaryButton:disabled,
-.secondaryButton:disabled,
-.transportButton:disabled,
-.playButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-  transform: none;
-}
-
-.pastePanel {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 18px;
-  background: var(--dream-panel-alt);
-}
-
-.textareaLabel {
-  font-size: 0.88rem;
-  color: var(--dream-muted);
-}
-
-.textarea {
-  min-height: 220px;
-  resize: vertical;
-  padding: 14px 15px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  background: rgba(8, 10, 13, 0.65);
-  color: var(--dream-ink);
-  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
-.textarea:focus-visible,
-.scrubber:focus-visible,
-.speedControl select:focus-visible {
-  outline: 2px solid rgba(255, 191, 122, 0.72);
-  outline-offset: 2px;
-}
-
-.metaList {
-  display: grid;
-  gap: 14px;
-  margin-top: auto;
-}
-
-.metaList div,
-.summaryCard,
-.statusPill {
-  padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.metaList span,
-.summaryCard span,
-.statusPill span,
-.speedControl span {
-  display: block;
-  margin-bottom: 6px;
-  color: rgba(244, 241, 236, 0.56);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.metaList strong,
-.summaryCard strong,
-.statusPill strong {
-  font-size: 0.98rem;
-  font-weight: 560;
-  line-height: 1.4;
-}
-
-.voiceBadge {
-  align-self: flex-start;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 191, 122, 0.25);
-  background: rgba(242, 166, 90, 0.12);
-  color: rgba(255, 223, 194, 0.95);
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-
-.summaryRow {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.transport {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.playButton {
-  font-weight: 600;
-}
-
-.scrubberBlock {
-  display: grid;
-  gap: 10px;
-}
-
-.scrubberLabels {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: rgba(244, 241, 236, 0.84);
-  font-variant-numeric: tabular-nums;
-}
-
-.scrubber {
-  width: 100%;
-  accent-color: var(--dream-accent-strong);
-}
-
-.bottomRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 12px;
-}
-
-.speedControl {
-  min-width: 160px;
-}
-
-.speedControl select {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--dream-ink);
-  font: inherit;
-}
-
-.statusPill {
-  min-width: 180px;
-}
-
-.emptyState,
-.notice,
-.warning,
-.error {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 18px;
-}
-
-.emptyState {
-  min-height: 220px;
-  justify-content: center;
-  flex-direction: column;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
-  color: var(--dream-muted);
-  text-align: center;
-}
-
-.notice {
-  background: rgba(88, 133, 255, 0.12);
-  color: rgba(212, 223, 255, 0.94);
-}
-
-.warning {
-  background: rgba(242, 166, 90, 0.12);
-  color: rgba(255, 222, 192, 0.94);
-}
-
-.error {
-  background: rgba(255, 111, 111, 0.14);
-  color: rgba(255, 212, 212, 0.98);
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 940px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .page {
-    padding: 72px 14px 24px;
-  }
-
-  .panel {
-    padding: 18px;
-    border-radius: 20px;
-  }
-
-  .sectionHead {
-    flex-direction: column;
-  }
-
-  .summaryRow,
-  .transport {
-    grid-template-columns: 1fr;
-  }
-
-  .bottomRow {
-    flex-direction: column;
-  }
-
-  .speedControl,
-  .statusPill {
-    width: 100%;
-  }
 }
 
 .readerMain {
@@ -401,234 +14,482 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 127, 127, 0.18);
-  border-radius: 16px;
-  background: rgba(255, 127, 127, 0.08);
-  color: rgba(255, 224, 224, 0.96);
+  border: 1px solid rgba(255, 132, 132, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 132, 132, 0.08);
+  color: rgba(255, 222, 222, 0.96);
 }
 
-.readerSurface {
+.layout {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.libraryRail {
+  display: none;
+}
+
+.libraryPanel,
+.stage {
   min-height: 100%;
   display: grid;
   gap: 14px;
-  padding: 18px;
 }
 
-.readerToolbar {
+.libraryPanelHead,
+.stageHead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.readerIdentity {
+.libraryPanelIdentity,
+.stageIdentity {
   display: grid;
   gap: 6px;
   min-width: 0;
 }
 
-.readerIdentity strong {
-  color: var(--dream-ink);
+.libraryPanelIdentity strong,
+.stageIdentity strong {
+  color: rgba(244, 245, 247, 0.96);
   font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
-  font-size: clamp(1.4rem, 2vw, 2rem);
+  font-size: clamp(1.3rem, 2vw, 2rem);
   line-height: 0.98;
   letter-spacing: -0.03em;
 }
 
-.readerToolbarActions {
+.libraryPanelActions,
+.stageActions,
+.emptyStageActions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
-.readerIconButton,
-.readerPrimaryControl,
-.readerSecondaryControl,
-.readerPasteButton {
-  display: inline-flex;
+.libraryList {
+  display: grid;
+  gap: 8px;
+}
+
+.libraryItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-align: left;
   cursor: pointer;
   transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease,
-    color 180ms ease,
-    opacity 180ms ease;
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
 }
 
-.readerIconButton {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(244, 241, 236, 0.78);
-}
-
-.readerIconButtonActive,
-.readerIconButton:hover,
-.readerIconButton:focus-visible {
-  border-color: rgba(255, 191, 122, 0.26);
-  background: rgba(242, 166, 90, 0.12);
-  color: rgba(255, 238, 223, 0.96);
+.libraryItem:hover,
+.libraryItem:focus-visible,
+.libraryItemActive {
+  border-color: rgba(94, 167, 255, 0.26);
+  background: rgba(94, 167, 255, 0.08);
   transform: translateY(-1px);
 }
 
-.readerMeta {
+.libraryItemCopy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.libraryItemCopy strong {
+  font-size: 0.96rem;
+  font-weight: 560;
+  line-height: 1.3;
+}
+
+.libraryItemCopy span,
+.libraryItemMeta,
+.stageHint {
+  color: rgba(244, 245, 247, 0.58);
+  font-size: 0.82rem;
+}
+
+.libraryItemMeta {
+  font-variant-numeric: tabular-nums;
+}
+
+.libraryEmpty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: rgba(244, 245, 247, 0.54);
+  text-align: center;
+}
+
+.stageWrap {
+  min-height: 100%;
+}
+
+.stageMeta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
-.readerProgress {
+.scrubRow {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  color: rgba(244, 241, 236, 0.86);
+  color: rgba(244, 245, 247, 0.84);
   font-variant-numeric: tabular-nums;
 }
 
-.readerTransport {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+.scrubber {
+  width: 100%;
+  accent-color: #5ea7ff;
 }
 
-.readerPrimaryControl {
+.transportRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primaryControl,
+.secondaryControl,
+.iconAction,
+.pasteSubmit,
+.libraryToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(244, 245, 247, 0.84);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.primaryControl:hover,
+.primaryControl:focus-visible,
+.secondaryControl:hover,
+.secondaryControl:focus-visible,
+.iconAction:hover,
+.iconAction:focus-visible,
+.pasteSubmit:hover,
+.pasteSubmit:focus-visible,
+.libraryToggle:hover,
+.libraryToggle:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(94, 167, 255, 0.26);
+  color: rgba(244, 245, 247, 0.98);
+}
+
+.primaryControl {
   width: 72px;
   height: 72px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(242, 166, 90, 0.28), rgba(255, 191, 122, 0.2));
-  color: rgba(255, 247, 236, 0.98);
+  background: linear-gradient(135deg, rgba(94, 167, 255, 0.28), rgba(127, 217, 160, 0.16));
 }
 
-.readerSecondaryControl,
-.readerPasteButton {
+.secondaryControl,
+.iconAction,
+.pasteSubmit {
   width: 40px;
   height: 40px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(244, 241, 236, 0.8);
 }
 
-.readerPrimaryControl:hover,
-.readerPrimaryControl:focus-visible,
-.readerSecondaryControl:hover,
-.readerSecondaryControl:focus-visible,
-.readerPasteButton:hover,
-.readerPasteButton:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(255, 191, 122, 0.28);
+.primaryControl:disabled,
+.secondaryControl:disabled,
+.iconAction:disabled,
+.pasteSubmit:disabled {
+  opacity: 0.44;
+  cursor: not-allowed;
+  transform: none;
 }
 
-.readerDocument {
-  min-height: 0;
-  max-height: min(52vh, 640px);
-  overflow: auto;
-  display: grid;
-  gap: 14px;
-  padding: 10px 2px 2px;
-  content-visibility: auto;
-}
-
-.readerChunk {
-  margin: 0;
-  color: rgba(244, 241, 236, 0.58);
-  font-size: 1.05rem;
-  line-height: 1.72;
-  transition:
-    color 220ms ease,
-    opacity 220ms ease,
-    transform 220ms ease;
-}
-
-.readerChunkActive {
-  color: rgba(244, 241, 236, 0.96);
-  transform: translateX(2px);
-}
-
-.readerControls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.readerHint {
-  color: var(--dream-muted);
+.libraryToggle {
+  min-width: 42px;
+  min-height: 42px;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 999px;
   font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
-  font-size: 0.72rem;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.08em;
+}
+
+.iconActionActive {
+  border-color: rgba(94, 167, 255, 0.24);
+  background: rgba(94, 167, 255, 0.1);
+}
+
+.speedControl {
+  display: grid;
+  gap: 6px;
+  min-width: 104px;
+  margin-left: auto;
+}
+
+.speedControl span {
+  color: rgba(244, 245, 247, 0.54);
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.readerEmpty {
-  min-height: min(52vh, 520px);
+.speedControl select,
+.textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(7, 8, 11, 0.54);
+  color: rgba(244, 245, 247, 0.96);
+  font: inherit;
+}
+
+.speedControl select {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.pastePanel {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.textarea {
+  min-height: 160px;
+  resize: vertical;
+  padding: 14px;
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.documentStage {
+  min-height: 0;
+  max-height: min(58vh, 760px);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 10px 2px 4px;
+  content-visibility: auto;
+}
+
+.chunk {
+  margin: 0;
+  color: rgba(244, 245, 247, 0.54);
+  font-size: clamp(1rem, 1.4vw, 1.12rem);
+  line-height: 1.78;
+  transition:
+    color 220ms ease,
+    transform 220ms ease;
+}
+
+.chunkActive {
+  color: rgba(244, 245, 247, 0.98);
+  transform: translateX(2px);
+}
+
+.emptyStage {
+  min-height: min(54vh, 560px);
   display: grid;
   place-items: center;
   gap: 18px;
-  color: rgba(244, 241, 236, 0.42);
 }
 
-.readerEmptyActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+.spin {
+  animation: spin 1s linear infinite;
 }
 
-.readerMain .pastePanel {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
-  padding: 12px;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.readerMain .textarea {
-  min-height: 150px;
-}
-
-.readerMain .speedControl {
-  min-width: 116px;
-}
-
-.readerMain .speedControl span {
-  margin-bottom: 4px;
-  font-size: 0.68rem;
-}
-
-.readerMain .speedControl select {
-  min-height: 40px;
-}
-
-@media (max-width: 640px) {
-  .readerSurface {
-    padding: 16px;
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
   }
 
-  .readerToolbar {
-    align-items: center;
+  .libraryRail {
+    display: block;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 2px;
   }
 
-  .readerIdentity strong {
-    font-size: 1.35rem;
+  .stageActions > .iconAction:first-child {
+    display: none;
+  }
+}
+
+@media (max-width: 959px) {
+  .libraryToggle {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
+  .layout {
+    gap: 12px;
   }
 
-  .readerProgress {
+  .stageHead,
+  .libraryPanelHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stageActions,
+  .libraryPanelActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .scrubRow {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  .readerChunk {
-    font-size: 1rem;
+  .transportRow {
+    justify-content: space-between;
   }
 
-  .readerControls {
-    align-items: flex-start;
-    flex-direction: column;
+  .speedControl {
+    width: 100%;
+    margin-left: 0;
   }
 
-  .readerMain .pastePanel {
+  .pastePanel {
     grid-template-columns: 1fr;
+  }
+
+  .primaryControl {
+    width: 64px;
+    height: 64px;
+  }
+
+  .secondaryControl,
+  .iconAction,
+  .pasteSubmit {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .documentStage {
+    max-height: min(50vh, 620px);
+    gap: 14px;
+    padding-top: 6px;
+  }
+
+  .chunk {
+    font-size: 0.98rem;
+    line-height: 1.72;
+  }
+
+  .emptyStage {
+    min-height: min(46vh, 460px);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .readerMain {
+    gap: 10px;
+  }
+
+  .libraryPanel,
+  .stage {
+    gap: 12px;
+  }
+
+  .libraryPanelIdentity strong,
+  .stageIdentity strong {
+    font-size: clamp(1.1rem, 8vw, 1.45rem);
+  }
+
+  .libraryPanelActions,
+  .stageActions,
+  .emptyStageActions {
+    gap: 6px;
+  }
+
+  .libraryToggle {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0 10px;
+  }
+
+  .libraryToggle span {
+    display: none;
+  }
+
+  .scrubRow {
+    gap: 6px;
+  }
+
+  .scrubRow span {
+    font-size: 0.78rem;
+  }
+
+  .transportRow {
+    gap: 8px;
+  }
+
+  .primaryControl {
+    width: 60px;
+    height: 60px;
+  }
+
+  .speedControl {
+    min-width: 0;
+  }
+
+  .speedControl span {
+    font-size: 9px;
+  }
+
+  .pastePanel {
+    padding: 12px;
+  }
+
+  .textarea {
+    min-height: 140px;
+    font-size: 0.85rem;
+  }
+
+  .documentStage {
+    max-height: min(48vh, 560px);
   }
 }

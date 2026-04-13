@@ -4,6 +4,24 @@
   gap: 12px;
 }
 
+.headerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--shell-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--shell-soft);
+  font-family: var(--shell-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
 .notice {
   display: inline-flex;
   align-items: center;

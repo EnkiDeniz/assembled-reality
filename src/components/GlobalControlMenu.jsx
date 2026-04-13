@@ -15,7 +15,7 @@ const DEFAULT_ITEMS = [
   },
   {
     href: "/dream",
-    label: "Section Dream",
+    label: "Dream Library",
     icon: Headphones,
   },
   {
@@ -32,7 +32,7 @@ const DEFAULT_ITEMS = [
 
 export default function GlobalControlMenu({
   title = "Menu",
-  subtitle = "Move between the Room, Section Dream, and account controls.",
+  subtitle = "Move between the Room, Dream Library, and account controls.",
   items = DEFAULT_ITEMS,
 }) {
   const pathname = usePathname();

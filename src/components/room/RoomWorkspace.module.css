@@ -1581,6 +1581,9 @@
 
 .fieldChipLabel {
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fieldChipFloating {
@@ -1590,6 +1593,53 @@
   z-index: 24;
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
   animation: chipBirthIn 0.8s var(--room-ease) both;
+}
+
+.contextControlCluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.contextButton {
+  min-width: 148px;
+  min-height: 42px;
+  display: inline-grid;
+  gap: 2px;
+  padding: 0 14px;
+  border: 1px solid var(--room-line);
+  border-radius: 999px;
+  background: var(--room-surface-strong);
+  color: var(--room-white);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.contextButton span,
+.contextButton small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextButton span {
+  font-family: var(--room-font-sans);
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.15;
+}
+
+.contextButton small {
+  color: var(--room-soft);
+  font-family: var(--room-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .terrainFog {
@@ -2714,5 +2764,51 @@
 
   .overlayBackdrop {
     padding: 58px 10px 10px;
+  }
+
+  .contextControlCluster {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    width: 100%;
+    gap: 6px;
+  }
+
+  .contextButton {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  .contextButton span {
+    font-size: 11px;
+  }
+
+  .contextButton small {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .contextControlCluster {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contextControlCluster .fieldChip {
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .contextButton {
+    min-height: 38px;
+    border-radius: 18px;
+  }
+
+  .contextButton small {
+    display: none;
+  }
+
+  .fieldChip {
+    min-height: 28px;
+    padding: 0 10px;
   }
 }

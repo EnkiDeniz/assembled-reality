@@ -1,61 +1,80 @@
 .root {
-  --shell-canvas: #0c0d10;
-  --shell-shell: #121315;
-  --shell-raised: #1a1d22;
-  --shell-s3: #1f2228;
-  --shell-s4: #262a30;
-  --shell-white: #f0f2f4;
-  --shell-soft: rgba(255, 255, 255, 0.7);
-  --shell-meta: rgba(255, 255, 255, 0.42);
-  --shell-ghost: rgba(255, 255, 255, 0.18);
-  --shell-void: rgba(255, 255, 255, 0.06);
-  --shell-blue: #5ea7ff;
-  --shell-blue-dim: rgba(94, 167, 255, 0.08);
-  --shell-blue-soft: rgba(94, 167, 255, 0.22);
+  --shell-canvas: #090a0d;
+  --shell-shell: rgba(22, 24, 28, 0.74);
+  --shell-shell-strong: rgba(28, 31, 37, 0.86);
+  --shell-raised: rgba(36, 40, 47, 0.6);
+  --shell-ink: rgba(244, 245, 247, 0.96);
+  --shell-soft: rgba(244, 245, 247, 0.68);
+  --shell-meta: rgba(244, 245, 247, 0.42);
+  --shell-line: rgba(255, 255, 255, 0.08);
+  --shell-line-lit: rgba(255, 255, 255, 0.14);
+  --shell-brand: #5ea7ff;
+  --shell-brand-dim: rgba(94, 167, 255, 0.1);
   --shell-green: #7fd9a0;
   --shell-green-dim: rgba(127, 217, 160, 0.1);
   --shell-amber: #f0bf69;
-  --shell-amber-dim: rgba(240, 191, 105, 0.1);
-  --shell-red: #ff7f7f;
-  --shell-red-dim: rgba(255, 127, 127, 0.1);
-  --shell-line: rgba(255, 255, 255, 0.07);
-  --shell-line-lit: rgba(255, 255, 255, 0.12);
+  --shell-amber-dim: rgba(240, 191, 105, 0.12);
+  --shell-red: #ff8484;
+  --shell-red-dim: rgba(255, 132, 132, 0.12);
   --shell-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
   --shell-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   min-height: 100dvh;
   background:
-    radial-gradient(ellipse at 20% 0%, rgba(94, 167, 255, 0.06), transparent 50%),
-    radial-gradient(ellipse at 80% 100%, rgba(127, 217, 160, 0.03), transparent 50%),
-    var(--shell-canvas);
-  color: var(--shell-white);
+    radial-gradient(circle at 0% 0%, rgba(94, 167, 255, 0.08), transparent 32%),
+    radial-gradient(circle at 100% 100%, rgba(127, 217, 160, 0.05), transparent 30%),
+    linear-gradient(180deg, #090a0d 0%, #0d1014 100%);
+  color: var(--shell-ink);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
   padding:
     calc(14px + env(safe-area-inset-top, 0px))
     14px
     calc(14px + env(safe-area-inset-bottom, 0px));
-  gap: 12px;
   overflow: hidden;
 }
 
 .header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.headerCopy,
-.headerActions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
 }
 
-.wordmark {
-  color: var(--shell-white);
+.headerCopy,
+.headerActions,
+.headerMiddle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.headerMiddle {
+  justify-content: center;
+  grid-area: middle;
+}
+
+.headerActions {
+  justify-content: flex-end;
+  grid-area: actions;
+}
+
+.headerCopy {
+  grid-area: copy;
+}
+
+.wordmark,
+.headerTitle,
+.kicker,
+.signalChip,
+.modeTab {
   font-family: var(--shell-mono);
+}
+
+.wordmark {
+  color: var(--shell-ink);
   font-size: 13px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -63,16 +82,75 @@
 
 .headerTitle {
   color: var(--shell-meta);
-  font-family: var(--shell-mono);
   font-size: 10px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.mainFrame {
+.modeSwitch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--shell-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.modeTab {
+  min-width: 76px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--shell-meta);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.modeTab:hover,
+.modeTab:focus-visible {
+  color: var(--shell-ink);
+  transform: translateY(-1px);
+}
+
+.modeTabActive {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--shell-ink);
+}
+
+.body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  overflow: hidden;
+}
+
+.bodyWithCards {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stageFrame {
   min-height: 0;
   overflow: hidden;
-  position: relative;
+}
+
+.cardRail {
+  display: none;
 }
 
 .bottomRail {
@@ -86,11 +164,12 @@
 
 .surface {
   border: 1px solid var(--shell-line);
-  border-radius: 18px;
+  border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 28%),
-    rgba(255, 255, 255, 0.018);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%),
+    var(--shell-shell);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(18px) saturate(1.2);
   overflow: hidden;
 }
 
@@ -100,45 +179,53 @@
 
 .surfaceRaised {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%),
-    rgba(255, 255, 255, 0.03);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 26%),
+    var(--shell-raised);
 }
 
 .surfaceBrand {
-  border-color: var(--shell-blue-soft);
+  border-color: rgba(94, 167, 255, 0.28);
   background:
-    linear-gradient(180deg, rgba(94, 167, 255, 0.08), transparent 40%),
-    rgba(255, 255, 255, 0.018);
+    linear-gradient(180deg, rgba(94, 167, 255, 0.1), transparent 28%),
+    var(--shell-shell);
 }
 
 .surfaceGrounded {
-  border-color: rgba(127, 217, 160, 0.18);
+  border-color: rgba(127, 217, 160, 0.24);
   background:
-    linear-gradient(180deg, rgba(127, 217, 160, 0.08), transparent 40%),
-    rgba(255, 255, 255, 0.018);
+    linear-gradient(180deg, rgba(127, 217, 160, 0.08), transparent 28%),
+    var(--shell-shell);
+}
+
+.surfaceFlagged {
+  border-color: rgba(240, 191, 105, 0.24);
+  background:
+    linear-gradient(180deg, rgba(240, 191, 105, 0.1), transparent 28%),
+    var(--shell-shell);
+}
+
+.surfaceDanger {
+  border-color: rgba(255, 132, 132, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 132, 132, 0.1), transparent 28%),
+    var(--shell-shell);
 }
 
 .emptyPlane {
   min-height: 100%;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 25%),
-    rgba(255, 255, 255, 0.01);
-}
-
-.kicker,
-.signalChip,
-.headerTitle {
-  font-family: var(--shell-mono);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%),
+    rgba(255, 255, 255, 0.015);
 }
 
 .kicker {
   display: inline-flex;
   align-items: center;
-  min-height: 20px;
+  min-height: 18px;
   color: var(--shell-meta);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -147,7 +234,7 @@
 }
 
 .toneBrand {
-  color: var(--shell-blue);
+  color: var(--shell-brand);
 }
 
 .toneGrounded {
@@ -158,12 +245,16 @@
   color: var(--shell-amber);
 }
 
+.toneDanger {
+  color: var(--shell-red);
+}
+
 .signalChip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 22px;
-  padding: 0 8px;
+  padding: 0 9px;
   border: 1px solid var(--shell-line);
   border-radius: 999px;
   font-size: 9px;
@@ -178,32 +269,38 @@
 }
 
 .chipBrand {
-  color: var(--shell-blue);
-  border-color: var(--shell-blue-soft);
-  background: var(--shell-blue-dim);
+  color: var(--shell-brand);
+  border-color: rgba(94, 167, 255, 0.26);
+  background: var(--shell-brand-dim);
 }
 
 .chipGrounded {
   color: var(--shell-green);
-  border-color: rgba(127, 217, 160, 0.16);
+  border-color: rgba(127, 217, 160, 0.22);
   background: var(--shell-green-dim);
 }
 
 .chipFlagged {
   color: var(--shell-amber);
-  border-color: rgba(240, 191, 105, 0.16);
+  border-color: rgba(240, 191, 105, 0.22);
   background: var(--shell-amber-dim);
+}
+
+.chipDanger {
+  color: var(--shell-red);
+  border-color: rgba(255, 132, 132, 0.22);
+  background: var(--shell-red-dim);
 }
 
 .iconButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--shell-line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--shell-soft);
   text-decoration: none;
   cursor: pointer;
@@ -219,91 +316,204 @@
 .iconButton:hover,
 .iconButton:focus-visible {
   transform: translateY(-1px);
-  border-color: var(--shell-blue-soft);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--shell-white);
+  border-color: var(--shell-line-lit);
+  color: var(--shell-ink);
 }
 
 .iconButtonActive {
-  border-color: var(--shell-blue-soft);
-  background: var(--shell-blue-dim);
-  color: var(--shell-blue);
+  border-color: rgba(94, 167, 255, 0.3);
+  background: var(--shell-brand-dim);
+  color: var(--shell-brand);
 }
 
 .iconButtonDisabled,
 .iconButton:disabled {
-  opacity: 0.4;
+  opacity: 0.44;
   cursor: not-allowed;
   transform: none;
 }
 
-.iconButton:focus-visible {
-  outline: 2px solid rgba(94, 167, 255, 0.72);
-  outline-offset: 2px;
-}
-
-.dock {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px;
-  margin: 0 auto;
+.pulseStrip {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
   border: 1px solid var(--shell-line);
-  border-radius: 18px;
-  background: rgba(18, 19, 21, 0.88);
-  backdrop-filter: blur(18px);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 30%),
+    rgba(20, 22, 27, 0.84);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(18px) saturate(1.2);
 }
 
-.echoPulse {
+.pulseStripDormant {
+  opacity: 0.76;
+}
+
+.pulsePrimary {
   display: grid;
   gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--shell-line);
-  border-radius: 16px;
-  background: rgba(18, 19, 21, 0.9);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
 }
 
-.echoPulseDormant {
-  opacity: 0.72;
+.pulsePrimary p {
+  margin: 0;
+  font-family: var(--shell-sans);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-.echoPulseMeta {
+.pulseSecondary {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.echoPulseChip {
-  padding-left: 7px;
-  padding-right: 7px;
+.contextCard {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
 }
 
-.echoPulseCopy {
-  min-width: 0;
+.contextCardCompact {
+  border-radius: 24px;
 }
 
-.echoPulseCopy p,
-.echoPulseCopy small {
-  margin: 0;
-  display: block;
+.contextCardFront,
+.contextCardBack,
+.contextCardBackStatic {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
 }
 
-.echoPulseCopy p {
-  color: var(--shell-white);
+.contextCardFront {
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.contextCardFrontInteractive {
+  cursor: pointer;
+}
+
+.contextCardTintBrand {
+  background: linear-gradient(180deg, rgba(94, 167, 255, 0.1), transparent 72%);
+}
+
+.contextCardTintGrounded {
+  background: linear-gradient(180deg, rgba(127, 217, 160, 0.1), transparent 72%);
+}
+
+.contextCardTintFlagged {
+  background: linear-gradient(180deg, rgba(240, 191, 105, 0.1), transparent 72%);
+}
+
+.contextCardTintDanger {
+  background: linear-gradient(180deg, rgba(255, 132, 132, 0.1), transparent 72%);
+}
+
+.contextCardTintNeutral {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 72%);
+}
+
+.contextCardHead,
+.contextCardMeta,
+.contextCardFoot,
+.contextCardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contextCardHead {
+  justify-content: space-between;
+}
+
+.contextCardMeta,
+.contextCardFoot,
+.contextCardActions {
+  flex-wrap: wrap;
+}
+
+.contextCardBody {
+  display: grid;
+  gap: 6px;
+}
+
+.contextCardBody strong {
+  color: var(--shell-ink);
   font-family: var(--shell-sans);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 17px;
+  font-weight: 620;
+  line-height: 1.16;
 }
 
-.echoPulseCopy small {
-  color: var(--shell-meta);
-  font-size: 11px;
-  line-height: 1.45;
+.contextCardBody p,
+.contextCardBack small,
+.contextCardBackStatic small {
+  margin: 0;
 }
 
-.sectionBackdrop {
+.contextCardBody p {
+  color: var(--shell-ink);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.contextCardBack,
+.contextCardBackStatic {
+  border-top: 1px solid var(--shell-line);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.contextCardBack small,
+.contextCardBackStatic small {
+  color: var(--shell-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.contextCardEvidence {
+  display: grid;
+  gap: 8px;
+}
+
+.cardAction,
+.cardDismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--shell-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--shell-soft);
+  font-family: var(--shell-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cardDismiss {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+}
+
+.contextCardDismissRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px 16px;
+}
+
+.sheetBackdrop {
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -311,28 +521,28 @@
   align-items: flex-end;
   justify-content: center;
   padding:
-    calc(70px + env(safe-area-inset-top, 0px))
+    calc(66px + env(safe-area-inset-top, 0px))
     14px
-    calc(112px + env(safe-area-inset-bottom, 0px));
-  background: rgba(7, 8, 10, 0.54);
+    calc(96px + env(safe-area-inset-bottom, 0px));
+  background: rgba(6, 7, 9, 0.54);
   backdrop-filter: blur(10px);
 }
 
-.sectionLayer {
-  width: min(880px, 100%);
+.sheetLayer {
+  width: min(900px, 100%);
   max-height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--shell-line-lit);
-  border-radius: 24px;
+  border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%),
-    rgba(18, 19, 21, 0.98);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 24%),
+    rgba(18, 19, 22, 0.98);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.34);
   overflow: hidden;
 }
 
-.sectionHeader {
+.sheetHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -341,24 +551,34 @@
   border-bottom: 1px solid var(--shell-line);
 }
 
-.sectionHeaderCopy {
+.sheetHeaderCopy {
   display: grid;
   gap: 4px;
 }
 
-.sectionHeaderCopy strong {
-  color: var(--shell-white);
+.sheetHeaderCopy strong {
+  color: var(--shell-ink);
   font-family: var(--shell-sans);
   font-size: 16px;
   font-weight: 560;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
-.sectionBody {
+.sheetBody {
   min-height: 0;
   overflow: auto;
   padding: 14px;
   overscroll-behavior: contain;
+}
+
+.sheetCardStack {
+  display: grid;
+  gap: 12px;
+}
+
+.emptyContext p {
+  margin: 0;
+  color: var(--shell-soft);
 }
 
 .overflow {
@@ -369,13 +589,14 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 180px;
+  min-width: min(180px, calc(100vw - 28px));
+  width: min(220px, calc(100vw - 28px));
   display: grid;
   gap: 6px;
   padding: 8px;
   border: 1px solid var(--shell-line-lit);
-  border-radius: 16px;
-  background: rgba(18, 19, 21, 0.98);
+  border-radius: 18px;
+  background: rgba(18, 19, 22, 0.98);
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.28);
 }
 
@@ -383,7 +604,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 10px;
   border: 1px solid transparent;
   border-radius: 12px;
@@ -399,31 +620,159 @@
 .overflowItem:focus-visible {
   border-color: var(--shell-line);
   background: rgba(255, 255, 255, 0.03);
-  color: var(--shell-white);
+  color: var(--shell-ink);
 }
 
-@media (min-width: 900px) {
+@media (max-width: 720px) {
+  .root {
+    gap: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy actions"
+      "middle middle";
+    align-items: start;
+    row-gap: 12px;
+  }
+
+  .headerMiddle {
+    justify-content: stretch;
+  }
+
+  .modeSwitch {
+    width: 100%;
+  }
+
+  .modeTab {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .headerActions {
+    gap: 8px;
+  }
+
+  .headerCopy {
+    gap: 8px;
+  }
+
+  .bottomRail {
+    gap: 8px;
+  }
+
+  .pulseStrip {
+    padding: 10px 12px;
+    border-radius: 20px;
+  }
+
+  .sheetBackdrop {
+    padding-top: calc(58px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sheetLayer {
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 420px) {
+  .root {
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .header {
+    row-gap: 10px;
+  }
+
+  .wordmark {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+  }
+
+  .headerTitle {
+    display: none;
+  }
+
+  .iconButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .modeSwitch {
+    padding: 3px;
+  }
+
+  .modeTab {
+    min-height: 32px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .pulseStrip {
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 18px;
+  }
+
+  .pulsePrimary p {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .pulseSecondary {
+    gap: 4px;
+  }
+
+  .sheetBackdrop {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .sheetLayer {
+    border-radius: 20px;
+  }
+}
+
+@media (min-width: 960px) {
   .root {
     padding-left: 20px;
     padding-right: 20px;
   }
 
-  .bottomRail {
+  .header {
+    grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  }
+
+  .bodyWithCards {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  }
+
+  .cardRail {
+    min-height: 0;
+    display: grid;
+    align-content: start;
     gap: 12px;
+    overflow: auto;
+    padding-right: 2px;
   }
 
-  .echoPulse {
-    max-width: 720px;
-    margin: 0 auto;
+  .pulseStrip {
+    display: none;
   }
 
-  .sectionBackdrop {
+  .sheetBackdrop {
     align-items: center;
-    padding-top: 90px;
-    padding-bottom: 110px;
+    padding-top: 86px;
+    padding-bottom: 100px;
   }
 
-  .sectionLayer {
-    max-height: calc(100dvh - 180px);
+  .sheetLayer {
+    max-height: calc(100dvh - 172px);
   }
 }
