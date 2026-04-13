@@ -3,7 +3,10 @@ import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { extractRoomPayloadFromCitations } from "../../src/lib/room.js";
+import {
+  extractBridgePayloadFromCitations,
+  extractRoomPayloadFromCitations,
+} from "../../src/lib/room.js";
 import { handleRoomApplyPost } from "../../src/lib/room-apply-route-handler.js";
 import { handleRoomTurnPost } from "../../src/lib/room-turn-route-handler.js";
 import { buildJourneyView } from "./run-room-journey.mjs";
@@ -309,24 +312,30 @@ export function createRoomRouteHarness(fixture, options = {}) {
           json: async () => clone(rawModelPayload),
         };
       },
-      appendConversationExchangeForUser: async (_userId, { documentKey, userLine, answer, citations }) => {
+      appendConversationExchangeForUser: async (
+        _userId,
+        { documentKey, userLine, answer, citations, userCitations, assistantCitations },
+      ) => {
         const targetSessionId =
           sessionIdByThreadDocumentKey.get(normalizeText(documentKey)) || state.session?.id || "";
         const currentMessages = clone(sessionMessagesById.get(targetSessionId) || []);
         const nextIndex = currentMessages.length + 1;
-        const assistantPayload = extractRoomPayloadFromCitations(citations);
+        const resolvedAssistantCitations = Array.isArray(assistantCitations) ? assistantCitations : citations;
+        const assistantPayload = extractRoomPayloadFromCitations(resolvedAssistantCitations);
+        const bridgePayload = extractBridgePayloadFromCitations(userCitations);
         const userMessage = {
           id: `${fixture.id}-route-user-${nextIndex}`,
           role: "user",
           content: userLine,
-          citations: [],
+          citations: clone(Array.isArray(userCitations) ? userCitations : []),
+          bridgePayload,
           roomPayload: null,
         };
         const assistantMessage = {
           id: `${fixture.id}-route-assistant-${nextIndex}`,
           role: "assistant",
           content: answer,
-          citations: clone(citations),
+          citations: clone(Array.isArray(resolvedAssistantCitations) ? resolvedAssistantCitations : []),
           roomPayload: assistantPayload,
         };
         const nextMessages = [...currentMessages, userMessage, assistantMessage];

@@ -11,7 +11,11 @@ import { listReaderProjectsForUser } from "@/lib/reader-projects";
 import { buildSourceSummaryViewModel } from "@/lib/box-view-models";
 import { loadConversationThreadForUser } from "@/lib/reader-workspace";
 import { getLatestReaderOperateRunForUser } from "@/lib/reader-operate";
-import { extractRoomPayloadFromCitations, isRoomAssemblyDocument } from "@/lib/room";
+import {
+  extractBridgePayloadFromCitations,
+  extractRoomPayloadFromCitations,
+  isRoomAssemblyDocument,
+} from "@/lib/room";
 import {
   buildRoomCanonicalViewModel,
   compileRoomSource,
@@ -298,6 +302,7 @@ function buildEmptyRoomView({ readerData: _readerData = null, projects = [], res
     session: null,
     sessions: [],
     messages: [],
+    bridgeContext: null,
     focusedWitness: null,
     adjacent: {
       operate: {
@@ -385,6 +390,7 @@ function buildEmptyRoomView({ readerData: _readerData = null, projects = [], res
 function mapThreadMessageToRoomMessage(message = null) {
   if (!message) return null;
   const roomPayload = extractRoomPayloadFromCitations(message.citations);
+  const bridgePayload = extractBridgePayloadFromCitations(message.citations);
 
   return {
     id: message.id,
@@ -392,6 +398,7 @@ function mapThreadMessageToRoomMessage(message = null) {
     content: message.content || "",
     createdAt: message.createdAt,
     roomPayload,
+    bridgePayload,
   };
 }
 
@@ -536,6 +543,13 @@ export async function buildRoomWorkspaceViewForUser(
     ? await loadConversationThreadForUser(userId, activeSession.threadDocumentKey)
     : { messages: [] };
   const messages = (thread?.messages || []).map(mapThreadMessageToRoomMessage).filter(Boolean);
+  const bridgeContext =
+    [...messages]
+      .reverse()
+      .find(
+        (message) =>
+          normalizeText(message?.role).toLowerCase() === "user" && message?.bridgePayload?.documentId,
+      )?.bridgePayload || null;
   const latestReceiptKit =
     [...messages].reverse().find((message) => message?.roomPayload?.receiptKit)?.roomPayload?.receiptKit ||
     null;
@@ -637,6 +651,7 @@ export async function buildRoomWorkspaceViewForUser(
     focusedWitness,
     adjacent: adjacentState,
     overlayIntent,
+    bridgeContext,
     authorityContext,
     resetAt: resetState.resetAt,
     workingEcho,

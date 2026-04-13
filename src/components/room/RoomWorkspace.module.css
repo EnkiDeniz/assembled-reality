@@ -94,6 +94,102 @@
   gap: 14px;
 }
 
+.threadIdentityBar {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.threadIdentityCopy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.threadIdentityCopy strong {
+  color: rgba(242, 244, 247, 0.96);
+  font-size: 1rem;
+  line-height: 1.25;
+  font-weight: 560;
+}
+
+.threadIdentityCopy span {
+  color: rgba(198, 204, 212, 0.68);
+  font-family: var(--room-font-mono);
+  font-size: 0.73rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.threadIdentityActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.dreamBridgeNotice {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(94, 167, 255, 0.16);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(94, 167, 255, 0.08), transparent 70%),
+    rgba(19, 21, 25, 0.92);
+}
+
+.dreamBridgeCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.dreamBridgeCopy strong {
+  color: rgba(242, 244, 247, 0.96);
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-weight: 560;
+}
+
+.dreamBridgeCopy p {
+  margin: 0;
+  color: rgba(242, 244, 247, 0.84);
+  line-height: 1.55;
+}
+
+.dreamBridgeMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: rgba(198, 204, 212, 0.64);
+  font-family: var(--room-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dreamBridgeActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.roomEchoStripWrap {
+  width: min(100%, 960px);
+  margin: 0 auto;
+}
+
+.roomEchoStrip {
+  width: 100%;
+}
+
 .sectionStack {
   display: grid;
   gap: 14px;
@@ -2714,7 +2810,9 @@
   .mirrorStrip,
   .thread,
   .bannerStack,
-  .composerCapsule {
+  .composerCapsule,
+  .threadIdentityBar,
+  .dreamBridgeNotice {
     width: 100%;
   }
 
@@ -2773,6 +2871,17 @@
     gap: 6px;
   }
 
+  .threadIdentityBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .threadIdentityActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
   .contextButton {
     width: 100%;
     min-height: 40px;
@@ -2789,6 +2898,15 @@
 }
 
 @media (max-width: 420px) {
+  .threadIdentityActions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .threadIdentityActions .fieldChip {
+    justify-self: start;
+    max-width: 100%;
+  }
+
   .contextControlCluster {
     grid-template-columns: minmax(0, 1fr);
   }

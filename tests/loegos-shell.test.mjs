@@ -9,6 +9,7 @@ import {
   buildDormantEchoPulseState,
   buildEchoPulseState,
   buildEchoPulseStateFromRoomView,
+  buildWorkingEchoStripStateFromRoomView,
   buildPulseStripState,
   normalizeAppMode,
   normalizeSectionId,
@@ -67,6 +68,37 @@ test("room views produce a minimal live echo pulse", () => {
   assert.equal(pulse.primary?.key, "decide");
   assert.match(pulse.primary?.text || "", /verified receipt/);
   assert.equal(pulse.entries.length >= 3, true);
+});
+
+test("room working echo strip keeps field state and steering objects visible", () => {
+  const strip = buildWorkingEchoStripStateFromRoomView({
+    fieldState: {
+      key: "awaiting_return",
+      label: "Awaiting return",
+    },
+    session: {
+      updatedAt: "2026-04-13T12:00:00.000Z",
+    },
+    workingEcho: {
+      whatSeemsReal: {
+        text: "The source points to one live protocol worth keeping.",
+      },
+      openTension: [
+        {
+          text: "The story still outruns the witness.",
+        },
+      ],
+      whatWouldDecideIt: {
+        text: "Check one external witness before moving.",
+      },
+    },
+  });
+
+  assert.equal(strip.field.label, "Awaiting return");
+  assert.equal(strip.field.tone, "grounded");
+  assert.equal(strip.primary?.label, "Would Decide");
+  assert.match(strip.primary?.verdict || "", /external witness/);
+  assert.equal(strip.secondaryCards.length >= 2, true);
 });
 
 test("room context cards and pulse strip stay priority-ordered and compressed", () => {

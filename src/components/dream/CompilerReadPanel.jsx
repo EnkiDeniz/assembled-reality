@@ -42,7 +42,7 @@ export default function CompilerReadPanel({
   const diagnostics = Array.isArray(compilerRead?.compileResult?.diagnostics)
     ? compilerRead.compileResult.diagnostics
     : [];
-  const compilerWasRun = Boolean(normalizeText(compilerRead?.loeCandidate?.source));
+  const compilerExecuted = Boolean(compilerRead?.compileResult?.executed);
 
   return (
     <section
@@ -100,17 +100,21 @@ export default function CompilerReadPanel({
             <div className={styles.compilerReadCard}>
               <Kicker tone="neutral">What the language can hold right now</Kicker>
               <p>{compilerRead?.loeCandidate?.translationStrategy || "No lawful subset was translated."}</p>
-              <div className={styles.compilerReadChips}>
-                <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.compileResult?.compileState || "unknown")}
-                </SignalChip>
-                <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.compileResult?.runtimeState || "open")}
-                </SignalChip>
-                <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.compileResult?.mergedWindowState || "open")}
-                </SignalChip>
-              </div>
+              {compilerExecuted ? (
+                <div className={styles.compilerReadChips}>
+                  <SignalChip tone="neutral">
+                    {sentenceCase(compilerRead?.compileResult?.compileState || "unknown")}
+                  </SignalChip>
+                  <SignalChip tone="neutral">
+                    {sentenceCase(compilerRead?.compileResult?.runtimeState || "open")}
+                  </SignalChip>
+                  <SignalChip tone="neutral">
+                    {sentenceCase(compilerRead?.compileResult?.mergedWindowState || "open")}
+                  </SignalChip>
+                </div>
+              ) : (
+                <p>No lawful subset compiled in this read.</p>
+              )}
             </div>
           </div>
 
@@ -162,6 +166,7 @@ export default function CompilerReadPanel({
               <div className={styles.compilerReadInspectBlock}>
                 <Kicker tone="neutral">Compile artifact summary</Kicker>
                 <ul className={styles.compilerReadList}>
+                  <li>Compiler executed: {compilerExecuted ? "Yes" : "No"}</li>
                   <li>Compile state: {sentenceCase(compilerRead?.compileResult?.compileState || "unknown")}</li>
                   <li>Runtime state: {sentenceCase(compilerRead?.compileResult?.runtimeState || "open")}</li>
                   <li>
@@ -180,7 +185,7 @@ export default function CompilerReadPanel({
                       </li>
                     ))}
                   </ul>
-                ) : !compilerWasRun ? (
+                ) : !compilerExecuted ? (
                   <p>No compiler run yet because no lawful subset translated in v0.</p>
                 ) : (
                   <p>No compiler diagnostics on the translated subset.</p>

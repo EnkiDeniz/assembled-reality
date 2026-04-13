@@ -80,9 +80,11 @@ test("buildWorkingEcho emits grounded surfaced claims with refs and a deciding s
 
   assert.ok(result);
   assert.equal(result.status, "move_ready");
+  assert.equal(result.loopState, "contested");
   assert.equal(result.turnId, "assistant_2");
   assert.ok(result.whatWouldDecideIt);
   assert.match(result.whatWouldDecideIt.text, /Compare verifier timestamps/i);
+  assert.equal(result.reasonForOpen, "The popup explanation is still unsupported.");
   assert.ok(Array.isArray(result.whatWouldDecideIt.sourceRefs));
   assert.ok(result.whatWouldDecideIt.sourceRefs.length > 0);
   assert.ok(Array.isArray(result.evidenceCarried));
@@ -134,8 +136,10 @@ test("buildWorkingEcho preserves canonical input and can wake in awaiting-return
 
   assert.ok(result);
   assert.equal(result.status, "awaiting_return");
+  assert.equal(result.loopState, "awaiting_return");
   assert.equal(result.candidateMove, null);
   assert.match(result.whatWouldDecideIt.text, /which return/i);
+  assert.equal(result.reasonForOpen, result.whatWouldDecideIt.text);
   assert.deepEqual(canonicalView, snapshot);
 });
 
@@ -178,6 +182,7 @@ test("buildWorkingEcho does not surface internal shape-fix instructions as the d
 
   assert.ok(result);
   assert.match(result.whatWouldDecideIt.text, /where exactly do users vanish/i);
+  assert.equal(result.loopState, "contested");
   assert.equal(result.candidateMove, null);
   assert.ok(
     result.openTension.every((item) => !/fix shape violations/i.test(item.text)),
@@ -241,6 +246,8 @@ test("buildWorkingEcho groups evidence and surfaces return-aware deltas when pri
   assert.ok(result.evidenceBuckets.weakens.some((item) => item.id === "E2" || item.id === "E4"));
   assert.ok(result.evidenceBuckets.missing.length > 0);
   assert.ok(result.returnDelta);
+  assert.equal(result.loopState, "contested");
+  assert.equal(result.reasonForOpen, "The CTA-copy explanation is unsupported.");
   assert.ok(result.returnDelta.changedRead.length > 0);
   assert.ok(result.returnDelta.weakenedRead.length > 0);
   assert.match(result.aim.text, /post-SMS blocker|foreign-card travelers/i);
@@ -303,6 +310,7 @@ test("buildWorkingEcho does not overstate return authorship when the deciding sp
   });
 
   assert.ok(result);
+  assert.equal(result.loopState, "contested");
   assert.equal(
     result.whatWouldDecideIt.text,
     "Inspect the post-SMS AVS handoff logs for foreign-card travelers.",
@@ -376,6 +384,7 @@ test("buildWorkingEcho keeps no-move-yet explicit and prefers artifact-backed ai
 
   assert.ok(result);
   assert.equal(result.candidateMove, null);
+  assert.equal(result.loopState, "contested");
   assert.equal(result.aim.text, "Find the failed step before changing pricing.");
   assert.ok(result.aim.sourceRefs.includes("mirror:aim"));
   assert.match(result.whatWouldDecideIt.text, /replay|legal review|SSO|pricing exposure/i);

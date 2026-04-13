@@ -1,15 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { LogOut, MoreHorizontal, X } from "lucide-react";
 import {
   APP_MODES,
-  buildPulseStripState,
   CONTEXT_CARD_LIFECYCLES,
   normalizeAppMode,
-  sortContextCards,
 } from "@/lib/loegos-shell";
 import styles from "@/components/shell/LoegosShell.module.css";
 
@@ -104,12 +102,11 @@ export function IconButton({
 
 function ModeSwitch({ mode = APP_MODES.room }) {
   return (
-    <div className={styles.modeSwitch} role="tablist" aria-label="Signed-in modes">
+    <nav className={styles.modeSwitch} aria-label="Signed-in sections">
       <Link
         href="/workspace"
         className={joinClasses(styles.modeTab, mode === APP_MODES.room ? styles.modeTabActive : "")}
-        role="tab"
-        aria-selected={mode === APP_MODES.room}
+        aria-current={mode === APP_MODES.room ? "page" : undefined}
         data-testid="shell-mode-room"
       >
         Room
@@ -117,13 +114,12 @@ function ModeSwitch({ mode = APP_MODES.room }) {
       <Link
         href="/dream"
         className={joinClasses(styles.modeTab, mode === APP_MODES.dream ? styles.modeTabActive : "")}
-        role="tab"
-        aria-selected={mode === APP_MODES.dream}
+        aria-current={mode === APP_MODES.dream ? "page" : undefined}
         data-testid="shell-mode-dream"
       >
         Dream
       </Link>
-    </div>
+    </nav>
   );
 }
 
@@ -277,6 +273,7 @@ export function PulseStrip({ state = null, onOpenCards, className = "" }) {
   const primary = state?.primary || null;
   const secondaryCards = Array.isArray(state?.secondaryCards) ? state.secondaryCards : [];
   const overflowCount = Number(state?.overflowCount || 0);
+  const field = state?.field || null;
 
   return (
     <button
@@ -286,6 +283,12 @@ export function PulseStrip({ state = null, onOpenCards, className = "" }) {
       onClick={onOpenCards}
       data-testid="shell-pulse-strip"
     >
+      {field?.label ? (
+        <div className={styles.pulseHead}>
+          <SignalChip tone={field.tone || "neutral"}>{field.label}</SignalChip>
+        </div>
+      ) : null}
+
       <div className={styles.pulsePrimary}>
         {primary ? (
           <>
@@ -331,17 +334,97 @@ export function SectionLayer({
   onClose,
   children = null,
 }) {
+  const titleId = useId();
+  const closeButtonRef = useRef(null);
+  const layerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const layer = layerRef.current;
+    const previousActiveElement =
+      typeof document !== "undefined" ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    const frame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+    document.body.style.overflow = "hidden";
+
+    function getFocusableElements() {
+      if (!layer) return [];
+      return Array.from(
+        layer.querySelectorAll(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => {
+        if (!(element instanceof HTMLElement)) return false;
+        return !element.hasAttribute("disabled") && !element.getAttribute("aria-hidden");
+      });
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const focusable = getFocusableElements();
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey) {
+        if (activeElement === first || !layer?.contains(activeElement)) {
+          event.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+
+      if (activeElement === last || !layer?.contains(activeElement)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousActiveElement && typeof previousActiveElement.focus === "function") {
+        previousActiveElement.focus();
+      }
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
     <div className={styles.sheetBackdrop} onClick={onClose}>
-      <aside className={styles.sheetLayer} onClick={(event) => event.stopPropagation()}>
+      <aside
+        ref={layerRef}
+        className={styles.sheetLayer}
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+      >
         <div className={styles.sheetHeader}>
           <div className={styles.sheetHeaderCopy}>
             {label ? <Kicker>{label}</Kicker> : null}
-            {title ? <strong>{title}</strong> : null}
+            {title ? <strong id={titleId}>{title}</strong> : null}
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             className={styles.iconButton}
             onClick={onClose}
@@ -421,7 +504,7 @@ function buildDefaultOverflowItems(route = "workspace") {
     items.push({ label: "Account", href: "/account" });
   } else {
     items.push({ label: "Room", href: "/workspace" });
-    items.push({ label: "Dream Library", href: "/dream" });
+    items.push({ label: "Dream", href: "/dream" });
   }
 
   items.push({
@@ -442,10 +525,6 @@ export default function LoegosShell({
   contextControl = null,
   headerAccessory = null,
   main = null,
-  cards = [],
-  onDismissCard = null,
-  pulse = null,
-  echo = null,
   composer = null,
   sheet = null,
   sectionLayer = null,
@@ -457,17 +536,8 @@ export default function LoegosShell({
       ? APP_MODES.dream
       : APP_MODES.room);
   const normalizedMode = normalizeAppMode(resolvedMode);
-  const resolvedCards = useMemo(
-    () =>
-      sortContextCards(cards).filter(
-        (card) => card.lifecycle === CONTEXT_CARD_LIFECYCLES.active,
-      ),
-    [cards],
-  );
-  const desktopCards = resolvedCards.slice(0, 3);
-  const resolvedPulse = pulse || echo?.pulse || buildPulseStripState(resolvedCards);
-  const [isPulseOpen, setIsPulseOpen] = useState(false);
   const resolvedSheet = sheet || sectionLayer;
+  const sheetOpen = Boolean(resolvedSheet?.open);
   const headerControl = contextControl || headerAccessory;
   const resolvedOverflowItems = overflowItems.length
     ? overflowItems
@@ -475,7 +545,7 @@ export default function LoegosShell({
 
   return (
     <main className={styles.root} data-route={route} data-mode={normalizedMode}>
-      <div className={styles.header}>
+      <div className={styles.header} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
         <div className={styles.headerCopy}>
           <span className={styles.wordmark}>Lœgos</span>
           {title ? <span className={styles.headerTitle}>{title}</span> : null}
@@ -486,45 +556,20 @@ export default function LoegosShell({
         </div>
 
         <div className={styles.headerActions}>
-          {headerControl}
+          {headerControl || null}
           <OverflowMenu items={resolvedOverflowItems} />
         </div>
       </div>
 
-      <div className={joinClasses(styles.body, desktopCards.length ? styles.bodyWithCards : "")}>
+      <div className={styles.body} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
         <div className={styles.stageFrame}>{main || <Surface className={styles.emptyPlane} />}</div>
-        <CardLane cards={desktopCards} onDismiss={onDismissCard} />
       </div>
 
-      <div className={styles.bottomRail}>
-        <PulseStrip state={resolvedPulse} onOpenCards={() => setIsPulseOpen(true)} />
-        {composer ? <div className={styles.composerSlot}>{composer}</div> : null}
-      </div>
-
-      <SectionLayer
-        open={isPulseOpen}
-        label="Context"
-        title={resolvedPulse?.primary?.label || "Context"}
-        onClose={() => setIsPulseOpen(false)}
-      >
-        <div className={styles.sheetCardStack}>
-          {resolvedCards.length ? (
-            resolvedCards.map((card) => (
-              <ContextCard
-                key={card.id}
-                card={card}
-                compact
-                defaultExpanded
-                onDismiss={onDismissCard}
-              />
-            ))
-          ) : (
-            <Surface className={styles.emptyContext} roomy>
-              <p>Awaiting structure.</p>
-            </Surface>
-          )}
+      {composer ? (
+        <div className={styles.bottomRail} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
+          <div className={styles.composerSlot}>{composer}</div>
         </div>
-      </SectionLayer>
+      ) : null}
 
       <SectionLayer
         open={Boolean(resolvedSheet?.open)}

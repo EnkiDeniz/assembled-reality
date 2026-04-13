@@ -48,6 +48,24 @@ export const ROOM_SHAPE_ROLES = Object.freeze({
 });
 
 export const ROOM_TERRAIN_PRESENTATIONS = Object.freeze({
+  open: {
+    key: "open",
+    label: "Open",
+    description: "A read is still forming.",
+    tone: "neutral",
+  },
+  contested: {
+    key: "contested",
+    label: "Contested",
+    description: "Competing reads or instability remain live.",
+    tone: "flagged",
+  },
+  awaiting_return: {
+    key: "awaiting_return",
+    label: "Awaiting return",
+    description: "Reality still needs to answer back.",
+    tone: "brand",
+  },
   fog: {
     key: "fog",
     label: "Fog",
@@ -111,7 +129,30 @@ export function getMirrorRegionRole(region = "other") {
   return ROOM_SHAPE_ROLES.other;
 }
 
-export function deriveRoomTerrainPresentation({ fieldState = null } = {}) {
+export function deriveRoomTerrainPresentation({ fieldState = null, loopState = "" } = {}) {
+  const normalizedLoopState = normalizeText(loopState).toLowerCase();
+  if (normalizedLoopState === "awaiting_return") {
+    return {
+      ...ROOM_TERRAIN_PRESENTATIONS.awaiting_return,
+      canonicalKey: "awaiting",
+      canonicalLabel: ROOM_TERRAIN_PRESENTATIONS.awaiting_return.label,
+    };
+  }
+  if (normalizedLoopState === "contested") {
+    return {
+      ...ROOM_TERRAIN_PRESENTATIONS.contested,
+      canonicalKey: "contested",
+      canonicalLabel: ROOM_TERRAIN_PRESENTATIONS.contested.label,
+    };
+  }
+  if (normalizedLoopState === "open") {
+    return {
+      ...ROOM_TERRAIN_PRESENTATIONS.open,
+      canonicalKey: normalizeText(fieldState?.key).toLowerCase() || "open",
+      canonicalLabel: ROOM_TERRAIN_PRESENTATIONS.open.label,
+    };
+  }
+
   const canonicalKey = normalizeText(fieldState?.key).toLowerCase();
   let terrain = ROOM_TERRAIN_PRESENTATIONS.fog;
 

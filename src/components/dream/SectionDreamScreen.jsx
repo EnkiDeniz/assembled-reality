@@ -56,7 +56,6 @@ import {
 } from "@/lib/dream-storage";
 import { saveDreamBridgePayload } from "@/lib/dream-bridge";
 import { clampListeningRate, formatVoiceLabel } from "@/lib/listening";
-import { buildEchoPulseState } from "@/lib/loegos-shell";
 
 const SKIP_BACK_MS = 15_000;
 const SKIP_FORWARD_MS = 30_000;
@@ -145,7 +144,7 @@ export default function SectionDreamScreen({
   const [showLibrarySheet, setShowLibrarySheet] = useState(false);
   const [pasteValue, setPasteValue] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [notice, setNotice] = useState("");
+  const [, setNotice] = useState("");
   const [isRestoring, setIsRestoring] = useState(true);
   const [isFetchingAudio, setIsFetchingAudio] = useState(false);
   const [compilerRead, setCompilerRead] = useState(null);
@@ -220,7 +219,6 @@ export default function SectionDreamScreen({
 
   useEffect(() => {
     if (
-      isPasteDocument &&
       hasUnsavedPasteChanges &&
       (compilerRead || compilerReadPending || compilerReadError)
     ) {
@@ -232,7 +230,6 @@ export default function SectionDreamScreen({
     compilerReadError,
     compilerReadPending,
     hasUnsavedPasteChanges,
-    isPasteDocument,
   ]);
 
   const setPlaybackPosition = useCallback((documentRecord, nextIndex = 0, nextOffsetMs = 0) => {
@@ -418,7 +415,7 @@ export default function SectionDreamScreen({
 
       if (!response.ok) {
         throw new Error(
-          payload?.error || "Dream Library could not fetch voice audio for this markdown chunk.",
+          payload?.error || "Dream could not fetch voice audio for this markdown chunk.",
         );
       }
 
@@ -516,7 +513,7 @@ export default function SectionDreamScreen({
       } catch (error) {
         setStatus(DREAM_PLAYBACK_STATUSES.paused);
         setErrorMessage(
-          error instanceof Error ? error.message : "Dream Library could not continue playback.",
+          error instanceof Error ? error.message : "Dream could not continue playback.",
         );
       } finally {
         setIsFetchingAudio(false);
@@ -562,7 +559,7 @@ export default function SectionDreamScreen({
           storedSession,
           storedSession?.globalOffsetMs
             ? `Resume ready from ${formatDreamTime(storedSession.globalOffsetMs)}.`
-            : "Dream Library restored.",
+            : "Dream restored.",
         );
       });
 
@@ -578,7 +575,7 @@ export default function SectionDreamScreen({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Dream Library could not restore the last listening state.",
+          : "Dream could not restore the last listening state.",
       );
     } finally {
       setIsRestoring(false);
@@ -764,7 +761,7 @@ export default function SectionDreamScreen({
     autoPlay = true,
   }) {
     if (!String(rawMarkdown || "").trim()) {
-      setErrorMessage("Dream Library needs markdown before it can start listening.");
+      setErrorMessage("Dream needs markdown before it can start listening.");
       return;
     }
 
@@ -821,7 +818,7 @@ export default function SectionDreamScreen({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Dream Library could not prepare that markdown file.",
+          : "Dream could not prepare that markdown file.",
       );
       setNotice("");
     }
@@ -836,7 +833,7 @@ export default function SectionDreamScreen({
     }
 
     if (!isDreamMarkdownFilename(file.name)) {
-      setErrorMessage("Dream Library accepts only .md or .markdown files right now.");
+      setErrorMessage("Dream accepts only .md or .markdown files right now.");
       return;
     }
 
@@ -898,7 +895,7 @@ export default function SectionDreamScreen({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Dream Library could not open that document.",
+          : "Dream could not open that document.",
       );
     }
   }
@@ -931,7 +928,7 @@ export default function SectionDreamScreen({
         setResolvedVoiceId(requestVoiceChoice.voiceId || null);
         setPasteValue("");
         setShowPaste(false);
-        setNotice("Dream Library cleared.");
+        setNotice("Dream cleared.");
         setErrorMessage("");
       });
       return;
@@ -950,7 +947,7 @@ export default function SectionDreamScreen({
     }
 
     if (!hasRemoteVoice) {
-      setErrorMessage("Dream Library needs ElevenLabs or OpenAI voice configured to listen.");
+      setErrorMessage("Dream needs ElevenLabs or OpenAI voice configured to listen.");
       return;
     }
 
@@ -1091,39 +1088,21 @@ export default function SectionDreamScreen({
     }
 
     saveDreamBridgePayload({
+      kind: "passage",
       documentId: dreamDocument.id,
+      documentTitle: dreamDocument.filename,
       anchor: currentChunk?.id || "",
       excerpt: currentChunk?.text || dreamDocument.normalizedText.slice(0, 220),
-      action: "witness",
+      savedAt: new Date().toISOString(),
     });
     router.push("/workspace");
   }
-
-  const dreamEcho = buildEchoPulseState({
-    change: notice,
-    tension: errorMessage,
-    survives: globalOffsetMs > 0 ? `Resume ${formatDreamTime(globalOffsetMs)}` : "",
-  });
-
-  const libraryControl = (
-    <button
-      type="button"
-      className={styles.libraryToggle}
-      onClick={() => setShowLibrarySheet(true)}
-      aria-label="Open Dream Library"
-      title="Open Dream Library"
-      data-testid="dream-library-toggle"
-    >
-      <Library size={16} aria-hidden="true" />
-      <span>{dreamLibrary.length}</span>
-    </button>
-  );
 
   const libraryPanel = (
     <div className={styles.libraryPanel}>
       <div className={styles.libraryPanelHead}>
         <div className={styles.libraryPanelIdentity}>
-          <Kicker tone="brand">Dream Library</Kicker>
+          <Kicker tone="brand">Dream</Kicker>
           <strong>{dreamLibrary.length ? `${dreamLibrary.length} documents` : "Empty"}</strong>
         </div>
         <div className={styles.libraryPanelActions}>
@@ -1197,7 +1176,7 @@ export default function SectionDreamScreen({
       />
 
       {errorMessage ? (
-        <div className={styles.readerBanner} data-testid="dream-error">
+        <div className={styles.readerBanner} role="alert" aria-live="polite" data-testid="dream-error">
           <CircleAlert size={16} />
           <span>{errorMessage}</span>
         </div>
@@ -1210,11 +1189,40 @@ export default function SectionDreamScreen({
           <ShellSurface className={styles.stage} roomy>
             <div className={styles.stageHead}>
               <div className={styles.stageIdentity}>
-                <Kicker tone={dreamDocument ? "brand" : "neutral"}>Dream Library</Kicker>
-                <strong>{dreamDocument?.filename || "Dream Library"}</strong>
+                <Kicker tone={dreamDocument ? "brand" : "neutral"}>Dream</Kicker>
+                <strong>{dreamDocument?.filename || "Dream"}</strong>
               </div>
 
               <div className={styles.stageActions}>
+                <button
+                  type="button"
+                  className={styles.libraryToggle}
+                  onClick={() => setShowLibrarySheet(true)}
+                  aria-label="Open Dream documents"
+                  title="Open Dream documents"
+                  data-testid="dream-library-toggle"
+                >
+                  <Library size={16} aria-hidden="true" />
+                  <span>{dreamLibrary.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.iconAction}
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Upload markdown"
+                  title="Upload markdown"
+                >
+                  <Upload size={16} />
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.iconAction} ${showPaste ? styles.iconActionActive : ""}`}
+                  onClick={() => setShowPaste((current) => !current)}
+                  aria-label={showPaste ? "Hide paste input" : "Paste markdown"}
+                  title={showPaste ? "Hide paste input" : "Paste markdown"}
+                >
+                  <FileText size={16} />
+                </button>
                 {dreamDocument ? (
                   <button
                     type="button"
@@ -1227,26 +1235,18 @@ export default function SectionDreamScreen({
                     <span>{compilerReadPending ? "Running…" : "Compiler Read"}</span>
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  className={styles.iconAction}
-                  onClick={() => setShowLibrarySheet(true)}
-                  aria-label="Browse library"
-                  title="Browse library"
-                >
-                  <Library size={16} />
-                </button>
                 {dreamDocument ? (
                   <>
                     <button
                       type="button"
-                      className={styles.iconAction}
+                      className={styles.actionButton}
                       onClick={handleSendToRoom}
                       aria-label="Send to Room"
                       title="Send to Room"
                       data-testid="dream-send-to-room"
                     >
                       <Send size={16} />
+                      <span>Send to Room</span>
                     </button>
                     <button
                       type="button"
@@ -1294,7 +1294,7 @@ export default function SectionDreamScreen({
               </p>
             ) : null}
 
-            {dreamDocument ? (
+              {dreamDocument ? (
               <>
                 <div className={styles.stageMeta}>
                   <SignalChip tone={hasRemoteVoice ? "brand" : "neutral"} data-testid="dream-voice-badge">
@@ -1305,11 +1305,16 @@ export default function SectionDreamScreen({
                   </SignalChip>
                 </div>
 
-                <CompilerReadPanel
-                  compilerRead={compilerRead}
-                  pending={compilerReadPending}
-                  error={compilerReadError}
-                />
+                <div className={styles.documentStage}>
+                  {chunks.map((chunk, index) => (
+                    <p
+                      key={chunk.id}
+                      className={`${styles.chunk} ${index === activeChunkIndex ? styles.chunkActive : ""}`}
+                    >
+                      {chunk.text}
+                    </p>
+                  ))}
+                </div>
 
                 <div className={styles.scrubRow}>
                   <span data-testid="dream-current-time">{formatDreamTime(globalOffsetMs)}</span>
@@ -1393,16 +1398,11 @@ export default function SectionDreamScreen({
                   </label>
                 </div>
 
-                <div className={styles.documentStage}>
-                  {chunks.map((chunk, index) => (
-                    <p
-                      key={chunk.id}
-                      className={`${styles.chunk} ${index === activeChunkIndex ? styles.chunkActive : ""}`}
-                    >
-                      {chunk.text}
-                    </p>
-                  ))}
-                </div>
+                <CompilerReadPanel
+                  compilerRead={compilerRead}
+                  pending={compilerReadPending}
+                  error={compilerReadError}
+                />
 
                 {!hasRemoteVoice ? (
                   <p className={styles.stageHint}>Voice unavailable</p>
@@ -1448,13 +1448,11 @@ export default function SectionDreamScreen({
   return (
     <LoegosShell
       route="dream"
-      title={dreamDocument?.filename || "Dream Library"}
-      contextControl={libraryControl}
-      pulse={dreamEcho.pulse}
+      title="Dream"
       main={main}
       sheet={{
         open: showLibrarySheet,
-        label: "Dream Library",
+        label: "Dream",
         title: dreamDocument?.filename || "Documents",
         onClose: () => setShowLibrarySheet(false),
         children: libraryPanel,

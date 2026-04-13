@@ -358,6 +358,12 @@
   opacity: 0.76;
 }
 
+.pulseHead {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .pulsePrimary {
   display: grid;
   gap: 4px;
@@ -767,10 +773,6 @@
     gap: 12px;
     overflow: auto;
     padding-right: 2px;
-  }
-
-  .pulseStrip {
-    display: none;
   }
 
   .sheetBackdrop {

@@ -11,7 +11,10 @@ import {
   Upload,
 } from "lucide-react";
 import styles from "@/components/room/RoomWorkspace.module.css";
-import LoegosShell, { Surface as ShellSurface } from "@/components/shell/LoegosShell";
+import LoegosShell, {
+  PulseStrip,
+  Surface as ShellSurface,
+} from "@/components/shell/LoegosShell";
 import {
   deriveRoomTerrainPresentation,
   getMirrorRegionRole,
@@ -19,10 +22,13 @@ import {
   getSegmentShapeRole,
 } from "@/components/room/roomDesignSystem";
 import { buildOperateAuditPrompt } from "@/lib/operate";
-import { clearDreamBridgePayload, loadDreamBridgePayload } from "@/lib/dream-bridge";
 import {
-  buildContextCardsFromRoomView,
-  buildEchoPulseStateFromRoomView,
+  clearDreamBridgePayload,
+  loadDreamBridgePayload,
+  normalizeDreamBridgePayload,
+} from "@/lib/dream-bridge";
+import {
+  buildWorkingEchoStripStateFromRoomView,
   normalizeSectionId,
 } from "@/lib/loegos-shell";
 
@@ -256,9 +262,19 @@ function RatioBar({ ratio = 0.5, className = "" }) {
 }
 
 function StatusChip({ view, floating = false }) {
-  const terrain = deriveRoomTerrainPresentation({ fieldState: view?.fieldState });
+  const terrain = deriveRoomTerrainPresentation({
+    fieldState: view?.fieldState,
+    loopState: view?.workingEcho?.loopState,
+  });
+  const terrainClassMap = {
+    open: styles.terrainFog,
+    contested: styles.terrainFractured,
+    awaiting_return: styles.terrainAwaiting,
+  };
   const terrainClass =
-    styles[`terrain${String(terrain.key || "fog").replace(/^\w/, (char) => char.toUpperCase())}`] || styles.terrainFog;
+    terrainClassMap[terrain.key] ||
+    styles[`terrain${String(terrain.key || "fog").replace(/^\w/, (char) => char.toUpperCase())}`] ||
+    styles.terrainFog;
 
   return (
     <span
@@ -267,9 +283,89 @@ function StatusChip({ view, floating = false }) {
       aria-label={`${terrain.canonicalLabel}. ${terrain.description}`}
       title={terrain.description}
     >
-      <SignalDot tone={terrain.tone} pulse={terrain.key === "awaiting"} className={styles.fieldDot} />
+      <SignalDot
+        tone={terrain.tone}
+        pulse={terrain.key === "awaiting" || terrain.key === "awaiting_return"}
+        className={styles.fieldDot}
+      />
       <span className={styles.fieldChipLabel}>{terrain.canonicalLabel || "Open"}</span>
     </span>
+  );
+}
+
+function ThreadIdentityBar({ view, onOpenThreads }) {
+  const roomTitle = normalizeText(view?.session?.title) || "Conversation";
+  const roomLabel = normalizeText(view?.project?.title) || "Current room";
+  const sessionCount = Array.isArray(view?.sessions) ? view.sessions.length : 0;
+  const sessionLabel =
+    sessionCount > 0 ? `${sessionCount} conversation${sessionCount === 1 ? "" : "s"}` : "Start fresh";
+
+  return (
+    <div className={styles.threadIdentityBar} data-testid="room-thread-identity">
+      <div className={styles.threadIdentityCopy}>
+        <Kicker tone="neutral">Room</Kicker>
+        <strong>{roomTitle}</strong>
+        <span>{roomLabel}</span>
+      </div>
+
+      <div className={styles.threadIdentityActions}>
+        {view?.fieldState ? <StatusChip view={view} /> : null}
+        <button
+          type="button"
+          className={styles.contextButton}
+          onClick={onOpenThreads}
+          data-testid="room-open-context"
+        >
+          <span>Conversations</span>
+          <small>{sessionLabel}</small>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DreamBridgeNotice({ payload, onUse }) {
+  if (!payload?.documentId) return null;
+
+  const kind = normalizeText(payload?.kind).toLowerCase();
+  const sourceLabel = normalizeText(payload?.documentTitle) || "Dream document";
+  const excerpt = normalizeText(payload?.excerpt) || "Passage carried from Dream.";
+  const kindLabel =
+    kind === "witness" ? "Witness" : kind === "note" ? "Note" : "Passage";
+  const anchorLabel = normalizeText(payload?.anchor);
+
+  return (
+    <div className={styles.dreamBridgeNotice} data-testid="room-dream-bridge">
+      <div className={styles.dreamBridgeCopy}>
+        <Kicker tone="brand">From Dream</Kicker>
+        <strong>{sourceLabel}</strong>
+        <p>{excerpt}</p>
+        <div className={styles.dreamBridgeMeta}>
+          <span>{kindLabel}</span>
+          <span>Dream</span>
+          {anchorLabel ? <span>{anchorLabel}</span> : null}
+          {normalizeText(payload?.savedAt) ? <span>{formatOperateTimestamp(payload.savedAt)}</span> : null}
+        </div>
+      </div>
+
+      <div className={styles.dreamBridgeActions}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onUse}
+          data-testid="dream-bridge-use"
+        >
+          Use in Room
+        </button>
+        <Link
+          href={buildDreamHref(payload.documentId, payload.anchor)}
+          className={styles.inlineLinkButton}
+          data-testid="dream-bridge-return"
+        >
+          Open Dream
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -478,6 +574,7 @@ function getWorkingEchoTone(status = "") {
   if (normalized === "move_ready") return "brand";
   if (normalized === "awaiting_return") return "grounded";
   if (normalized === "contested") return "flagged";
+  if (normalized === "open") return "neutral";
   return "neutral";
 }
 
@@ -486,6 +583,7 @@ function formatWorkingEchoStatus(status = "") {
   if (normalized === "move_ready") return "Move ready";
   if (normalized === "awaiting_return") return "Awaiting return";
   if (normalized === "contested") return "Contested";
+  if (normalized === "open") return "Open";
   if (normalized === "grounded") return "Grounded";
   return "Forming";
 }
@@ -598,20 +696,22 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
   const previewLink = workingEcho?.previewLink || null;
   const returnDelta = workingEcho?.returnDelta || null;
   const uncertaintyDetail = normalizeText(workingEcho?.uncertainty?.detail);
+  const loopState = normalizeText(workingEcho?.loopState || workingEcho?.status).toLowerCase();
+  const reasonForOpen = normalizeText(workingEcho?.reasonForOpen);
   const aimText =
-    normalizeText(workingEcho?.aim?.text) ||
+    normalizeText(workingEcho?.whatSeemsReal?.text || workingEcho?.aim?.text) ||
     (uncertaintyDetail ? `Current aim is still forming. ${uncertaintyDetail}` : "");
 
   return (
     <section className={styles.workingEchoPanel} data-testid="room-working-echo">
       <div className={styles.workingEchoHead}>
         <div>
-          <Kicker tone={getWorkingEchoTone(workingEcho?.status)}>Working Echo</Kicker>
+          <Kicker tone={getWorkingEchoTone(loopState)}>Working Echo</Kicker>
           <strong>Session-scoped. Not canon.</strong>
         </div>
         <div className={styles.workingEchoMeta}>
-          <span className={styles.workingEchoStatus}>{formatWorkingEchoStatus(workingEcho?.status)}</span>
-          {uncertaintyDetail ? <span className={styles.workingEchoMetaDetail}>{uncertaintyDetail}</span> : null}
+          <span className={styles.workingEchoStatus}>{formatWorkingEchoStatus(loopState)}</span>
+          {reasonForOpen ? <span className={styles.workingEchoMetaDetail}>{reasonForOpen}</span> : null}
           {previewLink?.assistantMessageId ? (
             <span className={styles.workingEchoMetaText}>Linked preview</span>
           ) : null}
@@ -663,10 +763,10 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
           <Kicker tone="brand">What Would Decide It</Kicker>
           <p>{workingEcho?.whatWouldDecideIt?.text || "No deciding split is visible yet."}</p>
           <WorkingEchoRefs refs={workingEcho?.whatWouldDecideIt?.sourceRefs} />
-          {uncertaintyDetail && normalizeText(workingEcho?.status).toLowerCase() !== "move_ready" ? (
+          {reasonForOpen && loopState !== "awaiting_return" ? (
             <div className={styles.workingEchoItem}>
               <strong>Why it stays open</strong>
-              <span>{uncertaintyDetail}</span>
+              <span>{reasonForOpen}</span>
             </div>
           ) : null}
           {returnDelta?.nextMoveShift?.text ? (
@@ -690,6 +790,21 @@ function WorkingEchoPanel({ workingEcho, collapsed = false, onToggle = null }) {
   );
 }
 
+function WorkingEchoStrip({ view, onOpenDetail }) {
+  const stripState = useMemo(() => buildWorkingEchoStripStateFromRoomView(view), [view]);
+  if (stripState?.dormant) return null;
+
+  return (
+    <div className={styles.roomEchoStripWrap}>
+      <PulseStrip
+        state={stripState}
+        onOpenCards={onOpenDetail}
+        className={styles.roomEchoStrip}
+      />
+    </div>
+  );
+}
+
 function StarterView({ starter = null, canCreateBox = false, onCreateBox = null }) {
   return (
     <section className={styles.starter} data-testid="room-starter">
@@ -701,7 +816,7 @@ function StarterView({ starter = null, canCreateBox = false, onCreateBox = null 
       {canCreateBox ? (
         <button type="button" className={styles.primaryButton} onClick={onCreateBox}>
           <Plus size={14} />
-          Create a Box
+          Start Room
         </button>
       ) : null}
     </section>
@@ -771,8 +886,8 @@ function CreateBoxForm({ onCreate, busy }) {
     <form className={styles.panel} onSubmit={handleSubmit}>
       <div className={styles.panelHead}>
         <div>
-          <Kicker tone="brand">New Box</Kicker>
-          <strong>Open a fresh room</strong>
+          <Kicker tone="brand">Start Room</Kicker>
+          <strong>Create the internal room container</strong>
         </div>
       </div>
       <div className={styles.formGrid}>
@@ -782,7 +897,7 @@ function CreateBoxForm({ onCreate, busy }) {
             data-testid="room-create-box-name"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Box title"
+            placeholder="Room title"
           />
         </label>
         <label className={styles.field}>
@@ -797,7 +912,7 @@ function CreateBoxForm({ onCreate, busy }) {
       {error ? <p className={styles.errorText}>{error}</p> : null}
       <div className={styles.inlineActions}>
         <button type="submit" className={styles.primaryButton} disabled={busy} data-testid="room-create-box-submit">
-          {busy ? "Creating..." : "Create Box"}
+          {busy ? "Starting..." : "Start Room"}
         </button>
       </div>
     </form>
@@ -816,7 +931,7 @@ function SourceTray({ projectKey, onComplete }) {
   async function handleUpload(event) {
     event.preventDefault();
     if (!file) {
-      setError("Choose a file to bring into the box.");
+      setError("Choose a file to bring into the room.");
       return;
     }
     setPending(true);
@@ -834,7 +949,7 @@ function SourceTray({ projectKey, onComplete }) {
       if (!response.ok) {
         throw new Error(payload?.error || "Could not upload that source.");
       }
-      setNotice("Source added to the box.");
+      setNotice("Source added to the room.");
       setFile(null);
       await onComplete(payload);
     } catch (nextError) {
@@ -882,7 +997,7 @@ function SourceTray({ projectKey, onComplete }) {
   async function handleLink(event) {
     event.preventDefault();
     if (!normalizeText(url)) {
-      setError("Paste a link the box can fetch.");
+      setError("Paste a link the room can fetch.");
       return;
     }
     setPending(true);
@@ -918,7 +1033,7 @@ function SourceTray({ projectKey, onComplete }) {
       <div className={styles.panelHead}>
         <div>
           <Kicker tone="grounded">Source</Kicker>
-          <strong>Add source</strong>
+          <strong>Attach source</strong>
         </div>
       </div>
 
@@ -2007,6 +2122,19 @@ function WorkspaceSectionContent({
   operateResult,
   busy,
 }) {
+  if (mode === "threads") {
+    return (
+      <RoomSessionList
+        sessions={view?.sessions}
+        activeSessionId={view?.session?.id}
+        onCreate={onCreateSession}
+        onActivate={onActivateSession}
+        onArchive={onArchiveSession}
+        busy={busy}
+      />
+    );
+  }
+
   if (mode === "mirror") {
     return (
       <div className={styles.sectionStack}>
@@ -2097,80 +2225,6 @@ function buildDreamHref(documentId = "", anchor = "") {
   return query ? `/dream?${query}` : "/dream";
 }
 
-function buildRoomContextCards({
-  view,
-  dreamBridgePayload,
-  onOpenWitness,
-  onOpenOperate,
-  dismissedCardIds = [],
-}) {
-  const cards = buildContextCardsFromRoomView(view).map((card) => {
-    if (card.kind === "witness" && card.href) {
-      return {
-        ...card,
-        actions: [
-          {
-            label: "Open",
-            onClick: () => {
-              void onOpenWitness();
-            },
-          },
-        ],
-      };
-    }
-
-    if (card.kind === "preview") {
-      return {
-        ...card,
-        meta: [...(card.meta || []), "Preview"],
-      };
-    }
-
-    if (card.kind === "decide" && view?.adjacent?.operate?.available) {
-      return {
-        ...card,
-        actions: [
-          {
-            label: "Operate",
-            onClick: () => {
-              void onOpenOperate();
-            },
-          },
-        ],
-      };
-    }
-
-    return card;
-  });
-
-  if (dreamBridgePayload?.documentId) {
-    cards.unshift({
-      id: `dream-bridge-${dreamBridgePayload.documentId}`,
-      kind: "witness",
-      label: "Witness",
-      tone: "brand",
-      title: "Dream Library passage",
-      verdict: dreamBridgePayload.excerpt || "Passage moved from Dream Library.",
-      detail: "Ready in the room. Reality still closes here.",
-      actions: [
-        {
-          label: "Open Dream",
-          href: buildDreamHref(dreamBridgePayload.documentId, dreamBridgePayload.anchor),
-        },
-      ],
-      lifecycle: "active",
-      updatedAt: dreamBridgePayload.savedAt || new Date().toISOString(),
-    });
-  }
-
-  const filtered = cards.filter((card) => !dismissedCardIds.includes(card.id));
-
-  return filtered.map((card, index) => ({
-    ...card,
-    lifecycle: index < 3 ? "active" : "settled",
-  }));
-}
-
 export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const router = useRouter();
   const [view, setView] = useState(initialView);
@@ -2182,10 +2236,10 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const [mirrorCollapsed, setMirrorCollapsed] = useState(false);
   const [overlayMode, setOverlayMode] = useState(() => {
     const requestedSection = normalizeSectionId(initialSection);
-    if (requestedSection === "boxes" || requestedSection === "mirror") return "context";
+    if (requestedSection === "context" || requestedSection === "boxes") return "threads";
     if (requestedSection) return requestedSection;
     const nextIntent = normalizeText(initialView?.overlayIntent).toLowerCase();
-    return nextIntent === "instrument" ? "context" : nextIntent === "boxes" ? "context" : nextIntent;
+    return nextIntent === "instrument" ? "threads" : nextIntent === "boxes" ? "threads" : nextIntent;
   });
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
@@ -2195,11 +2249,12 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const [highlightedRegion, setHighlightedRegion] = useState("");
   const [workingEchoCollapsed, setWorkingEchoCollapsed] = useState(false);
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
-  const [dismissedCardIds, setDismissedCardIds] = useState([]);
-  const [dreamBridgePayload, setDreamBridgePayload] = useState(null);
+  const [pendingDreamBridgePayload, setPendingDreamBridgePayload] = useState(null);
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
   const overlayIntentKeyRef = useRef("");
+  const persistedDreamBridgePayload = normalizeDreamBridgePayload(view?.bridgeContext);
+  const dreamBridgePayload = pendingDreamBridgePayload || persistedDreamBridgePayload || null;
 
   useEffect(() => {
     setView(initialView);
@@ -2211,8 +2266,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     const requestedSection = normalizeSectionId(initialSection);
     if (!requestedSection) return;
     const nextSection =
-      requestedSection === "boxes" || requestedSection === "mirror"
-        ? "context"
+      requestedSection === "context" || requestedSection === "boxes"
+        ? "threads"
         : requestedSection;
     setOverlayMode((current) => current || nextSection);
   }, [initialSection]);
@@ -2236,9 +2291,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       return;
     }
 
-    setDreamBridgePayload(incomingPayload);
+    setPendingDreamBridgePayload(incomingPayload);
     clearDreamBridgePayload();
-    setComposerText((current) => current || incomingPayload.excerpt || "");
   }, []);
 
   const projectKey = view?.project?.projectKey || "";
@@ -2249,11 +2303,18 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
   const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
 
+  function applyRoomView(nextView, { clearPendingBridge = false } = {}) {
+    setView(nextView);
+    if (clearPendingBridge) {
+      setPendingDreamBridgePayload(null);
+    }
+  }
+
   useEffect(() => {
     const rawIntent = normalizeText(view?.overlayIntent).toLowerCase();
     const nextIntent =
       rawIntent === "instrument" || rawIntent === "boxes"
-        ? "context"
+        ? "threads"
         : rawIntent;
     const intentKey = [nextIntent, projectKey, activeSessionId, currentFocusedDocumentKey].join(":");
     if (!nextIntent || overlayMode || overlayIntentKeyRef.current === intentKey) return;
@@ -2298,7 +2359,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     if (!response.ok) {
       throw new Error(payload?.error || "Could not refresh the room.");
     }
-    setView(payload.view);
+    applyRoomView(payload.view);
     return payload.view;
   }
 
@@ -2306,6 +2367,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     setActionError("");
     try {
       await refreshRoom(nextProjectKey, "", "", "");
+      setPendingDreamBridgePayload(null);
       startActionTransition(() => {
         router.replace(buildWorkspaceHref(nextProjectKey), { scroll: false });
       });
@@ -2354,7 +2416,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       if (!response.ok) {
         throw new Error(payload?.error || "Could not start a new conversation.");
       }
-      setView(payload.view);
+      applyRoomView(payload.view, { clearPendingBridge: true });
       setComposerText("");
       setMessageError("");
       startActionTransition(() => {
@@ -2366,7 +2428,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           { scroll: false },
         );
       });
-      setOverlayMode("context");
+      setOverlayMode("");
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Could not start a new conversation.",
@@ -2394,7 +2456,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       if (!response.ok) {
         throw new Error(payload?.error || "Could not open that conversation.");
       }
-      setView(payload.view);
+      applyRoomView(payload.view, { clearPendingBridge: true });
       startActionTransition(() => {
         router.replace(
           buildWorkspaceHref(projectKey, {
@@ -2404,7 +2466,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           { scroll: false },
         );
       });
-      setOverlayMode("context");
+      setOverlayMode("");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that conversation.");
     }
@@ -2430,7 +2492,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       if (!response.ok) {
         throw new Error(payload?.error || "Could not archive that conversation.");
       }
-      setView(payload.view);
+      applyRoomView(payload.view, { clearPendingBridge: true });
       startActionTransition(() => {
         router.replace(
           buildWorkspaceHref(projectKey, {
@@ -2440,7 +2502,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           { scroll: false },
         );
       });
-      setOverlayMode("context");
+      setOverlayMode("");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not archive that conversation.");
     }
@@ -2458,6 +2520,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     setMessageError("");
     setOptimisticUserMessage(message);
     setComposerText("");
+    const bridgePayload = pendingDreamBridgePayload;
     try {
       const response = await fetch("/api/workspace/room/turn", {
         method: "POST",
@@ -2469,13 +2532,14 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           sessionId: activeSessionId,
           documentKey: currentFocusedDocumentKey,
           message,
+          bridgePayload,
         }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(payload?.error || "The room did not answer.");
       }
-      setView(payload.view);
+      applyRoomView(payload.view, { clearPendingBridge: true });
       setOptimisticUserMessage("");
     } catch (error) {
       setComposerText((current) => current || message);
@@ -2509,7 +2573,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       if (!response.ok) {
         throw new Error(payload?.error || "Could not apply the proposal.");
       }
-      setView(payload.view);
+      applyRoomView(payload.view);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not apply the proposal.");
     } finally {
@@ -2573,7 +2637,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       if (!response.ok) {
         throw new Error(payload?.error || "Could not record the return.");
       }
-      setView(payload.view);
+      applyRoomView(payload.view);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not record the return.");
     } finally {
@@ -2642,6 +2706,14 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     if (!result) return;
     setComposerText(buildOperateAuditPrompt(result));
     handleCloseOverlay();
+  }
+
+  function handleUseDreamBridge() {
+    if (!dreamBridgePayload?.documentId) return;
+    const excerpt = normalizeText(dreamBridgePayload.excerpt);
+    if (excerpt) {
+      setComposerText((current) => current || excerpt);
+    }
   }
 
   async function handleOpenWitness(nextDocumentKey = "") {
@@ -2722,55 +2794,20 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   }
 
   const activeSectionMode = normalizeText(overlayMode).toLowerCase();
-  const echoPulse = useMemo(() => buildEchoPulseStateFromRoomView(view), [view]);
-  const roomCards = buildRoomContextCards({
-    view,
-    dreamBridgePayload,
-    onOpenWitness: handleOpenWitness,
-    onOpenOperate: handleOpenOperate,
-    dismissedCardIds,
-  });
-  const contextSummary = normalizeText(view?.project?.title)
-    ? `${view?.project?.title || "Room"}`
-    : "Open a room";
-  const contextDetail = normalizeText(view?.session?.title)
-    ? view.session.title
-    : normalizeText(activeSessionId)
-      ? "Conversation"
-      : "No active conversation";
-  const contextControl = (
-    <div className={styles.contextControlCluster}>
-      {view?.hasStructure ? <StatusChip view={view} /> : null}
-      <button
-        type="button"
-        className={styles.contextButton}
-        onClick={() => setOverlayMode("context")}
-        data-testid="room-open-context"
-      >
-        <span>{contextSummary}</span>
-        <small>{contextDetail}</small>
-      </button>
-    </div>
-  );
   const sectionMeta =
-    activeSectionMode === "mirror"
+    activeSectionMode === "threads"
+      ? { label: "Conversations", title: view?.session?.title || "Conversations" }
+      : activeSectionMode === "mirror"
       ? { label: "Mirror", title: view?.project?.title || "Room" }
       : activeSectionMode === "witness"
         ? { label: "Witness", title: view?.focusedWitness?.title || "Focused witness" }
         : activeSectionMode === "operate"
           ? { label: "Operate", title: view?.project?.title || "Box advisory" }
-          : activeSectionMode === "context" || activeSectionMode === "boxes"
-            ? { label: "Context", title: view?.project?.title || "Room context" }
-            : activeSectionMode === "source"
+          : activeSectionMode === "source"
               ? { label: "Source", title: "Add source" }
               : activeSectionMode === "create"
-                ? { label: "Box", title: "Open a fresh room" }
+                ? { label: "Start Room", title: "Create the internal room container" }
                 : { label: "", title: "" };
-
-  useEffect(() => {
-    const activeIds = new Set(roomCards.map((card) => card.id));
-    setDismissedCardIds((current) => current.filter((cardId) => activeIds.has(cardId)));
-  }, [roomCards]);
 
   const workspaceMain = (
     <div className={styles.workspaceMain} data-testid="room-workspace">
@@ -2782,7 +2819,21 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       ) : null}
 
       <ShellSurface className={styles.workspaceSurface} roomy>
-        {view?.activePreview ? <ActivePreviewBanner activePreview={view.activePreview} /> : null}
+        <ThreadIdentityBar
+          view={view}
+          onOpenThreads={() => setOverlayMode("threads")}
+        />
+
+        {dreamBridgePayload?.documentId ? (
+          <DreamBridgeNotice payload={dreamBridgePayload} onUse={handleUseDreamBridge} />
+        ) : null}
+
+        {view?.workingEcho ? (
+          <WorkingEchoStrip
+            view={view}
+            onOpenDetail={() => setOverlayMode("mirror")}
+          />
+        ) : null}
 
         <div
           ref={threadRef}
@@ -2791,7 +2842,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           {showStarter ? (
             <StarterView
               starter={view?.starter}
-              canCreateBox={false}
+              canCreateBox={!normalizeText(projectKey)}
+              onCreateBox={() => setOverlayMode("create")}
             />
           ) : null}
 
@@ -2838,16 +2890,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   return (
     <LoegosShell
       route="workspace"
-      title={view?.project?.title || "Room"}
-      contextControl={contextControl}
+      title="Room"
       main={workspaceMain}
-      cards={roomCards}
-      onDismissCard={(card) => {
-        setDismissedCardIds((current) =>
-          current.includes(card.id) ? current : [...current, card.id],
-        );
-      }}
-      pulse={echoPulse.pulse}
       composer={
         <Composer
           value={composerText}

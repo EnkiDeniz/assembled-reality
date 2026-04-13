@@ -5,6 +5,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
+  extractBridgePayloadFromCitations,
   buildRoomPayloadCitations,
   makeRoomId,
   normalizeRoomTurnResult,
@@ -150,6 +151,16 @@ export function buildJourneyView(state = {}) {
     focusedWitness,
     activeSession: state.session,
   });
+  const latestBridgedUserMessage = [...(Array.isArray(state.messages) ? state.messages : [])]
+    .reverse()
+    .find((message) => {
+      if (normalizeText(message?.role).toLowerCase() !== "user") return false;
+      return Boolean(message?.bridgePayload || extractBridgePayloadFromCitations(message?.citations));
+    });
+  const bridgeContext =
+    latestBridgedUserMessage?.bridgePayload ||
+    extractBridgePayloadFromCitations(latestBridgedUserMessage?.citations) ||
+    null;
 
   return {
     roomDocument,
@@ -171,6 +182,7 @@ export function buildJourneyView(state = {}) {
       authorityContext,
       focusedWitness,
       adjacent,
+      bridgeContext,
       workingEcho,
       resetAt: "2026-04-11T00:00:00.000Z",
       ...canonicalView,

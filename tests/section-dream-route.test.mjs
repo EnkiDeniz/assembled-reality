@@ -15,13 +15,13 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   const roomServer = await read("src/lib/room-server.js");
 
   assert.match(dreamPage, /SectionDreamScreen/);
-  assert.match(dreamPage, /Dream Library/);
+  assert.match(dreamPage, /title: "Dream"/);
   assert.match(dreamPage, /getRequiredSession/);
   assert.match(dreamPage, /redirect\("\/"\)/);
   assert.match(dreamPage, /includeDevice:\s*false/);
 
   assert.match(dreamScreen, /LoegosShell/);
-  assert.match(dreamScreen, /Dream Library/);
+  assert.match(dreamScreen, /<Kicker tone="brand">Dream<\/Kicker>/);
   assert.match(dreamScreen, /dream-library-toggle/);
   assert.match(dreamScreen, /dream-compiler-read/);
   assert.match(dreamScreen, /CompilerReadPanel/);
@@ -29,8 +29,13 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(shell, /shell-mode-dream/);
   assert.match(shell, /Account/);
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
+  assert.match(shell, /event\.key !== "Tab"/);
   assert.match(roomWorkspace, /room-open-context/);
-  assert.match(roomWorkspace, /Dream Library passage/);
+  assert.match(roomWorkspace, /function WorkingEchoStrip/);
+  assert.match(roomWorkspace, /buildWorkingEchoStripStateFromRoomView/);
+  assert.match(roomWorkspace, /dream-bridge-return/);
+  assert.match(roomWorkspace, /dream-bridge-use/);
+  assert.doesNotMatch(roomWorkspace, /setComposerText\(\(current\) => current \|\| incomingPayload\.excerpt/);
 
   assert.doesNotMatch(publicSite, /\/dream/);
   assert.doesNotMatch(roomServer, /\/dream/);

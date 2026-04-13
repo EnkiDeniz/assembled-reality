@@ -433,6 +433,8 @@ export async function appendConversationExchangeForUser(
     userLine,
     answer,
     citations = [],
+    userCitations = [],
+    assistantCitations = citations,
   } = {},
 ) {
   const owner = await resolveWorkspaceOwner(userId);
@@ -448,6 +450,7 @@ export async function appendConversationExchangeForUser(
         threadId: thread.id,
         role: "USER",
         content: userLine,
+        citations: Array.isArray(userCitations) ? userCitations : [],
       },
     }),
     prisma.readerConversationMessage.create({
@@ -455,7 +458,7 @@ export async function appendConversationExchangeForUser(
         threadId: thread.id,
         role: "ASSISTANT",
         content: answer,
-        citations,
+        citations: Array.isArray(assistantCitations) ? assistantCitations : [],
       },
     }),
     prisma.readerConversationThread.update({

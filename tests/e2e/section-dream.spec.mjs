@@ -183,6 +183,7 @@ async function mockCompilerRead(page) {
             omittedClaims: ["claim_phi"],
           },
           compileResult: {
+            executed: true,
             compileState: "clean",
             runtimeState: "awaiting",
             closureType: null,

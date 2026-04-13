@@ -1,6 +1,9 @@
+import { normalizeDreamBridgePayload } from "./dream-bridge.js";
+
 export const ROOM_METADATA_VERSION = 2;
 export const ROOM_THREAD_PREFIX = "room:";
 export const ROOM_PAYLOAD_KIND = "room_payload";
+export const ROOM_BRIDGE_KIND = "dream_bridge";
 export const ROOM_LEGACY_SEED_MODE = "comments-only";
 export const ROOM_TURN_MODES = new Set(["conversation", "proposal"]);
 
@@ -390,6 +393,28 @@ export function extractRoomPayloadFromCitations(citations = []) {
 
   if (!payloadEntry?.payload) return null;
   return normalizeRoomTurnResult(payloadEntry.payload);
+}
+
+export function buildBridgePayloadCitations(payload = null) {
+  const normalizedPayload = normalizeDreamBridgePayload(payload);
+  if (!normalizedPayload) return [];
+
+  return [
+    {
+      kind: ROOM_BRIDGE_KIND,
+      payload: normalizedPayload,
+    },
+  ];
+}
+
+export function extractBridgePayloadFromCitations(citations = []) {
+  const normalizedCitations = Array.isArray(citations) ? citations : [];
+  const payloadEntry = normalizedCitations.find(
+    (entry) => normalizeText(entry?.kind).toLowerCase() === ROOM_BRIDGE_KIND,
+  );
+
+  if (!payloadEntry?.payload) return null;
+  return normalizeDreamBridgePayload(payloadEntry.payload);
 }
 
 export function isRoomAssemblyDocument(document = null) {

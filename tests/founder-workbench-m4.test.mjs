@@ -49,7 +49,7 @@ test("account shell exposes the shared signed-in shell", async () => {
   assert.match(accountShell, /<LoegosShell/);
   assert.match(accountShell, /href="\/workspace"/);
   assert.match(accountShell, /href="\/dream"/);
-  assert.match(shell, /Dream Library/);
+  assert.match(shell, /Dream/);
   assert.match(shell, /Account/);
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
 });

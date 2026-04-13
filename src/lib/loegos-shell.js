@@ -47,6 +47,12 @@ export const SHELL_ROUTES = Object.freeze({
   account: "account",
 });
 
+const FIELD_TONE_BY_KEY = Object.freeze({
+  open: "brand",
+  contested: "flagged",
+  awaiting_return: "grounded",
+});
+
 const CARD_PRIORITY = Object.freeze([
   CONTEXT_CARD_KINDS.decide,
   CONTEXT_CARD_KINDS.changed,
@@ -373,4 +379,120 @@ export function buildDormantEchoPulseState() {
 
 export function clipPulseVerdict(value = "") {
   return clipText(value, MAX_PULSE_TEXT);
+}
+
+function normalizeFieldStateKey(value = "") {
+  return normalizeText(value)
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function formatFieldStateLabel(fieldState = null) {
+  const explicitLabel = clipText(fieldState?.label || "", 32);
+  if (explicitLabel) return explicitLabel;
+
+  const key = normalizeFieldStateKey(fieldState?.key || "open");
+  if (key === "awaiting_return") return "Awaiting return";
+  if (key === "contested") return "Contested";
+  return "Open";
+}
+
+export function buildWorkingEchoStripStateFromRoomView(view = null) {
+  const workingEcho = view?.workingEcho || null;
+  const fieldState = view?.fieldState || null;
+  const fieldKey = normalizeFieldStateKey(fieldState?.key || "open");
+  const fieldTone = FIELD_TONE_BY_KEY[fieldKey] || "neutral";
+  const seemsReal =
+    clipPulseVerdict(
+      workingEcho?.whatSeemsReal?.text ||
+        workingEcho?.aim?.text ||
+        view?.starter?.prompt ||
+        "",
+    ) || "";
+  const conflicts =
+    clipPulseVerdict(
+      workingEcho?.openTension?.[0]?.text ||
+        workingEcho?.uncertainty?.detail ||
+        "",
+    ) || "";
+  const decidingSplit = clipPulseVerdict(workingEcho?.whatWouldDecideIt?.text || "");
+  const returnShift = clipPulseVerdict(
+    workingEcho?.returnDelta?.summary || workingEcho?.returnDelta?.nextMoveShift?.text || "",
+  );
+  const nextMove = clipPulseVerdict(workingEcho?.candidateMove?.text || "");
+
+  const cards = [
+    seemsReal
+      ? {
+          id: "working-echo-seems-real",
+          kind: CONTEXT_CARD_KINDS.changed,
+          label: "Seems Real",
+          tone: fieldTone,
+          verdict: seemsReal,
+          lifecycle: CONTEXT_CARD_LIFECYCLES.active,
+          updatedAt: view?.session?.updatedAt || view?.session?.createdAt || "",
+        }
+      : null,
+    conflicts
+      ? {
+          id: "working-echo-conflicts",
+          kind: CONTEXT_CARD_KINDS.tension,
+          label: "Conflicts",
+          tone: "flagged",
+          verdict: conflicts,
+          lifecycle: CONTEXT_CARD_LIFECYCLES.active,
+          updatedAt: view?.session?.updatedAt || view?.session?.createdAt || "",
+        }
+      : null,
+    decidingSplit
+      ? {
+          id: "working-echo-decide",
+          kind: CONTEXT_CARD_KINDS.decide,
+          label: "Would Decide",
+          tone: "brand",
+          verdict: decidingSplit,
+          lifecycle: CONTEXT_CARD_LIFECYCLES.active,
+          updatedAt: view?.session?.updatedAt || view?.session?.createdAt || "",
+        }
+      : null,
+    returnShift
+      ? {
+          id: "working-echo-return",
+          kind: CONTEXT_CARD_KINDS.survives,
+          label: "Return Shift",
+          tone: "grounded",
+          verdict: returnShift,
+          lifecycle: CONTEXT_CARD_LIFECYCLES.active,
+          updatedAt: view?.session?.updatedAt || view?.session?.createdAt || "",
+        }
+      : null,
+    !returnShift && nextMove
+      ? {
+          id: "working-echo-next",
+          kind: CONTEXT_CARD_KINDS.survives,
+          label: "Next Move",
+          tone: "grounded",
+          verdict: nextMove,
+          lifecycle: CONTEXT_CARD_LIFECYCLES.active,
+          updatedAt: view?.session?.updatedAt || view?.session?.createdAt || "",
+        }
+      : null,
+  ].filter(Boolean);
+
+  const pulse = buildPulseStripState(cards);
+
+  return {
+    field: {
+      key: fieldKey || "open",
+      label: formatFieldStateLabel(fieldState),
+      tone: fieldTone,
+    },
+    primaryCardId: pulse.primaryCardId,
+    visibleCardIds: pulse.visibleCardIds,
+    overflowCount: pulse.overflowCount,
+    primary: pulse.primary || null,
+    secondaryCards: pulse.secondaryCards || [],
+    cards: pulse.cards || [],
+    dormant: pulse.dormant,
+  };
 }

@@ -862,6 +862,32 @@ function computeStatus({
   return "forming";
 }
 
+function buildLoopState({ fieldState = "", canonicalView = null, openTension = [], returnDelta = null } = {}) {
+  const normalizedFieldState = normalizeText(fieldState).toLowerCase();
+  const waiting = Boolean(canonicalView?.interaction?.paneContract?.waiting);
+  const previewBlocked =
+    normalizeText(canonicalView?.activePreview?.status).toLowerCase() === "blocked" ||
+    canonicalView?.activePreview?.gatePreview?.accepted === false;
+  const structurallyContested = ["flagged", "rerouted", "stopped"].includes(normalizedFieldState);
+
+  if (normalizedFieldState === "awaiting" || waiting) return "awaiting_return";
+  if (structurallyContested || previewBlocked || returnDelta || openTension.length > 0) return "contested";
+  return "open";
+}
+
+function buildReasonForOpen({ loopState = "", whatWouldDecideIt = null, openTension = [], uncertainty = null } = {}) {
+  if (loopState === "awaiting_return" && normalizeText(whatWouldDecideIt?.text)) {
+    return clipText(whatWouldDecideIt.text, 180);
+  }
+  if (loopState === "contested" && normalizeText(openTension?.[0]?.text)) {
+    return clipText(openTension[0].text, 180);
+  }
+  if (normalizeText(uncertainty?.detail)) {
+    return clipText(uncertainty.detail, 180);
+  }
+  return "No move earned yet.";
+}
+
 function shouldShowWorkingEcho({ fieldState = "", evidenceCarried = [], aim = null, openTension = [], whatWouldDecideIt = null } = {}) {
   const normalizedFieldState = normalizeText(fieldState).toLowerCase();
   if (!whatWouldDecideIt?.text) return false;
@@ -949,6 +975,18 @@ export function buildWorkingEcho({
     aim,
     returnDelta,
   });
+  const loopState = buildLoopState({
+    fieldState,
+    canonicalView,
+    openTension,
+    returnDelta,
+  });
+  const reasonForOpen = buildReasonForOpen({
+    loopState,
+    whatWouldDecideIt,
+    openTension,
+    uncertainty,
+  });
   const turnId = normalizeText(lastAssistant?.id || canonicalView?.activePreview?.assistantMessageId || "turn");
   const sessionId = normalizeText(activeSession?.id || canonicalView?.session?.id || "session");
 
@@ -959,7 +997,10 @@ export function buildWorkingEcho({
     turnId,
     updatedAt: new Date().toISOString(),
     status,
+    loopState,
+    reasonForOpen,
     aim,
+    whatSeemsReal: aim,
     evidenceCarried,
     evidenceBuckets,
     openTension,

@@ -42,6 +42,7 @@ test("compiler read returns needs_more_witness for a lawful protocol note with w
   assert.equal(compilerRead.verdict.overall, "lawful_subset_compiles");
   assert.equal(typeof compilerRead.loeCandidate.source, "string");
   assert.match(compilerRead.loeCandidate.source, /MOV move/);
+  assert.equal(compilerRead.compileResult.executed, true);
 });
 
 test("compiler read returns needs_clearer_split for mixed architecture content", () => {
@@ -159,6 +160,7 @@ test("compiler read stays informative for mostly philosophical documents", () =>
 
   assert.equal(compilerRead.verdict.overall, "document_mostly_philosophy");
   assert.equal(compilerRead.verdict.readDisposition, "informative_only");
+  assert.equal(compilerRead.compileResult.executed, false);
   assert.equal(compilerRead.compileResult.compileState, "not_run");
   assert.equal(compilerRead.compileResult.runtimeState, "not_run");
 });

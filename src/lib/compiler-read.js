@@ -408,6 +408,7 @@ function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [
 function toCompileResult(artifact, source = "") {
   if (!normalizeLongText(source)) {
     return {
+      executed: false,
       compileState: "not_run",
       runtimeState: "not_run",
       closureType: null,
@@ -417,6 +418,7 @@ function toCompileResult(artifact, source = "") {
   }
 
   return {
+    executed: true,
     compileState: normalizeText(artifact?.compileState).toLowerCase() || "unknown",
     runtimeState: normalizeText(artifact?.runtimeState).toLowerCase() || "open",
     closureType: normalizeText(artifact?.closureType) || null,

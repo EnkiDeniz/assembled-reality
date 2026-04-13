@@ -1,9 +1,11 @@
 import { appEnv } from "./env.js";
 import {
+  buildBridgePayloadCitations,
   buildRoomPayloadCitations,
   makeRoomId,
   normalizeRoomTurnResult,
 } from "./room.js";
+import { normalizeDreamBridgePayload } from "./dream-bridge.js";
 import {
   compileRoomSource,
   createOrHydrateRoomRuntimeWindow,
@@ -150,9 +152,11 @@ export async function createRoomTurnRouteDependencies(overrides = {}) {
   const deps = {
     appEnvValue: appEnv,
     fetchImpl: (...args) => fetch(...args),
+    buildBridgePayloadCitations,
     buildRoomPayloadCitations,
     makeRoomId,
     normalizeRoomTurnResult,
+    normalizeDreamBridgePayload,
     compileRoomSource,
     createOrHydrateRoomRuntimeWindow,
     runRoomProposalGate,
@@ -197,7 +201,17 @@ export async function createRoomTurnRouteDependencies(overrides = {}) {
   return deps;
 }
 
-async function persistRoomTurn(deps, userId, roomSession, projectKey, documentKey, message, turn, provider) {
+async function persistRoomTurn(
+  deps,
+  userId,
+  roomSession,
+  projectKey,
+  documentKey,
+  message,
+  turn,
+  provider,
+  bridgePayload = null,
+) {
   if (!normalizeText(roomSession?.threadDocumentKey)) {
     throw new Error("Conversation not found.");
   }
@@ -206,7 +220,8 @@ async function persistRoomTurn(deps, userId, roomSession, projectKey, documentKe
     documentKey: roomSession.threadDocumentKey,
     userLine: message,
     answer: turn.assistantText,
-    citations: deps.buildRoomPayloadCitations(turn),
+    userCitations: deps.buildBridgePayloadCitations(bridgePayload),
+    assistantCitations: deps.buildRoomPayloadCitations(turn),
   });
   const view = await deps.buildRoomWorkspaceViewForUser(userId, {
     projectKey,
@@ -239,6 +254,7 @@ export async function handleRoomTurnPost(request, overrides = {}) {
   const sessionId = String(body?.sessionId || "").trim();
   const documentKey = String(body?.documentKey || body?.document || "").trim();
   const message = normalizeLongText(body?.message);
+  const bridgePayload = deps.normalizeDreamBridgePayload(body?.bridgePayload);
 
   if (!message) {
     return json({ ok: false, error: "Say what the room should respond to." }, 400);
@@ -306,6 +322,7 @@ export async function handleRoomTurnPost(request, overrides = {}) {
           message,
           deps.normalizeRoomTurnResult(deps.coerceConversationTurn(normalizedTurn)),
           provider,
+          bridgePayload,
         ),
       );
     }
@@ -332,6 +349,7 @@ export async function handleRoomTurnPost(request, overrides = {}) {
         message,
         gatedTurn,
         provider,
+        bridgePayload,
       ),
     );
   }

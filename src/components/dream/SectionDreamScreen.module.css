@@ -506,7 +506,7 @@
     padding-right: 2px;
   }
 
-  .stageActions > .iconAction:first-child {
+  .libraryToggle {
     display: none;
   }
 }

@@ -41,7 +41,14 @@ test("compiler read route returns compilerRead payload on success", async () => 
     documentSummary: { title: "Doc", documentType: "protocol", dominantMode: "proposal", summary: "Summary" },
     claimSet: [],
     loeCandidate: { source: "", translationStrategy: "None", omittedClaims: [] },
-    compileResult: { compileState: "clean", runtimeState: "open", closureType: null, mergedWindowState: "open", diagnostics: [] },
+    compileResult: {
+      executed: true,
+      compileState: "clean",
+      runtimeState: "open",
+      closureType: null,
+      mergedWindowState: "open",
+      diagnostics: [],
+    },
     verdict: { overall: "lawful_subset_compiles", primaryFinding: "Found it.", failureClass: "mixed", readDisposition: "needs_more_witness" },
     nextMoves: ["Add witness."],
   };

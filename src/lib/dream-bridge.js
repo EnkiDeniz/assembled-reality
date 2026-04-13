@@ -1,4 +1,20 @@
 const BRIDGE_KEY = "assembled-reality:dream-bridge:v1";
+const BRIDGE_KINDS = new Set(["passage", "note", "witness"]);
+
+function normalizeText(value = "") {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeLongText(value = "") {
+  return String(value || "").trim();
+}
+
+function normalizeSavedAt(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return new Date().toISOString();
+  const parsed = Date.parse(raw);
+  return Number.isNaN(parsed) ? new Date().toISOString() : new Date(parsed).toISOString();
+}
 
 function loadJson(key) {
   if (typeof window === "undefined") return null;
@@ -16,20 +32,37 @@ function saveJson(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-export function saveDreamBridgePayload(payload = null) {
-  if (!payload?.documentId) return;
+export function normalizeDreamBridgePayload(payload = null) {
+  const nextPayload = payload && typeof payload === "object" ? payload : null;
+  if (!nextPayload) return null;
 
-  saveJson(BRIDGE_KEY, {
-    documentId: String(payload.documentId || "").trim(),
-    anchor: String(payload.anchor || "").trim(),
-    excerpt: String(payload.excerpt || "").trim(),
-    action: String(payload.action || "witness").trim() || "witness",
-    savedAt: new Date().toISOString(),
-  });
+  const documentId = normalizeText(nextPayload.documentId);
+  const excerpt = normalizeLongText(nextPayload.excerpt);
+  if (!documentId || !excerpt) return null;
+
+  const kind = normalizeText(nextPayload.kind).toLowerCase();
+
+  return {
+    kind: BRIDGE_KINDS.has(kind) ? kind : "passage",
+    documentId,
+    documentTitle:
+      normalizeText(nextPayload.documentTitle) ||
+      normalizeText(nextPayload.sourceLabel) ||
+      "Dream document",
+    anchor: normalizeText(nextPayload.anchor) || null,
+    excerpt,
+    savedAt: normalizeSavedAt(nextPayload.savedAt),
+  };
+}
+
+export function saveDreamBridgePayload(payload = null) {
+  const normalizedPayload = normalizeDreamBridgePayload(payload);
+  if (!normalizedPayload) return;
+  saveJson(BRIDGE_KEY, normalizedPayload);
 }
 
 export function loadDreamBridgePayload() {
-  return loadJson(BRIDGE_KEY);
+  return normalizeDreamBridgePayload(loadJson(BRIDGE_KEY));
 }
 
 export function clearDreamBridgePayload() {
