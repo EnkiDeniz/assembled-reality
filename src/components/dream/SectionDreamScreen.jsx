@@ -29,6 +29,7 @@ import LoegosShell, {
   SignalChip,
   Surface as ShellSurface,
 } from "@/components/shell/LoegosShell";
+import CompilerReadPanel from "@/components/dream/CompilerReadPanel";
 import styles from "@/components/dream/SectionDreamScreen.module.css";
 import {
   buildDreamDocumentRecord,
@@ -94,6 +95,10 @@ function removeDocument(documents = [], documentId = "") {
   return documents.filter((document) => document.id !== documentId);
 }
 
+function normalizeLongForm(value = "") {
+  return String(value || "").trim();
+}
+
 export default function SectionDreamScreen({
   initialVoiceChoice = null,
   voiceCatalog = [],
@@ -141,6 +146,9 @@ export default function SectionDreamScreen({
   const [notice, setNotice] = useState("");
   const [isRestoring, setIsRestoring] = useState(true);
   const [isFetchingAudio, setIsFetchingAudio] = useState(false);
+  const [compilerRead, setCompilerRead] = useState(null);
+  const [compilerReadError, setCompilerReadError] = useState("");
+  const [compilerReadPending, setCompilerReadPending] = useState(false);
   const [, setDurationVersion] = useState(0);
   const [isPending, startTransition] = useTransition();
 
@@ -171,6 +179,13 @@ export default function SectionDreamScreen({
   const currentChunk = chunks[activeChunkIndex] || null;
   const requestedDocumentId = String(searchParams?.get("document") || "").trim();
   const requestedAnchor = String(searchParams?.get("anchor") || "").trim();
+  const isPasteDocument = dreamDocument?.sourceKind === DREAM_SOURCE_KINDS.paste;
+  const hasUnsavedPasteChanges = isPasteDocument
+    ? showPaste && normalizeLongForm(pasteValue) !== normalizeLongForm(dreamDocument?.rawMarkdown || "")
+    : showPaste && Boolean(normalizeLongForm(pasteValue));
+  const compilerReadDisabledReason = hasUnsavedPasteChanges
+    ? "Update pasted markdown first."
+    : "";
 
   const cleanupChunkCache = useCallback(() => {
     for (const entry of chunkCacheRef.current.values()) {
@@ -180,6 +195,12 @@ export default function SectionDreamScreen({
     }
 
     chunkCacheRef.current.clear();
+  }, []);
+
+  const clearCompilerReadState = useCallback(() => {
+    setCompilerRead(null);
+    setCompilerReadError("");
+    setCompilerReadPending(false);
   }, []);
 
   const setPlaybackPosition = useCallback((documentRecord, nextIndex = 0, nextOffsetMs = 0) => {
@@ -716,6 +737,7 @@ export default function SectionDreamScreen({
     }
 
     try {
+      clearCompilerReadState();
       setErrorMessage("");
       setNotice("Preparing markdown for listening.");
       const documentRecord = await buildDreamDocumentRecord({
@@ -815,6 +837,7 @@ export default function SectionDreamScreen({
     }
 
     try {
+      clearCompilerReadState();
       persistLatestSession();
       resetAudioRuntime();
 
@@ -854,6 +877,7 @@ export default function SectionDreamScreen({
     }
 
     const currentId = dreamDocument.id;
+    clearCompilerReadState();
     resetAudioRuntime();
     await deleteDreamDocument(currentId);
     const nextLibrary = removeDocument(dreamLibrary, currentId);
@@ -917,6 +941,46 @@ export default function SectionDreamScreen({
     void loadChunkIntoAudio(dreamDocument, nextPosition.index, nextPosition.chunkOffsetMs, {
       autoPlay: true,
     });
+  }
+
+  async function handleRunCompilerRead() {
+    if (!dreamDocument?.id || compilerReadPending || compilerReadDisabledReason) {
+      return;
+    }
+
+    setCompilerRead(null);
+    setCompilerReadError("");
+    setCompilerReadPending(true);
+
+    try {
+      const response = await fetch("/api/compiler-read", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentId: dreamDocument.id,
+          title: dreamDocument.filename,
+          text: dreamDocument.rawMarkdown || dreamDocument.normalizedText || "",
+          focus: null,
+          strictness: "soft",
+          question: null,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.compilerRead) {
+        throw new Error(payload?.error || "Compiler Read is unavailable right now.");
+      }
+
+      setCompilerRead(payload.compilerRead);
+    } catch (error) {
+      setCompilerReadError(
+        error instanceof Error ? error.message : "Compiler Read is unavailable right now.",
+      );
+    } finally {
+      setCompilerReadPending(false);
+    }
   }
 
   function seekToGlobalOffset(nextGlobalMs) {
@@ -1089,6 +1153,18 @@ export default function SectionDreamScreen({
               </div>
 
               <div className={styles.stageActions}>
+                {dreamDocument ? (
+                  <button
+                    type="button"
+                    className={styles.actionButton}
+                    onClick={handleRunCompilerRead}
+                    disabled={compilerReadPending || Boolean(compilerReadDisabledReason)}
+                    data-testid="dream-compiler-read"
+                  >
+                    <FileText size={16} />
+                    <span>{compilerReadPending ? "Running…" : "Compiler Read"}</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={styles.iconAction}
@@ -1147,6 +1223,15 @@ export default function SectionDreamScreen({
               </div>
             ) : null}
 
+            {compilerReadDisabledReason ? (
+              <p
+                className={styles.compilerReadDisabledReason}
+                data-testid="dream-compiler-read-disabled-reason"
+              >
+                {compilerReadDisabledReason}
+              </p>
+            ) : null}
+
             {dreamDocument ? (
               <>
                 <div className={styles.stageMeta}>
@@ -1157,6 +1242,12 @@ export default function SectionDreamScreen({
                     {summary?.wordCount || 0} words
                   </SignalChip>
                 </div>
+
+                <CompilerReadPanel
+                  compilerRead={compilerRead}
+                  pending={compilerReadPending}
+                  error={compilerReadError}
+                />
 
                 <div className={styles.scrubRow}>
                   <span data-testid="dream-current-time">{formatDreamTime(globalOffsetMs)}</span>

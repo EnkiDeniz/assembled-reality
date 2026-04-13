@@ -23,6 +23,8 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(dreamScreen, /LoegosShell/);
   assert.match(dreamScreen, /Dream Library/);
   assert.match(dreamScreen, /dream-library-toggle/);
+  assert.match(dreamScreen, /dream-compiler-read/);
+  assert.match(dreamScreen, /CompilerReadPanel/);
   assert.match(shell, /shell-mode-room/);
   assert.match(shell, /shell-mode-dream/);
   assert.match(shell, /Account/);

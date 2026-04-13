@@ -139,6 +139,72 @@ async function mockDreamAudio(page) {
   });
 }
 
+async function mockCompilerRead(page) {
+  await page.route("**/api/compiler-read", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        compilerRead: {
+          documentSummary: {
+            title: "field-notes.md",
+            documentType: "protocol",
+            dominantMode: "proposal",
+            summary: "The document contains one operational subset worth pressure-testing.",
+          },
+          claimSet: [
+            {
+              id: "claim_protocol",
+              text: "Pull one trace before changing the flow.",
+              claimKind: "protocol",
+              translationReadiness: "candidate_for_translation",
+              provenanceClass: "self_reported",
+              supportStatus: "weakly_supported",
+              evidenceRefs: ["field-notes"],
+              reason: "This is the smallest protocol step the document names.",
+              sourceExcerpt: "Pull one trace before changing the flow.",
+            },
+            {
+              id: "claim_phi",
+              text: "The flow should feel hospitable to doubt.",
+              claimKind: "philosophy",
+              translationReadiness: "non_compilable_philosophy",
+              provenanceClass: "unknown",
+              supportStatus: "unsupported",
+              evidenceRefs: [],
+              reason: "This belongs outside the v0 translated subset.",
+              sourceExcerpt: "The flow should feel hospitable to doubt.",
+            },
+          ],
+          loeCandidate: {
+            source: 'GND box @field_notes\nDIR aim "Pull one trace before changing the flow."\nMOV move "Pull one trace before changing the flow." via manual\nTST test "A concrete witness can confirm or falsify this protocol step."',
+            translationStrategy: "Carried one protocol line and one move/test pair from the provisional claim set.",
+            omittedClaims: ["claim_phi"],
+          },
+          compileResult: {
+            compileState: "clean",
+            runtimeState: "awaiting",
+            closureType: null,
+            mergedWindowState: "awaiting",
+            diagnostics: [],
+          },
+          verdict: {
+            overall: "lawful_subset_compiles",
+            primaryFinding: "The language can hold part of this document, but the central protocol still needs stronger witness.",
+            failureClass: "mixed",
+            readDisposition: "needs_more_witness",
+          },
+          nextMoves: [
+            "Add one quoted witness or external citation for the central protocol claim.",
+            "Keep the operational subset, then rerun Compiler Read.",
+          ],
+        },
+      }),
+    });
+  });
+}
+
 test("dream library uploads markdown, plays, pauses, and restores the last position", async ({
   page,
 }) => {
@@ -198,4 +264,46 @@ test("section dream is reachable from signed-in menus and remains usable on mobi
   await expect(page.getByTestId("shell-mode-dream")).toBeVisible();
   await page.getByTestId("shell-mode-dream").click();
   await expect(page.getByTestId("dream-screen")).toBeVisible();
+});
+
+test("dream runs compiler read inline and clears it on refresh", async ({ page }) => {
+  await bootstrapGuardian(page);
+  await installMediaMock(page);
+  await mockDreamAudio(page);
+  await mockCompilerRead(page);
+
+  await page.goto("/dream", { waitUntil: "commit" });
+  await expect(page.getByTestId("dream-screen")).toBeVisible();
+
+  await page.getByTestId("dream-upload-input").setInputFiles({
+    name: "field-notes.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from(
+      "# Field Notes\n\nPull one trace before changing the flow.\n\nThe flow should feel hospitable to doubt.",
+    ),
+  });
+
+  await page.getByTestId("dream-compiler-read").click();
+  await expect(page.getByTestId("dream-compiler-read-panel")).toBeVisible();
+  await expect(page.getByTestId("dream-compiler-read-summary")).toContainText(
+    "The language can hold part of this document",
+  );
+  await expect(page.getByTestId("dream-compiler-read-claims")).toContainText("Seven-assisted extraction remains provisional");
+  await expect(page.getByTestId("dream-compiler-read-next-moves")).toContainText(
+    "Add one quoted witness or external citation",
+  );
+
+  await page.getByTestId("dream-compiler-read-inspect").click();
+  await expect(page.getByTestId("dream-compiler-read-inspect")).toContainText("GND box @field_notes");
+
+  await page.getByTestId("dream-paste-toggle").click();
+  await page.getByTestId("dream-paste-input").fill("# New draft\n\nThis is not saved yet.");
+  await expect(page.getByTestId("dream-compiler-read")).toBeDisabled();
+  await expect(page.getByTestId("dream-compiler-read-disabled-reason")).toContainText(
+    "Update pasted markdown first.",
+  );
+
+  await page.reload({ waitUntil: "commit" });
+  await expect(page.getByTestId("dream-player")).toContainText("field-notes.md");
+  await expect(page.getByTestId("dream-compiler-read-panel")).toHaveCount(0);
 });
