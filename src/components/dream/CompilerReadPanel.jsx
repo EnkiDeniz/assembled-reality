@@ -42,6 +42,7 @@ export default function CompilerReadPanel({
   const diagnostics = Array.isArray(compilerRead?.compileResult?.diagnostics)
     ? compilerRead.compileResult.diagnostics
     : [];
+  const compilerWasRun = Boolean(normalizeText(compilerRead?.loeCandidate?.source));
 
   return (
     <section
@@ -179,6 +180,8 @@ export default function CompilerReadPanel({
                       </li>
                     ))}
                   </ul>
+                ) : !compilerWasRun ? (
+                  <p>No compiler run yet because no lawful subset translated in v0.</p>
                 ) : (
                   <p>No compiler diagnostics on the translated subset.</p>
                 )}

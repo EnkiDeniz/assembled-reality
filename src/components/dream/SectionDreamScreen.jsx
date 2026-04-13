@@ -119,6 +119,8 @@ export default function SectionDreamScreen({
   const lastPersistedAtRef = useRef(0);
   const pendingSeekMsRef = useRef(null);
   const suppressPauseRef = useRef(false);
+  const compilerReadAbortRef = useRef(null);
+  const compilerReadRequestIdRef = useRef(0);
   const currentStateRef = useRef({
     dreamDocument: null,
     status: DREAM_PLAYBACK_STATUSES.idle,
@@ -197,11 +199,41 @@ export default function SectionDreamScreen({
     chunkCacheRef.current.clear();
   }, []);
 
+  const cancelCompilerReadRequest = useCallback(() => {
+    compilerReadRequestIdRef.current += 1;
+    if (compilerReadAbortRef.current) {
+      compilerReadAbortRef.current.abort();
+      compilerReadAbortRef.current = null;
+    }
+  }, []);
+
   const clearCompilerReadState = useCallback(() => {
+    cancelCompilerReadRequest();
     setCompilerRead(null);
     setCompilerReadError("");
     setCompilerReadPending(false);
-  }, []);
+  }, [cancelCompilerReadRequest]);
+
+  useEffect(() => () => {
+    cancelCompilerReadRequest();
+  }, [cancelCompilerReadRequest]);
+
+  useEffect(() => {
+    if (
+      isPasteDocument &&
+      hasUnsavedPasteChanges &&
+      (compilerRead || compilerReadPending || compilerReadError)
+    ) {
+      clearCompilerReadState();
+    }
+  }, [
+    clearCompilerReadState,
+    compilerRead,
+    compilerReadError,
+    compilerReadPending,
+    hasUnsavedPasteChanges,
+    isPasteDocument,
+  ]);
 
   const setPlaybackPosition = useCallback((documentRecord, nextIndex = 0, nextOffsetMs = 0) => {
     const queue = Array.isArray(documentRecord?.chunkMap) ? documentRecord.chunkMap : [];
@@ -948,6 +980,11 @@ export default function SectionDreamScreen({
       return;
     }
 
+    cancelCompilerReadRequest();
+    const requestId = compilerReadRequestIdRef.current;
+    const requestDocumentId = dreamDocument.id;
+    const controller = new AbortController();
+    compilerReadAbortRef.current = controller;
     setCompilerRead(null);
     setCompilerReadError("");
     setCompilerReadPending(true);
@@ -966,6 +1003,7 @@ export default function SectionDreamScreen({
           strictness: "soft",
           question: null,
         }),
+        signal: controller.signal,
       });
 
       const payload = await response.json().catch(() => null);
@@ -973,13 +1011,37 @@ export default function SectionDreamScreen({
         throw new Error(payload?.error || "Compiler Read is unavailable right now.");
       }
 
+      if (
+        compilerReadRequestIdRef.current !== requestId ||
+        currentStateRef.current.dreamDocument?.id !== requestDocumentId
+      ) {
+        return;
+      }
+
       setCompilerRead(payload.compilerRead);
     } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+      if (
+        compilerReadRequestIdRef.current !== requestId ||
+        currentStateRef.current.dreamDocument?.id !== requestDocumentId
+      ) {
+        return;
+      }
       setCompilerReadError(
         error instanceof Error ? error.message : "Compiler Read is unavailable right now.",
       );
     } finally {
-      setCompilerReadPending(false);
+      if (compilerReadAbortRef.current === controller) {
+        compilerReadAbortRef.current = null;
+      }
+      if (
+        compilerReadRequestIdRef.current === requestId &&
+        currentStateRef.current.dreamDocument?.id === requestDocumentId
+      ) {
+        setCompilerReadPending(false);
+      }
     }
   }
 

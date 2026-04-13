@@ -149,11 +149,17 @@ function inferDominantMode(claims = []) {
   return entries[0][0];
 }
 
-function normalizeClaim(rawClaim = null, index = 0) {
+function normalizeClaim(rawClaim = null, index = 0, documentText = "") {
   const claim = rawClaim && typeof rawClaim === "object" ? rawClaim : {};
   const sourceExcerpt = normalizeLongText(claim.sourceExcerpt);
   if (!sourceExcerpt) {
     throw new CompilerReadError("Seven returned a claim without a source excerpt.", {
+      status: 503,
+      unavailable: true,
+    });
+  }
+  if (normalizeLongText(documentText) && !String(documentText).includes(sourceExcerpt)) {
+    throw new CompilerReadError("Seven returned a claim whose source excerpt is not present in the document.", {
       status: 503,
       unavailable: true,
     });
@@ -305,6 +311,12 @@ function deriveAimText(claims = [], documentSummary = null) {
   );
 }
 
+function deriveAimClaim(claims = []) {
+  return (Array.isArray(claims) ? claims : []).find((claim) =>
+    ["protocol", "testable_hypothesis", "interpretation"].includes(claim.claimKind),
+  ) || null;
+}
+
 function buildWitnessSourceLabel(claim = null) {
   const primaryRef = Array.isArray(claim?.evidenceRefs) ? claim.evidenceRefs[0] : "";
   if (normalizeText(primaryRef)) return normalizeText(primaryRef);
@@ -334,10 +346,14 @@ function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [
   const lines = [];
   const usedIds = new Set();
   const boxRef = `@${toIdentifier(documentId || documentSummary?.title || "compiler_read", "compiler_read")}`;
+  const aimSourceClaim = deriveAimClaim(protocolClaims.length ? protocolClaims : translatableClaims);
 
   if (translatableClaims.length) {
     lines.push(`GND box ${boxRef}`);
     lines.push(`DIR aim ${quoteLoeString(deriveAimText(protocolClaims.length ? protocolClaims : translatableClaims, documentSummary), 100)}`);
+    if (aimSourceClaim?.id) {
+      usedIds.add(aimSourceClaim.id);
+    }
   }
 
   witnessClaims.forEach((claim, index) => {
@@ -390,8 +406,18 @@ function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [
 }
 
 function toCompileResult(artifact, source = "") {
+  if (!normalizeLongText(source)) {
+    return {
+      compileState: "not_run",
+      runtimeState: "not_run",
+      closureType: null,
+      mergedWindowState: "not_run",
+      diagnostics: [],
+    };
+  }
+
   return {
-    compileState: normalizeText(artifact?.compileState).toLowerCase() || (source ? "unknown" : "clean"),
+    compileState: normalizeText(artifact?.compileState).toLowerCase() || "unknown",
     runtimeState: normalizeText(artifact?.runtimeState).toLowerCase() || "open",
     closureType: normalizeText(artifact?.closureType) || null,
     mergedWindowState: normalizeText(artifact?.mergedWindowState).toLowerCase() || "open",
@@ -540,17 +566,20 @@ function buildNextMoves({ verdict, claims }) {
 export function buildCompilerReadFromExtraction({
   documentId = "",
   title = "",
+  text = "",
   extracted = null,
 } = {}) {
   const payload = extracted && typeof extracted === "object" ? extracted : {};
   const rawClaims = Array.isArray(payload.claimSet) ? payload.claimSet : [];
-  const claimSet = rawClaims.map((claim, index) => normalizeClaim(claim, index));
+  const claimSet = rawClaims.map((claim, index) => normalizeClaim(claim, index, text));
   const documentSummary = normalizeDocumentSummary(payload.documentSummary, claimSet, title);
   const loeCandidate = buildLoeCandidate({ documentId, documentSummary, claims: claimSet });
-  const artifact = compileSource({
-    filename: `${toIdentifier(documentId || title || "compiler_read", "compiler_read")}.loe`,
-    source: loeCandidate.source,
-  });
+  const artifact = loeCandidate.source
+    ? compileSource({
+        filename: `${toIdentifier(documentId || title || "compiler_read", "compiler_read")}.loe`,
+        source: loeCandidate.source,
+      })
+    : null;
   const compileResult = toCompileResult(artifact, loeCandidate.source);
   const verdict = buildVerdict({ documentSummary, claims: claimSet, loeCandidate, compileResult });
   const nextMoves = buildNextMoves({ verdict, claims: claimSet });
@@ -597,6 +626,7 @@ export async function runCompilerRead({
   return buildCompilerReadFromExtraction({
     documentId: normalizedDocumentId,
     title,
+    text: normalizedText,
     extracted,
   });
 }

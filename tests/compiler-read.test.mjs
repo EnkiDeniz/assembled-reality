@@ -19,7 +19,7 @@ test("compiler read returns needs_more_witness for a lawful protocol note with w
   const compilerRead = buildCompilerReadFromExtraction({
     documentId: "protocol-weak-witness",
     title: "Protocol note",
-    text: "Check the schema and confirm the result.",
+    text: "Run the contract check before rollout.",
     extracted: buildExtraction([
       {
         id: "claim_protocol",
@@ -48,7 +48,10 @@ test("compiler read returns needs_clearer_split for mixed architecture content",
   const compilerRead = buildCompilerReadFromExtraction({
     documentId: "architecture-mixed",
     title: "Architecture memo",
-    text: "Separate protocol from theory.",
+    text: [
+      "Pull one trace before touching the flow.",
+      "The interface is the shadow of the ontology.",
+    ].join("\n\n"),
     extracted: buildExtraction([
       {
         id: "claim_protocol",
@@ -87,7 +90,7 @@ test("compiler read exposes compiler gaps when meaning exists but the language c
   const compilerRead = buildCompilerReadFromExtraction({
     documentId: "compiler-gap",
     title: "Compiler gap",
-    text: "Meaningful but not representable.",
+    text: "The runtime should preserve competing branches without sealing them.",
     extracted: buildExtraction([
       {
         id: "claim_gap",
@@ -111,7 +114,7 @@ test("compiler read reports translation loss when prose meaning cannot survive c
   const compilerRead = buildCompilerReadFromExtraction({
     documentId: "translation-loss",
     title: "Translation loss",
-    text: "Meaning without stable protocol.",
+    text: "The whole system should feel like an ethical membrane around choice.",
     extracted: buildExtraction([
       {
         id: "claim_loss",
@@ -135,7 +138,7 @@ test("compiler read stays informative for mostly philosophical documents", () =>
   const compilerRead = buildCompilerReadFromExtraction({
     documentId: "mostly-philosophy",
     title: "Mostly philosophy",
-    text: "This is philosophy.",
+    text: "Reality is the echo of attention.",
     extracted: buildExtraction([
       {
         id: "claim_phi",
@@ -156,13 +159,18 @@ test("compiler read stays informative for mostly philosophical documents", () =>
 
   assert.equal(compilerRead.verdict.overall, "document_mostly_philosophy");
   assert.equal(compilerRead.verdict.readDisposition, "informative_only");
+  assert.equal(compilerRead.compileResult.compileState, "not_run");
+  assert.equal(compilerRead.compileResult.runtimeState, "not_run");
 });
 
 test("compiler read preserves provenance fields and explicit omitted claims", () => {
   const compilerRead = buildCompilerReadFromExtraction({
     documentId: "explicit-fields",
     title: "Explicit fields",
-    text: "Source text.",
+    text: [
+      "The cited trace shows the blocker at permissions.",
+      "This probably means the policy is spiritually wrong.",
+    ].join("\n\n"),
     extracted: buildExtraction([
       {
         id: "claim_ground",
@@ -195,4 +203,53 @@ test("compiler read preserves provenance fields and explicit omitted claims", ()
   assert.deepEqual(claim.evidenceRefs, ["trace-17"]);
   assert.deepEqual(compilerRead.loeCandidate.omittedClaims, ["claim_interp"]);
   assert.ok(Array.isArray(compilerRead.compileResult.diagnostics));
+});
+
+test("compiler read rejects claims whose source excerpt is not present in the document", () => {
+  assert.throws(
+    () =>
+      buildCompilerReadFromExtraction({
+        documentId: "bad-excerpt",
+        title: "Bad excerpt",
+        text: "The document says something else entirely.",
+        extracted: buildExtraction([
+          {
+            id: "claim_bad",
+            text: "Invented structure.",
+            claimKind: "protocol",
+            translationReadiness: "candidate_for_translation",
+            provenanceClass: "self_reported",
+            supportStatus: "unsupported",
+            evidenceRefs: [],
+            reason: "This should fail grounding.",
+            sourceExcerpt: "This excerpt never appears in the document.",
+          },
+        ]),
+      }),
+    /source excerpt is not present in the document/i,
+  );
+});
+
+test("compiler read does not mark the translated aim claim as omitted", () => {
+  const compilerRead = buildCompilerReadFromExtraction({
+    documentId: "aim-only",
+    title: "Aim only",
+    text: "Preserve competing branches without sealing them.",
+    extracted: buildExtraction([
+      {
+        id: "claim_aim",
+        text: "Preserve competing branches without sealing them.",
+        claimKind: "interpretation",
+        translationReadiness: "candidate_for_translation",
+        provenanceClass: "self_reported",
+        supportStatus: "weakly_supported",
+        evidenceRefs: [],
+        reason: "This is the smallest translatable vector in the document.",
+        sourceExcerpt: "Preserve competing branches without sealing them.",
+      },
+    ]),
+  });
+
+  assert.match(compilerRead.loeCandidate.source, /DIR aim "Preserve competing branches without sealing them\."/);
+  assert.deepEqual(compilerRead.loeCandidate.omittedClaims, []);
 });

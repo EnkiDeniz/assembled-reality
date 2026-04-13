@@ -302,6 +302,7 @@ test("dream runs compiler read inline and clears it on refresh", async ({ page }
   await expect(page.getByTestId("dream-compiler-read-disabled-reason")).toContainText(
     "Update pasted markdown first.",
   );
+  await expect(page.getByTestId("dream-compiler-read-panel")).toHaveCount(0);
 
   await page.reload({ waitUntil: "commit" });
   await expect(page.getByTestId("dream-player")).toContainText("field-notes.md");
