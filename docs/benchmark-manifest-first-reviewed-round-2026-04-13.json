@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "first-reviewed-round-hand-frozen-2026-04-13",
+  "purpose": "Hand-frozen first reviewed round with two previously useful cases, one grounding-failure case, and one invalid-payload case.",
+  "sampledDocuments": [
+    {
+      "documentPath": "docs/seven-operate-receipt-contract.md",
+      "sourceRoot": "docs",
+      "contentHash": "f46bbb5caae92a4dc6fc35b002b37d41d4f8ff476ec57e59b48db5459fcb60a1"
+    },
+    {
+      "documentPath": "LoegosCLI/docs/seven-proposal-gate-contract-v0.md",
+      "sourceRoot": "LoegosCLI/docs",
+      "contentHash": "e3cf3a6b97258dd51cd5bd4bbe22ad5dd9f0c709b95752bb9dacfd5dc3f721a2"
+    },
+    {
+      "documentPath": "docs/LoegosSeed/loegos-positioning-final.md",
+      "sourceRoot": "docs",
+      "contentHash": "9add70bb92e677ef30935295c7eb94384358005eb14086dc2c058203599592f9"
+    },
+    {
+      "documentPath": "docs/LoegosSeed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
+      "sourceRoot": "docs",
+      "contentHash": "5322edfda7f14b949a966baf0710eb354e5f781a9099e2ccc97ea36da5e18423"
+    }
+  ]
+}

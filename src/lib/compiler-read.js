@@ -28,6 +28,56 @@ const SUPPORT_STATUSES = new Set(["supported", "weakly_supported", "unsupported"
 const DOCUMENT_TYPES = new Set(["protocol", "architecture", "theory", "essay", "mixed"]);
 const DOMINANT_MODES = new Set(["ground", "interpretation", "proposal", "philosophy", "mixed"]);
 const CLAUSE_HEADS = new Set(["DIR", "GND", "INT", "XFM", "MOV", "TST", "RTN", "CLS"]);
+const COMPILER_READ_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["documentSummary", "claimSet"],
+  properties: {
+    documentSummary: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title", "documentType", "dominantMode", "summary"],
+      properties: {
+        title: { type: "string" },
+        documentType: { type: "string", enum: [...DOCUMENT_TYPES] },
+        dominantMode: { type: "string", enum: [...DOMINANT_MODES] },
+        summary: { type: "string" },
+      },
+    },
+    claimSet: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "text",
+          "claimKind",
+          "translationReadiness",
+          "provenanceClass",
+          "supportStatus",
+          "evidenceRefs",
+          "reason",
+          "sourceExcerpt",
+        ],
+        properties: {
+          id: { type: "string" },
+          text: { type: "string" },
+          claimKind: { type: "string", enum: [...CLAIM_KINDS] },
+          translationReadiness: { type: "string", enum: [...TRANSLATION_READINESS_VALUES] },
+          provenanceClass: { type: "string", enum: [...PROVENANCE_CLASSES] },
+          supportStatus: { type: "string", enum: [...SUPPORT_STATUSES] },
+          evidenceRefs: {
+            type: "array",
+            items: { type: "string" },
+          },
+          reason: { type: "string" },
+          sourceExcerpt: { type: "string" },
+        },
+      },
+    },
+  },
+};
 
 export class CompilerReadError extends Error {
   constructor(message, { status = 500, unavailable = false } = {}) {
@@ -84,6 +134,31 @@ function extractOutputText(payload) {
   return parts.join("\n\n").trim();
 }
 
+function extractStructuredCompilerReadPayload(payload = null) {
+  if (payload && typeof payload?.output_parsed === "object" && payload.output_parsed) {
+    return payload.output_parsed;
+  }
+
+  const output = Array.isArray(payload?.output) ? payload.output : [];
+  for (const item of output) {
+    if (item && typeof item?.json === "object" && item.json) {
+      return item.json;
+    }
+
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const entry of content) {
+      if (entry && typeof entry?.json === "object" && entry.json) {
+        return entry.json;
+      }
+      if (entry && typeof entry?.parsed === "object" && entry.parsed) {
+        return entry.parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
 function extractJsonObject(text = "") {
   const normalized = String(text || "").trim();
   if (!normalized) return null;
@@ -121,6 +196,82 @@ function normalizeEnum(value, allowedValues, fallback) {
   return allowedValues.has(normalized) ? normalized : fallback;
 }
 
+function canonicalizeGroundingChar(char = "") {
+  if (char === "\u2018" || char === "\u2019" || char === "\u2032") return "'";
+  if (char === "\u201c" || char === "\u201d" || char === "\u2033") return '"';
+  if (char === "\u2013" || char === "\u2014" || char === "\u2212") return "-";
+  if (char === "\u2026") return "...";
+  return char;
+}
+
+function buildGroundingProjection(text = "") {
+  const source = String(text || "");
+  const chars = [];
+  const indexMap = [];
+  let lastWasSpace = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (/\s/u.test(char)) {
+      if (!lastWasSpace) {
+        chars.push(" ");
+        indexMap.push(index);
+        lastWasSpace = true;
+      }
+      continue;
+    }
+
+    lastWasSpace = false;
+    const canonical = canonicalizeGroundingChar(char);
+    for (const projected of canonical) {
+      chars.push(projected);
+      indexMap.push(index);
+    }
+  }
+
+  let start = 0;
+  let end = chars.length - 1;
+  while (start <= end && chars[start] === " ") {
+    start += 1;
+  }
+  while (end >= start && chars[end] === " ") {
+    end -= 1;
+  }
+
+  return {
+    text: chars.slice(start, end + 1).join(""),
+    indexMap: indexMap.slice(start, end + 1),
+  };
+}
+
+function recoverGroundedSourceExcerpt(documentText = "", sourceExcerpt = "") {
+  const exactExcerpt = normalizeLongText(sourceExcerpt);
+  if (!exactExcerpt) return "";
+  if (String(documentText).includes(exactExcerpt)) {
+    return exactExcerpt;
+  }
+
+  const projectedDocument = buildGroundingProjection(documentText);
+  const projectedExcerpt = buildGroundingProjection(sourceExcerpt).text;
+  if (!projectedDocument.text || !projectedExcerpt) {
+    return "";
+  }
+
+  const start = projectedDocument.text.indexOf(projectedExcerpt);
+  if (start < 0) {
+    return "";
+  }
+
+  const end = start + projectedExcerpt.length - 1;
+  const startIndex = projectedDocument.indexMap[start];
+  const endIndex = projectedDocument.indexMap[end];
+  if (!Number.isInteger(startIndex) || !Number.isInteger(endIndex)) {
+    return "";
+  }
+
+  return String(documentText).slice(startIndex, endIndex + 1).trim();
+}
+
 function inferDocumentType(claims = []) {
   const kinds = new Set((Array.isArray(claims) ? claims : []).map((claim) => claim.claimKind));
   if (kinds.has("protocol") && kinds.size === 1) return "protocol";
@@ -152,14 +303,16 @@ function inferDominantMode(claims = []) {
 
 function normalizeClaim(rawClaim = null, index = 0, documentText = "") {
   const claim = rawClaim && typeof rawClaim === "object" ? rawClaim : {};
-  const sourceExcerpt = normalizeLongText(claim.sourceExcerpt);
-  if (!sourceExcerpt) {
+  const requestedSourceExcerpt = normalizeLongText(claim.sourceExcerpt);
+  if (!requestedSourceExcerpt) {
     throw new CompilerReadError("Seven returned a claim without a source excerpt.", {
       status: 503,
       unavailable: true,
     });
   }
-  if (normalizeLongText(documentText) && !String(documentText).includes(sourceExcerpt)) {
+
+  const sourceExcerpt = recoverGroundedSourceExcerpt(documentText, requestedSourceExcerpt);
+  if (!sourceExcerpt || (normalizeLongText(documentText) && !String(documentText).includes(sourceExcerpt))) {
     throw new CompilerReadError("Seven returned a claim whose source excerpt is not present in the document.", {
       status: 503,
       unavailable: true,
@@ -184,6 +337,39 @@ function normalizeClaim(rawClaim = null, index = 0, documentText = "") {
     evidenceRefs,
     reason: normalizeText(claim.reason) || "Seven classified this claim provisionally.",
     sourceExcerpt,
+  };
+}
+
+function isGroundingError(error = null) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /claim without a source excerpt|source excerpt is not present in the document/i.test(message);
+}
+
+function normalizeClaimsForRead(rawClaims = [], documentText = "", { tolerateGroundingFailures = false } = {}) {
+  const claimSet = [];
+  const groundingRejectedClaims = [];
+
+  rawClaims.forEach((claim, index) => {
+    try {
+      claimSet.push(normalizeClaim(claim, index, documentText));
+    } catch (error) {
+      if (!tolerateGroundingFailures || !isGroundingError(error)) {
+        throw error;
+      }
+
+      groundingRejectedClaims.push({
+        id:
+          normalizeText(claim?.id) ||
+          `claim_${index + 1}`,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  return {
+    claimSet,
+    groundingRejectedClaims,
+    groundingRejectedClaimCount: groundingRejectedClaims.length,
   };
 }
 
@@ -244,7 +430,10 @@ async function extractClaimsWithSeven({
               text: [
                 "You are Seven, performing a provisional Compiler Read inside Dream.",
                 "Return strict JSON only.",
-                "Never invent claims. Every claim must include a direct sourceExcerpt copied from the document.",
+                "Grounding gate: if you cannot copy a sourceExcerpt directly from the document, omit the claim.",
+                "Every claim must include a sourceExcerpt copied verbatim from the document.",
+                "Do not normalize quotes, dashes, ellipses, or line breaks inside sourceExcerpt.",
+                "Before you finalize, check that every sourceExcerpt appears in the document exactly as quoted.",
                 "Classify claims conservatively. If a sentence is philosophical or not honestly translatable, say so.",
                 "Use this shape:",
                 JSON.stringify({
@@ -279,7 +468,16 @@ async function extractClaimsWithSeven({
           content: [{ type: "input_text", text: buildPromptContext({ title, text, focus, strictness, question }) }],
         },
       ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "compiler_read_result",
+          strict: true,
+          schema: COMPILER_READ_RESPONSE_SCHEMA,
+        },
+      },
     }),
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -290,7 +488,7 @@ async function extractClaimsWithSeven({
   }
 
   const payload = await response.json().catch(() => null);
-  const parsed = extractJsonObject(extractOutputText(payload));
+  const parsed = extractStructuredCompilerReadPayload(payload) || extractJsonObject(extractOutputText(payload));
   if (!parsed || !Array.isArray(parsed.claimSet)) {
     throw new CompilerReadError("Seven returned an invalid Compiler Read payload.", {
       status: 503,
@@ -513,7 +711,7 @@ function detectEmbeddedExecutable(text = "") {
   };
 }
 
-function deriveLimitationClass(claims = []) {
+function deriveLimitationClass(claims = [], { groundingRejectedClaimCount = 0 } = {}) {
   const normalizedClaims = Array.isArray(claims) ? claims : [];
   const totalClaims = normalizedClaims.length;
   const candidateClaims = normalizedClaims.filter((claim) => claim.translationReadiness === "candidate_for_translation");
@@ -528,6 +726,10 @@ function deriveLimitationClass(claims = []) {
 
   if (philosophyClaims.length === totalClaims && totalClaims > 0) {
     return "out_of_scope";
+  }
+
+  if (!totalClaims && groundingRejectedClaimCount > 0) {
+    return "excerpt_not_anchorable";
   }
 
   if (!candidateClaims.length && compilerGapClaims.length) {
@@ -631,6 +833,15 @@ function buildVerdict({
     };
   }
 
+  if (limitationClass === "excerpt_not_anchorable") {
+    return {
+      overall: "excerpt_not_anchorable",
+      primaryFinding:
+        "This document did not yield any excerpt-grounded claims, so the read stays at an honest limitation instead of fabricating structure.",
+      readDisposition: "informative_only",
+    };
+  }
+
   if (limitationClass === "compiler_gap") {
     return {
       overall: "compiler_gap_exposed",
@@ -705,7 +916,7 @@ function buildVerdict({
   };
 }
 
-function buildNextMoves({ verdict, claims, outcomeClass }) {
+function buildNextMoves({ verdict, claims, outcomeClass, limitationClass }) {
   const omittedCount = (Array.isArray(claims) ? claims : []).filter(
     (claim) => claim.translationReadiness !== "candidate_for_translation",
   ).length;
@@ -747,6 +958,13 @@ function buildNextMoves({ verdict, claims, outcomeClass }) {
     ];
   }
 
+  if (limitationClass === "excerpt_not_anchorable") {
+    return [
+      "Treat this as currently non-anchorable prose rather than forcing a structural read.",
+      "If you need Compiler Read pressure here, rewrite one discrete quotable claim and rerun.",
+    ];
+  }
+
   if (verdict.readDisposition === "ready_for_room_work") {
     return [
       "Carry the translated subset forward manually if it is worth active Room work.",
@@ -779,13 +997,20 @@ export function evaluateCompilerRead({
   title = "",
   text = "",
   extracted = null,
+  tolerateGroundingFailures = false,
 } = {}) {
   const normalizedDocumentId = normalizeText(documentId);
   const normalizedTitle = normalizeText(title);
   const normalizedText = normalizeLongText(text);
   const payload = extracted && typeof extracted === "object" ? extracted : {};
   const rawClaims = Array.isArray(payload.claimSet) ? payload.claimSet : [];
-  const claimSet = rawClaims.map((claim, index) => normalizeClaim(claim, index, normalizedText));
+  const {
+    claimSet,
+    groundingRejectedClaims,
+    groundingRejectedClaimCount,
+  } = normalizeClaimsForRead(rawClaims, normalizedText, {
+    tolerateGroundingFailures,
+  });
   const documentSummary = normalizeDocumentSummary(payload.documentSummary, claimSet, normalizedTitle);
 
   const rawArtifact = normalizedText
@@ -835,7 +1060,9 @@ export function evaluateCompilerRead({
     }),
   };
 
-  const limitationClass = deriveLimitationClass(claimSet);
+  const limitationClass = deriveLimitationClass(claimSet, {
+    groundingRejectedClaimCount,
+  });
   const outcomeClass = deriveOutcomeClass({
     rawDocumentResult,
     translatedSubsetResult,
@@ -852,11 +1079,14 @@ export function evaluateCompilerRead({
     verdict,
     claims: claimSet,
     outcomeClass,
+    limitationClass,
   });
 
   return {
     documentSummary,
     claimSet,
+    groundingRejectedClaimCount,
+    groundingRejectedClaimIds: groundingRejectedClaims.map((claim) => claim.id),
     rawDocumentResult,
     translatedSubsetResult,
     embeddedExecutableResult,
@@ -899,5 +1129,6 @@ export async function runCompilerRead({
     title,
     text: normalizedText,
     extracted,
+    tolerateGroundingFailures: true,
   });
 }

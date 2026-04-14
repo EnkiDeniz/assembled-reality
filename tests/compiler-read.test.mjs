@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluateCompilerRead } from "../src/lib/compiler-read.js";
+import { evaluateCompilerRead, runCompilerRead } from "../src/lib/compiler-read.js";
 
 function buildExtraction(claimSet = [], summary = {}) {
   return {
@@ -254,6 +254,31 @@ test("compiler read rejects claims whose source excerpt is not present in the do
   );
 });
 
+test("compiler read recovers exact source excerpts across quote and whitespace normalization drift", () => {
+  const sourceText = ['He said, “Pull one trace', 'before touching the flow.”'].join("\n");
+  const compilerRead = evaluateCompilerRead({
+    documentId: "grounding-recovery",
+    title: "Grounding recovery",
+    text: sourceText,
+    extracted: buildExtraction([
+      {
+        id: "claim_grounded",
+        text: 'He said, "Pull one trace before touching the flow."',
+        claimKind: "protocol",
+        translationReadiness: "candidate_for_translation",
+        provenanceClass: "quoted_witness",
+        supportStatus: "supported",
+        evidenceRefs: ["trace-18"],
+        reason: "This should recover the exact in-document quote rather than fail on punctuation drift.",
+        sourceExcerpt: 'He said, "Pull one trace before touching the flow."',
+      },
+    ]),
+  });
+
+  assert.equal(compilerRead.claimSet[0].sourceExcerpt, sourceText);
+  assert.equal(compilerRead.claimSet[0].provenanceClass, "quoted_witness");
+});
+
 test("compiler read does not mark the translated aim claim as omitted", () => {
   const compilerRead = evaluateCompilerRead({
     documentId: "aim-only",
@@ -383,4 +408,142 @@ test("compiler read does not overstate malformed embedded loe as a direct progra
   assert.equal(compilerRead.embeddedExecutableResult.compileState, "blocked");
   assert.equal(compilerRead.outcomeClass, "mixed");
   assert.equal(compilerRead.verdict.readDisposition, "needs_more_witness");
+});
+
+test("compiler read consumes structured schema output directly when present", async () => {
+  const compilerRead = await runCompilerRead({
+    documentId: "structured-payload",
+    title: "Structured payload",
+    text: "Run the contract check before rollout.",
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        output: [
+          {
+            content: [
+              {
+                type: "output_json",
+                json: buildExtraction([
+                  {
+                    id: "claim_protocol",
+                    text: "Run the contract check before rollout.",
+                    claimKind: "protocol",
+                    translationReadiness: "candidate_for_translation",
+                    provenanceClass: "self_reported",
+                    supportStatus: "unsupported",
+                    evidenceRefs: [],
+                    reason: "Structured output should parse without text scraping.",
+                    sourceExcerpt: "Run the contract check before rollout.",
+                  },
+                ]),
+              },
+            ],
+          },
+        ],
+      }),
+    }),
+  });
+
+  assert.equal(compilerRead.claimSet.length, 1);
+  assert.equal(compilerRead.claimSet[0].sourceExcerpt, "Run the contract check before rollout.");
+  assert.equal(compilerRead.translatedSubsetResult.compileState, "clean");
+});
+
+test("live compiler read returns an honest non-anchorable limitation when every extracted quote fails grounding", async () => {
+  const compilerRead = await runCompilerRead({
+    documentId: "non-anchorable",
+    title: "Non-anchorable",
+    text: "Reality moves faster than our names for it.",
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        output: [
+          {
+            content: [
+              {
+                type: "output_json",
+                json: buildExtraction([
+                  {
+                    id: "claim_bad",
+                    text: "Reality moves faster than our names for it.",
+                    claimKind: "interpretation",
+                    translationReadiness: "candidate_for_translation",
+                    provenanceClass: "self_reported",
+                    supportStatus: "unsupported",
+                    evidenceRefs: [],
+                    reason: "This quote is wrong on purpose.",
+                    sourceExcerpt: "This excerpt never appears in the document.",
+                  },
+                ]),
+              },
+            ],
+          },
+        ],
+      }),
+    }),
+  });
+
+  assert.equal(compilerRead.claimSet.length, 0);
+  assert.equal(compilerRead.groundingRejectedClaimCount, 1);
+  assert.deepEqual(compilerRead.groundingRejectedClaimIds, ["claim_bad"]);
+  assert.equal(compilerRead.limitationClass, "excerpt_not_anchorable");
+  assert.equal(compilerRead.outcomeClass, "raw_not_direct_source");
+  assert.equal(compilerRead.verdict.overall, "excerpt_not_anchorable");
+  assert.equal(compilerRead.translatedSubsetResult.compileState, "not_run");
+});
+
+test("live compiler read keeps grounded claims and records rejected ones separately", async () => {
+  const compilerRead = await runCompilerRead({
+    documentId: "mixed-grounding",
+    title: "Mixed grounding",
+    text: [
+      "Pull one trace before rollout.",
+      "Reality moves faster than our names for it.",
+    ].join("\n\n"),
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        output: [
+          {
+            content: [
+              {
+                type: "output_json",
+                json: buildExtraction([
+                  {
+                    id: "claim_good",
+                    text: "Pull one trace before rollout.",
+                    claimKind: "protocol",
+                    translationReadiness: "candidate_for_translation",
+                    provenanceClass: "self_reported",
+                    supportStatus: "unsupported",
+                    evidenceRefs: [],
+                    reason: "This quote is exact.",
+                    sourceExcerpt: "Pull one trace before rollout.",
+                  },
+                  {
+                    id: "claim_bad",
+                    text: "Reality moves faster than our names for it.",
+                    claimKind: "interpretation",
+                    translationReadiness: "candidate_for_translation",
+                    provenanceClass: "self_reported",
+                    supportStatus: "unsupported",
+                    evidenceRefs: [],
+                    reason: "This quote is wrong on purpose.",
+                    sourceExcerpt: "This excerpt never appears in the document.",
+                  },
+                ]),
+              },
+            ],
+          },
+        ],
+      }),
+    }),
+  });
+
+  assert.equal(compilerRead.claimSet.length, 1);
+  assert.equal(compilerRead.claimSet[0].id, "claim_good");
+  assert.equal(compilerRead.groundingRejectedClaimCount, 1);
+  assert.deepEqual(compilerRead.groundingRejectedClaimIds, ["claim_bad"]);
+  assert.equal(compilerRead.limitationClass, null);
+  assert.equal(compilerRead.translatedSubsetResult.compileState, "clean");
 });

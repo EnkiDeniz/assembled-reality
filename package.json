@@ -11,6 +11,7 @@
     "test:smoke": "node scripts/phase1-smoke-check.mjs",
     "test:room:phase1-benchmark": "node scripts/run-room-phase1-benchmark.mjs",
     "test:room:test-drive-ii": "node scripts/run-test-drive-ii-benchmark.mjs",
+    "test:compiler-read:sample": "node scripts/run-compiler-read-corpus-sample.mjs",
     "test:e2e": "npm run test:e2e:local",
     "test:e2e:local": "node scripts/run-phase1-e2e-local.mjs",
     "test:e2e:ci": "playwright test --config=playwright.ci.config.mjs",
