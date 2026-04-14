@@ -18,6 +18,7 @@ function buildPatchRequest(body) {
 
 test("replay review session POST creates or resumes the current session", async () => {
   const payload = {
+    available: true,
     reviewKey: "packet-a__packet-b",
     packetA: { packetId: "a", entries: [] },
     packetB: { packetId: "b", entries: [] },
@@ -31,6 +32,21 @@ test("replay review session POST creates or resumes the current session", async 
   const response = await POST();
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, ...payload });
+});
+
+test("replay review session POST returns 409 when artifacts are not published", async () => {
+  const POST = createReplayReviewSessionPostHandler({
+    getSession: async () => ({ user: { id: "user_1" } }),
+    createOrResume: async () => {
+      throw new Error("Replay Review is not published on this deployment yet.");
+    },
+  });
+
+  const response = await POST();
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Replay Review is not published on this deployment yet.",
+  });
 });
 
 test("replay review session PATCH saves the overall decision", async () => {

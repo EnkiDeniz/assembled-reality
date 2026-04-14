@@ -7,6 +7,16 @@ function normalizeText(value = "") {
   return String(value || "").trim();
 }
 
+function replayReviewStatusForMessage(message = "") {
+  if (/not published on this deployment yet/i.test(message)) {
+    return 409;
+  }
+  if (/required|must be|unknown/i.test(message)) {
+    return 400;
+  }
+  return 503;
+}
+
 export function createReplayReviewEntryHandler({
   getSession = async () => {
     const sessionModule = await import("../../../../lib/server-session.js");
@@ -42,7 +52,7 @@ export function createReplayReviewEntryHandler({
       return Response.json({ ok: true, entry: updated });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Replay review entry could not be saved.";
-      const status = /required|must be|unknown/i.test(message) ? 400 : 503;
+      const status = replayReviewStatusForMessage(message);
       return Response.json({ error: message }, { status });
     }
   };

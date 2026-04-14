@@ -229,6 +229,7 @@
   gap: 8px;
   font-size: 0.84rem;
   font-weight: 560;
+  flex: 0 1 auto;
 }
 
 .primaryControl:disabled,
@@ -422,6 +423,24 @@
   gap: 8px;
 }
 
+.compilerReadInlineNote {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(7, 8, 11, 0.28);
+}
+
+.compilerReadInlineNote strong {
+  color: rgba(244, 245, 247, 0.94);
+}
+
+.compilerReadInlineNote span {
+  color: rgba(244, 245, 247, 0.68);
+  line-height: 1.5;
+}
+
 .compilerReadClaimList {
   display: grid;
   gap: 10px;
@@ -516,6 +535,21 @@
 .replayReviewEntryIdentity {
   display: grid;
   gap: 6px;
+}
+
+.replayReviewUnavailable {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(244, 245, 247, 0.84);
+}
+
+.replayReviewUnavailable span {
+  color: rgba(244, 245, 247, 0.64);
+  line-height: 1.55;
 }
 
 .replayReviewIdentity strong,
@@ -808,6 +842,51 @@
 
   .libraryToggle {
     display: none;
+  }
+
+  .stageHead,
+  .libraryPanelHead {
+    align-items: center;
+  }
+
+  .stageActions,
+  .libraryPanelActions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
+  .documentStage {
+    padding-right: 8px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .stageWrap {
+    display: grid;
+    gap: 14px;
+  }
+
+  .stageHead {
+    grid-template-columns: minmax(0, 1fr) auto;
+    display: grid;
+    align-items: start;
+  }
+
+  .stageIdentity {
+    max-width: 38rem;
+  }
+
+  .stageActions {
+    max-width: 44rem;
+  }
+
+  .actionButton {
+    padding: 0 12px;
+  }
+
+  .documentStage {
+    max-height: min(62vh, 820px);
   }
 }
 

@@ -196,6 +196,7 @@ export default function ReplayReviewPanel({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [unavailableReason, setUnavailableReason] = useState("");
   const [reviewState, setReviewState] = useState(null);
   const [activePacketKind, setActivePacketKind] = useState("present_day_packet");
   const [packetIndices, setPacketIndices] = useState({
@@ -227,6 +228,7 @@ export default function ReplayReviewPanel({
     async function loadReview() {
       setLoading(true);
       setError("");
+      setUnavailableReason("");
       setSaveState({ kind: "idle", message: "" });
 
       try {
@@ -235,8 +237,28 @@ export default function ReplayReviewPanel({
           cache: "no-store",
         });
         const currentPayload = await currentResponse.json().catch(() => null);
-        if (!currentResponse.ok || !currentPayload?.packetA || !currentPayload?.packetB) {
+        if (!currentResponse.ok) {
           throw new Error(currentPayload?.error || "Replay review is unavailable right now.");
+        }
+
+        if (currentPayload?.available === false) {
+          if (!cancelled && loadRequestIdRef.current === requestId) {
+            setReviewState(null);
+            setEntryDrafts({});
+            setOverallDraft({
+              overallDecision: "",
+              overallSummary: "",
+              status: "in_progress",
+            });
+            setUnavailableReason(
+              currentPayload?.reason || "Replay Review is not published on this deployment yet.",
+            );
+          }
+          return;
+        }
+
+        if (!currentPayload?.packetA || !currentPayload?.packetB) {
+          throw new Error("Replay review is unavailable right now.");
         }
 
         if (cancelled || loadRequestIdRef.current !== requestId) {
@@ -479,6 +501,16 @@ export default function ReplayReviewPanel({
         <div className={styles.compilerReadError} role="alert" data-testid="dream-replay-review-error">
           <strong>Replay review could not load.</strong>
           <span>{error}</span>
+        </div>
+      ) : null}
+      {!error && unavailableReason ? (
+        <div
+          className={styles.replayReviewUnavailable}
+          role="status"
+          data-testid="dream-replay-review-unavailable"
+        >
+          <strong>Replay Review is not available here yet.</strong>
+          <span>{unavailableReason}</span>
         </div>
       ) : null}
 

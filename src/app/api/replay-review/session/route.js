@@ -10,6 +10,16 @@ function normalizeText(value = "") {
   return String(value || "").trim();
 }
 
+function replayReviewStatusForMessage(message = "") {
+  if (/not published on this deployment yet/i.test(message)) {
+    return 409;
+  }
+  if (/required|must be|does not exist/i.test(message)) {
+    return 400;
+  }
+  return 503;
+}
+
 export function createReplayReviewSessionPostHandler({
   getSession = async () => {
     const sessionModule = await import("../../../../lib/server-session.js");
@@ -27,11 +37,10 @@ export function createReplayReviewSessionPostHandler({
       const current = await createOrResume(session.user.id);
       return Response.json({ ok: true, ...current });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Replay review is unavailable right now.";
       return Response.json(
-        {
-          error: error instanceof Error ? error.message : "Replay review is unavailable right now.",
-        },
-        { status: 503 },
+        { error: message },
+        { status: replayReviewStatusForMessage(message) },
       );
     }
   };
@@ -62,7 +71,7 @@ export function createReplayReviewSessionPatchHandler({
       return Response.json({ ok: true, session: updated });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Replay review could not be saved.";
-      const status = /required|must be|does not exist/i.test(message) ? 400 : 503;
+      const status = replayReviewStatusForMessage(message);
       return Response.json({ error: message }, { status });
     }
   };

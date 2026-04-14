@@ -79,6 +79,53 @@ function readRequiredJsonFile(filePath, label) {
   return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
+function describeMissingArtifact(filePath, label) {
+  return {
+    label,
+    path: relativeWorkspacePath(filePath),
+  };
+}
+
+function listMissingReplayReviewArtifacts() {
+  const missing = [];
+
+  if (!existsSync(PRESENT_DAY_PACKET_FILES.jsonPath)) {
+    missing.push(
+      describeMissingArtifact(
+        PRESENT_DAY_PACKET_FILES.jsonPath,
+        "present-day packet JSON",
+      ),
+    );
+  }
+
+  if (!existsSync(HISTORICAL_PACKET_FILES.jsonPath)) {
+    missing.push(
+      describeMissingArtifact(
+        HISTORICAL_PACKET_FILES.jsonPath,
+        "historical replay packet JSON",
+      ),
+    );
+  }
+
+  return missing;
+}
+
+function buildReplayReviewUnavailableState(missingArtifacts = []) {
+  const missingLabel = missingArtifacts.map((entry) => `${entry.label} (${entry.path})`).join(", ");
+  const reason = missingArtifacts.length
+    ? `Replay Review is not published on this deployment yet. Missing ${missingLabel}.`
+    : "Replay Review is not published on this deployment yet.";
+
+  return {
+    available: false,
+    reason,
+    missingArtifacts,
+    packetA: null,
+    packetB: null,
+    reviewKey: null,
+  };
+}
+
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -458,7 +505,15 @@ function normalizeHistoricalPacket(report, files) {
   };
 }
 
-export function loadReplayReviewArtifacts() {
+export function loadReplayReviewArtifacts({ allowUnavailable = false } = {}) {
+  const missingArtifacts = listMissingReplayReviewArtifacts();
+  if (missingArtifacts.length) {
+    if (allowUnavailable) {
+      return buildReplayReviewUnavailableState(missingArtifacts);
+    }
+    throw new Error(buildReplayReviewUnavailableState(missingArtifacts).reason);
+  }
+
   const presentDayReport = readRequiredJsonFile(
     PRESENT_DAY_PACKET_FILES.jsonPath,
     "Replay review present-day packet",
@@ -472,6 +527,7 @@ export function loadReplayReviewArtifacts() {
   const packetB = normalizeHistoricalPacket(historicalReport, HISTORICAL_PACKET_FILES);
 
   return {
+    available: true,
     packetA,
     packetB,
     reviewKey: `${packetA.packetId}__${packetB.packetId}`,
@@ -581,7 +637,14 @@ async function findReplayReviewSession(userId, reviewKey, prismaClient = prisma)
 }
 
 export async function loadReplayReviewCurrent(userId, prismaClient = prisma) {
-  const artifacts = loadReplayReviewArtifacts();
+  const artifacts = loadReplayReviewArtifacts({ allowUnavailable: true });
+  if (!artifacts.available) {
+    return {
+      ...artifacts,
+      session: null,
+    };
+  }
+
   const session = await findReplayReviewSession(userId, artifacts.reviewKey, prismaClient);
 
   return {

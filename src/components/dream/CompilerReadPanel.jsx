@@ -230,81 +230,14 @@ export default function CompilerReadPanel({
             </div>
 
             {embeddedExecutableResult?.present ? (
-              <div className={styles.compilerReadCard} data-testid="dream-compiler-read-embedded">
-                <Kicker tone="neutral">Embedded executable</Kicker>
+              <div
+                className={styles.compilerReadInlineNote}
+                data-testid="dream-compiler-read-embedded"
+              >
                 <strong>{embeddedSummary.title}</strong>
-                <p>{embeddedSummary.body}</p>
-                <div className={styles.compilerReadChips}>
-                  <SignalChip tone="neutral">
-                    {sentenceCase(embeddedExecutableResult?.compileState || "unknown")}
-                  </SignalChip>
-                  <SignalChip tone="neutral">
-                    {sentenceCase(embeddedExecutableResult?.mergedWindowState || "unknown")}
-                  </SignalChip>
-                </div>
+                <span>{embeddedSummary.body}</span>
               </div>
             ) : null}
-          </div>
-
-          <div className={styles.compilerReadSection} data-testid="dream-compiler-read-claims">
-            <div className={styles.compilerReadSectionHead}>
-              <Kicker tone="neutral">Claims</Kicker>
-              <span>Seven-assisted extraction remains provisional.</span>
-            </div>
-            <div className={styles.compilerReadClaimList}>
-              {claimSet.map((claim) => (
-                <article key={claim.id} className={styles.compilerReadClaim}>
-                  <div className={styles.compilerReadClaimHead}>
-                    <strong>{claim.text}</strong>
-                    <div className={styles.compilerReadChips}>
-                      {renderClaimMeta(claim).map((item) => (
-                        <SignalChip key={`${claim.id}:${item}`} tone="neutral">
-                          {item}
-                        </SignalChip>
-                      ))}
-                    </div>
-                  </div>
-                  <p>{claim.reason}</p>
-                  <blockquote className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</blockquote>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.compilerReadSection} data-testid="dream-compiler-read-omitted">
-            <div className={styles.compilerReadSectionHead}>
-              <Kicker tone="neutral">Omitted material</Kicker>
-              <span>Claims intentionally left outside the translated subset.</span>
-            </div>
-            {omittedClaimDetails.length ? (
-              <ul className={styles.compilerReadList}>
-                {omittedClaimDetails.map((claim) => (
-                  <li key={claim.id}>
-                    <strong>{claim.text}</strong>: {claim.reason}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No claims were omitted from the translated subset.</p>
-            )}
-          </div>
-
-          <div className={styles.compilerReadSection} data-testid="dream-compiler-read-diagnostics">
-            <div className={styles.compilerReadSectionHead}>
-              <Kicker tone="neutral">Diagnostics</Kicker>
-              <span>Admission-control and compiler output remain inspectable.</span>
-            </div>
-            {diagnostics.length ? (
-              <ul className={styles.compilerReadList}>
-                {diagnostics.map((diagnostic) => (
-                  <li key={diagnostic.key}>
-                    <strong>{diagnostic.label}</strong>: {diagnostic.text}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No compiler diagnostics were emitted in this read.</p>
-            )}
           </div>
 
           <div className={styles.compilerReadSection} data-testid="dream-compiler-read-next-moves">
@@ -312,15 +245,19 @@ export default function CompilerReadPanel({
               <Kicker tone="neutral">Next moves</Kicker>
               <span>Next-step bias only.</span>
             </div>
-            <ul className={styles.compilerReadList}>
-              {nextMoves.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {nextMoves.length ? (
+              <ul className={styles.compilerReadList}>
+                {nextMoves.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>No concrete next move was proposed in this run.</p>
+            )}
           </div>
 
-          <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-inspect">
-            <summary>Inspect translation & diagnostics</summary>
+          <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-evidence">
+            <summary>Show evidence and diagnostics</summary>
             <div className={styles.compilerReadInspectBody}>
               <div className={styles.compilerReadInspectBlock}>
                 <Kicker tone="neutral">Raw source summary</Kicker>
@@ -334,6 +271,82 @@ export default function CompilerReadPanel({
                     Merged window state: {sentenceCase(rawDocumentResult?.mergedWindowState || "unknown")}
                   </li>
                 </ul>
+              </div>
+
+              <div
+                className={styles.compilerReadInspectBlock}
+                data-testid="dream-compiler-read-claims"
+              >
+                <div className={styles.compilerReadSectionHead}>
+                  <Kicker tone="neutral">Claims</Kicker>
+                  <span>Seven-assisted extraction remains provisional.</span>
+                </div>
+                {claimSet.length ? (
+                  <div className={styles.compilerReadClaimList}>
+                    {claimSet.map((claim) => (
+                      <article key={claim.id} className={styles.compilerReadClaim}>
+                        <div className={styles.compilerReadClaimHead}>
+                          <strong>{claim.text}</strong>
+                          <div className={styles.compilerReadChips}>
+                            {renderClaimMeta(claim).map((item) => (
+                              <SignalChip key={`${claim.id}:${item}`} tone="neutral">
+                                {item}
+                              </SignalChip>
+                            ))}
+                          </div>
+                        </div>
+                        <p>{claim.reason}</p>
+                        <blockquote className={styles.compilerReadExcerpt}>
+                          {claim.sourceExcerpt}
+                        </blockquote>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No grounded claims were retained in this read.</p>
+                )}
+              </div>
+
+              <div
+                className={styles.compilerReadInspectBlock}
+                data-testid="dream-compiler-read-omitted"
+              >
+                <div className={styles.compilerReadSectionHead}>
+                  <Kicker tone="neutral">Omitted material</Kicker>
+                  <span>Claims intentionally left outside the translated subset.</span>
+                </div>
+                {omittedClaimDetails.length ? (
+                  <ul className={styles.compilerReadList}>
+                    {omittedClaimDetails.map((claim) => (
+                      <li key={claim.id}>
+                        <strong>{claim.text}</strong>: {claim.reason}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No claims were omitted from the translated subset.</p>
+                )}
+              </div>
+
+              <div
+                className={styles.compilerReadInspectBlock}
+                data-testid="dream-compiler-read-diagnostics"
+              >
+                <div className={styles.compilerReadSectionHead}>
+                  <Kicker tone="neutral">Diagnostics</Kicker>
+                  <span>Admission-control and compiler output remain inspectable.</span>
+                </div>
+                {diagnostics.length ? (
+                  <ul className={styles.compilerReadList}>
+                    {diagnostics.map((diagnostic) => (
+                      <li key={diagnostic.key}>
+                        <strong>{diagnostic.label}</strong>: {diagnostic.text}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No compiler diagnostics were emitted in this read.</p>
+                )}
               </div>
 
               <div className={styles.compilerReadInspectBlock}>
@@ -360,11 +373,22 @@ export default function CompilerReadPanel({
               </div>
 
               {embeddedExecutableResult?.present ? (
-                <div className={styles.compilerReadInspectBlock}>
+                <div
+                  className={styles.compilerReadInspectBlock}
+                  data-testid="dream-compiler-read-inspect"
+                >
                   <Kicker tone="neutral">Embedded executable source</Kicker>
                   <pre>{embeddedExecutableResult.source}</pre>
                 </div>
-              ) : null}
+              ) : (
+                <div
+                  className={styles.compilerReadInspectBlock}
+                  data-testid="dream-compiler-read-inspect"
+                >
+                  <Kicker tone="neutral">Embedded executable source</Kicker>
+                  <p>No embedded executable source was retained in this read.</p>
+                </div>
+              )}
             </div>
           </details>
         </>
