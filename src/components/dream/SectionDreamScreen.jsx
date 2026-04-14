@@ -45,18 +45,24 @@ import {
   normalizeDreamSession,
 } from "@/lib/dream";
 import {
+  createNextDreamDocumentVersion,
+  attachCompilerReadToDreamDocument,
   deleteDreamDocument,
+  getDreamDocumentCurrentVersion,
   listDreamDocuments,
   loadActiveDreamDocument,
   loadDreamSession,
   replaceActiveDreamDocument,
-  saveDreamDocument,
+  restorePreviousDreamDocumentVersion,
   saveDreamSession,
   setActiveDreamDocument,
+  updateDreamDocumentProgress,
 } from "@/lib/dream-storage";
 import { saveDreamBridgePayload } from "@/lib/dream-bridge";
 import { clearCompilerReadSelfCheck } from "@/lib/compiler-read-self-check";
 import { clampListeningRate, formatVoiceLabel } from "@/lib/listening";
+import { buildCompilerReadDelta } from "@/lib/compiler-read-delta";
+import { formatCompilerReadAsMarkdown } from "@/lib/compiler-read-markdown";
 import {
   clearRuntimeSurfaceResumeLibrary,
   saveRuntimeSurfaceResumeState,
@@ -167,10 +173,11 @@ export default function SectionDreamScreen({
   const [noticeMessage, setNoticeMessage] = useState("");
   const [isRestoring, setIsRestoring] = useState(true);
   const [isFetchingAudio, setIsFetchingAudio] = useState(false);
-  const [compilerRead, setCompilerRead] = useState(null);
   const [compilerReadError, setCompilerReadError] = useState("");
   const [compilerReadPending, setCompilerReadPending] = useState(false);
   const [showCompilerReadSelfCheck, setShowCompilerReadSelfCheck] = useState(false);
+  const [copiedRead, setCopiedRead] = useState(false);
+  const [isLibraryDropActive, setIsLibraryDropActive] = useState(false);
   const [, setDurationVersion] = useState(0);
   const [isPending, startTransition] = useTransition();
 
@@ -201,17 +208,25 @@ export default function SectionDreamScreen({
   const currentChunk = chunks[activeChunkIndex] || null;
   const requestedDocumentId = String(searchParams?.get("document") || "").trim();
   const requestedAnchor = String(searchParams?.get("anchor") || "").trim();
-  const isPasteDocument = dreamDocument?.sourceKind === DREAM_SOURCE_KINDS.paste;
-  const hasUnsavedPasteChanges = isPasteDocument
-    ? showPaste && normalizeLongForm(pasteValue) !== normalizeLongForm(dreamDocument?.rawMarkdown || "")
-    : showPaste && Boolean(normalizeLongForm(pasteValue));
+  const hasUnsavedPasteChanges = showPaste
+    ? normalizeLongForm(pasteValue) !== normalizeLongForm(dreamDocument?.rawMarkdown || "")
+    : false;
   const compilerReadDisabledReason = hasUnsavedPasteChanges
-    ? "Pasted markdown changed. Update it before running a current Compiler Read."
+    ? "Draft changed. Save a new version before running a current Compiler Read."
     : "";
-  const visibleCompilerRead = hasUnsavedPasteChanges ? null : compilerRead;
-  const visibleCompilerReadError = hasUnsavedPasteChanges ? "" : compilerReadError;
-  const visibleCompilerReadPending = hasUnsavedPasteChanges ? false : compilerReadPending;
-  const compilerReadSheetOpen = showCompilerReadSheet && !hasUnsavedPasteChanges;
+  const visibleCompilerRead = dreamDocument?.compilerRead || null;
+  const visibleCompilerReadError = compilerReadError;
+  const visibleCompilerReadPending = compilerReadPending;
+  const compilerReadSheetOpen = showCompilerReadSheet;
+  const currentVersion = dreamDocument?.currentVersion || getDreamDocumentCurrentVersion(dreamDocument);
+  const previousVersion =
+    dreamDocument?.versions?.find((version) => version.versionId === currentVersion?.parentVersionId) || null;
+  const previousCompilerRead = previousVersion?.compilerRead || null;
+  const compilerReadDelta =
+    visibleCompilerRead && previousCompilerRead
+      ? buildCompilerReadDelta(visibleCompilerRead, previousCompilerRead)
+      : null;
+  const isCompilerReadStale = Boolean(hasUnsavedPasteChanges && visibleCompilerRead);
 
   const cleanupChunkCache = useCallback(() => {
     for (const entry of chunkCacheRef.current.values()) {
@@ -233,10 +248,10 @@ export default function SectionDreamScreen({
 
   const clearCompilerReadState = useCallback(() => {
     cancelCompilerReadRequest();
-    setCompilerRead(null);
     setCompilerReadError("");
     setCompilerReadPending(false);
     setShowCompilerReadSelfCheck(false);
+    setCopiedRead(false);
   }, [cancelCompilerReadRequest]);
 
   useEffect(() => () => {
@@ -246,16 +261,18 @@ export default function SectionDreamScreen({
   useEffect(() => {
     if (
       hasUnsavedPasteChanges &&
-      (compilerRead || compilerReadPending || compilerReadError)
+      (visibleCompilerRead || compilerReadPending || compilerReadError)
     ) {
-      clearCompilerReadState();
+      cancelCompilerReadRequest();
+      setCompilerReadPending(false);
+      setCompilerReadError("");
     }
   }, [
-    clearCompilerReadState,
-    compilerRead,
+    cancelCompilerReadRequest,
     compilerReadError,
     compilerReadPending,
     hasUnsavedPasteChanges,
+    visibleCompilerRead,
   ]);
 
   useEffect(() => {
@@ -263,6 +280,10 @@ export default function SectionDreamScreen({
       setShowCompilerReadSelfCheck(false);
     }
   }, [visibleCompilerRead]);
+
+  useEffect(() => {
+    setCopiedRead(false);
+  }, [dreamDocument?.id, currentVersion?.versionId]);
 
   const setPlaybackPosition = useCallback((documentRecord, nextIndex = 0, nextOffsetMs = 0) => {
     const queue = Array.isArray(documentRecord?.chunkMap) ? documentRecord.chunkMap : [];
@@ -378,18 +399,17 @@ export default function SectionDreamScreen({
     );
 
     saveDreamSession(snapshot);
-
-    const persistedDocument = {
-      ...documentRecord,
+    const persistedDocument = updateDocumentInState(documentRecord, {
       progressMs: snapshot.globalOffsetMs,
       lastOpenedAt: snapshot.lastOpenedAt,
       totalDurationMs:
         Number(documentRecord.totalDurationMs) ||
         getDreamQueueDurationMs(documentRecord.chunkMap, durationMapRef.current),
-    };
-
-    updateDocumentInState(persistedDocument);
-    void saveDreamDocument(persistedDocument).catch(() => {});
+    });
+    void updateDreamDocumentProgress(persistedDocument, {
+      progressMs: snapshot.globalOffsetMs,
+      lastOpenedAt: snapshot.lastOpenedAt,
+    }).catch(() => {});
   }, [requestVoiceChoice.provider, requestVoiceChoice.voiceId, updateDocumentInState]);
 
   const resetAudioRuntime = useCallback(() => {
@@ -872,21 +892,22 @@ export default function SectionDreamScreen({
       );
 
       resetAudioRuntime();
-      await replaceActiveDreamDocument(documentRecord);
+      const savedDocument = await replaceActiveDreamDocument(documentRecord);
       saveDreamSession(nextSession);
-      setDreamLibrary((current) => upsertDocument(current, documentRecord));
+      setDreamLibrary((current) => upsertDocument(current, savedDocument));
 
       startTransition(() => {
         applyDocumentState(
-          documentRecord,
+          savedDocument,
           nextSession,
           autoPlay ? "Loading voice." : "Document saved.",
         );
         setShowLibrarySheet(false);
+        setShowPaste(false);
       });
 
       if (autoPlay && hasRemoteVoice) {
-        await loadChunkIntoAudio(documentRecord, 0, 0, { autoPlay: true });
+        await loadChunkIntoAudio(savedDocument, 0, 0, { autoPlay: true });
       } else if (!hasRemoteVoice) {
         setStatus(DREAM_PLAYBACK_STATUSES.paused);
         setNoticeMessage("Document is ready. Add a remote voice provider to listen.");
@@ -926,7 +947,59 @@ export default function SectionDreamScreen({
     });
   }
 
+  async function handleDroppedFile(file = null) {
+    if (!file) return;
+
+    if (!isDreamMarkdownFilename(file.name)) {
+      setErrorMessage("Library accepts only .md or .markdown files right now.");
+      return;
+    }
+
+    const rawMarkdown = await file.text();
+    startTransition(() => {
+      setNoticeMessage("Preparing markdown.");
+    });
+    await ingestMarkdown({
+      rawMarkdown,
+      filename: file.name,
+      sourceKind: DREAM_SOURCE_KINDS.upload,
+      autoPlay: false,
+    });
+  }
+
+  function handleDragOver(event) {
+    if (!event.dataTransfer?.types?.includes("Files")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsLibraryDropActive(true);
+  }
+
+  function handleDragLeave(event) {
+    if (event.currentTarget.contains(event.relatedTarget)) {
+      return;
+    }
+    setIsLibraryDropActive(false);
+  }
+
+  async function handleDrop(event) {
+    if (!event.dataTransfer?.files?.length) {
+      return;
+    }
+
+    event.preventDefault();
+    setIsLibraryDropActive(false);
+    await handleDroppedFile(event.dataTransfer.files[0]);
+  }
+
   async function handlePasteSubmit() {
+    if (dreamDocument?.id && showPaste) {
+      await handleSaveVersionAndRerun();
+      return;
+    }
+
     await ingestMarkdown({
       rawMarkdown: pasteValue,
       filename: "dream-library-paste.md",
@@ -1008,7 +1081,7 @@ export default function SectionDreamScreen({
         setPasteValue("");
         setShowPaste(false);
         setShowCompilerReadSheet(false);
-        setNoticeMessage("Removed current document. Library is empty.");
+        setNoticeMessage("Deleted current document from Library. Library is empty.");
         setErrorMessage("");
       });
       return;
@@ -1020,52 +1093,31 @@ export default function SectionDreamScreen({
       applyDocumentState(
         fallbackDocument,
         fallbackSession,
-        "Removed current document. Opened the next saved document.",
+        "Deleted current document from Library. Opened the next saved document.",
       );
     });
   }
 
-  async function handleUpdateDocumentAndRerun() {
+  async function handleSaveVersionAndRerun() {
     if (!dreamDocument?.id || !showPaste || !normalizeLongForm(pasteValue)) {
       return;
     }
 
     try {
-      clearCompilerReadSelfCheck(dreamDocument.id);
+      clearCompilerReadSelfCheck(
+        dreamDocument.id,
+        currentVersion?.versionId || dreamDocument?.contentHash || "",
+      );
       clearCompilerReadState();
       setErrorMessage("");
-      setNoticeMessage("Updating document.");
-      const rebuilt = await buildDreamDocumentRecord({
+      setNoticeMessage("Saving new version.");
+      const replacement = await createNextDreamDocumentVersion(dreamDocument, {
         filename: dreamDocument.filename,
         rawMarkdown: pasteValue,
         sourceKind: dreamDocument.sourceKind,
       });
-      const preservedId = dreamDocument.id;
-      const updatedAt = new Date().toISOString();
-      const replacement = {
-        ...dreamDocument,
-        ...rebuilt,
-        id: preservedId,
-        chunkMap: rebuilt.chunkMap.map((chunk, index) => ({
-          ...chunk,
-          id: `${preservedId}:${index}`,
-          index,
-        })),
-        createdAt: dreamDocument.createdAt || rebuilt.createdAt,
-        updatedAt,
-        lastOpenedAt: updatedAt,
-        progressMs: 0,
-        totalDurationMs: getDreamQueueDurationMs(
-          rebuilt.chunkMap.map((chunk, index) => ({
-            ...chunk,
-            id: `${preservedId}:${index}`,
-            index,
-          })),
-        ),
-      };
 
       resetAudioRuntime();
-      await replaceActiveDreamDocument(replacement);
       saveDreamSession(
         normalizeDreamSession(
           {
@@ -1077,7 +1129,7 @@ export default function SectionDreamScreen({
             activeChunkIndex: 0,
             chunkOffsetMs: 0,
             globalOffsetMs: 0,
-            lastOpenedAt: updatedAt,
+            lastOpenedAt: replacement.lastOpenedAt,
           },
           {
             documentId: replacement.id,
@@ -1091,13 +1143,14 @@ export default function SectionDreamScreen({
 
       startTransition(() => {
         setDreamLibrary((current) => upsertDocument(current, replacement));
-        applyDocumentState(replacement, loadDreamSession(replacement.id), "Document updated.");
+        applyDocumentState(replacement, loadDreamSession(replacement.id), "Saved new version.");
+        setShowPaste(false);
       });
 
       await runCompilerReadForDocument(replacement);
     } catch (error) {
       setCompilerReadError(
-        error instanceof Error ? error.message : "Library could not update the document.",
+        error instanceof Error ? error.message : "Library could not save the new version.",
       );
     }
   }
@@ -1115,6 +1168,49 @@ export default function SectionDreamScreen({
   function handleReturnToDocument() {
     setCompilerReadError("");
     setShowCompilerReadSheet(false);
+  }
+
+  async function handleRestorePreviousVersion() {
+    if (!dreamDocument?.id || !dreamDocument?.hasPreviousVersion) {
+      return;
+    }
+
+    try {
+      clearCompilerReadState();
+      setErrorMessage("");
+      const restoredDocument = await restorePreviousDreamDocumentVersion(dreamDocument);
+      saveDreamSession(
+        normalizeDreamSession(
+          {
+            documentId: restoredDocument.id,
+            provider: resolvedProvider || requestVoiceChoice.provider,
+            voiceId: resolvedVoiceId || requestVoiceChoice.voiceId,
+            rate,
+            status: DREAM_PLAYBACK_STATUSES.idle,
+            activeChunkIndex: 0,
+            chunkOffsetMs: 0,
+            globalOffsetMs: 0,
+            lastOpenedAt: restoredDocument.lastOpenedAt,
+          },
+          {
+            documentId: restoredDocument.id,
+            provider: requestVoiceChoice.provider,
+            voiceId: requestVoiceChoice.voiceId,
+            rate,
+            chunkCount: restoredDocument.chunkMap.length,
+          },
+        ),
+      );
+      startTransition(() => {
+        setDreamLibrary((current) => upsertDocument(current, restoredDocument));
+        applyDocumentState(restoredDocument, loadDreamSession(restoredDocument.id), "Previous version restored.");
+        setShowPaste(false);
+      });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Library could not restore the previous version.",
+      );
+    }
   }
 
   function handleTogglePlayback() {
@@ -1159,9 +1255,9 @@ export default function SectionDreamScreen({
     const requestDocumentId = activeDocument.id;
     const controller = new AbortController();
     compilerReadAbortRef.current = controller;
-    setCompilerRead(null);
     setCompilerReadError("");
     setCompilerReadPending(true);
+    setCopiedRead(false);
 
     try {
       const response = await fetch("/api/compiler-read", {
@@ -1192,7 +1288,13 @@ export default function SectionDreamScreen({
         return;
       }
 
-      setCompilerRead(payload.compilerRead);
+      const persistedDocument = await attachCompilerReadToDreamDocument(activeDocument, payload.compilerRead);
+      startTransition(() => {
+        setDreamLibrary((current) => upsertDocument(current, persistedDocument));
+        if (currentStateRef.current.dreamDocument?.id === persistedDocument.id) {
+          applyDocumentState(persistedDocument, loadDreamSession(persistedDocument.id), "Compiler Read ready.");
+        }
+      });
     } catch (error) {
       if (error?.name === "AbortError") {
         return;
@@ -1225,14 +1327,17 @@ export default function SectionDreamScreen({
     }
 
     if (compilerReadError) {
-      clearCompilerReadSelfCheck(dreamDocument.id);
+      clearCompilerReadSelfCheck(
+        dreamDocument.id,
+        currentVersion?.versionId || dreamDocument?.contentHash || "",
+      );
     }
 
     await runCompilerReadForDocument(dreamDocument);
   }
 
   function handleOpenCompilerReadInspect() {
-    if (!dreamDocument || (!compilerRead && !compilerReadError && !compilerReadPending)) {
+    if (!dreamDocument || (!visibleCompilerRead && !compilerReadError && !compilerReadPending)) {
       return;
     }
     setShowCompilerReadSelfCheck(true);
@@ -1300,13 +1405,13 @@ export default function SectionDreamScreen({
   }
 
   function handleDiscussThisRead() {
-    if (!dreamDocument?.id || !compilerRead) {
+    if (!dreamDocument?.id || !visibleCompilerRead) {
       return;
     }
 
-    const primaryFinding = normalizeText(compilerRead?.verdict?.primaryFinding);
-    const nextMove = normalizeText(Array.isArray(compilerRead?.nextMoves) ? compilerRead.nextMoves[0] : "");
-    const readDisposition = normalizeText(compilerRead?.verdict?.readDisposition);
+    const primaryFinding = normalizeText(visibleCompilerRead?.verdict?.primaryFinding);
+    const nextMove = normalizeText(Array.isArray(visibleCompilerRead?.nextMoves) ? visibleCompilerRead.nextMoves[0] : "");
+    const readDisposition = normalizeText(visibleCompilerRead?.verdict?.readDisposition);
 
     saveDreamBridgePayload({
       kind: "read_summary",
@@ -1330,29 +1435,68 @@ export default function SectionDreamScreen({
 
   function handleChooseAnotherDocument() {
     setShowCompilerReadSheet(false);
-    setShowLibrarySheet(!shouldUseLibraryRail());
+    if (shouldUseLibraryRail()) {
+      setShowPaste(false);
+      return;
+    }
+    setShowLibrarySheet(true);
   }
 
   function handleOpenLibraryManager() {
     setShowCompilerReadSheet(false);
-    setShowLibrarySheet(!shouldUseLibraryRail());
+    if (shouldUseLibraryRail()) {
+      setPasteValue(dreamDocument?.rawMarkdown || "");
+      setShowPaste((current) => !current);
+      return;
+    }
+    setShowLibrarySheet(true);
   }
 
   function handleReplaceDocumentAction() {
     setShowCompilerReadSheet(false);
+    setPasteValue(dreamDocument?.rawMarkdown || "");
     setShowPaste(true);
     setShowLibrarySheet(!shouldUseLibraryRail());
   }
+
+  async function handleCopyCompilerRead() {
+    if (!visibleCompilerRead || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        formatCompilerReadAsMarkdown({
+          title: dreamDocument?.filename || "",
+          versionLabel: currentVersion ? `v${dreamDocument?.versionCount || 1}` : "",
+          versionCreatedAt: currentVersion?.createdAt || "",
+          compilerRead: visibleCompilerRead,
+        }),
+      );
+      setCopiedRead(true);
+      setNoticeMessage("Compiler Read copied as markdown.");
+    } catch {
+      setErrorMessage("Library could not copy this Compiler Read yet.");
+    }
+  }
+
+  const showFreshImportRow = Boolean(
+    dreamDocument?.id &&
+      !visibleCompilerRead &&
+      !visibleCompilerReadPending &&
+      !visibleCompilerReadError &&
+      !hasUnsavedPasteChanges,
+  );
 
   const compilerRepairRow = hasUnsavedPasteChanges ? (
     <div className={styles.compilerRepairRow} data-testid="dream-compiler-read-repair-row">
       <button
         type="button"
         className={styles.actionButton}
-        onClick={() => void handleUpdateDocumentAndRerun()}
+        onClick={() => void handleSaveVersionAndRerun()}
         data-testid="dream-compiler-read-update-rerun"
       >
-        Update document and rerun
+        Save as new version and rerun
       </button>
       <button
         type="button"
@@ -1392,8 +1536,56 @@ export default function SectionDreamScreen({
     </div>
   ) : null;
 
+  const freshImportRow = showFreshImportRow ? (
+    <div className={styles.compilerRepairRow} data-testid="dream-fresh-import-actions">
+      <button
+        type="button"
+        className={styles.actionButton}
+        onClick={() => void handleRunCompilerRead()}
+        data-testid="dream-fresh-import-run-read"
+      >
+        Run Compiler Read
+      </button>
+      <button
+        type="button"
+        className={styles.iconTextButton}
+        onClick={handleTogglePlayback}
+        data-testid="dream-fresh-import-listen"
+      >
+        Listen
+      </button>
+      <button
+        type="button"
+        className={styles.textButton}
+        onClick={handleReplaceDocumentAction}
+        data-testid="dream-fresh-import-replace"
+      >
+        Replace document
+      </button>
+    </div>
+  ) : null;
+
+  const versionActionRow =
+    dreamDocument?.hasPreviousVersion && !hasUnsavedPasteChanges ? (
+      <div className={styles.compilerRepairRow} data-testid="dream-version-actions">
+        <button
+          type="button"
+          className={styles.iconTextButton}
+          onClick={() => void handleRestorePreviousVersion()}
+          data-testid="dream-restore-previous-version"
+        >
+          Restore previous version
+        </button>
+      </div>
+    ) : null;
+
   const compilerReadActions = visibleCompilerRead
     ? [
+        {
+          label: copiedRead ? "Read copied" : "Copy read as markdown",
+          onClick: handleCopyCompilerRead,
+          testId: "dream-copy-read",
+        },
         {
           label: "Discuss this read",
           onClick: handleDiscussThisRead,
@@ -1417,7 +1609,8 @@ export default function SectionDreamScreen({
       <div className={styles.libraryPanelHead}>
         <div className={styles.libraryPanelIdentity}>
           <Kicker tone="brand">Library</Kicker>
-          <strong>{dreamLibrary.length ? `${dreamLibrary.length} documents` : "Empty"}</strong>
+          <strong>All Library documents</strong>
+          <span>{dreamLibrary.length ? `${dreamLibrary.length} saved` : "No saved documents yet"}</span>
         </div>
         <div className={styles.libraryPanelActions}>
           <button
@@ -1445,8 +1638,8 @@ export default function SectionDreamScreen({
               type="button"
               className={styles.iconAction}
               onClick={handleClear}
-              aria-label="Remove document"
-              title="Remove document"
+              aria-label="Delete from Library"
+              title="Delete from Library"
               data-testid="dream-clear"
             >
               <Trash2 size={16} />
@@ -1470,7 +1663,10 @@ export default function SectionDreamScreen({
               >
                 <div className={styles.libraryItemCopy}>
                   <strong>{document.filename}</strong>
-                  <span>{documentSummary.wordCount} words</span>
+                  <span>
+                    {documentSummary.wordCount} words
+                    {document.libraryStatusLabel ? ` · ${document.libraryStatusLabel}` : ""}
+                  </span>
                 </div>
                 <span className={styles.libraryItemMeta}>
                   {formatDreamTime(document.progressMs || 0)}
@@ -1489,7 +1685,14 @@ export default function SectionDreamScreen({
   );
 
   const main = (
-    <div className={styles.readerMain} data-testid="dream-screen">
+    <div
+      className={`${styles.readerMain} ${isLibraryDropActive ? styles.readerMainDropActive : ""}`}
+      data-testid="dream-screen"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={(event) => void handleDrop(event)}
+    >
       <audio ref={audioRef} preload="auto" className={styles.hiddenAudio} />
 
       <input
@@ -1594,11 +1797,11 @@ export default function SectionDreamScreen({
                     type="button"
                     className={styles.actionButton}
                     onClick={handlePasteSubmit}
-                    disabled={!pasteValue.trim()}
+                    disabled={dreamDocument?.id ? !hasUnsavedPasteChanges : !pasteValue.trim()}
                     data-testid="dream-paste-submit"
                   >
                     <FileText size={15} />
-                    <span>Save document</span>
+                    <span>{dreamDocument?.id ? "Save as new version" : "Save document"}</span>
                   </button>
                 </div>
               </div>
@@ -1613,6 +1816,8 @@ export default function SectionDreamScreen({
               </p>
             ) : null}
             {compilerRepairRow}
+            {freshImportRow}
+            {versionActionRow}
 
             {dreamDocument ? (
               <>
@@ -1623,6 +1828,14 @@ export default function SectionDreamScreen({
                   <SignalChip tone="neutral">
                     {summary?.wordCount || 0} words
                   </SignalChip>
+                  <SignalChip tone="neutral">
+                    {dreamDocument.libraryStatusLabel || "Library only"}
+                  </SignalChip>
+                  {dreamDocument.versionCount > 1 ? (
+                    <SignalChip tone="neutral">
+                      {`v${dreamDocument.versionCount}`}
+                    </SignalChip>
+                  ) : null}
                 </div>
 
                 <div className={styles.documentStage}>
@@ -1720,9 +1933,15 @@ export default function SectionDreamScreen({
 
                 <CompilerReadPanel
                   documentId={dreamDocument.id}
+                  compilerReadKey={currentVersion?.versionId || dreamDocument?.contentHash || ""}
+                  documentTitle={dreamDocument.filename}
+                  versionLabel={currentVersion ? `v${dreamDocument.versionCount || 1}` : ""}
+                  versionCreatedAt={currentVersion?.createdAt || ""}
                   compilerRead={visibleCompilerRead}
                   pending={visibleCompilerReadPending}
                   error={visibleCompilerReadError}
+                  stale={isCompilerReadStale}
+                  delta={compilerReadDelta}
                   onOpenInspect={handleOpenCompilerReadInspect}
                   actions={compilerReadActions}
                   showSelfCheck={showCompilerReadSelfCheck}
@@ -1787,9 +2006,15 @@ export default function SectionDreamScreen({
         children: compilerReadSheetOpen ? (
           <CompilerReadPanel
             documentId={dreamDocument?.id || ""}
+            compilerReadKey={currentVersion?.versionId || dreamDocument?.contentHash || ""}
+            documentTitle={dreamDocument?.filename || ""}
+            versionLabel={currentVersion ? `v${dreamDocument?.versionCount || 1}` : ""}
+            versionCreatedAt={currentVersion?.createdAt || ""}
             compilerRead={visibleCompilerRead}
             pending={visibleCompilerReadPending}
             error={visibleCompilerReadError}
+            stale={isCompilerReadStale}
+            delta={compilerReadDelta}
             mode="detail"
             showSelfCheck={showCompilerReadSelfCheck}
           />

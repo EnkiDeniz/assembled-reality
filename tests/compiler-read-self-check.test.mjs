@@ -55,3 +55,21 @@ test("clearCompilerReadSelfCheck removes a stored calibration answer", () => {
     restore();
   }
 });
+
+test("compiler read self-check values are version scoped", () => {
+  const restore = installMockWindow();
+
+  try {
+    saveCompilerReadSelfCheck("dream_doc_1", "version-a", "yes");
+    saveCompilerReadSelfCheck("dream_doc_1", "version-b", "no");
+
+    assert.equal(loadCompilerReadSelfCheck("dream_doc_1", "version-a"), "yes");
+    assert.equal(loadCompilerReadSelfCheck("dream_doc_1", "version-b"), "no");
+
+    clearCompilerReadSelfCheck("dream_doc_1", "version-a");
+    assert.equal(loadCompilerReadSelfCheck("dream_doc_1", "version-a"), "");
+    assert.equal(loadCompilerReadSelfCheck("dream_doc_1", "version-b"), "no");
+  } finally {
+    restore();
+  }
+});

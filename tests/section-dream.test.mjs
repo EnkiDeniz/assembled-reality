@@ -99,7 +99,11 @@ test("section dream document records and sessions stay stable for local restore"
 
   assert.match(document.id, /^[a-f0-9]{64}$/);
   assert.equal(document.filename, "resume.md");
-  assert.equal(document.chunkMap[0].id.startsWith(`${document.id}:`), true);
+  assert.equal(Array.isArray(document.versions), true);
+  assert.equal(document.versions.length, 1);
+  assert.equal(document.currentVersionId, document.versions[0].versionId);
+  assert.equal(document.chunkMap[0].id.startsWith(`${document.id}:${document.currentVersionId}:`), true);
+  assert.equal(document.contentHash, document.versions[0].contentHash);
   assert.equal(document.wordCount > 0, true);
   assert.equal(document.totalDurationMs > 0, true);
   assert.equal(document.progressMs, 0);

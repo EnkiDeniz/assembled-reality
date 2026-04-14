@@ -119,11 +119,11 @@ function isMeaningfulCompilerRead(compilerRead = null) {
   );
 }
 
-function CompilerReadSelfCheck({ documentId = "", compilerRead = null }) {
+function CompilerReadSelfCheck({ documentId = "", compilerReadKey = "", compilerRead = null }) {
   const meaningful = isMeaningfulCompilerRead(compilerRead);
   const selectedValue = useSyncExternalStore(
-    (callback) => subscribeToCompilerReadSelfCheck(documentId, callback),
-    () => loadCompilerReadSelfCheck(documentId),
+    (callback) => subscribeToCompilerReadSelfCheck(documentId, compilerReadKey, callback),
+    () => loadCompilerReadSelfCheck(documentId, compilerReadKey),
     () => "",
   );
 
@@ -152,7 +152,7 @@ function CompilerReadSelfCheck({ documentId = "", compilerRead = null }) {
             type="button"
             className={`${styles.compilerReadSelfCheckButton} ${selectedValue === option.value ? styles.compilerReadSelfCheckButtonActive : ""}`}
             onClick={() => {
-              saveCompilerReadSelfCheck(documentId, option.value);
+              saveCompilerReadSelfCheck(documentId, compilerReadKey, option.value);
             }}
             data-testid={`dream-compiler-read-self-check-${option.value}`}
           >
@@ -347,9 +347,15 @@ function CompilerReadDetail({ compilerRead = null }) {
 
 export default function CompilerReadPanel({
   documentId = "",
+  compilerReadKey = "",
+  documentTitle = "",
+  versionLabel = "",
+  versionCreatedAt = "",
   compilerRead = null,
   pending = false,
   error = "",
+  stale = false,
+  delta = null,
   mode = "summary",
   onOpenInspect = null,
   actions = [],
@@ -372,6 +378,7 @@ export default function CompilerReadPanel({
   const omittedCount = Array.isArray(translatedSubsetResult?.omittedClaims)
     ? translatedSubsetResult.omittedClaims.length
     : 0;
+  const versionContext = [versionLabel, versionCreatedAt].filter(Boolean).join(" · ");
 
   if (mode === "detail") {
     return (
@@ -402,6 +409,18 @@ export default function CompilerReadPanel({
           >
             <strong>Compiler Read could not finish.</strong>
             <span>{error}</span>
+          </div>
+        ) : null}
+        {stale ? (
+          <div className={styles.compilerReadInlineNote} data-testid="dream-compiler-read-stale">
+            <strong>Read is stale for the current draft.</strong>
+            <span>This read belongs to the last saved version. Save a new version and rerun to update it.</span>
+          </div>
+        ) : null}
+        {versionContext ? (
+          <div className={styles.compilerReadInlineNote}>
+            <strong>{documentTitle || "Current document"}</strong>
+            <span>{versionContext}</span>
           </div>
         ) : null}
         <CompilerReadDetail compilerRead={compilerRead} />
@@ -444,6 +463,23 @@ export default function CompilerReadPanel({
 
       {compilerRead ? (
         <>
+          {stale ? (
+            <div className={styles.compilerReadInlineNote} data-testid="dream-compiler-read-stale">
+              <strong>Read is stale for the current draft.</strong>
+              <span>This read still belongs to the last saved version. Save a new version and rerun to refresh it.</span>
+            </div>
+          ) : null}
+
+          {delta ? (
+            <div className={styles.compilerReadCard} data-testid="dream-compiler-read-delta">
+              <Kicker tone="neutral">Compared to previous version</Kicker>
+              <strong>{delta.trajectoryLine}</strong>
+              <p>
+                {`${delta.claimsAdded.length} claims added · ${delta.claimsRemoved.length} claims removed · ${delta.previousRejected} -> ${delta.currentRejected} rejected`}
+              </p>
+            </div>
+          ) : null}
+
           <div
             ref={summaryRef}
             className={styles.compilerReadSummaryLead}
@@ -470,6 +506,9 @@ export default function CompilerReadPanel({
             ) : (
               <SignalChip tone="neutral">Not direct source</SignalChip>
             )}
+            {versionContext ? (
+              <SignalChip tone="neutral">{versionContext}</SignalChip>
+            ) : null}
           </div>
 
           {onOpenInspect ? (
@@ -502,7 +541,11 @@ export default function CompilerReadPanel({
           ) : null}
 
           {showSelfCheck ? (
-            <CompilerReadSelfCheck documentId={documentId} compilerRead={compilerRead} />
+            <CompilerReadSelfCheck
+              documentId={documentId}
+              compilerReadKey={compilerReadKey}
+              compilerRead={compilerRead}
+            />
           ) : null}
         </>
       ) : null}

@@ -396,6 +396,62 @@ export async function createDreamDocumentId({ filename = "", rawMarkdown = "" } 
   return digestSha256(`${normalizedFilename}::${String(rawMarkdown || "")}`);
 }
 
+export async function createDreamContentHash(rawMarkdown = "") {
+  return digestSha256(String(rawMarkdown || ""));
+}
+
+export async function createDreamVersionId({
+  documentId = "",
+  createdAt = "",
+  contentHash = "",
+} = {}) {
+  return digestSha256(
+    `${String(documentId || "").trim()}::${String(createdAt || "").trim()}::${String(contentHash || "").trim()}`,
+  );
+}
+
+export async function buildDreamVersionRecord({
+  documentId = "",
+  rawMarkdown = "",
+  createdAt = new Date().toISOString(),
+} = {}) {
+  const normalizedText = normalizeDreamMarkdown(rawMarkdown);
+
+  if (!normalizedText) {
+    throw new Error("Section Dream needs readable markdown before it can start listening.");
+  }
+
+  const contentHash = await createDreamContentHash(rawMarkdown);
+  const versionId = await createDreamVersionId({
+    documentId,
+    createdAt,
+    contentHash,
+  });
+  const chunkMap = buildDreamChunkMap(normalizedText).map((chunk, index) => ({
+    ...chunk,
+    id: `${documentId}:${versionId}:${index}`,
+    index,
+  }));
+  const wordCount = countWords(normalizedText);
+  const totalDurationMs = getDreamQueueDurationMs(chunkMap);
+
+  return {
+    versionId,
+    parentVersionId: null,
+    createdAt,
+    updatedAt: createdAt,
+    contentHash,
+    rawMarkdown: String(rawMarkdown || ""),
+    normalizedText,
+    chunkMap,
+    wordCount,
+    progressMs: 0,
+    totalDurationMs,
+    compilerRead: null,
+    compilerReadRanAt: null,
+  };
+}
+
 export async function buildDreamDocumentRecord({
   filename = "",
   rawMarkdown = "",
@@ -403,38 +459,37 @@ export async function buildDreamDocumentRecord({
 } = {}) {
   const normalizedSourceKind = normalizeDreamSourceKind(sourceKind);
   const normalizedFilename = normalizeDreamFilename(filename, normalizedSourceKind);
-  const normalizedText = normalizeDreamMarkdown(rawMarkdown);
-
-  if (!normalizedText) {
-    throw new Error("Section Dream needs readable markdown before it can start listening.");
-  }
 
   const id = await createDreamDocumentId({
     filename: normalizedFilename,
     rawMarkdown,
   });
   const timestamp = new Date().toISOString();
-  const chunkMap = buildDreamChunkMap(normalizedText).map((chunk, index) => ({
-    ...chunk,
-    id: `${id}:${index}`,
-    index,
-  }));
-  const wordCount = countWords(normalizedText);
-  const totalDurationMs = getDreamQueueDurationMs(chunkMap);
+  const initialVersion = await buildDreamVersionRecord({
+    documentId: id,
+    rawMarkdown,
+    createdAt: timestamp,
+  });
 
   return {
     id,
     filename: normalizedFilename,
     sourceKind: normalizedSourceKind,
-    rawMarkdown: String(rawMarkdown || ""),
-    normalizedText,
-    chunkMap,
-    wordCount,
-    progressMs: 0,
-    totalDurationMs,
+    currentVersionId: initialVersion.versionId,
+    versions: [initialVersion],
+    rawMarkdown: initialVersion.rawMarkdown,
+    normalizedText: initialVersion.normalizedText,
+    chunkMap: initialVersion.chunkMap,
+    wordCount: initialVersion.wordCount,
+    progressMs: initialVersion.progressMs,
+    totalDurationMs: initialVersion.totalDurationMs,
+    contentHash: initialVersion.contentHash,
+    compilerRead: null,
+    compilerReadRanAt: null,
     lastOpenedAt: timestamp,
     createdAt: timestamp,
     updatedAt: timestamp,
+    libraryStatus: "library_only",
   };
 }
 

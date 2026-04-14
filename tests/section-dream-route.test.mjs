@@ -33,13 +33,21 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(dreamScreen, /dream-compiler-read-repair-row/);
   assert.match(dreamScreen, /dream-compiler-read-update-rerun/);
   assert.match(dreamScreen, /dream-compiler-read-discard-edits/);
+  assert.match(dreamScreen, /dream-fresh-import-actions/);
+  assert.match(dreamScreen, /dream-copy-read/);
+  assert.match(dreamScreen, /dream-restore-previous-version/);
   assert.match(dreamScreen, /dream-discuss-read/);
   assert.match(dreamScreen, /dream-choose-document/);
   assert.match(dreamScreen, /dream-replace-document/);
   assert.match(dreamScreen, /window\.matchMedia\("\(min-width: 960px\)"\)\.matches/);
-  assert.match(dreamScreen, /setShowLibrarySheet\(!shouldUseLibraryRail\(\)\)/);
-  assert.match(dreamScreen, /clearCompilerReadSelfCheck\(dreamDocument\.id\)/);
+  assert.match(dreamScreen, /createNextDreamDocumentVersion/);
+  assert.match(dreamScreen, /attachCompilerReadToDreamDocument/);
+  assert.match(dreamScreen, /restorePreviousDreamDocumentVersion/);
+  assert.match(dreamScreen, /clearCompilerReadSelfCheck\(\s*dreamDocument\.id,/);
   assert.match(dreamScreen, /clearRuntimeSurfaceResumeLibrary\(\)/);
+  assert.match(dreamScreen, /All Library documents/);
+  assert.match(dreamScreen, /Delete from Library/);
+  assert.match(dreamScreen, /Library only/);
   assert.doesNotMatch(dreamScreen, /ReplayReviewPanel/);
   assert.match(compilerPanel, /useSyncExternalStore/);
   assert.match(compilerPanel, /loadCompilerReadSelfCheck/);
@@ -50,6 +58,9 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(compilerPanel, /dream-compiler-read-diagnostics-all/);
   assert.match(compilerPanel, /showSelfCheck/);
   assert.match(compilerPanel, /summaryRef/);
+  assert.match(compilerPanel, /compilerReadKey/);
+  assert.match(compilerPanel, /dream-compiler-read-stale/);
+  assert.match(compilerPanel, /dream-compiler-read-delta/);
   assert.match(compilerPanel, /dream-compiler-read-actions/);
   assert.match(compilerSelfCheck, /clearCompilerReadSelfCheck/);
   assert.match(compilerDiagnostics, /Raw prose \/ formatting noise/);
@@ -91,8 +102,8 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(roomWorkspace, /Continue the live issue or add new source/);
   assert.doesNotMatch(roomWorkspace, /setComposerText\(\(current\) => current \|\| excerpt/);
   assert.doesNotMatch(roomWorkspace, /const bridgePayload = pendingDreamBridgePayload;/);
-  assert.match(dreamScreen, /hasUnsavedPasteChanges \? null : compilerRead/);
-  assert.match(dreamScreen, /showCompilerReadSheet && !hasUnsavedPasteChanges/);
+  assert.match(dreamScreen, /const visibleCompilerRead = dreamDocument\?\.compilerRead \|\| null/);
+  assert.match(dreamScreen, /const isCompilerReadStale = Boolean\(hasUnsavedPasteChanges && visibleCompilerRead\)/);
   assert.match(runtimeResume, /clearRuntimeSurfaceResumeLibrary/);
 
   assert.doesNotMatch(publicSite, /\/dream/);
