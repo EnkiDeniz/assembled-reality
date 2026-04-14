@@ -1,5 +1,6 @@
 const BRIDGE_KEY = "assembled-reality:dream-bridge:v1";
 const BRIDGE_KINDS = new Set(["passage", "note", "witness"]);
+const BRIDGE_STATES = new Set(["pending", "armed", "dismissed", "sent"]);
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -41,14 +42,20 @@ export function normalizeDreamBridgePayload(payload = null) {
   if (!documentId || !excerpt) return null;
 
   const kind = normalizeText(nextPayload.kind).toLowerCase();
+  const state = normalizeText(nextPayload.state).toLowerCase();
+  const sourceLabel =
+    normalizeText(nextPayload.sourceLabel) ||
+    normalizeText(nextPayload.documentTitle) ||
+    "Library document";
+  const provenanceLabel = normalizeText(nextPayload.provenanceLabel) || "From Library";
 
   return {
     kind: BRIDGE_KINDS.has(kind) ? kind : "passage",
+    state: BRIDGE_STATES.has(state) ? state : "pending",
     documentId,
-    documentTitle:
-      normalizeText(nextPayload.documentTitle) ||
-      normalizeText(nextPayload.sourceLabel) ||
-      "Dream document",
+    documentTitle: normalizeText(nextPayload.documentTitle) || sourceLabel,
+    sourceLabel,
+    provenanceLabel,
     anchor: normalizeText(nextPayload.anchor) || null,
     excerpt,
     savedAt: normalizeSavedAt(nextPayload.savedAt),

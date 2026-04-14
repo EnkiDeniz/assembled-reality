@@ -30,7 +30,7 @@ test("auth and read/library routes target the room", async () => {
   assert.match(introLanding, /callbackUrl: "\/workspace"/);
   assert.match(authTerminal, /callbackUrl: "\/workspace"/);
   assert.match(readPage, /redirect\("\/workspace"\)/);
-  assert.match(libraryPage, /redirect\("\/workspace"\)/);
+  assert.match(libraryPage, /redirect\("\/dream"\)/);
 });
 
 test("integration callback lands on the room", async () => {
@@ -49,7 +49,7 @@ test("account shell exposes the shared signed-in shell", async () => {
   assert.match(accountShell, /<LoegosShell/);
   assert.match(accountShell, /href="\/workspace"/);
   assert.match(accountShell, /href="\/dream"/);
-  assert.match(shell, /Dream/);
+  assert.match(shell, /Library/);
   assert.match(shell, /Account/);
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
 });

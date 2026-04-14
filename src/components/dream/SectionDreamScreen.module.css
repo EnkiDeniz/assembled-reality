@@ -356,6 +356,12 @@
   background: rgba(94, 167, 255, 0.05);
 }
 
+.compilerReadSummaryLead {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .compilerReadHead,
 .compilerReadSectionHead {
   display: flex;
@@ -381,6 +387,44 @@
   font-size: 0.86rem;
 }
 
+.compilerReadActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.compilerReadInspectButton,
+.compilerReadSelfCheckButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(244, 245, 247, 0.84);
+  font-size: 0.82rem;
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.compilerReadInspectButton:hover,
+.compilerReadInspectButton:focus-visible,
+.compilerReadSelfCheckButton:hover,
+.compilerReadSelfCheckButton:focus-visible,
+.compilerReadSelfCheckButtonActive {
+  border-color: rgba(94, 167, 255, 0.28);
+  background: rgba(94, 167, 255, 0.12);
+  color: rgba(244, 245, 247, 0.98);
+  transform: translateY(-1px);
+}
+
 .compilerReadError {
   display: grid;
   gap: 6px;
@@ -389,12 +433,6 @@
   border-radius: 18px;
   background: rgba(255, 132, 132, 0.08);
   color: rgba(255, 222, 222, 0.96);
-}
-
-.compilerReadSummary {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .compilerReadCard,
@@ -439,6 +477,11 @@
 .compilerReadInlineNote span {
   color: rgba(244, 245, 247, 0.68);
   line-height: 1.5;
+}
+
+.compilerReadDetail {
+  display: grid;
+  gap: 14px;
 }
 
 .compilerReadClaimList {
@@ -503,6 +546,21 @@
   font-size: 0.82rem;
   line-height: 1.55;
   white-space: pre-wrap;
+}
+
+.compilerReadSelfCheck {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.compilerReadSelfCheckButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .replayReviewPanel {
@@ -816,6 +874,14 @@
   display: grid;
   place-items: center;
   gap: 18px;
+}
+
+.emptyStageCopy {
+  margin: 0;
+  max-width: 20rem;
+  color: rgba(244, 245, 247, 0.64);
+  text-align: center;
+  line-height: 1.6;
 }
 
 .spin {

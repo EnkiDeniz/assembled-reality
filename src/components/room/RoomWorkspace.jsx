@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  FileText,
   Headphones,
   Paperclip,
   Plus,
@@ -26,6 +27,7 @@ import {
   clearDreamBridgePayload,
   loadDreamBridgePayload,
   normalizeDreamBridgePayload,
+  saveDreamBridgePayload,
 } from "@/lib/dream-bridge";
 import {
   buildWorkingEchoStripStateFromRoomView,
@@ -324,45 +326,70 @@ function ThreadIdentityBar({ view, onOpenThreads }) {
   );
 }
 
-function DreamBridgeNotice({ payload, onUse }) {
+function DreamBridgeNotice({ payload, onUse, onDismiss }) {
   if (!payload?.documentId) return null;
 
   const kind = normalizeText(payload?.kind).toLowerCase();
-  const sourceLabel = normalizeText(payload?.documentTitle) || "Dream document";
-  const excerpt = normalizeText(payload?.excerpt) || "Passage carried from Dream.";
+  const state = normalizeText(payload?.state).toLowerCase() || "pending";
+  const sourceLabel =
+    normalizeText(payload?.sourceLabel) ||
+    normalizeText(payload?.documentTitle) ||
+    "Library document";
+  const excerpt = normalizeText(payload?.excerpt) || "Passage carried from Library.";
   const kindLabel =
     kind === "witness" ? "Witness" : kind === "note" ? "Note" : "Passage";
   const anchorLabel = normalizeText(payload?.anchor);
+  const stateLabel =
+    state === "armed"
+      ? "Armed"
+      : state === "sent"
+        ? "Used in Room"
+        : "Pending";
+  const showUseAction = state === "pending" || state === "armed";
+  const showDismissAction = state === "pending" || state === "armed";
 
   return (
     <div className={styles.dreamBridgeNotice} data-testid="room-dream-bridge">
       <div className={styles.dreamBridgeCopy}>
-        <Kicker tone="brand">From Dream</Kicker>
+        <Kicker tone="brand">{normalizeText(payload?.provenanceLabel) || "From Library"}</Kicker>
         <strong>{sourceLabel}</strong>
         <p>{excerpt}</p>
         <div className={styles.dreamBridgeMeta}>
           <span>{kindLabel}</span>
-          <span>Dream</span>
+          <span>Library</span>
+          <span>{stateLabel}</span>
           {anchorLabel ? <span>{anchorLabel}</span> : null}
           {normalizeText(payload?.savedAt) ? <span>{formatOperateTimestamp(payload.savedAt)}</span> : null}
         </div>
       </div>
 
       <div className={styles.dreamBridgeActions}>
-        <button
-          type="button"
-          className={styles.secondaryButton}
-          onClick={onUse}
-          data-testid="dream-bridge-use"
-        >
-          Use in Room
-        </button>
+        {showUseAction ? (
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={onUse}
+            data-testid="dream-bridge-use"
+          >
+            {state === "armed" ? "Armed for next turn" : "Use in Room"}
+          </button>
+        ) : null}
+        {showDismissAction ? (
+          <button
+            type="button"
+            className={styles.inlineLinkButton}
+            onClick={onDismiss}
+            data-testid="dream-bridge-dismiss"
+          >
+            Dismiss
+          </button>
+        ) : null}
         <Link
           href={buildDreamHref(payload.documentId, payload.anchor)}
           className={styles.inlineLinkButton}
           data-testid="dream-bridge-return"
         >
-          Open Dream
+          Open Library
         </Link>
       </div>
     </div>
@@ -805,20 +832,70 @@ function WorkingEchoStrip({ view, onOpenDetail }) {
   );
 }
 
-function StarterView({ starter = null, canCreateBox = false, onCreateBox = null }) {
+function StarterView({
+  starter = null,
+  canCreateBox = false,
+  canCompose = false,
+  onCreateBox = null,
+  onOpenSource = null,
+  onFocusComposer = null,
+}) {
+  function handleStarterAction(nextAction = "") {
+    if (canCreateBox && nextAction) {
+      onCreateBox?.(nextAction);
+      return;
+    }
+
+    if (nextAction === "talk") {
+      onFocusComposer?.();
+      return;
+    }
+
+    onOpenSource?.();
+  }
+
   return (
     <section className={styles.starter} data-testid="room-starter">
       <Kicker tone="neutral" className={styles.starterKicker}>
         Room
       </Kicker>
-      <h1>{starter?.firstLine || "What's on your mind?"}</h1>
-      <p>{starter?.secondLine || "A decision. A question. Something you're carrying. Just start talking."}</p>
-      {canCreateBox ? (
-        <button type="button" className={styles.primaryButton} onClick={onCreateBox}>
-          <Plus size={14} />
-          Start Room
+      <h1>{starter?.firstLine || "Bring one live thing into focus."}</h1>
+      <p>
+        {starter?.secondLine ||
+          "Paste a document, upload a file, or start talking. Open Library when you want to re-enter source first."}
+      </p>
+      <div className={styles.starterActions}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => handleStarterAction("paste")}
+          data-testid="room-starter-paste"
+        >
+          <FileText size={14} />
+          Paste document
         </button>
-      ) : null}
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => handleStarterAction("upload")}
+          data-testid="room-starter-upload"
+        >
+          <Upload size={14} />
+          Upload file
+        </button>
+        <button
+          type="button"
+          className={canCompose ? styles.primaryButton : styles.secondaryButton}
+          onClick={() => handleStarterAction("talk")}
+          data-testid="room-starter-talk"
+        >
+          <SendHorizontal size={14} />
+          Just start talking
+        </button>
+      </div>
+      <p className={styles.starterHint}>
+        Or open <Link href="/dream">Library</Link> to re-enter a document first.
+      </p>
     </section>
   );
 }
@@ -1781,6 +1858,7 @@ function Composer({
   placeholder = "Your word",
   onOpenAttach,
   listenHref,
+  focusSignal = 0,
 }) {
   const textareaRef = useRef(null);
   const isComposingRef = useRef(false);
@@ -1796,6 +1874,11 @@ function Composer({
     textarea.style.height = `${Math.max(54, nextHeight)}px`;
     textarea.style.overflowY = textarea.scrollHeight > 128 ? "auto" : "hidden";
   }, [value]);
+
+  useEffect(() => {
+    if (!focusSignal || disabled) return;
+    textareaRef.current?.focus();
+  }, [disabled, focusSignal]);
 
   function handleKeyDown(event) {
     if (event.key !== "Enter" || event.shiftKey || isComposingRef.current) return;
@@ -2250,11 +2333,17 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const [workingEchoCollapsed, setWorkingEchoCollapsed] = useState(false);
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
   const [pendingDreamBridgePayload, setPendingDreamBridgePayload] = useState(null);
+  const [pendingStarterAction, setPendingStarterAction] = useState("");
+  const [composerFocusSignal, setComposerFocusSignal] = useState(0);
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
   const overlayIntentKeyRef = useRef("");
   const persistedDreamBridgePayload = normalizeDreamBridgePayload(view?.bridgeContext);
-  const dreamBridgePayload = pendingDreamBridgePayload || persistedDreamBridgePayload || null;
+  const dreamBridgePayload =
+    pendingDreamBridgePayload ||
+    (persistedDreamBridgePayload
+      ? { ...persistedDreamBridgePayload, state: "sent" }
+      : null);
 
   useEffect(() => {
     setView(initialView);
@@ -2291,8 +2380,12 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       return;
     }
 
+    if (incomingPayload.state === "dismissed" || incomingPayload.state === "sent") {
+      clearDreamBridgePayload();
+      return;
+    }
+
     setPendingDreamBridgePayload(incomingPayload);
-    clearDreamBridgePayload();
   }, []);
 
   const projectKey = view?.project?.projectKey || "";
@@ -2307,6 +2400,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     setView(nextView);
     if (clearPendingBridge) {
       setPendingDreamBridgePayload(null);
+      clearDreamBridgePayload();
     }
   }
 
@@ -2333,6 +2427,16 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     highlightTimeoutRef.current = setTimeout(() => {
       setHighlightedRegion("");
     }, 1400);
+  }
+
+  function resolveStarterAction(nextAction = "") {
+    const normalizedAction = normalizeText(nextAction).toLowerCase();
+    if (!normalizedAction) return;
+    if (normalizedAction === "talk") {
+      setComposerFocusSignal((current) => current + 1);
+      return;
+    }
+    setOverlayMode("source");
   }
 
   async function refreshRoom(
@@ -2363,15 +2467,21 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     return payload.view;
   }
 
-  async function handleProjectSelect(nextProjectKey) {
+  async function handleProjectSelect(nextProjectKey, { starterAction = "" } = {}) {
     setActionError("");
     try {
       await refreshRoom(nextProjectKey, "", "", "");
       setPendingDreamBridgePayload(null);
+      clearDreamBridgePayload();
+      setPendingStarterAction("");
       startActionTransition(() => {
         router.replace(buildWorkspaceHref(nextProjectKey), { scroll: false });
       });
-      setOverlayMode("");
+      if (normalizeText(starterAction)) {
+        resolveStarterAction(starterAction);
+      } else {
+        setOverlayMode("");
+      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that box.");
     }
@@ -2389,7 +2499,9 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     if (!response.ok) {
       throw new Error(payload?.error || "Could not create the box.");
     }
-    await handleProjectSelect(payload?.project?.projectKey || "");
+    await handleProjectSelect(payload?.project?.projectKey || "", {
+      starterAction: pendingStarterAction,
+    });
   }
 
   async function handleSourceComplete() {
@@ -2520,7 +2632,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     setMessageError("");
     setOptimisticUserMessage(message);
     setComposerText("");
-    const bridgePayload = pendingDreamBridgePayload;
+    const bridgePayload =
+      pendingDreamBridgePayload?.state === "armed" ? pendingDreamBridgePayload : null;
     try {
       const response = await fetch("/api/workspace/room/turn", {
         method: "POST",
@@ -2539,7 +2652,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       if (!response.ok) {
         throw new Error(payload?.error || "The room did not answer.");
       }
-      applyRoomView(payload.view, { clearPendingBridge: true });
+      applyRoomView(payload.view, { clearPendingBridge: Boolean(bridgePayload) });
       setOptimisticUserMessage("");
     } catch (error) {
       setComposerText((current) => current || message);
@@ -2711,9 +2824,23 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   function handleUseDreamBridge() {
     if (!dreamBridgePayload?.documentId) return;
     const excerpt = normalizeText(dreamBridgePayload.excerpt);
+    const nextPayload = normalizeDreamBridgePayload({
+      ...dreamBridgePayload,
+      state: "armed",
+    });
+    if (nextPayload) {
+      setPendingDreamBridgePayload(nextPayload);
+      saveDreamBridgePayload(nextPayload);
+    }
     if (excerpt) {
       setComposerText((current) => current || excerpt);
     }
+    setComposerFocusSignal((current) => current + 1);
+  }
+
+  function handleDismissDreamBridge() {
+    setPendingDreamBridgePayload(null);
+    clearDreamBridgePayload();
   }
 
   async function handleOpenWitness(nextDocumentKey = "") {
@@ -2769,6 +2896,9 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   function handleCloseOverlay() {
     const nextMode = normalizeText(overlayMode).toLowerCase();
     setOverlayMode("");
+    if (nextMode === "create") {
+      setPendingStarterAction("");
+    }
     if (nextMode === "witness") {
       startActionTransition(() => {
         router.replace(
@@ -2825,7 +2955,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
         />
 
         {dreamBridgePayload?.documentId ? (
-          <DreamBridgeNotice payload={dreamBridgePayload} onUse={handleUseDreamBridge} />
+          <DreamBridgeNotice
+            payload={dreamBridgePayload}
+            onUse={handleUseDreamBridge}
+            onDismiss={handleDismissDreamBridge}
+          />
         ) : null}
 
         {view?.workingEcho ? (
@@ -2843,7 +2977,13 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
             <StarterView
               starter={view?.starter}
               canCreateBox={!normalizeText(projectKey)}
-              onCreateBox={() => setOverlayMode("create")}
+              canCompose={canSend}
+              onCreateBox={(nextAction) => {
+                setPendingStarterAction(normalizeText(nextAction).toLowerCase());
+                setOverlayMode("create");
+              }}
+              onOpenSource={() => setOverlayMode("source")}
+              onFocusComposer={() => setComposerFocusSignal((current) => current + 1)}
             />
           ) : null}
 
@@ -2900,8 +3040,16 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           pending={turnPending}
           placeholder="Your word"
           disabled={!canSend}
-          onOpenAttach={() => setOverlayMode(normalizeText(projectKey) ? "source" : "create")}
+          onOpenAttach={() => {
+            if (normalizeText(projectKey)) {
+              setOverlayMode("source");
+              return;
+            }
+            setPendingStarterAction("");
+            setOverlayMode("create");
+          }}
           listenHref={view?.deepLinks?.reader || ""}
+          focusSignal={composerFocusSignal}
         />
       }
       sheet={{

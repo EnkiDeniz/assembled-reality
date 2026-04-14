@@ -114,7 +114,7 @@ export default function AccountShell({
               </div>
               <div className={styles.linkRow}>
                 <Link href="/dream" className={`${styles.linkButton} ${styles.linkButtonPrimary}`}>
-                  Open Dream
+                  Open Library
                 </Link>
               </div>
             </ShellSurface>

@@ -12,7 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Dream",
+  title: "Library",
 };
 
 export default async function DreamPage() {

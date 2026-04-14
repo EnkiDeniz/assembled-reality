@@ -379,8 +379,8 @@ function buildEmptyRoomView({ readerData: _readerData = null, projects = [], res
     },
     starter: {
       show: true,
-      firstLine: "What's on your mind?",
-      secondLine: "Create a box when you're ready. The Room will start fresh.",
+      firstLine: "Bring one live thing into focus.",
+      secondLine: "Paste a document, upload a file, or start talking. Open Library when you want to re-enter source first.",
     },
     diagnostics: [],
     resetAt,

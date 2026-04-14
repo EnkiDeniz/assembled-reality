@@ -1,7 +1,10 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { Kicker, SignalChip } from "@/components/shell/LoegosShell";
 import styles from "@/components/dream/SectionDreamScreen.module.css";
+
+const SELF_CHECK_KEY = "assembled-reality:compiler-read-self-check:v1";
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -39,7 +42,7 @@ function buildAdmissionSummary(rawDocumentResult = null) {
   if (compileState === "blocked") {
     return {
       title: "Not direct source",
-      body: "The source document is not directly executable Lœgos. Diagnostics are available below, and the structural read continues through interpretation.",
+      body: "The source document is not directly executable Lœgos. The read stays provisional.",
     };
   }
 
@@ -59,7 +62,7 @@ function buildAdmissionSummary(rawDocumentResult = null) {
 
   return {
     title: "Admission control is provisional",
-    body: "The raw source result is available for inspection below.",
+    body: "The raw source result is available for inspection.",
   };
 }
 
@@ -69,7 +72,7 @@ function buildInterpretationSummary(compilerRead = null) {
   const outcomeClass = normalizeText(compilerRead?.outcomeClass);
 
   if (outcomeClass === "direct_source_compiled") {
-    return "This document already compiled directly as source, so no translated subset was needed in this read.";
+    return "This document already compiled directly as source, so no translated subset was needed.";
   }
 
   if (translatedSubsetResult?.present) {
@@ -112,17 +115,118 @@ function buildEmbeddedSummary(embeddedExecutableResult = null) {
   };
 }
 
-export default function CompilerReadPanel({
-  compilerRead = null,
-  pending = false,
-  error = "",
-}) {
-  if (!pending && !error && !compilerRead) {
+function isMeaningfulCompilerRead(compilerRead = null) {
+  if (!compilerRead) return false;
+  const claimCount = Array.isArray(compilerRead?.claimSet) ? compilerRead.claimSet.length : 0;
+  const nextMoveCount = Array.isArray(compilerRead?.nextMoves) ? compilerRead.nextMoves.length : 0;
+  return Boolean(
+    claimCount ||
+      nextMoveCount ||
+      normalizeText(compilerRead?.verdict?.primaryFinding) ||
+      normalizeText(compilerRead?.documentSummary?.documentType),
+  );
+}
+
+function getSelfCheckStorageKey(documentId = "") {
+  return `${SELF_CHECK_KEY}:${normalizeText(documentId) || "unknown"}`;
+}
+
+function loadSelfCheck(documentId = "") {
+  if (typeof window === "undefined" || !normalizeText(documentId)) return "";
+  try {
+    return normalizeText(window.localStorage.getItem(getSelfCheckStorageKey(documentId)));
+  } catch {
+    return "";
+  }
+}
+
+function saveSelfCheck(documentId = "", value = "") {
+  if (typeof window === "undefined" || !normalizeText(documentId)) return;
+  try {
+    if (!normalizeText(value)) {
+      window.localStorage.removeItem(getSelfCheckStorageKey(documentId));
+      window.dispatchEvent(new CustomEvent("compiler-read-self-check-change", { detail: { documentId } }));
+      return;
+    }
+    window.localStorage.setItem(getSelfCheckStorageKey(documentId), normalizeText(value));
+    window.dispatchEvent(new CustomEvent("compiler-read-self-check-change", { detail: { documentId } }));
+  } catch {
+    // Ignore local persistence failures and keep the read usable.
+  }
+}
+
+function subscribeToSelfCheck(documentId = "", callback = () => {}) {
+  if (typeof window === "undefined" || !normalizeText(documentId)) {
+    return () => {};
+  }
+
+  function handleStorage(event) {
+    if (event.key && event.key !== getSelfCheckStorageKey(documentId)) return;
+    callback();
+  }
+
+  function handleChange(event) {
+    if (normalizeText(event?.detail?.documentId) !== normalizeText(documentId)) return;
+    callback();
+  }
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener("compiler-read-self-check-change", handleChange);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("compiler-read-self-check-change", handleChange);
+  };
+}
+
+function CompilerReadSelfCheck({ documentId = "", compilerRead = null }) {
+  const meaningful = isMeaningfulCompilerRead(compilerRead);
+  const selectedValue = useSyncExternalStore(
+    (callback) => subscribeToSelfCheck(documentId, callback),
+    () => loadSelfCheck(documentId),
+    () => "",
+  );
+
+  if (!meaningful) {
     return null;
   }
 
+  const options = [
+    { value: "yes", label: "Yes" },
+    { value: "no", label: "No" },
+    { value: "already_knew", label: "I already knew this" },
+  ];
+
+  return (
+    <div className={styles.compilerReadSelfCheck} data-testid="dream-compiler-read-self-check">
+      <div className={styles.compilerReadSectionHead}>
+        <div className={styles.compilerReadIdentity}>
+          <Kicker tone="neutral">Calibration</Kicker>
+          <strong>Did this change your next move?</strong>
+        </div>
+      </div>
+      <div className={styles.compilerReadSelfCheckButtons}>
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`${styles.compilerReadSelfCheckButton} ${selectedValue === option.value ? styles.compilerReadSelfCheckButtonActive : ""}`}
+            onClick={() => {
+              saveSelfCheck(documentId, option.value);
+            }}
+            data-testid={`dream-compiler-read-self-check-${option.value}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompilerReadDetail({ compilerRead = null }) {
+  if (!compilerRead) return null;
+
   const claimSet = Array.isArray(compilerRead?.claimSet) ? compilerRead.claimSet : [];
-  const nextMoves = Array.isArray(compilerRead?.nextMoves) ? compilerRead.nextMoves : [];
   const rawDocumentResult = compilerRead?.rawDocumentResult || null;
   const translatedSubsetResult = compilerRead?.translatedSubsetResult || null;
   const embeddedExecutableResult = compilerRead?.embeddedExecutableResult || null;
@@ -132,15 +236,174 @@ export default function CompilerReadPanel({
   const omittedClaimDetails = omittedClaims
     .map((claimId) => claimSet.find((claim) => claim.id === claimId))
     .filter(Boolean);
-  const admissionSummary = buildAdmissionSummary(rawDocumentResult);
-  const interpretationSummary = buildInterpretationSummary(compilerRead);
   const diagnostics = [
     ...buildLayerDiagnostics("Raw source", rawDocumentResult),
     ...buildLayerDiagnostics("Translated subset", translatedSubsetResult),
     ...buildLayerDiagnostics("Embedded program", embeddedExecutableResult),
   ];
-  const rawSecondaryTrusted = Boolean(rawDocumentResult?.secondaryRuntimeTrusted);
   const embeddedSummary = buildEmbeddedSummary(embeddedExecutableResult);
+
+  return (
+    <div className={styles.compilerReadDetail} data-testid="dream-compiler-read-detail">
+      <div className={styles.compilerReadSection} data-testid="dream-compiler-read-claims">
+        <div className={styles.compilerReadSectionHead}>
+          <div className={styles.compilerReadIdentity}>
+            <Kicker tone="neutral">Claims</Kicker>
+            <strong>What the read can currently ground</strong>
+          </div>
+        </div>
+        {claimSet.length ? (
+          <div className={styles.compilerReadClaimList}>
+            {claimSet.map((claim) => (
+              <article key={claim.id} className={styles.compilerReadClaim}>
+                <div className={styles.compilerReadClaimHead}>
+                  <strong>{claim.text || "Untitled claim"}</strong>
+                  <div className={styles.compilerReadChips}>
+                    {renderClaimMeta(claim).map((meta) => (
+                      <SignalChip key={`${claim.id}:${meta}`} tone="neutral">
+                        {meta}
+                      </SignalChip>
+                    ))}
+                  </div>
+                </div>
+                {claim.sourceExcerpt ? (
+                  <p className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</p>
+                ) : null}
+                {claim.reason ? <p>{claim.reason}</p> : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No structured claim set was produced in this run.</p>
+        )}
+      </div>
+
+      {omittedClaimDetails.length ? (
+        <div className={styles.compilerReadSection} data-testid="dream-compiler-read-omitted">
+          <div className={styles.compilerReadSectionHead}>
+            <div className={styles.compilerReadIdentity}>
+              <Kicker tone="neutral">Omitted material</Kicker>
+              <strong>What did not travel cleanly</strong>
+            </div>
+          </div>
+          <div className={styles.compilerReadClaimList}>
+            {omittedClaimDetails.map((claim) => (
+              <article key={claim.id} className={styles.compilerReadClaim}>
+                <div className={styles.compilerReadClaimHead}>
+                  <strong>{claim.text || "Untitled claim"}</strong>
+                </div>
+                {claim.sourceExcerpt ? (
+                  <p className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</p>
+                ) : null}
+                <p>{claim.reason || "This claim could not travel cleanly in the current subset."}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-evidence">
+        <summary>Show diagnostics and translation detail</summary>
+        <div className={styles.compilerReadInspectBody}>
+          {diagnostics.length ? (
+            <div className={styles.compilerReadInspectBlock} data-testid="dream-compiler-read-diagnostics">
+              <Kicker tone="neutral">Diagnostics</Kicker>
+              <ul className={styles.compilerReadList}>
+                {diagnostics.map((diagnostic) => (
+                  <li key={diagnostic.key}>{diagnostic.label}: {diagnostic.text}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {translatedSubsetResult?.present ? (
+            <div className={styles.compilerReadInspectBlock} data-testid="dream-compiler-read-inspect">
+              <Kicker tone="neutral">Translated subset</Kicker>
+              <p>{translatedSubsetResult.translationStrategy || "A lawful subset was carried."}</p>
+              {translatedSubsetResult.source ? <pre>{translatedSubsetResult.source}</pre> : null}
+            </div>
+          ) : null}
+
+          {embeddedExecutableResult?.present ? (
+            <div className={styles.compilerReadInspectBlock} data-testid="dream-compiler-read-inspect">
+              <Kicker tone="neutral">Embedded program</Kicker>
+              <p>{embeddedSummary.body}</p>
+              {embeddedExecutableResult.source ? <pre>{embeddedExecutableResult.source}</pre> : null}
+            </div>
+          ) : null}
+
+          {rawDocumentResult ? (
+            <div className={styles.compilerReadInspectBlock}>
+              <Kicker tone="neutral">Admission control</Kicker>
+              <p>{buildAdmissionSummary(rawDocumentResult).body}</p>
+            </div>
+          ) : null}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+export default function CompilerReadPanel({
+  documentId = "",
+  compilerRead = null,
+  pending = false,
+  error = "",
+  mode = "summary",
+  onOpenInspect = null,
+}) {
+  if (!pending && !error && !compilerRead) {
+    return null;
+  }
+
+  const claimSet = Array.isArray(compilerRead?.claimSet) ? compilerRead.claimSet : [];
+  const nextMoves = Array.isArray(compilerRead?.nextMoves) ? compilerRead.nextMoves : [];
+  const rawDocumentResult = compilerRead?.rawDocumentResult || null;
+  const translatedSubsetResult = compilerRead?.translatedSubsetResult || null;
+  const rawSecondaryTrusted = Boolean(rawDocumentResult?.secondaryRuntimeTrusted);
+  const admissionSummary = buildAdmissionSummary(rawDocumentResult);
+  const interpretationSummary = buildInterpretationSummary(compilerRead);
+  const primaryFinding = compilerRead?.verdict?.primaryFinding || "No primary finding yet.";
+  const nextMove = nextMoves[0] || "No concrete next move was proposed in this run.";
+  const omittedCount = Array.isArray(translatedSubsetResult?.omittedClaims)
+    ? translatedSubsetResult.omittedClaims.length
+    : 0;
+
+  if (mode === "detail") {
+    return (
+      <section
+        className={styles.compilerReadPanel}
+        data-testid="dream-compiler-read-panel"
+        aria-live="polite"
+      >
+        <div className={styles.compilerReadHead}>
+          <div className={styles.compilerReadIdentity}>
+            <Kicker tone={error ? "flagged" : "brand"}>Compiler Read</Kicker>
+            <strong>Claims first. Diagnostics on demand. Still provisional.</strong>
+          </div>
+          {compilerRead?.verdict?.readDisposition ? (
+            <SignalChip tone="neutral">{sentenceCase(compilerRead.verdict.readDisposition)}</SignalChip>
+          ) : null}
+        </div>
+        {pending ? (
+          <p className={styles.compilerReadStatus} data-testid="dream-compiler-read-status">
+            Running Compiler Read…
+          </p>
+        ) : null}
+        {error ? (
+          <div
+            className={styles.compilerReadError}
+            role="alert"
+            data-testid="dream-compiler-read-error"
+          >
+            <strong>Compiler Read could not finish.</strong>
+            <span>{error}</span>
+          </div>
+        ) : null}
+        <CompilerReadDetail compilerRead={compilerRead} />
+      </section>
+    );
+  }
 
   return (
     <section
@@ -151,7 +414,7 @@ export default function CompilerReadPanel({
       <div className={styles.compilerReadHead}>
         <div className={styles.compilerReadIdentity}>
           <Kicker tone={error ? "flagged" : "brand"}>Compiler Read</Kicker>
-          <strong>Seven-assisted. Provisional. Not proof.</strong>
+          <strong>What this is, what it means now, and what to do next.</strong>
         </div>
         {compilerRead?.verdict?.readDisposition ? (
           <SignalChip tone="neutral">{sentenceCase(compilerRead.verdict.readDisposition)}</SignalChip>
@@ -177,220 +440,44 @@ export default function CompilerReadPanel({
 
       {compilerRead ? (
         <>
-          <div className={styles.compilerReadSummary} data-testid="dream-compiler-read-summary">
-            <div className={styles.compilerReadCard} data-testid="dream-compiler-read-admission">
-              <Kicker tone="neutral">Admission control</Kicker>
-              <strong>{admissionSummary.title}</strong>
-              <p>{admissionSummary.body}</p>
-              <div className={styles.compilerReadChips}>
-                <SignalChip tone="neutral">
-                  {sentenceCase(rawDocumentResult?.compileState || "unknown")}
-                </SignalChip>
-                {!rawSecondaryTrusted ? (
-                  <SignalChip tone="neutral">Not direct source</SignalChip>
-                ) : (
-                  <>
-                    <SignalChip tone="neutral">
-                      {sentenceCase(rawDocumentResult?.runtimeState || "open")}
-                    </SignalChip>
-                    <SignalChip tone="neutral">
-                      {sentenceCase(rawDocumentResult?.mergedWindowState || "open")}
-                    </SignalChip>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.compilerReadCard} data-testid="dream-compiler-read-interpretation">
-              <Kicker tone="neutral">Structural interpretation</Kicker>
-              <strong>{compilerRead?.verdict?.primaryFinding || "No primary finding yet."}</strong>
+          <div className={styles.compilerReadSummaryLead} data-testid="dream-compiler-read-summary">
+            <div className={styles.compilerReadCard}>
+              <Kicker tone="neutral">Finding</Kicker>
+              <strong>{primaryFinding}</strong>
               <p>{interpretationSummary}</p>
-              <div className={styles.compilerReadChips}>
-                <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.documentSummary?.documentType || "mixed")}
-                </SignalChip>
-                <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.outcomeClass || "mixed")}
-                </SignalChip>
-                {compilerRead?.limitationClass ? (
-                  <SignalChip tone="neutral">
-                    {sentenceCase(compilerRead.limitationClass)}
-                  </SignalChip>
-                ) : null}
-                {compilerRead?.outcomeClass === "direct_source_compiled" ? (
-                  <SignalChip tone="neutral">Direct source</SignalChip>
-                ) : translatedSubsetResult?.present ? (
-                  <SignalChip tone="neutral">
-                    {sentenceCase(translatedSubsetResult?.mergedWindowState || "unknown")}
-                  </SignalChip>
-                ) : (
-                  <SignalChip tone="neutral">No lawful subset</SignalChip>
-                )}
-              </div>
             </div>
-
-            {embeddedExecutableResult?.present ? (
-              <div
-                className={styles.compilerReadInlineNote}
-                data-testid="dream-compiler-read-embedded"
-              >
-                <strong>{embeddedSummary.title}</strong>
-                <span>{embeddedSummary.body}</span>
-              </div>
-            ) : null}
+            <div className={styles.compilerReadCard} data-testid="dream-compiler-read-next-moves">
+              <Kicker tone="neutral">Next move</Kicker>
+              <strong>{nextMove}</strong>
+              <p>{admissionSummary.title}. {admissionSummary.body}</p>
+            </div>
           </div>
 
-          <div className={styles.compilerReadSection} data-testid="dream-compiler-read-next-moves">
-            <div className={styles.compilerReadSectionHead}>
-              <Kicker tone="neutral">Next moves</Kicker>
-              <span>Next-step bias only.</span>
-            </div>
-            {nextMoves.length ? (
-              <ul className={styles.compilerReadList}>
-                {nextMoves.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+          <div className={styles.compilerReadChips}>
+            <SignalChip tone="neutral">{sentenceCase(compilerRead?.documentSummary?.documentType || "mixed")}</SignalChip>
+            <SignalChip tone="neutral">{claimSet.length} claims</SignalChip>
+            <SignalChip tone="neutral">{omittedCount} omitted</SignalChip>
+            {rawSecondaryTrusted ? (
+              <SignalChip tone="neutral">{sentenceCase(rawDocumentResult?.runtimeState || "open")}</SignalChip>
             ) : (
-              <p>No concrete next move was proposed in this run.</p>
+              <SignalChip tone="neutral">Not direct source</SignalChip>
             )}
           </div>
 
-          <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-evidence">
-            <summary>Show evidence and diagnostics</summary>
-            <div className={styles.compilerReadInspectBody}>
-              <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Raw source summary</Kicker>
-                <ul className={styles.compilerReadList}>
-                  <li>Compile state: {sentenceCase(rawDocumentResult?.compileState || "unknown")}</li>
-                  <li>
-                    Secondary runtime trusted: {rawSecondaryTrusted ? "Yes" : "No"}
-                  </li>
-                  <li>Runtime state: {sentenceCase(rawDocumentResult?.runtimeState || "unknown")}</li>
-                  <li>
-                    Merged window state: {sentenceCase(rawDocumentResult?.mergedWindowState || "unknown")}
-                  </li>
-                </ul>
-              </div>
-
-              <div
-                className={styles.compilerReadInspectBlock}
-                data-testid="dream-compiler-read-claims"
+          {onOpenInspect ? (
+            <div className={styles.compilerReadActionRow}>
+              <button
+                type="button"
+                className={styles.compilerReadInspectButton}
+                onClick={onOpenInspect}
+                data-testid="dream-compiler-read-open-inspect"
               >
-                <div className={styles.compilerReadSectionHead}>
-                  <Kicker tone="neutral">Claims</Kicker>
-                  <span>Seven-assisted extraction remains provisional.</span>
-                </div>
-                {claimSet.length ? (
-                  <div className={styles.compilerReadClaimList}>
-                    {claimSet.map((claim) => (
-                      <article key={claim.id} className={styles.compilerReadClaim}>
-                        <div className={styles.compilerReadClaimHead}>
-                          <strong>{claim.text}</strong>
-                          <div className={styles.compilerReadChips}>
-                            {renderClaimMeta(claim).map((item) => (
-                              <SignalChip key={`${claim.id}:${item}`} tone="neutral">
-                                {item}
-                              </SignalChip>
-                            ))}
-                          </div>
-                        </div>
-                        <p>{claim.reason}</p>
-                        <blockquote className={styles.compilerReadExcerpt}>
-                          {claim.sourceExcerpt}
-                        </blockquote>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p>No grounded claims were retained in this read.</p>
-                )}
-              </div>
-
-              <div
-                className={styles.compilerReadInspectBlock}
-                data-testid="dream-compiler-read-omitted"
-              >
-                <div className={styles.compilerReadSectionHead}>
-                  <Kicker tone="neutral">Omitted material</Kicker>
-                  <span>Claims intentionally left outside the translated subset.</span>
-                </div>
-                {omittedClaimDetails.length ? (
-                  <ul className={styles.compilerReadList}>
-                    {omittedClaimDetails.map((claim) => (
-                      <li key={claim.id}>
-                        <strong>{claim.text}</strong>: {claim.reason}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No claims were omitted from the translated subset.</p>
-                )}
-              </div>
-
-              <div
-                className={styles.compilerReadInspectBlock}
-                data-testid="dream-compiler-read-diagnostics"
-              >
-                <div className={styles.compilerReadSectionHead}>
-                  <Kicker tone="neutral">Diagnostics</Kicker>
-                  <span>Admission-control and compiler output remain inspectable.</span>
-                </div>
-                {diagnostics.length ? (
-                  <ul className={styles.compilerReadList}>
-                    {diagnostics.map((diagnostic) => (
-                      <li key={diagnostic.key}>
-                        <strong>{diagnostic.label}</strong>: {diagnostic.text}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No compiler diagnostics were emitted in this read.</p>
-                )}
-              </div>
-
-              <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Generated .loe subset</Kicker>
-                <pre>{translatedSubsetResult?.source || "# No lawful subset translated in this read."}</pre>
-              </div>
-
-              <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Translated subset summary</Kicker>
-                <ul className={styles.compilerReadList}>
-                  <li>Present: {translatedSubsetResult?.present ? "Yes" : "No"}</li>
-                  <li>
-                    Compile state: {sentenceCase(translatedSubsetResult?.compileState || "not_run")}
-                  </li>
-                  <li>
-                    Runtime state: {sentenceCase(translatedSubsetResult?.runtimeState || "not_run")}
-                  </li>
-                  <li>
-                    Merged window state: {sentenceCase(
-                      translatedSubsetResult?.mergedWindowState || "not_run",
-                    )}
-                  </li>
-                </ul>
-              </div>
-
-              {embeddedExecutableResult?.present ? (
-                <div
-                  className={styles.compilerReadInspectBlock}
-                  data-testid="dream-compiler-read-inspect"
-                >
-                  <Kicker tone="neutral">Embedded executable source</Kicker>
-                  <pre>{embeddedExecutableResult.source}</pre>
-                </div>
-              ) : (
-                <div
-                  className={styles.compilerReadInspectBlock}
-                  data-testid="dream-compiler-read-inspect"
-                >
-                  <Kicker tone="neutral">Embedded executable source</Kicker>
-                  <p>No embedded executable source was retained in this read.</p>
-                </div>
-              )}
+                Inspect claims and diagnostics
+              </button>
             </div>
-          </details>
+          ) : null}
+
+          <CompilerReadSelfCheck documentId={documentId} compilerRead={compilerRead} />
         </>
       ) : null}
     </section>

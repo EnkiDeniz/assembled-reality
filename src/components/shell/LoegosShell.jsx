@@ -117,8 +117,35 @@ function ModeSwitch({ mode = APP_MODES.room }) {
         aria-current={mode === APP_MODES.dream ? "page" : undefined}
         data-testid="shell-mode-dream"
       >
-        Dream
+        Library
       </Link>
+    </nav>
+  );
+}
+
+function MobileTabBar({ route = "workspace" }) {
+  const items = [
+    { href: "/workspace", label: "Room", testId: "shell-mobile-room", active: route === "workspace" },
+    { href: "/dream", label: "Library", testId: "shell-mobile-dream", active: route === "dream" },
+  ];
+
+  return (
+    <nav
+      className={styles.mobileNav}
+      aria-label="Primary signed-in navigation"
+      style={{ "--mobile-nav-count": items.length }}
+    >
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={joinClasses(styles.mobileNavLink, item.active ? styles.mobileNavLinkActive : "")}
+          aria-current={item.active ? "page" : undefined}
+          data-testid={item.testId}
+        >
+          {item.label}
+        </Link>
+      ))}
     </nav>
   );
 }
@@ -504,7 +531,7 @@ function buildDefaultOverflowItems(route = "workspace") {
     items.push({ label: "Account", href: "/account" });
   } else {
     items.push({ label: "Room", href: "/workspace" });
-    items.push({ label: "Dream", href: "/dream" });
+    items.push({ label: "Library", href: "/dream" });
   }
 
   items.push({
@@ -565,11 +592,10 @@ export default function LoegosShell({
         <div className={styles.stageFrame}>{main || <Surface className={styles.emptyPlane} />}</div>
       </div>
 
-      {composer ? (
-        <div className={styles.bottomRail} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
-          <div className={styles.composerSlot}>{composer}</div>
-        </div>
-      ) : null}
+      <div className={styles.bottomRail} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
+        {composer ? <div className={styles.composerSlot}>{composer}</div> : null}
+        <MobileTabBar route={route} />
+      </div>
 
       <SectionLayer
         open={Boolean(resolvedSheet?.open)}

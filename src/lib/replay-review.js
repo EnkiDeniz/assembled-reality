@@ -145,7 +145,7 @@ function buildArtifactId(kind, report, sourceArtifactPath) {
 
 function buildRepeatDrift(documentRecord = null) {
   const stability = documentRecord?.stability || {};
-  const isDrifting = !Boolean(stability.repeatStable);
+  const isDrifting = !stability.repeatStable;
   const runs = ensureArray(documentRecord?.runs);
   const changedFields = [];
   if (ensureArray(stability.instabilityReasons).includes("outcome_changed")) {
