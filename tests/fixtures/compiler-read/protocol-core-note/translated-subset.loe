@@ -1,0 +1,4 @@
+GND box @protocol_core_note
+DIR aim "Pull one trace before changing the flow."
+MOV move "Pull one trace before changing the flow." via manual
+TST test "A concrete witness can confirm or falsify this protocol step."

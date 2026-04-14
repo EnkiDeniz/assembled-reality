@@ -27,6 +27,7 @@ const SUPPORT_STATUSES = new Set(["supported", "weakly_supported", "unsupported"
 
 const DOCUMENT_TYPES = new Set(["protocol", "architecture", "theory", "essay", "mixed"]);
 const DOMINANT_MODES = new Set(["ground", "interpretation", "proposal", "philosophy", "mixed"]);
+const CLAUSE_HEADS = new Set(["DIR", "GND", "INT", "XFM", "MOV", "TST", "RTN", "CLS"]);
 
 export class CompilerReadError extends Error {
   constructor(message, { status = 500, unavailable = false } = {}) {
@@ -312,9 +313,11 @@ function deriveAimText(claims = [], documentSummary = null) {
 }
 
 function deriveAimClaim(claims = []) {
-  return (Array.isArray(claims) ? claims : []).find((claim) =>
-    ["protocol", "testable_hypothesis", "interpretation"].includes(claim.claimKind),
-  ) || null;
+  return (
+    (Array.isArray(claims) ? claims : []).find((claim) =>
+      ["protocol", "testable_hypothesis", "interpretation"].includes(claim.claimKind),
+    ) || null
+  );
 }
 
 function buildWitnessSourceLabel(claim = null) {
@@ -326,7 +329,7 @@ function buildWitnessSourceLabel(claim = null) {
   return "document excerpt";
 }
 
-function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [] } = {}) {
+function buildTranslatedSubset({ documentId = "", documentSummary = null, claims = [] } = {}) {
   const normalizedClaims = Array.isArray(claims) ? claims : [];
   const translatableClaims = normalizedClaims.filter(
     (claim) => claim.translationReadiness === "candidate_for_translation",
@@ -350,7 +353,12 @@ function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [
 
   if (translatableClaims.length) {
     lines.push(`GND box ${boxRef}`);
-    lines.push(`DIR aim ${quoteLoeString(deriveAimText(protocolClaims.length ? protocolClaims : translatableClaims, documentSummary), 100)}`);
+    lines.push(
+      `DIR aim ${quoteLoeString(
+        deriveAimText(protocolClaims.length ? protocolClaims : translatableClaims, documentSummary),
+        100,
+      )}`,
+    );
     if (aimSourceClaim?.id) {
       usedIds.add(aimSourceClaim.id);
     }
@@ -388,7 +396,9 @@ function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [
   if (source) {
     translationStrategy = [
       `Carried ${protocolClaims.length ? "one protocol line" : "the minimal aim"}`,
-      witnessClaims.length ? `plus ${witnessClaims.length} witness${witnessClaims.length === 1 ? "" : "es"}` : "",
+      witnessClaims.length
+        ? `plus ${witnessClaims.length} witness${witnessClaims.length === 1 ? "" : "es"}`
+        : "",
       primaryProtocolClaim ? "and one move/test pair" : "",
       "from the provisional claim set.",
     ]
@@ -405,9 +415,21 @@ function buildLoeCandidate({ documentId = "", documentSummary = null, claims = [
   };
 }
 
-function toCompileResult(artifact, source = "") {
-  if (!normalizeLongText(source)) {
-    return {
+function normalizeDiagnostics(diagnostics = []) {
+  return Array.isArray(diagnostics)
+    ? diagnostics.map((diagnostic) => ({
+        code: normalizeText(diagnostic?.code) || "diag",
+        severity: normalizeText(diagnostic?.severity).toLowerCase() || "info",
+        message: normalizeText(diagnostic?.message),
+        line: Number.isFinite(Number(diagnostic?.span?.line)) ? Number(diagnostic.span.line) : null,
+      }))
+    : [];
+}
+
+function buildCompileLayer(artifact, source = "", { present = true, trustSecondaryRuntime = null } = {}) {
+  if (!present || !normalizeLongText(source)) {
+    const notRun = {
+      present,
       executed: false,
       compileState: "not_run",
       runtimeState: "not_run",
@@ -415,86 +437,231 @@ function toCompileResult(artifact, source = "") {
       mergedWindowState: "not_run",
       diagnostics: [],
     };
+    if (trustSecondaryRuntime !== null) {
+      notRun.secondaryRuntimeTrusted = false;
+    }
+    return notRun;
   }
 
-  return {
+  const compileState = normalizeText(artifact?.compileState).toLowerCase() || "unknown";
+  const layer = {
+    present,
     executed: true,
-    compileState: normalizeText(artifact?.compileState).toLowerCase() || "unknown",
+    compileState,
     runtimeState: normalizeText(artifact?.runtimeState).toLowerCase() || "open",
     closureType: normalizeText(artifact?.closureType) || null,
     mergedWindowState: normalizeText(artifact?.mergedWindowState).toLowerCase() || "open",
-    diagnostics: Array.isArray(artifact?.diagnostics)
-      ? artifact.diagnostics.map((diagnostic) => ({
-          code: normalizeText(diagnostic?.code) || "diag",
-          severity: normalizeText(diagnostic?.severity).toLowerCase() || "info",
-          message: normalizeText(diagnostic?.message),
-          line: Number.isFinite(Number(diagnostic?.span?.line)) ? Number(diagnostic.span.line) : null,
-        }))
-      : [],
+    diagnostics: normalizeDiagnostics(artifact?.diagnostics),
+  };
+
+  if (trustSecondaryRuntime !== null) {
+    layer.secondaryRuntimeTrusted = Boolean(trustSecondaryRuntime) && compileState !== "blocked";
+  }
+
+  return layer;
+}
+
+function hasClauseHead(line = "") {
+  const normalized = normalizeText(line);
+  if (!normalized || normalized.startsWith("#")) return true;
+  const [head] = normalized.split(/\s+/, 1);
+  return CLAUSE_HEADS.has(head);
+}
+
+function detectEmbeddedExecutable(text = "") {
+  const sourceText = String(text || "");
+  const blockPattern = /```([^\n]*)\n([\s\S]*?)```/g;
+  let match;
+
+  while ((match = blockPattern.exec(sourceText))) {
+    const label = normalizeText(match[1]).toLowerCase();
+    const body = normalizeLongText(match[2]);
+    if (!body) continue;
+
+    if (label === "loe") {
+      return {
+        source: body,
+        detectionMethod: "fenced_loe",
+      };
+    }
+
+    if (label === "loegos") {
+      return {
+        source: body,
+        detectionMethod: "fenced_loegos",
+      };
+    }
+
+    if (!label) {
+      const nonEmptyLines = body
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (nonEmptyLines.length && nonEmptyLines.every((line) => hasClauseHead(line))) {
+        return {
+          source: body,
+          detectionMethod: "fenced_clause_block",
+        };
+      }
+    }
+  }
+
+  return {
+    source: "",
+    detectionMethod: null,
   };
 }
 
-function buildVerdict({ claims, compileResult }) {
-  const totalClaims = claims.length;
-  const candidateClaims = claims.filter((claim) => claim.translationReadiness === "candidate_for_translation");
-  const philosophyClaims = claims.filter(
+function deriveLimitationClass(claims = []) {
+  const normalizedClaims = Array.isArray(claims) ? claims : [];
+  const totalClaims = normalizedClaims.length;
+  const candidateClaims = normalizedClaims.filter((claim) => claim.translationReadiness === "candidate_for_translation");
+  const philosophyClaims = normalizedClaims.filter(
     (claim) =>
       claim.translationReadiness === "non_compilable_philosophy" || claim.claimKind === "philosophy",
   );
-  const mixedProtocolAndPhilosophy = candidateClaims.length > 0 && philosophyClaims.length > 0;
-  const compilerGapClaims = claims.filter(
+  const compilerGapClaims = normalizedClaims.filter(
     (claim) => claim.translationReadiness === "meaningful_but_not_representable",
   );
-  const supportedWitnessClaims = claims.filter(
+  const blockedClaims = normalizedClaims.filter((claim) => claim.translationReadiness === "blocked_by_structure");
+
+  if (philosophyClaims.length === totalClaims && totalClaims > 0) {
+    return "out_of_scope";
+  }
+
+  if (!candidateClaims.length && compilerGapClaims.length) {
+    return "compiler_gap";
+  }
+
+  if (!candidateClaims.length && blockedClaims.length) {
+    return "translation_loss";
+  }
+
+  return null;
+}
+
+function deriveOutcomeClass({ rawDocumentResult, translatedSubsetResult, embeddedExecutableResult }) {
+  const outcomes = [];
+  const rawCompileState = normalizeText(rawDocumentResult?.compileState).toLowerCase();
+  const translatedCompileState = normalizeText(translatedSubsetResult?.compileState).toLowerCase();
+  const embeddedCompileState = normalizeText(embeddedExecutableResult?.compileState).toLowerCase();
+
+  if (rawCompileState === "blocked") {
+    outcomes.push("raw_not_direct_source");
+  }
+
+  if (translatedSubsetResult?.present && translatedCompileState === "clean") {
+    outcomes.push("translated_subset_compiled");
+  }
+
+  if (embeddedExecutableResult?.present && embeddedCompileState === "clean") {
+    outcomes.push("direct_program_found");
+  }
+
+  if (!outcomes.length) {
+    if (rawCompileState === "blocked") {
+      return "raw_not_direct_source";
+    }
+
+    if (rawCompileState === "clean") {
+      return "direct_source_compiled";
+    }
+
+    return null;
+  }
+
+  if (outcomes.length === 1) return outcomes[0];
+  return "mixed";
+}
+
+function buildVerdict({
+  claims,
+  translatedSubsetResult,
+  embeddedExecutableResult,
+  limitationClass,
+  outcomeClass,
+}) {
+  const normalizedClaims = Array.isArray(claims) ? claims : [];
+  const totalClaims = normalizedClaims.length;
+  const candidateClaims = normalizedClaims.filter((claim) => claim.translationReadiness === "candidate_for_translation");
+  const philosophyClaims = normalizedClaims.filter(
+    (claim) =>
+      claim.translationReadiness === "non_compilable_philosophy" || claim.claimKind === "philosophy",
+  );
+  const supportedWitnessClaims = normalizedClaims.filter(
     (claim) =>
       claim.supportStatus === "supported" &&
       ["quoted_witness", "external_citation"].includes(claim.provenanceClass),
   );
-  const blockedClaims = claims.filter((claim) => claim.translationReadiness === "blocked_by_structure");
-  const compileBlocked = normalizeText(compileResult?.compileState).toLowerCase() === "blocked";
+  const mixedProtocolAndPhilosophy = candidateClaims.length > 0 && philosophyClaims.length > 0;
+  const translatedClean =
+    translatedSubsetResult?.present &&
+    normalizeText(translatedSubsetResult?.compileState).toLowerCase() === "clean";
+  const translatedBlocked =
+    translatedSubsetResult?.present &&
+    normalizeText(translatedSubsetResult?.compileState).toLowerCase() === "blocked";
+  const embeddedClean =
+    embeddedExecutableResult?.present &&
+    normalizeText(embeddedExecutableResult?.compileState).toLowerCase() === "clean";
 
-  if (compilerGapClaims.length && !candidateClaims.length) {
+  if (outcomeClass === "direct_source_compiled") {
+    return {
+      overall: "direct_source_compiles",
+      primaryFinding:
+        "This document already compiles directly as source, so no translation boundary was needed for this read.",
+      readDisposition: "inspect_direct_source",
+    };
+  }
+
+  if (embeddedClean && translatedClean) {
+    return {
+      overall: "mixed_document_with_direct_program",
+      primaryFinding:
+        "This document is not direct source, but it contains both a lawful translated subset and an embedded executable program.",
+      readDisposition: "inspect_direct_program",
+    };
+  }
+
+  if (embeddedClean) {
+    return {
+      overall: "direct_program_found",
+      primaryFinding: "This document already contains executable Lœgos that runs directly when extracted.",
+      readDisposition: "inspect_direct_program",
+    };
+  }
+
+  if (limitationClass === "compiler_gap") {
     return {
       overall: "compiler_gap_exposed",
-      primaryFinding: "The document contains at least one meaningful structured claim the current language cannot represent honestly yet.",
-      failureClass: "compiler_gap",
+      primaryFinding:
+        "The document contains meaningful structure the current language cannot represent honestly yet.",
       readDisposition: "needs_language_extension",
     };
   }
 
-  if (philosophyClaims.length === totalClaims && totalClaims > 0) {
+  if (limitationClass === "out_of_scope" && totalClaims > 0) {
     return {
       overall: "document_mostly_philosophy",
       primaryFinding: "This document currently reads more like philosophy than protocol.",
-      failureClass: "out_of_scope",
       readDisposition: "informative_only",
     };
   }
 
-  if (!candidateClaims.length && blockedClaims.length) {
+  if (translatedBlocked || limitationClass === "translation_loss") {
     return {
-      overall: "lawful_subset_blocked",
+      overall: "translation_loss_exposed",
       primaryFinding: "The document has meaning, but the current translation would lose too much structure.",
-      failureClass: "translation_loss",
       readDisposition: "needs_clearer_split",
     };
   }
 
-  if (compileBlocked) {
-    return {
-      overall: "lawful_subset_blocked",
-      primaryFinding: "The translated subset still blocks under the current compiler.",
-      failureClass: "thought_flaw",
-      readDisposition: "needs_clearer_split",
-    };
-  }
-
-  if (candidateClaims.length) {
+  if (translatedClean) {
     if (mixedProtocolAndPhilosophy && supportedWitnessClaims.length) {
       return {
         overall: "lawful_subset_compiles",
-        primaryFinding: "A grounded operational subset holds, but philosophy still needs to stay separate.",
-        failureClass: "mixed",
+        primaryFinding:
+          "A grounded operational subset holds, but some of the document still belongs outside the language.",
         readDisposition: "ready_for_room_work",
       };
     }
@@ -502,8 +669,7 @@ function buildVerdict({ claims, compileResult }) {
     if (mixedProtocolAndPhilosophy) {
       return {
         overall: "lawful_subset_compiles",
-        primaryFinding: "The operational subset is usable, but the document still mixes protocol and philosophy.",
-        failureClass: "mixed",
+        primaryFinding: "A lawful subset exists, but the document still mixes protocol and non-operational material.",
         readDisposition: "needs_clearer_split",
       };
     }
@@ -511,8 +677,8 @@ function buildVerdict({ claims, compileResult }) {
     if (!supportedWitnessClaims.length) {
       return {
         overall: "lawful_subset_compiles",
-        primaryFinding: "The language can hold part of this document, but the central protocol still needs stronger witness.",
-        failureClass: "mixed",
+        primaryFinding:
+          "The language can hold part of this document, but the central protocol still needs stronger witness.",
         readDisposition: "needs_more_witness",
       };
     }
@@ -520,85 +686,188 @@ function buildVerdict({ claims, compileResult }) {
     return {
       overall: "lawful_subset_compiles",
       primaryFinding: "A grounded subset is lawful enough to continue with normal Room work.",
-      failureClass: "mixed",
       readDisposition: "ready_for_room_work",
+    };
+  }
+
+  if (outcomeClass === "raw_not_direct_source") {
+    return {
+      overall: "structural_read_opened",
+      primaryFinding: "The document is not direct source, so the structural read stays open at the interpretation boundary.",
+      readDisposition: "informative_only",
     };
   }
 
   return {
     overall: "document_mostly_hypothesis",
-    primaryFinding: "The document is still more hypothesis than lawful operational structure.",
-    failureClass: "mixed",
+    primaryFinding: "The document is not direct source, and no strong lawful subset was established yet.",
     readDisposition: "informative_only",
   };
 }
 
-function buildNextMoves({ verdict, claims }) {
-  const omittedCount = claims.filter((claim) => claim.translationReadiness !== "candidate_for_translation").length;
+function buildNextMoves({ verdict, claims, outcomeClass }) {
+  const omittedCount = (Array.isArray(claims) ? claims : []).filter(
+    (claim) => claim.translationReadiness !== "candidate_for_translation",
+  ).length;
+
+  if (verdict.readDisposition === "inspect_direct_source") {
+    return [
+      "Treat the direct source compile as the primary read for this document.",
+      "Do not force a translated subset when the document already runs honestly as source.",
+    ];
+  }
+
+  if (verdict.readDisposition === "inspect_direct_program") {
+    return [
+      "Inspect the embedded `.loe` program separately from the surrounding prose.",
+      "Keep direct executable structure distinct from any translated subset.",
+    ];
+  }
+
   if (verdict.readDisposition === "needs_more_witness") {
     return [
       "Add one quoted witness or external citation for the central protocol claim.",
       "Keep the operational subset, then rerun Compiler Read.",
     ];
   }
+
   if (verdict.readDisposition === "needs_clearer_split") {
     return [
-      "Separate protocol from philosophy before the next read.",
-      omittedCount ? "Review omitted claims and decide which ones belong in the operational subset." : "Tighten the smallest operational claim and rerun.",
+      "Separate protocol from non-operational prose before the next read.",
+      omittedCount
+        ? "Review omitted claims and decide which ones belong in the operational subset."
+        : "Tighten the smallest operational claim and rerun.",
     ];
   }
+
   if (verdict.readDisposition === "needs_language_extension") {
     return [
       "Capture the non-representable claim explicitly as a compiler or language gap.",
       "Do not force a lossy translation just to get a clean compile.",
     ];
   }
+
   if (verdict.readDisposition === "ready_for_room_work") {
     return [
       "Carry the translated subset forward manually if it is worth active Room work.",
-      "Keep omitted philosophy and commentary outside canon until they earn stronger grounding.",
+      "Keep omitted commentary outside authority until it earns stronger grounding.",
     ];
   }
+
+  if (outcomeClass === "raw_not_direct_source") {
+    return [
+      "Treat the blocked raw result as admission control, not terminal failure.",
+      "Read the translated subset or embedded executable layer before deciding what this document can carry.",
+    ];
+  }
+
   return [
     "Use this read as pressure, not proof.",
     "Keep only the grounded operational subset if you carry anything forward.",
   ];
 }
 
-export function buildCompilerReadFromExtraction({
+function compileWithFilename(source = "", filename = "compiler_read.loe") {
+  return compileSource({
+    filename,
+    source,
+  });
+}
+
+export function evaluateCompilerRead({
   documentId = "",
   title = "",
   text = "",
   extracted = null,
 } = {}) {
+  const normalizedDocumentId = normalizeText(documentId);
+  const normalizedTitle = normalizeText(title);
+  const normalizedText = normalizeLongText(text);
   const payload = extracted && typeof extracted === "object" ? extracted : {};
   const rawClaims = Array.isArray(payload.claimSet) ? payload.claimSet : [];
-  const claimSet = rawClaims.map((claim, index) => normalizeClaim(claim, index, text));
-  const documentSummary = normalizeDocumentSummary(payload.documentSummary, claimSet, title);
-  const loeCandidate = buildLoeCandidate({ documentId, documentSummary, claims: claimSet });
-  const artifact = loeCandidate.source
-    ? compileSource({
-        filename: `${toIdentifier(documentId || title || "compiler_read", "compiler_read")}.loe`,
-        source: loeCandidate.source,
-      })
+  const claimSet = rawClaims.map((claim, index) => normalizeClaim(claim, index, normalizedText));
+  const documentSummary = normalizeDocumentSummary(payload.documentSummary, claimSet, normalizedTitle);
+
+  const rawArtifact = normalizedText
+    ? compileWithFilename(
+        normalizedText,
+        normalizedTitle || `${toIdentifier(normalizedDocumentId || "compiler_read", "compiler_read")}.md`,
+      )
     : null;
-  const compileResult = toCompileResult(artifact, loeCandidate.source);
-  const verdict = buildVerdict({ documentSummary, claims: claimSet, loeCandidate, compileResult });
-  const nextMoves = buildNextMoves({ verdict, claims: claimSet });
+  const rawDocumentResult = buildCompileLayer(rawArtifact, normalizedText, {
+    present: true,
+    trustSecondaryRuntime: true,
+  });
+
+  const translatedSubsetCandidate = buildTranslatedSubset({
+    documentId: normalizedDocumentId,
+    documentSummary,
+    claims: claimSet,
+  });
+  const translatedArtifact = translatedSubsetCandidate.source
+    ? compileWithFilename(
+        translatedSubsetCandidate.source,
+        `${toIdentifier(normalizedDocumentId || normalizedTitle || "compiler_read", "compiler_read")}.loe`,
+      )
+    : null;
+  const translatedSubsetResult = {
+    source: translatedSubsetCandidate.source,
+    translationStrategy: translatedSubsetCandidate.translationStrategy,
+    omittedClaims: translatedSubsetCandidate.omittedClaims,
+    selectedClaimIds: translatedSubsetCandidate.selectedClaimIds,
+    ...buildCompileLayer(translatedArtifact, translatedSubsetCandidate.source, {
+      present: Boolean(normalizeLongText(translatedSubsetCandidate.source)),
+    }),
+  };
+
+  const embeddedCandidate = detectEmbeddedExecutable(normalizedText);
+  const embeddedArtifact = embeddedCandidate.source
+    ? compileWithFilename(
+        embeddedCandidate.source,
+        `${toIdentifier(normalizedDocumentId || normalizedTitle || "compiler_read", "compiler_read")}_embedded.loe`,
+      )
+    : null;
+  const embeddedExecutableResult = {
+    source: embeddedCandidate.source,
+    detectionMethod: embeddedCandidate.detectionMethod,
+    ...buildCompileLayer(embeddedArtifact, embeddedCandidate.source, {
+      present: Boolean(normalizeLongText(embeddedCandidate.source)),
+    }),
+  };
+
+  const limitationClass = deriveLimitationClass(claimSet);
+  const outcomeClass = deriveOutcomeClass({
+    rawDocumentResult,
+    translatedSubsetResult,
+    embeddedExecutableResult,
+  });
+  const verdict = buildVerdict({
+    claims: claimSet,
+    translatedSubsetResult,
+    embeddedExecutableResult,
+    limitationClass,
+    outcomeClass,
+  });
+  const nextMoves = buildNextMoves({
+    verdict,
+    claims: claimSet,
+    outcomeClass,
+  });
 
   return {
     documentSummary,
     claimSet,
-    loeCandidate: {
-      source: loeCandidate.source,
-      translationStrategy: loeCandidate.translationStrategy,
-      omittedClaims: loeCandidate.omittedClaims,
-    },
-    compileResult,
+    rawDocumentResult,
+    translatedSubsetResult,
+    embeddedExecutableResult,
+    limitationClass,
+    outcomeClass,
     verdict,
     nextMoves,
   };
 }
+
+export const buildCompilerReadFromExtraction = evaluateCompilerRead;
 
 export async function runCompilerRead({
   documentId = "",
@@ -625,7 +894,7 @@ export async function runCompilerRead({
     fetchImpl,
   });
 
-  return buildCompilerReadFromExtraction({
+  return evaluateCompilerRead({
     documentId: normalizedDocumentId,
     title,
     text: normalizedText,

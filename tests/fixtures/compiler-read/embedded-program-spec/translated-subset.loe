@@ -1,0 +1,4 @@
+GND box @embedded_program_spec
+DIR aim "Pull one trace before calling the lender."
+MOV move "Pull one trace before calling the lender." via manual
+TST test "A concrete witness can confirm or falsify this protocol step."

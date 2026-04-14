@@ -1,0 +1,21 @@
+{
+  "documentSummary": {
+    "title": "Translation loss note",
+    "documentType": "theory",
+    "dominantMode": "interpretation",
+    "summary": "The document carries meaning, but the current language loses too much of it."
+  },
+  "claimSet": [
+    {
+      "id": "claim_loss",
+      "text": "The whole system should feel like an ethical membrane around choice.",
+      "claimKind": "interpretation",
+      "translationReadiness": "blocked_by_structure",
+      "provenanceClass": "self_reported",
+      "supportStatus": "unsupported",
+      "evidenceRefs": [],
+      "reason": "The statement carries intent, but v0 translation would flatten it badly.",
+      "sourceExcerpt": "The whole system should feel like an ethical membrane around choice."
+    }
+  ]
+}

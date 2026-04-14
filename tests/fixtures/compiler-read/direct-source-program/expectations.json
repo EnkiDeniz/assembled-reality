@@ -1,0 +1,26 @@
+{
+  "fixtureId": "direct-source-program",
+  "documentClass": "direct_source",
+  "rawDocumentResult": {
+    "expectedCompileState": "clean",
+    "expectedMergedWindowState": "awaiting",
+    "assertSecondaryRuntimeState": true
+  },
+  "translatedSubsetResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "embeddedExecutableResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "limitationClass": null,
+  "outcomeClass": "direct_source_compiled",
+  "expectExcerptGroundingPass": true,
+  "expectOmissionReportingPass": true,
+  "trustCaveats": [
+    "Direct source success should remain distinct from translated subset success."
+  ]
+}

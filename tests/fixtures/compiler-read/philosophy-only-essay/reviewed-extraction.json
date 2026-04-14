@@ -1,0 +1,21 @@
+{
+  "documentSummary": {
+    "title": "Philosophy only essay",
+    "documentType": "essay",
+    "dominantMode": "philosophy",
+    "summary": "This document is insight rather than operational protocol."
+  },
+  "claimSet": [
+    {
+      "id": "claim_phi",
+      "text": "Reality is the echo of attention.",
+      "claimKind": "philosophy",
+      "translationReadiness": "non_compilable_philosophy",
+      "provenanceClass": "unknown",
+      "supportStatus": "unsupported",
+      "evidenceRefs": [],
+      "reason": "This is insight, not a v0 operational claim.",
+      "sourceExcerpt": "Reality is the echo of attention."
+    }
+  ]
+}

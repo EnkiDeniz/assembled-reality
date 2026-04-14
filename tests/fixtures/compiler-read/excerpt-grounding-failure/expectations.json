@@ -1,0 +1,26 @@
+{
+  "fixtureId": "excerpt-grounding-failure",
+  "documentClass": "edge_case",
+  "rawDocumentResult": {
+    "expectedCompileState": "blocked",
+    "expectedMergedWindowState": "shape_error",
+    "assertSecondaryRuntimeState": false
+  },
+  "translatedSubsetResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "embeddedExecutableResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "limitationClass": null,
+  "outcomeClass": null,
+  "expectExcerptGroundingPass": false,
+  "expectOmissionReportingPass": false,
+  "trustCaveats": [
+    "No surfaced claim should survive without a verbatim source excerpt."
+  ]
+}

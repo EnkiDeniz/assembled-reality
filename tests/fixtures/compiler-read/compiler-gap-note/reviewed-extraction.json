@@ -1,0 +1,23 @@
+{
+  "documentSummary": {
+    "title": "Compiler gap note",
+    "documentType": "theory",
+    "dominantMode": "interpretation",
+    "summary": "The document suggests structure the current compiler cannot yet hold honestly."
+  },
+  "claimSet": [
+    {
+      "id": "claim_gap",
+      "text": "The runtime should preserve competing branches without sealing them.",
+      "claimKind": "interpretation",
+      "translationReadiness": "meaningful_but_not_representable",
+      "provenanceClass": "self_reported",
+      "supportStatus": "weakly_supported",
+      "evidenceRefs": [
+        "branching-note"
+      ],
+      "reason": "The current language does not own this construct honestly yet.",
+      "sourceExcerpt": "The runtime should preserve competing branches without sealing them."
+    }
+  ]
+}

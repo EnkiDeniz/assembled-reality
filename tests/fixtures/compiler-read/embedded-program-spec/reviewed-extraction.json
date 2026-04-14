@@ -1,0 +1,21 @@
+{
+  "documentSummary": {
+    "title": "Embedded program spec",
+    "documentType": "mixed",
+    "dominantMode": "proposal",
+    "summary": "The document contains an operational subset and a direct executable example."
+  },
+  "claimSet": [
+    {
+      "id": "claim_protocol",
+      "text": "Pull one trace before calling the lender.",
+      "claimKind": "protocol",
+      "translationReadiness": "candidate_for_translation",
+      "provenanceClass": "self_reported",
+      "supportStatus": "weakly_supported",
+      "evidenceRefs": [],
+      "reason": "This is a conservative protocol step worth translating.",
+      "sourceExcerpt": "Pull one trace before calling the lender."
+    }
+  ]
+}

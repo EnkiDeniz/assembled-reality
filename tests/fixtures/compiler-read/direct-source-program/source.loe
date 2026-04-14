@@ -1,0 +1,4 @@
+GND box @direct_source
+DIR aim "Keep the loop honest."
+MOV move "Ask for one concrete receipt." via manual
+TST test "A concrete receipt arrives."

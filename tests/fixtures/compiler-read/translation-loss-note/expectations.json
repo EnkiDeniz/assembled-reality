@@ -1,0 +1,26 @@
+{
+  "fixtureId": "translation-loss-note",
+  "documentClass": "mixed_prose",
+  "rawDocumentResult": {
+    "expectedCompileState": "blocked",
+    "expectedMergedWindowState": "shape_error",
+    "assertSecondaryRuntimeState": false
+  },
+  "translatedSubsetResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "embeddedExecutableResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "limitationClass": "translation_loss",
+  "outcomeClass": "raw_not_direct_source",
+  "expectExcerptGroundingPass": true,
+  "expectOmissionReportingPass": true,
+  "trustCaveats": [
+    "The feature should not force a lossy translation just to get a compile."
+  ]
+}

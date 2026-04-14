@@ -366,6 +366,7 @@
 }
 
 .compilerReadCard p,
+.compilerReadSection p,
 .compilerReadClaim p,
 .compilerReadInspect p {
   margin: 0;

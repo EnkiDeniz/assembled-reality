@@ -177,12 +177,28 @@ async function mockCompilerRead(page) {
               sourceExcerpt: "The flow should feel hospitable to doubt.",
             },
           ],
-          loeCandidate: {
+          rawDocumentResult: {
+            executed: true,
+            compileState: "blocked",
+            runtimeState: "closed",
+            closureType: "closed",
+            mergedWindowState: "shape_error",
+            diagnostics: [
+              {
+                code: "SH007",
+                severity: "error",
+                message: "Closure attempt requires provenance-bearing return on the active path.",
+                line: 1,
+              },
+            ],
+            secondaryRuntimeTrusted: false,
+          },
+          translatedSubsetResult: {
+            present: true,
             source: 'GND box @field_notes\nDIR aim "Pull one trace before changing the flow."\nMOV move "Pull one trace before changing the flow." via manual\nTST test "A concrete witness can confirm or falsify this protocol step."',
             translationStrategy: "Carried one protocol line and one move/test pair from the provisional claim set.",
             omittedClaims: ["claim_phi"],
-          },
-          compileResult: {
+            selectedClaimIds: ["claim_protocol"],
             executed: true,
             compileState: "clean",
             runtimeState: "awaiting",
@@ -190,10 +206,23 @@ async function mockCompilerRead(page) {
             mergedWindowState: "awaiting",
             diagnostics: [],
           },
+          embeddedExecutableResult: {
+            present: true,
+            source:
+              'GND box @field_notes\nDIR aim "Reroute only after a witness arrives."\nMOV move "Request the trace." via manual\nTST test "The trace shows whether the current flow is still viable."\nRTN witness "Trace confirms the blocker."\nCLS reroute "Shift to the trace-supported path."',
+            detectionMethod: "fenced_loe",
+            executed: true,
+            compileState: "clean",
+            runtimeState: "closed",
+            closureType: "reroute",
+            mergedWindowState: "rerouted",
+            diagnostics: [],
+          },
+          limitationClass: null,
+          outcomeClass: "mixed",
           verdict: {
             overall: "lawful_subset_compiles",
             primaryFinding: "The language can hold part of this document, but the central protocol still needs stronger witness.",
-            failureClass: "mixed",
             readDisposition: "needs_more_witness",
           },
           nextMoves: [
@@ -286,16 +315,28 @@ test("dream runs compiler read inline and clears it on refresh", async ({ page }
 
   await page.getByTestId("dream-compiler-read").click();
   await expect(page.getByTestId("dream-compiler-read-panel")).toBeVisible();
-  await expect(page.getByTestId("dream-compiler-read-summary")).toContainText(
+  await expect(page.getByTestId("dream-compiler-read-admission")).toContainText("Not direct source");
+  await expect(page.getByTestId("dream-compiler-read-admission")).toContainText("Blocked");
+  await expect(page.getByTestId("dream-compiler-read-interpretation")).toContainText(
     "The language can hold part of this document",
   );
-  await expect(page.getByTestId("dream-compiler-read-claims")).toContainText("Seven-assisted extraction remains provisional");
+  await expect(page.getByTestId("dream-compiler-read-embedded")).toContainText("Direct program found");
+  await expect(page.getByTestId("dream-compiler-read-claims")).toContainText(
+    "Seven-assisted extraction remains provisional",
+  );
+  await expect(page.getByTestId("dream-compiler-read-omitted")).toContainText(
+    "The flow should feel hospitable to doubt.",
+  );
+  await expect(page.getByTestId("dream-compiler-read-diagnostics")).toContainText("SH007");
   await expect(page.getByTestId("dream-compiler-read-next-moves")).toContainText(
     "Add one quoted witness or external citation",
   );
 
   await page.getByTestId("dream-compiler-read-inspect").click();
   await expect(page.getByTestId("dream-compiler-read-inspect")).toContainText("GND box @field_notes");
+  await expect(page.getByTestId("dream-compiler-read-inspect")).toContainText(
+    "Secondary runtime trusted: No",
+  );
 
   await page.getByTestId("dream-paste-toggle").click();
   await page.getByTestId("dream-paste-input").fill("# New draft\n\nThis is not saved yet.");

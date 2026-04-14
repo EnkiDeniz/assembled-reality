@@ -1,0 +1,26 @@
+{
+  "fixtureId": "philosophy-only-essay",
+  "documentClass": "philosophy_only",
+  "rawDocumentResult": {
+    "expectedCompileState": "blocked",
+    "expectedMergedWindowState": "shape_error",
+    "assertSecondaryRuntimeState": false
+  },
+  "translatedSubsetResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "embeddedExecutableResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "limitationClass": "out_of_scope",
+  "outcomeClass": "raw_not_direct_source",
+  "expectExcerptGroundingPass": true,
+  "expectOmissionReportingPass": true,
+  "trustCaveats": [
+    "Raw blocked prose should read as not direct source, not terminal failure."
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "fixtureId": "embedded-program-spec",
+  "documentClass": "embedded_program",
+  "rawDocumentResult": {
+    "expectedCompileState": "blocked",
+    "expectedMergedWindowState": "shape_error",
+    "assertSecondaryRuntimeState": false
+  },
+  "translatedSubsetResult": {
+    "present": true,
+    "expectedCompileState": "clean",
+    "expectedMergedWindowState": "awaiting"
+  },
+  "embeddedExecutableResult": {
+    "present": true,
+    "expectedCompileState": "clean",
+    "expectedMergedWindowState": "rerouted"
+  },
+  "limitationClass": null,
+  "outcomeClass": "mixed",
+  "expectExcerptGroundingPass": true,
+  "expectOmissionReportingPass": true,
+  "trustCaveats": [
+    "The raw blocked result should hand off into interpretation, not end the run.",
+    "Embedded executable code must remain separate from translated subset success."
+  ]
+}

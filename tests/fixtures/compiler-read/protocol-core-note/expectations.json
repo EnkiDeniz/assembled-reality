@@ -1,0 +1,26 @@
+{
+  "fixtureId": "protocol-core-note",
+  "documentClass": "protocol_core",
+  "rawDocumentResult": {
+    "expectedCompileState": "blocked",
+    "expectedMergedWindowState": "shape_error",
+    "assertSecondaryRuntimeState": false
+  },
+  "translatedSubsetResult": {
+    "present": true,
+    "expectedCompileState": "clean",
+    "expectedMergedWindowState": "awaiting"
+  },
+  "embeddedExecutableResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "limitationClass": null,
+  "outcomeClass": "mixed",
+  "expectExcerptGroundingPass": true,
+  "expectOmissionReportingPass": true,
+  "trustCaveats": [
+    "A clean translated subset is structural only, not proof."
+  ]
+}

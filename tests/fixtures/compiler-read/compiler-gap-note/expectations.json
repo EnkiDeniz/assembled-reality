@@ -1,0 +1,26 @@
+{
+  "fixtureId": "compiler-gap-note",
+  "documentClass": "architecture_memo",
+  "rawDocumentResult": {
+    "expectedCompileState": "blocked",
+    "expectedMergedWindowState": "shape_error",
+    "assertSecondaryRuntimeState": false
+  },
+  "translatedSubsetResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "embeddedExecutableResult": {
+    "present": false,
+    "expectedCompileState": "not_run",
+    "expectedMergedWindowState": "not_run"
+  },
+  "limitationClass": "compiler_gap",
+  "outcomeClass": "raw_not_direct_source",
+  "expectExcerptGroundingPass": true,
+  "expectOmissionReportingPass": true,
+  "trustCaveats": [
+    "Compiler gaps should be surfaced explicitly rather than translated dishonestly."
+  ]
+}

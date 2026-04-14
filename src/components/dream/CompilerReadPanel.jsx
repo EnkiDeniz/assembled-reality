@@ -22,6 +22,96 @@ function renderClaimMeta(claim) {
   ].filter(Boolean);
 }
 
+function buildLayerDiagnostics(label, result) {
+  const diagnostics = Array.isArray(result?.diagnostics) ? result.diagnostics : [];
+  if (!diagnostics.length) {
+    return [];
+  }
+  return diagnostics.map((diagnostic) => ({
+    key: `${label}:${diagnostic.code}:${diagnostic.line || 0}`,
+    label,
+    text: `${sentenceCase(diagnostic.severity)} ${diagnostic.code}: ${diagnostic.message}`,
+  }));
+}
+
+function buildAdmissionSummary(rawDocumentResult = null) {
+  const compileState = normalizeText(rawDocumentResult?.compileState).toLowerCase();
+  if (compileState === "blocked") {
+    return {
+      title: "Not direct source",
+      body: "The source document is not directly executable Lœgos. Diagnostics are available below, and the structural read continues through interpretation.",
+    };
+  }
+
+  if (compileState === "clean") {
+    return {
+      title: "Direct source compiled",
+      body: "The source document compiled as provided. This is admission control, not proof.",
+    };
+  }
+
+  if (compileState === "not_run") {
+    return {
+      title: "No raw compile run",
+      body: "No raw compile was executed for this document.",
+    };
+  }
+
+  return {
+    title: "Admission control is provisional",
+    body: "The raw source result is available for inspection below.",
+  };
+}
+
+function buildInterpretationSummary(compilerRead = null) {
+  const translatedSubsetResult = compilerRead?.translatedSubsetResult || null;
+  const limitationClass = normalizeText(compilerRead?.limitationClass);
+  const outcomeClass = normalizeText(compilerRead?.outcomeClass);
+
+  if (outcomeClass === "direct_source_compiled") {
+    return "This document already compiled directly as source, so no translated subset was needed in this read.";
+  }
+
+  if (translatedSubsetResult?.present) {
+    return translatedSubsetResult.translationStrategy || "A lawful subset was translated and checked.";
+  }
+
+  if (limitationClass === "compiler_gap") {
+    return "No lawful subset was carried because the current language cannot represent the central structure honestly yet.";
+  }
+
+  if (limitationClass === "translation_loss") {
+    return "No lawful subset was carried because the current translation would flatten too much of the document’s meaning.";
+  }
+
+  if (limitationClass === "out_of_scope") {
+    return "This document remains outside the current language boundary and stays informative only.";
+  }
+
+  if (outcomeClass === "raw_not_direct_source") {
+    return "The structural read remains open, but no lawful subset was established in this run.";
+  }
+
+  return "No lawful subset was translated in this read.";
+}
+
+function buildEmbeddedSummary(embeddedExecutableResult = null) {
+  const compileState = normalizeText(embeddedExecutableResult?.compileState).toLowerCase();
+  const detectionMethod = sentenceCase(embeddedExecutableResult?.detectionMethod || "fenced block");
+
+  if (compileState === "clean") {
+    return {
+      title: "Direct program found",
+      body: `This document already contains executable \`.loe\` detected via ${detectionMethod}.`,
+    };
+  }
+
+  return {
+    title: "Embedded program candidate",
+    body: `This document contains an embedded \`.loe\` candidate detected via ${detectionMethod}, but it did not compile cleanly in this read.`,
+  };
+}
+
 export default function CompilerReadPanel({
   compilerRead = null,
   pending = false,
@@ -33,16 +123,24 @@ export default function CompilerReadPanel({
 
   const claimSet = Array.isArray(compilerRead?.claimSet) ? compilerRead.claimSet : [];
   const nextMoves = Array.isArray(compilerRead?.nextMoves) ? compilerRead.nextMoves : [];
-  const omittedClaims = Array.isArray(compilerRead?.loeCandidate?.omittedClaims)
-    ? compilerRead.loeCandidate.omittedClaims
+  const rawDocumentResult = compilerRead?.rawDocumentResult || null;
+  const translatedSubsetResult = compilerRead?.translatedSubsetResult || null;
+  const embeddedExecutableResult = compilerRead?.embeddedExecutableResult || null;
+  const omittedClaims = Array.isArray(translatedSubsetResult?.omittedClaims)
+    ? translatedSubsetResult.omittedClaims
     : [];
   const omittedClaimDetails = omittedClaims
     .map((claimId) => claimSet.find((claim) => claim.id === claimId))
     .filter(Boolean);
-  const diagnostics = Array.isArray(compilerRead?.compileResult?.diagnostics)
-    ? compilerRead.compileResult.diagnostics
-    : [];
-  const compilerExecuted = Boolean(compilerRead?.compileResult?.executed);
+  const admissionSummary = buildAdmissionSummary(rawDocumentResult);
+  const interpretationSummary = buildInterpretationSummary(compilerRead);
+  const diagnostics = [
+    ...buildLayerDiagnostics("Raw source", rawDocumentResult),
+    ...buildLayerDiagnostics("Translated subset", translatedSubsetResult),
+    ...buildLayerDiagnostics("Embedded program", embeddedExecutableResult),
+  ];
+  const rawSecondaryTrusted = Boolean(rawDocumentResult?.secondaryRuntimeTrusted);
+  const embeddedSummary = buildEmbeddedSummary(embeddedExecutableResult);
 
   return (
     <section
@@ -80,42 +178,72 @@ export default function CompilerReadPanel({
       {compilerRead ? (
         <>
           <div className={styles.compilerReadSummary} data-testid="dream-compiler-read-summary">
-            <div className={styles.compilerReadCard}>
-              <Kicker tone="neutral">Plain-language result</Kicker>
+            <div className={styles.compilerReadCard} data-testid="dream-compiler-read-admission">
+              <Kicker tone="neutral">Admission control</Kicker>
+              <strong>{admissionSummary.title}</strong>
+              <p>{admissionSummary.body}</p>
+              <div className={styles.compilerReadChips}>
+                <SignalChip tone="neutral">
+                  {sentenceCase(rawDocumentResult?.compileState || "unknown")}
+                </SignalChip>
+                {!rawSecondaryTrusted ? (
+                  <SignalChip tone="neutral">Not direct source</SignalChip>
+                ) : (
+                  <>
+                    <SignalChip tone="neutral">
+                      {sentenceCase(rawDocumentResult?.runtimeState || "open")}
+                    </SignalChip>
+                    <SignalChip tone="neutral">
+                      {sentenceCase(rawDocumentResult?.mergedWindowState || "open")}
+                    </SignalChip>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.compilerReadCard} data-testid="dream-compiler-read-interpretation">
+              <Kicker tone="neutral">Structural interpretation</Kicker>
               <strong>{compilerRead?.verdict?.primaryFinding || "No primary finding yet."}</strong>
-              <p>{compilerRead?.documentSummary?.summary || "No summary returned."}</p>
+              <p>{interpretationSummary}</p>
               <div className={styles.compilerReadChips}>
                 <SignalChip tone="neutral">
                   {sentenceCase(compilerRead?.documentSummary?.documentType || "mixed")}
                 </SignalChip>
                 <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.documentSummary?.dominantMode || "mixed")}
+                  {sentenceCase(compilerRead?.outcomeClass || "mixed")}
                 </SignalChip>
-                <SignalChip tone="neutral">
-                  {sentenceCase(compilerRead?.verdict?.overall || "mixed")}
-                </SignalChip>
+                {compilerRead?.limitationClass ? (
+                  <SignalChip tone="neutral">
+                    {sentenceCase(compilerRead.limitationClass)}
+                  </SignalChip>
+                ) : null}
+                {compilerRead?.outcomeClass === "direct_source_compiled" ? (
+                  <SignalChip tone="neutral">Direct source</SignalChip>
+                ) : translatedSubsetResult?.present ? (
+                  <SignalChip tone="neutral">
+                    {sentenceCase(translatedSubsetResult?.mergedWindowState || "unknown")}
+                  </SignalChip>
+                ) : (
+                  <SignalChip tone="neutral">No lawful subset</SignalChip>
+                )}
               </div>
             </div>
 
-            <div className={styles.compilerReadCard}>
-              <Kicker tone="neutral">What the language can hold right now</Kicker>
-              <p>{compilerRead?.loeCandidate?.translationStrategy || "No lawful subset was translated."}</p>
-              {compilerExecuted ? (
+            {embeddedExecutableResult?.present ? (
+              <div className={styles.compilerReadCard} data-testid="dream-compiler-read-embedded">
+                <Kicker tone="neutral">Embedded executable</Kicker>
+                <strong>{embeddedSummary.title}</strong>
+                <p>{embeddedSummary.body}</p>
                 <div className={styles.compilerReadChips}>
                   <SignalChip tone="neutral">
-                    {sentenceCase(compilerRead?.compileResult?.compileState || "unknown")}
+                    {sentenceCase(embeddedExecutableResult?.compileState || "unknown")}
                   </SignalChip>
                   <SignalChip tone="neutral">
-                    {sentenceCase(compilerRead?.compileResult?.runtimeState || "open")}
-                  </SignalChip>
-                  <SignalChip tone="neutral">
-                    {sentenceCase(compilerRead?.compileResult?.mergedWindowState || "open")}
+                    {sentenceCase(embeddedExecutableResult?.mergedWindowState || "unknown")}
                   </SignalChip>
                 </div>
-              ) : (
-                <p>No lawful subset compiled in this read.</p>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.compilerReadSection} data-testid="dream-compiler-read-claims">
@@ -143,6 +271,42 @@ export default function CompilerReadPanel({
             </div>
           </div>
 
+          <div className={styles.compilerReadSection} data-testid="dream-compiler-read-omitted">
+            <div className={styles.compilerReadSectionHead}>
+              <Kicker tone="neutral">Omitted material</Kicker>
+              <span>Claims intentionally left outside the translated subset.</span>
+            </div>
+            {omittedClaimDetails.length ? (
+              <ul className={styles.compilerReadList}>
+                {omittedClaimDetails.map((claim) => (
+                  <li key={claim.id}>
+                    <strong>{claim.text}</strong>: {claim.reason}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No claims were omitted from the translated subset.</p>
+            )}
+          </div>
+
+          <div className={styles.compilerReadSection} data-testid="dream-compiler-read-diagnostics">
+            <div className={styles.compilerReadSectionHead}>
+              <Kicker tone="neutral">Diagnostics</Kicker>
+              <span>Admission-control and compiler output remain inspectable.</span>
+            </div>
+            {diagnostics.length ? (
+              <ul className={styles.compilerReadList}>
+                {diagnostics.map((diagnostic) => (
+                  <li key={diagnostic.key}>
+                    <strong>{diagnostic.label}</strong>: {diagnostic.text}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No compiler diagnostics were emitted in this read.</p>
+            )}
+          </div>
+
           <div className={styles.compilerReadSection} data-testid="dream-compiler-read-next-moves">
             <div className={styles.compilerReadSectionHead}>
               <Kicker tone="neutral">Next moves</Kicker>
@@ -159,53 +323,48 @@ export default function CompilerReadPanel({
             <summary>Inspect translation & diagnostics</summary>
             <div className={styles.compilerReadInspectBody}>
               <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Generated .loe</Kicker>
-                <pre>{compilerRead?.loeCandidate?.source || "# No lawful subset translated in v0."}</pre>
-              </div>
-
-              <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Compile artifact summary</Kicker>
+                <Kicker tone="neutral">Raw source summary</Kicker>
                 <ul className={styles.compilerReadList}>
-                  <li>Compiler executed: {compilerExecuted ? "Yes" : "No"}</li>
-                  <li>Compile state: {sentenceCase(compilerRead?.compileResult?.compileState || "unknown")}</li>
-                  <li>Runtime state: {sentenceCase(compilerRead?.compileResult?.runtimeState || "open")}</li>
+                  <li>Compile state: {sentenceCase(rawDocumentResult?.compileState || "unknown")}</li>
                   <li>
-                    Merged window state: {sentenceCase(compilerRead?.compileResult?.mergedWindowState || "open")}
+                    Secondary runtime trusted: {rawSecondaryTrusted ? "Yes" : "No"}
+                  </li>
+                  <li>Runtime state: {sentenceCase(rawDocumentResult?.runtimeState || "unknown")}</li>
+                  <li>
+                    Merged window state: {sentenceCase(rawDocumentResult?.mergedWindowState || "unknown")}
                   </li>
                 </ul>
               </div>
 
               <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Diagnostics</Kicker>
-                {diagnostics.length ? (
-                  <ul className={styles.compilerReadList}>
-                    {diagnostics.map((diagnostic) => (
-                      <li key={`${diagnostic.code}:${diagnostic.line || 0}`}>
-                        {sentenceCase(diagnostic.severity)} {diagnostic.code}: {diagnostic.message}
-                      </li>
-                    ))}
-                  </ul>
-                ) : !compilerExecuted ? (
-                  <p>No compiler run yet because no lawful subset translated in v0.</p>
-                ) : (
-                  <p>No compiler diagnostics on the translated subset.</p>
-                )}
+                <Kicker tone="neutral">Generated .loe subset</Kicker>
+                <pre>{translatedSubsetResult?.source || "# No lawful subset translated in this read."}</pre>
               </div>
 
               <div className={styles.compilerReadInspectBlock}>
-                <Kicker tone="neutral">Omitted claims</Kicker>
-                {omittedClaimDetails.length ? (
-                  <ul className={styles.compilerReadList}>
-                    {omittedClaimDetails.map((claim) => (
-                      <li key={claim.id}>
-                        <strong>{claim.text}</strong>: {claim.reason}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No claims were omitted from the translated subset.</p>
-                )}
+                <Kicker tone="neutral">Translated subset summary</Kicker>
+                <ul className={styles.compilerReadList}>
+                  <li>Present: {translatedSubsetResult?.present ? "Yes" : "No"}</li>
+                  <li>
+                    Compile state: {sentenceCase(translatedSubsetResult?.compileState || "not_run")}
+                  </li>
+                  <li>
+                    Runtime state: {sentenceCase(translatedSubsetResult?.runtimeState || "not_run")}
+                  </li>
+                  <li>
+                    Merged window state: {sentenceCase(
+                      translatedSubsetResult?.mergedWindowState || "not_run",
+                    )}
+                  </li>
+                </ul>
               </div>
+
+              {embeddedExecutableResult?.present ? (
+                <div className={styles.compilerReadInspectBlock}>
+                  <Kicker tone="neutral">Embedded executable source</Kicker>
+                  <pre>{embeddedExecutableResult.source}</pre>
+                </div>
+              ) : null}
             </div>
           </details>
         </>

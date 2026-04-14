@@ -1,0 +1,21 @@
+{
+  "documentSummary": {
+    "title": "Excerpt grounding failure",
+    "documentType": "mixed",
+    "dominantMode": "proposal",
+    "summary": "This fixture exists only to prove excerpt grounding rejection."
+  },
+  "claimSet": [
+    {
+      "id": "claim_bad",
+      "text": "Invented structure.",
+      "claimKind": "protocol",
+      "translationReadiness": "candidate_for_translation",
+      "provenanceClass": "self_reported",
+      "supportStatus": "unsupported",
+      "evidenceRefs": [],
+      "reason": "This should fail grounding.",
+      "sourceExcerpt": "This excerpt never appears in the document."
+    }
+  ]
+}
