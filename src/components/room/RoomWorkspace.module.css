@@ -2793,7 +2793,114 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) and (pointer: fine) {
+  .bannerStack,
+  .threadIdentityBar,
+  .dreamBridgeNotice,
+  .roomEchoStripWrap,
+  .thread {
+    width: 100%;
+  }
+
+  .workspaceSurface {
+    gap: 12px;
+  }
+
+  .threadViewport {
+    gap: 18px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .thread {
+    gap: 16px;
+  }
+
+  .messageCard {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) and (pointer: fine) {
+  .shell {
+    width: calc(100% - 20px);
+    padding-top: 16px;
+  }
+
+  .starter {
+    width: min(100%, 420px);
+  }
+
+  .starter h1 {
+    font-size: 1.8rem;
+  }
+
+  .starter p {
+    font-size: 0.95rem;
+  }
+
+  .mirrorStrip,
+  .thread,
+  .bannerStack,
+  .composerCapsule,
+  .threadIdentityBar,
+  .dreamBridgeNotice {
+    width: 100%;
+  }
+
+  .messageCard,
+  .overlayPanel {
+    width: 100%;
+  }
+
+  .messageCard,
+  .receiptKit,
+  .returnCard,
+  .panel,
+  .overlayPanel {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .composerShell {
+    padding: 0;
+  }
+
+  .composerRow {
+    gap: 6px;
+  }
+
+  .composerFootnote {
+    padding-left: 0;
+    white-space: normal;
+  }
+
+  .contextControlCluster {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    width: 100%;
+    gap: 6px;
+  }
+
+  .threadIdentityBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .threadIdentityActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .contextButton {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 640px) and (hover: none), (max-width: 640px) and (pointer: coarse) {
   .page {
     background:
       radial-gradient(ellipse at 24% 0%, rgba(84, 150, 216, 0.06), transparent 58%),
@@ -2932,7 +3039,27 @@
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 420px) and (pointer: fine) {
+  .threadIdentityActions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .threadIdentityActions .fieldChip {
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .contextControlCluster {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contextControlCluster .fieldChip {
+    justify-self: start;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 420px) and (hover: none), (max-width: 420px) and (pointer: coarse) {
   .threadIdentityActions {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -927,6 +927,33 @@
   }
 }
 
+@media (max-width: 959px) and (pointer: fine) {
+  .layout {
+    gap: 14px;
+  }
+
+  .stageHead,
+  .libraryPanelHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stageActions,
+  .libraryPanelActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .documentStage {
+    max-height: min(48vh, 560px);
+  }
+
+  .emptyStage {
+    min-height: min(38vh, 360px);
+  }
+}
+
 @media (min-width: 1200px) {
   .stageWrap {
     display: grid;
@@ -966,7 +993,47 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 720px) and (pointer: fine) {
+  .layout {
+    gap: 12px;
+  }
+
+  .scrubRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .transportRow {
+    justify-content: flex-start;
+  }
+
+  .speedControl {
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .pastePanel {
+    grid-template-columns: 1fr;
+  }
+
+  .documentStage {
+    max-height: min(44vh, 520px);
+    gap: 14px;
+    padding-top: 6px;
+  }
+
+  .chunk {
+    font-size: 0.98rem;
+    line-height: 1.72;
+  }
+
+  .emptyStage {
+    min-height: min(36vh, 320px);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 720px) and (hover: none), (max-width: 720px) and (pointer: coarse) {
   .layout {
     gap: 12px;
   }
@@ -1047,7 +1114,54 @@
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 420px) and (pointer: fine) {
+  .readerMain {
+    gap: 10px;
+  }
+
+  .libraryPanel,
+  .stage {
+    gap: 12px;
+  }
+
+  .libraryPanelIdentity strong,
+  .stageIdentity strong {
+    font-size: clamp(1.1rem, 6vw, 1.35rem);
+  }
+
+  .libraryPanelActions,
+  .stageActions,
+  .emptyStageActions {
+    gap: 6px;
+  }
+
+  .scrubRow {
+    gap: 6px;
+  }
+
+  .scrubRow span {
+    font-size: 0.78rem;
+  }
+
+  .transportRow {
+    gap: 8px;
+  }
+
+  .primaryControl {
+    width: 60px;
+    height: 60px;
+  }
+
+  .speedControl {
+    min-width: 0;
+  }
+
+  .pastePanel {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 420px) and (hover: none), (max-width: 420px) and (pointer: coarse) {
   .readerMain {
     gap: 10px;
   }

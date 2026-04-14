@@ -661,7 +661,8 @@
   }
 
   .headerMiddle {
-    display: none;
+    display: flex;
+    width: 100%;
   }
 
   .modeSwitch {
@@ -683,6 +684,29 @@
 
   .bottomRail {
     gap: 8px;
+  }
+
+  .pulseStrip {
+    padding: 10px 12px;
+    border-radius: 20px;
+  }
+
+  .sheetBackdrop {
+    padding-top: calc(58px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sheetLayer {
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 720px) and (hover: none), (max-width: 720px) and (pointer: coarse) {
+  .headerMiddle {
+    display: none;
+  }
+
+  .bottomRail {
     position: sticky;
     bottom: 0;
     z-index: 65;
@@ -731,18 +755,8 @@
     color: var(--shell-ink);
   }
 
-  .pulseStrip {
-    padding: 10px 12px;
-    border-radius: 20px;
-  }
-
   .sheetBackdrop {
-    padding-top: calc(58px + env(safe-area-inset-top, 0px));
     padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .sheetLayer {
-    border-radius: 22px;
   }
 }
 
