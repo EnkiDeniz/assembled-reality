@@ -87,6 +87,9 @@ test("beta admission schema, auth logging, and docs stay wired together", async 
   assert.match(auth, /error:\s*"\/"/);
   assert.match(auth, /scope:\s*"name email"/);
   assert.match(auth, /response_mode:\s*"form_post"/);
+  assert.match(auth, /pkceCodeVerifier/);
+  assert.match(auth, /state:\s*\{/);
+  assert.match(auth, /sameSite:\s*secureAuthCookies \? "none" : "lax"/);
   assert.match(proposal, /BETA_ACCESS_VERSION/);
   assert.match(runbook, /Prisma Studio/);
   assert.match(runbook, /candidateEmail/);

@@ -52,6 +52,26 @@ function generateAppleClientSecret() {
   });
 }
 
+function shouldUseSecureAuthCookies() {
+  return appEnv.siteUrl.startsWith("https://") || process.env.NODE_ENV === "production";
+}
+
+function getSecureAuthCookiePrefix() {
+  return shouldUseSecureAuthCookies() ? "__Secure-" : "";
+}
+
+function buildOAuthCookieOptions({ maxAge } = {}) {
+  const secureAuthCookies = shouldUseSecureAuthCookies();
+
+  return {
+    httpOnly: true,
+    sameSite: secureAuthCookies ? "none" : "lax",
+    path: "/",
+    secure: secureAuthCookies,
+    ...(typeof maxAge === "number" ? { maxAge } : {}),
+  };
+}
+
 function resolveSignInProvider({ account, email } = {}) {
   if (account?.provider) {
     return String(account.provider).trim().toLowerCase();
@@ -109,6 +129,22 @@ export const authOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
+  },
+  cookies: {
+    // Apple returns to the callback with a cross-site POST when using form_post.
+    // These transient OAuth cookies must be SameSite=None in production or the browser drops them.
+    pkceCodeVerifier: {
+      name: `${getSecureAuthCookiePrefix()}next-auth.pkce.code_verifier`,
+      options: buildOAuthCookieOptions({ maxAge: 60 * 15 }),
+    },
+    state: {
+      name: `${getSecureAuthCookiePrefix()}next-auth.state`,
+      options: buildOAuthCookieOptions({ maxAge: 60 * 15 }),
+    },
+    nonce: {
+      name: `${getSecureAuthCookiePrefix()}next-auth.nonce`,
+      options: buildOAuthCookieOptions(),
+    },
   },
   pages: {
     signIn: "/",
