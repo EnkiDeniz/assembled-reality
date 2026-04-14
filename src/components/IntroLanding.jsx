@@ -1,146 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
-import {
-  SevenGradient,
-  SettlementHex,
-  SignalChip,
-} from "@/components/LoegosSystem";
 import PublicFooterLinks from "@/components/PublicFooterLinks";
-import {
-  BOUNDARY_LINE,
-  BRAND_TRUTH,
-  PRODUCT_MARK,
-} from "@/lib/product-language";
+import { PRODUCT_MARK } from "@/lib/product-language";
 import { recordProductEvent } from "@/lib/product-analytics";
 
-const INTRO_STORAGE_KEY = "document-assembler:intro-complete-v1";
-const INTRO_STORAGE_EVENT = "document-assembler:intro-storage";
-
-function subscribeToIntroState(callback) {
-  if (typeof window === "undefined") {
-    return () => {};
+function resolveAuthErrorMessage(error = "", { allowlistEnabled = false } = {}) {
+  if (!error) return "";
+  if (error === "AccessDenied") {
+    return allowlistEnabled
+      ? "This email is not approved for the private beta."
+      : "Access to the beta is currently restricted.";
   }
-
-  window.addEventListener("storage", callback);
-  window.addEventListener(INTRO_STORAGE_EVENT, callback);
-
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener(INTRO_STORAGE_EVENT, callback);
-  };
-}
-
-function getIntroSeenSnapshot() {
-  if (typeof window === "undefined") {
-    return false;
+  if (error === "Verification") {
+    return "The sign-in link could not be verified. Try again from the same browser.";
   }
-
-  try {
-    return window.localStorage.getItem(INTRO_STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
+  return error;
 }
 
-function getIntroSeenServerSnapshot() {
-  return false;
-}
-
-function ProposalPeekLink() {
-  return (
-    <Link href="/design-proposal" className="intro-proposal-link">
-      Proposal
-    </Link>
-  );
-}
-
-const PRODUCT_LAW =
-  "Only returned evidence clears fog; mapped regions can become stale without renewed echoes.";
-
-const INSTRUMENT_PANES = [
-  {
-    title: "Ping",
-    body: "State the aim and send a move/test pair into reality.",
-    detail: "mov + tst",
-  },
-  {
-    title: "Listen",
-    body: "Hold awaiting as active listening, not missing progress.",
-    detail: "awaiting",
-  },
-  {
-    title: "Echoes",
-    body: "Read returns by provenance so wall and imagination stay separate.",
-    detail: "rtn + provenance",
-  },
-  {
-    title: "Field",
-    body: "See mapped, fog, fractured, and stale regions in one surface.",
-    detail: "state + freshness",
-  },
-];
-
-const HERO_SEQUENCE = ["Send a ping.", "Wait in listening mode.", "Receive echoes.", "Navigate the field."];
-
-const FOUR_QUESTIONS = [
-  "Did I ping?",
-  "Am I waiting?",
-  "What came back, from where?",
-  "How clear is this region?",
-];
-
-function EntrySystemPanel() {
-  return (
-    <div className="loegos-entry__panel">
-      <div className="loegos-entry__panel-copy">
-        <span className="loegos-kicker">Product law</span>
-        <h2 className="loegos-entry__panel-title">The Echo Instrument</h2>
-        <p className="loegos-entry__panel-body">
-          Lœgos gives you one navigable field compiled from returns. It is not a document manager.
-          It is an instrument for decision structure.
-        </p>
-        <p className="loegos-entry__panel-body">{PRODUCT_LAW}</p>
-      </div>
-
-      <div className="loegos-entry__rooms">
-        {INSTRUMENT_PANES.map((room) => (
-          <div key={room.title} className="loegos-entry__room">
-            <span className="loegos-entry__room-title">{room.title}</span>
-            <span className="loegos-entry__room-copy">{room.body}</span>
-            <span className="loegos-entry__room-detail">{room.detail}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="loegos-entry__system-row">
-        <div className="loegos-entry__system-card">
-          <span className="loegos-entry__room-title">Runtime state</span>
-          <SettlementHex stageCount={4} label="4 / 7" />
-          <SevenGradient level={4} label="Field resolution" />
-        </div>
-        <div className="loegos-entry__system-card">
-          <span className="loegos-entry__room-title">One glance checks</span>
-          <div className="loegos-entry__signal-row">
-            {FOUR_QUESTIONS.map((question) => (
-              <SignalChip key={question} tone="neutral">
-                {question}
-              </SignalChip>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AuthPanel({ authCapabilities, signedIn, onEnter }) {
+function AuthPanel({ authCapabilities, signedIn, betaAccess, authError }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [betaCode, setBetaCode] = useState("");
+  const [showBetaCode, setShowBetaCode] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
+  const authErrorMessage = resolveAuthErrorMessage(authError, betaAccess);
+
+  async function handleUnlock(event) {
+    event.preventDefault();
+    setUnlocking(true);
+    setUnlockError("");
+
+    try {
+      const response = await fetch("/api/unlock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code: betaCode }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Could not unlock the beta.");
+      }
+
+      window.location.reload();
+    } catch (thrownError) {
+      setUnlockError(
+        thrownError instanceof Error ? thrownError.message : "Could not unlock the beta.",
+      );
+    } finally {
+      setUnlocking(false);
+    }
+  }
 
   async function handleMagicLink(event) {
     event.preventDefault();
@@ -149,7 +67,6 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
     setError("");
 
     try {
-      onEnter?.();
       const result = await signIn("email", {
         email,
         redirect: false,
@@ -157,7 +74,7 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       });
 
       if (result?.error) {
-        throw new Error(result.error);
+        throw new Error(resolveAuthErrorMessage(result.error, betaAccess) || result.error);
       }
 
       setStatus("Magic link sent. Check your inbox.");
@@ -172,6 +89,60 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
     }
   }
 
+  if (betaAccess?.passwordRequired && !betaAccess?.unlocked) {
+    return (
+      <div className="intro-auth">
+        <form className="terminal-upload" onSubmit={handleUnlock}>
+          <label className="terminal-label" htmlFor="beta-password">
+            Private beta password
+          </label>
+          <div className="intro-auth__password-row">
+            <input
+              id="beta-password"
+              className="terminal-input"
+              type={showBetaCode ? "text" : "password"}
+              name="beta-password"
+              autoComplete="current-password"
+              placeholder="Enter beta password"
+              value={betaCode}
+              disabled={unlocking}
+              onChange={(event) => setBetaCode(event.target.value)}
+            />
+            <button
+              type="button"
+              className="intro-auth__visibility-toggle"
+              aria-label={showBetaCode ? "Hide password" : "Show password"}
+              aria-pressed={showBetaCode}
+              disabled={unlocking}
+              onClick={() => setShowBetaCode((current) => !current)}
+            >
+              {showBetaCode ? "Hide" : "Show"}
+            </button>
+          </div>
+          <div className="terminal-actions">
+            <button
+              type="submit"
+              className="terminal-button is-primary"
+              disabled={!betaCode.trim() || unlocking}
+            >
+              {unlocking ? "Unlocking…" : "Unlock private beta"}
+            </button>
+          </div>
+          {unlockError ? (
+            <p className="terminal-status is-error" aria-live="polite">
+              {unlockError}
+            </p>
+          ) : null}
+          {authErrorMessage ? (
+            <p className="terminal-status is-error" aria-live="polite">
+              {authErrorMessage}
+            </p>
+          ) : null}
+        </form>
+      </div>
+    );
+  }
+
   if (signedIn) {
     return (
       <div className="intro-auth">
@@ -179,9 +150,8 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
           <Link
             href="/workspace"
             className="terminal-link is-primary"
-            onClick={() => onEnter?.()}
           >
-            Open {PRODUCT_MARK}
+            Enter {PRODUCT_MARK}
           </Link>
         </div>
       </div>
@@ -196,11 +166,10 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
           className="terminal-button is-primary"
           disabled={!authCapabilities.appleEnabled}
           onClick={() => {
-            onEnter?.();
             void signIn("apple", { callbackUrl: "/workspace" });
           }}
         >
-          Continue with Apple
+          Sign in with Apple
         </button>
       </div>
 
@@ -235,119 +204,88 @@ function AuthPanel({ authCapabilities, signedIn, onEnter }) {
       </form>
 
       <p className="intro-auth__note">
-        Read the <Link href="/disclaimer" className="intro-auth__note-link">disclaimer</Link> before opening the box.
+        Read the <Link href="/disclaimer" className="intro-auth__note-link">disclaimer</Link> before entering.
       </p>
+      {betaAccess?.allowlistEnabled ? (
+        <p className="intro-auth__note">Only approved private beta emails can enter.</p>
+      ) : null}
+      {authErrorMessage ? (
+        <p className="terminal-status is-error" aria-live="polite">
+          {authErrorMessage}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 export default function IntroLanding({
   authCapabilities,
+  authError = "",
+  betaAccess = null,
   signedIn = false,
-  forceIntro = false,
 }) {
-  const seenIntro = useSyncExternalStore(
-    subscribeToIntroState,
-    getIntroSeenSnapshot,
-    getIntroSeenServerSnapshot,
-  );
-  const stage =
-    forceIntro || signedIn
-      ? "landing"
-      : seenIntro === null
-        ? "loading"
-        : seenIntro
-          ? "auth"
-          : "landing";
-
-  function markIntroSeen() {
-    try {
-      window.localStorage.setItem(INTRO_STORAGE_KEY, "1");
-      window.dispatchEvent(new Event(INTRO_STORAGE_EVENT));
-    } catch {
-      // Ignore storage failures.
-    }
-  }
-
-  if (stage === "loading") {
-    return <main className="intro-page" />;
-  }
-  const returning = stage === "auth";
-  const authKicker = returning ? "Return to the box" : "Enter the box";
-  const authTitle = returning ? "Resume the field." : "Open the field.";
-  const authBody = returning
-    ? "Sign in to reopen the active box and continue from the latest signal."
-    : "Sign in to start pinging, listening, and reading returns.";
+  const isPrivateBeta = Boolean(betaAccess?.passwordRequired || betaAccess?.allowlistEnabled);
+  const heroKicker = isPrivateBeta ? "Private beta" : "Sign in";
+  const heroTitle = isPrivateBeta ? `${PRODUCT_MARK} is in private beta.` : `Enter ${PRODUCT_MARK}.`;
+  const heroBody = isPrivateBeta
+    ? ""
+    : "Continue with Apple or a magic link to enter the workspace.";
+  const panelKicker = signedIn
+    ? "Ready"
+    : betaAccess?.passwordRequired && !betaAccess?.unlocked
+      ? "Enter"
+      : "Sign in";
+  const panelTitle = signedIn
+    ? `Enter ${PRODUCT_MARK}`
+    : betaAccess?.passwordRequired && !betaAccess?.unlocked
+      ? "Unlock private beta"
+      : `Sign in to ${PRODUCT_MARK}`;
+  const panelBody = signedIn
+    ? "Your beta session is ready."
+    : betaAccess?.passwordRequired && !betaAccess?.unlocked
+      ? "Use the shared password to continue."
+      : isPrivateBeta
+        ? "Use Apple or a magic link."
+        : "Use Apple or a magic link.";
 
   return (
-    <main className="loegos-entry">
+    <main className="loegos-entry loegos-entry--beta-gate">
       <section className="loegos-entry__shell">
         <div className="loegos-entry__masthead">
           <div className="loegos-entry__brandline">
             <span className="loegos-wordmark">
-              {PRODUCT_MARK} <span className="loegos-wordmark__sub">language tool</span>
+              {PRODUCT_MARK} <span className="loegos-wordmark__sub">{isPrivateBeta ? "private beta" : "sign in"}</span>
             </span>
-            <span className="loegos-thesis">An IDE for reality.</span>
+            <span className="loegos-thesis">{isPrivateBeta ? "Invited access only" : "Apple and email sign-in"}</span>
           </div>
         </div>
 
-        <div className="loegos-entry__hero">
-          <div className="loegos-entry__copy">
-            <span className="loegos-kicker">Category</span>
-            <h1 className="loegos-display">{BRAND_TRUTH}</h1>
-            <p className="loegos-entry__lede">
-              Lœgos is an echo instrument for decisions. Send pings into reality, listen for what
-              returns, and navigate only returned signal.
-            </p>
-            <div className="loegos-entry__support">
-              <p className="loegos-entry__lede loegos-entry__lede--support">
-                The field stays honest: mapped where returns are strong, fog where they are not,
-                fractured where contradictions land, stale where surfaces need renewed echoes.
-              </p>
-              <div className="loegos-entry__boundary">
-                {BOUNDARY_LINE.split(". ")
-                  .filter(Boolean)
-                  .map((item) => (
-                    <span key={item} className="loegos-entry__boundary-item">
-                      {item.replace(/\.$/, "")}
-                    </span>
-                  ))}
-              </div>
-              <div className="loegos-entry__sequence">
-                {HERO_SEQUENCE.map((item) => (
-                  <span key={item} className="loegos-entry__sequence-step">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
+        <div className="loegos-entry__hero loegos-entry__hero--gate">
+          <div className="loegos-entry__copy loegos-entry__copy--gate">
+            <span className="loegos-kicker">{heroKicker}</span>
+            <h1 className="loegos-display">{heroTitle}</h1>
+            {heroBody ? <p className="loegos-entry__lede">{heroBody}</p> : null}
           </div>
 
-          <div className="loegos-entry__panel">
+          <div className="loegos-entry__panel loegos-entry__panel--gate">
             <div className="loegos-entry__panel-copy">
-              <span className="loegos-kicker">{authKicker}</span>
-              <h2 className="loegos-entry__panel-title">{authTitle}</h2>
-              <p className="loegos-entry__panel-body">{authBody}</p>
-              <div className="loegos-entry__auth-notes">
-                <span>Inside the box: Ping. Listen. Echoes. Field.</span>
-                <span>Seven reads signal. Returns stay attributed.</span>
-              </div>
+              <span className="loegos-kicker">{panelKicker}</span>
+              <h2 className="loegos-entry__panel-title">{panelTitle}</h2>
+              <p className="loegos-entry__panel-body">{panelBody}</p>
             </div>
-            <div className={`intro-auth-inline ${returning ? "intro-auth-inline--stacked" : ""}`}>
+            <div className="intro-auth-inline">
               <AuthPanel
                 authCapabilities={authCapabilities}
+                authError={authError}
+                betaAccess={betaAccess}
                 signedIn={signedIn}
-                onEnter={markIntroSeen}
               />
             </div>
           </div>
         </div>
 
-        <EntrySystemPanel />
-
-        <div className="loegos-entry__footer">
+        <div className="loegos-entry__footer loegos-entry__footer--gate">
           <PublicFooterLinks className="intro-auth-inline__footer" />
-          <ProposalPeekLink />
         </div>
       </section>
     </main>

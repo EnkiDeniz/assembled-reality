@@ -460,11 +460,20 @@
   padding: clamp(32px, 4vw, 44px) 0 clamp(28px, 4vw, 36px);
 }
 
+.loegos-entry__hero--gate {
+  min-height: calc(100svh - 148px);
+  align-items: center;
+}
+
 .loegos-entry__copy,
 .loegos-public-document__hero,
 .loegos-account__hero {
   display: grid;
   gap: 16px;
+}
+
+.loegos-entry__copy--gate {
+  align-content: center;
 }
 
 .loegos-kicker {
@@ -562,6 +571,14 @@
   padding: 22px;
 }
 
+.loegos-entry__panel--gate {
+  gap: 22px;
+  padding: clamp(22px, 3vw, 30px);
+  background:
+    linear-gradient(180deg, rgba(94, 167, 255, 0.08), rgba(255, 255, 255, 0.02) 26%),
+    rgba(255, 255, 255, 0.02);
+}
+
 .loegos-entry__panel-copy {
   display: grid;
   gap: 8px;
@@ -644,6 +661,56 @@
   line-height: 1.55;
 }
 
+.loegos-entry__gate-sequence {
+  display: grid;
+  gap: 0;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--loegos-line);
+}
+
+.loegos-entry__gate-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.loegos-entry__gate-step:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.loegos-entry__gate-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(94, 167, 255, 0.22);
+  border-radius: 999px;
+  color: var(--loegos-brand);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.loegos-entry__gate-step-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.loegos-entry__gate-note {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--loegos-text-soft);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .loegos-entry__signal-row {
   display: flex;
   flex-wrap: wrap;
@@ -663,6 +730,10 @@
   border-top: 1px solid var(--loegos-line);
   color: var(--loegos-text-soft);
   font-size: 13px;
+}
+
+.loegos-entry__footer--gate {
+  margin-top: 0;
 }
 
 .auth-shell .terminal-actions,
@@ -765,6 +836,37 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.intro-auth__password-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.intro-auth__visibility-toggle {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--soft);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    background 180ms ease;
+}
+
+.intro-auth__visibility-toggle:hover,
+.intro-auth__visibility-toggle:focus-visible {
+  border-color: rgba(94, 167, 255, 0.28);
+  color: var(--white);
+  background: rgba(94, 167, 255, 0.08);
 }
 
 .intro-auth__copy {
@@ -1740,6 +1842,10 @@
     grid-template-columns: 1fr;
   }
 
+  .loegos-entry__hero--gate {
+    min-height: auto;
+  }
+
   .loegos-diagnostics__metrics,
   .loegos-diagnostics__operate-grid {
     grid-template-columns: 1fr;
@@ -1780,6 +1886,15 @@
   .loegos-workspace-control__meta {
     align-items: start;
     justify-content: start;
+  }
+
+  .loegos-entry__gate-step {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .intro-auth__password-row {
+    grid-template-columns: 1fr;
   }
 
   .loegos-workspace-control {

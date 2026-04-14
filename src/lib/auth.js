@@ -2,7 +2,12 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import AppleProvider from "next-auth/providers/apple";
 import EmailProvider from "next-auth/providers/email";
 import jwt from "jsonwebtoken";
+import {
+  BETA_ADMISSION_REASON_CODES,
+  recordDeniedBetaAdmissionAttempt,
+} from "@/lib/beta-admission-audit";
 import { prisma } from "@/lib/prisma";
+import { extractCandidateEmail, isBetaEmailAllowed } from "@/lib/beta-access";
 import { appEnv } from "@/lib/env";
 import { PRODUCT_NAME } from "@/lib/product-language";
 import { ensureReaderProfileForUser } from "@/lib/reader-db";
@@ -47,6 +52,58 @@ function generateAppleClientSecret() {
   });
 }
 
+function resolveSignInProvider({ account, email } = {}) {
+  if (account?.provider) {
+    return String(account.provider).trim().toLowerCase();
+  }
+
+  if (email) {
+    return "email";
+  }
+
+  return "unknown";
+}
+
+async function resolveBetaAdmissionEmail({ user, profile, email, account } = {}) {
+  const directCandidateEmail = extractCandidateEmail({ user, profile, email });
+  if (isBetaEmailAllowed(directCandidateEmail)) {
+    return directCandidateEmail;
+  }
+
+  if (user?.id) {
+    const storedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true },
+    });
+    const storedUserEmail = extractCandidateEmail({ user: storedUser });
+    if (isBetaEmailAllowed(storedUserEmail)) {
+      return storedUserEmail;
+    }
+  }
+
+  if (account?.provider && account?.providerAccountId) {
+    const linkedAccount = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: String(account.provider),
+          providerAccountId: String(account.providerAccountId),
+        },
+      },
+      select: {
+        user: {
+          select: { email: true },
+        },
+      },
+    });
+    const linkedUserEmail = extractCandidateEmail({ user: linkedAccount?.user });
+    if (isBetaEmailAllowed(linkedUserEmail)) {
+      return linkedUserEmail;
+    }
+  }
+
+  return directCandidateEmail;
+}
+
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
@@ -55,6 +112,7 @@ export const authOptions = {
   },
   pages: {
     signIn: "/",
+    error: "/",
   },
   providers: [
     ...(appEnv.magicLinksEnabled
@@ -75,8 +133,8 @@ export const authOptions = {
             allowDangerousEmailAccountLinking: true,
             authorization: {
               params: {
-                scope: "openid",
-                response_mode: "query",
+                scope: "name email",
+                response_mode: "form_post",
               },
             },
           }),
@@ -84,12 +142,33 @@ export const authOptions = {
       : []),
   ],
   callbacks: {
-    async signIn({ user }) {
-      const profile = await ensureReaderProfile(user);
-      if (profile) {
-        user.name = profile.displayName;
-        user.readerSlug = profile.readerSlug;
-        user.readerRole = profile.role;
+    async signIn({ user, profile, email, account }) {
+      const candidateEmail = extractCandidateEmail({ user, profile, email });
+      const resolvedCandidateEmail = await resolveBetaAdmissionEmail({
+        user,
+        profile,
+        email,
+        account,
+      });
+
+      if (!isBetaEmailAllowed(resolvedCandidateEmail)) {
+        await recordDeniedBetaAdmissionAttempt({
+          provider: resolveSignInProvider({ account, email }),
+          candidateEmail,
+          reasonCode: BETA_ADMISSION_REASON_CODES.emailNotAllowed,
+        });
+        return false;
+      }
+
+      if (resolvedCandidateEmail) {
+        user.email = resolvedCandidateEmail;
+      }
+
+      const readerProfile = await ensureReaderProfile(user);
+      if (readerProfile) {
+        user.name = readerProfile.displayName;
+        user.readerSlug = readerProfile.readerSlug;
+        user.readerRole = readerProfile.role;
       }
 
       return true;

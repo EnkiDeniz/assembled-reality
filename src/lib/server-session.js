@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isBetaSessionAllowed } from "@/lib/beta-access";
 import { prisma } from "@/lib/prisma";
 import { ensureReaderProfileForUser } from "@/lib/reader-db";
 
@@ -80,7 +81,16 @@ export async function getOptionalSession() {
     return devSession;
   }
 
-  return getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  if (!(await isBetaSessionAllowed(session))) {
+    return null;
+  }
+
+  return session;
 }
 
 export async function getRequiredSession() {

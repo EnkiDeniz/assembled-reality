@@ -2,6 +2,14 @@ function normalizeSecret(value) {
   return String(value || "").trim();
 }
 
+function parseEmailList(value) {
+  return String(value || "")
+    .split(/[\s,;]+/)
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((entry, index, values) => values.indexOf(entry) === index);
+}
+
 export const DEFAULT_EMAIL_FROM = "Loegos <noreply@loegos.com>";
 
 function getApplePrivateKey() {
@@ -45,7 +53,7 @@ function getOpenAiApiKey() {
 export const appEnv = {
   siteUrl: getDefaultSiteUrl(),
   authSecret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "",
-  bootstrapCode: normalizeSecret(process.env.READER_BOOTSTRAP_CODE) || "hineni",
+  bootstrapCode: normalizeSecret(process.env.READER_BOOTSTRAP_CODE),
   emailFrom:
     normalizeSecret(process.env.NEXTAUTH_EMAIL_FROM) ||
     normalizeSecret(process.env.EMAIL_FROM) ||
@@ -80,6 +88,17 @@ export const appEnv = {
     process.env.NEXTAUTH_SECRET ||
     process.env.AUTH_SECRET ||
     "",
+  beta: {
+    password:
+      normalizeSecret(process.env.BETA_ACCESS_PASSWORD) ||
+      normalizeSecret(process.env.PRIVATE_BETA_PASSWORD) ||
+      normalizeSecret(process.env.READER_BOOTSTRAP_CODE),
+    version: normalizeSecret(process.env.BETA_ACCESS_VERSION) || "1",
+    allowedEmails: parseEmailList(
+      process.env.BETA_ALLOWED_EMAILS || process.env.PRIVATE_BETA_EMAILS,
+    ),
+    cookieMaxAgeSeconds: 30 * 24 * 60 * 60,
+  },
   openai: {
     apiKey: getOpenAiApiKey(),
     textModel: normalizeSecret(process.env.OPENAI_SEVEN_MODEL) || "gpt-5.1",
@@ -105,6 +124,12 @@ appEnv.apple.enabled = Boolean(
     appEnv.apple.teamId &&
     appEnv.apple.keyId &&
     appEnv.apple.privateKey,
+);
+
+appEnv.beta.passwordRequired = Boolean(appEnv.beta.password);
+appEnv.beta.allowlistEnabled = appEnv.beta.allowedEmails.length > 0;
+appEnv.beta.enabled = Boolean(
+  appEnv.beta.passwordRequired || appEnv.beta.allowlistEnabled,
 );
 
 appEnv.openai.enabled = Boolean(appEnv.openai.apiKey);
