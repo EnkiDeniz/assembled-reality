@@ -30,6 +30,7 @@ import LoegosShell, {
   Surface as ShellSurface,
 } from "@/components/shell/LoegosShell";
 import CompilerReadPanel from "@/components/dream/CompilerReadPanel";
+import ReplayReviewPanel from "@/components/dream/ReplayReviewPanel";
 import styles from "@/components/dream/SectionDreamScreen.module.css";
 import {
   buildDreamDocumentRecord,
@@ -150,6 +151,8 @@ export default function SectionDreamScreen({
   const [compilerRead, setCompilerRead] = useState(null);
   const [compilerReadError, setCompilerReadError] = useState("");
   const [compilerReadPending, setCompilerReadPending] = useState(false);
+  const [insightMode, setInsightMode] = useState(null);
+  const [replayReviewRefreshToken, setReplayReviewRefreshToken] = useState(0);
   const [, setDurationVersion] = useState(0);
   const [isPending, startTransition] = useTransition();
 
@@ -187,6 +190,12 @@ export default function SectionDreamScreen({
   const compilerReadDisabledReason = hasUnsavedPasteChanges
     ? "Update pasted markdown first."
     : "";
+  const showInsightModeSwitch = Boolean(
+    compilerRead ||
+      compilerReadPending ||
+      compilerReadError ||
+      insightMode === "replay_review",
+  );
 
   const cleanupChunkCache = useCallback(() => {
     for (const entry of chunkCacheRef.current.values()) {
@@ -977,6 +986,7 @@ export default function SectionDreamScreen({
       return;
     }
 
+    setInsightMode("compiler_read");
     cancelCompilerReadRequest();
     const requestId = compilerReadRequestIdRef.current;
     const requestDocumentId = dreamDocument.id;
@@ -1040,6 +1050,24 @@ export default function SectionDreamScreen({
         setCompilerReadPending(false);
       }
     }
+  }
+
+  function handleOpenReplayReview() {
+    setInsightMode("replay_review");
+    setReplayReviewRefreshToken((current) => current + 1);
+  }
+
+  function handleShowCompilerRead() {
+    if (!dreamDocument) {
+      return;
+    }
+
+    if (!compilerRead && !compilerReadPending && !compilerReadError) {
+      void handleRunCompilerRead();
+      return;
+    }
+
+    setInsightMode("compiler_read");
   }
 
   function seekToGlobalOffset(nextGlobalMs) {
@@ -1235,6 +1263,15 @@ export default function SectionDreamScreen({
                     <span>{compilerReadPending ? "Running…" : "Compiler Read"}</span>
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  className={`${styles.actionButton} ${insightMode === "replay_review" ? styles.actionButtonActive : ""}`}
+                  onClick={handleOpenReplayReview}
+                  data-testid="dream-replay-review"
+                >
+                  <FileText size={16} />
+                  <span>Replay Review</span>
+                </button>
                 {dreamDocument ? (
                   <>
                     <button
@@ -1294,7 +1331,29 @@ export default function SectionDreamScreen({
               </p>
             ) : null}
 
-              {dreamDocument ? (
+            {showInsightModeSwitch ? (
+              <div className={styles.insightModeSwitch} data-testid="dream-insight-mode-switch">
+                <button
+                  type="button"
+                  className={`${styles.insightModeButton} ${insightMode !== "replay_review" ? styles.insightModeButtonActive : ""}`}
+                  onClick={handleShowCompilerRead}
+                  disabled={!dreamDocument}
+                  data-testid="dream-insight-mode-compiler-read"
+                >
+                  Compiler Read
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.insightModeButton} ${insightMode === "replay_review" ? styles.insightModeButtonActive : ""}`}
+                  onClick={handleOpenReplayReview}
+                  data-testid="dream-insight-mode-replay-review"
+                >
+                  Replay Review
+                </button>
+              </div>
+            ) : null}
+
+            {dreamDocument ? (
               <>
                 <div className={styles.stageMeta}>
                   <SignalChip tone={hasRemoteVoice ? "brand" : "neutral"} data-testid="dream-voice-badge">
@@ -1398,11 +1457,18 @@ export default function SectionDreamScreen({
                   </label>
                 </div>
 
-                <CompilerReadPanel
-                  compilerRead={compilerRead}
-                  pending={compilerReadPending}
-                  error={compilerReadError}
-                />
+                {insightMode === "replay_review" ? (
+                  <ReplayReviewPanel
+                    active
+                    refreshToken={replayReviewRefreshToken}
+                  />
+                ) : (
+                  <CompilerReadPanel
+                    compilerRead={compilerRead}
+                    pending={compilerReadPending}
+                    error={compilerReadError}
+                  />
+                )}
 
                 {!hasRemoteVoice ? (
                   <p className={styles.stageHint}>Voice unavailable</p>
@@ -1412,6 +1478,11 @@ export default function SectionDreamScreen({
                   <p className={styles.stageHint}>Updating…</p>
                 ) : null}
               </>
+            ) : insightMode === "replay_review" ? (
+              <ReplayReviewPanel
+                active
+                refreshToken={replayReviewRefreshToken}
+              />
             ) : (
               <div className={styles.emptyStage}>
                 <Headphones size={30} />

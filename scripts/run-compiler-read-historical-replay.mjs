@@ -36,6 +36,12 @@ function hashContent(value = "") {
   return crypto.createHash("sha256").update(String(value || ""), "utf8").digest("hex");
 }
 
+function buildArtifactId(kind = "", meta = {}) {
+  const seed = normalizeText(meta.replayName || meta.manifestSourcePath || meta.generatedAt);
+  const digest = hashContent(`${kind}:${seed}:${normalizeText(meta.generatedAt)}`).slice(0, 16);
+  return `${kind}:${digest}`;
+}
+
 function parseArgs(argv = []) {
   const options = {
     manifestFile: DEFAULT_MANIFEST_FILE,
@@ -1049,6 +1055,16 @@ export async function runHistoricalReplay(
   report.repeatInstabilityCases = buildRepeatInstabilityCases(results);
   report.reviewPacketEntries = selectReviewPacketEntries(report);
   report.finalRecommendation = deriveFinalRecommendation(report);
+  report.packetKind = "historical_replay_packet";
+  report.artifactId = buildArtifactId("historical_replay_packet", report.meta);
+  report.recommendation = report.finalRecommendation;
+  report.currentSnapshotExceptions = results
+    .filter((entry) => normalizeText(entry.sourceMode) === "current_snapshot")
+    .map((entry) => ({
+      replayId: entry.replayId,
+      currentPath: entry.currentPath,
+      reason: entry.pinExceptionReason,
+    }));
 
   return report;
 }

@@ -235,6 +235,317 @@ async function mockCompilerRead(page) {
   });
 }
 
+async function mockReplayReview(page) {
+  const currentPayload = {
+    ok: true,
+    reviewKey: "packet-a__packet-b",
+    packetA: {
+      packetId: "present:artifact",
+      packetKind: "present_day_packet",
+      title: "Packet A: Frozen present-day benchmark",
+      generatedAt: "2026-04-14T02:40:08.960Z",
+      sourceArtifactPath:
+        "output/compiler-read-benchmarks/compiler-read-corpus-sample-first-reviewed-round-hand-frozen-2026-04-13.json",
+      manifestSourcePath: "docs/benchmark-manifest-first-reviewed-round-2026-04-13.json",
+      summaryMetrics: {
+        meaningfulNextMoveSignalRate: 0.75,
+        repeatStabilityRate: 0.75,
+        classificationStabilityRate: 0.75,
+        noFakeCompileRate: 1,
+      },
+      recommendation: "Hold the line on honesty while usefulness gets sharper.",
+      trustCaveats: [
+        "Meaningful next-move rate is still a heuristic pre-review signal, not proof of usefulness.",
+      ],
+      entries: [
+        {
+          entryId: "docs/seven-operate-receipt-contract.md",
+          packetKind: "present_day_packet",
+          label: "seven-operate-receipt-contract.md",
+          sourcePath: "docs/seven-operate-receipt-contract.md",
+          category: "clean",
+          outcomeClass: "mixed",
+          readDisposition: "needs_more_witness",
+          primaryFinding: "The language can hold part of this document, but the central protocol still needs stronger witness.",
+          nextMoves: [
+            "Add one quoted witness or external citation for the central protocol claim.",
+          ],
+          repeatStability: {
+            repeatStable: true,
+            summary: "stable across repeats",
+            instabilityReasons: [],
+          },
+          repeatDrift: {
+            isDrifting: false,
+            changedFields: [],
+            runA: null,
+            runB: null,
+          },
+          groundingRejectedClaimCount: 0,
+          lookAheadSummary: null,
+          currentSnapshotException: null,
+          detailArtifactRefs: {
+            packetJsonPath:
+              "output/compiler-read-benchmarks/compiler-read-corpus-sample-first-reviewed-round-hand-frozen-2026-04-13.json",
+            packetMarkdownPath:
+              "output/compiler-read-benchmarks/compiler-read-corpus-sample-first-reviewed-round-hand-frozen-2026-04-13.md",
+            reviewPacketPath:
+              "output/compiler-read-benchmarks/compiler-read-corpus-review-packet-first-reviewed-round-hand-frozen-2026-04-13.md",
+            manifestPath:
+              "output/compiler-read-benchmarks/compiler-read-corpus-sample-first-reviewed-round-hand-frozen-2026-04-13.manifest.json",
+          },
+          sourceTags: ["top useful case"],
+          promotionReasons: ["High-signal useful case worth promoting later."],
+          preReviewUsefulnessSignal: 3,
+        },
+      ],
+    },
+    packetB: {
+      packetId: "historical:artifact",
+      packetKind: "historical_replay_packet",
+      title: "Packet B: Replay Pilot 0",
+      generatedAt: "2026-04-14T02:44:04.622Z",
+      sourceArtifactPath:
+        "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.json",
+      manifestSourcePath: "docs/benchmark-manifest-historical-replay-pilot-2026-04-13.json",
+      summaryMetrics: {
+        stableUsefulRate: 0.7778,
+        repeatStabilityRate: 0.7778,
+        classificationStabilityRate: 0.7778,
+        groundingPassRate: 0.4444,
+      },
+      recommendation: "pilot useful but full dossier not justified yet",
+      trustCaveats: ["This replay packet still includes an explicit current-snapshot exception."],
+      entries: [
+        {
+          entryId: "pivot-foundation",
+          packetKind: "historical_replay_packet",
+          label: "pivot-foundation",
+          sourcePath: "docs/ide-pivot-reset-foundation-2026-04-09.md",
+          category: "edge",
+          outcomeClass: "mixed",
+          readDisposition: "needs_more_witness",
+          primaryFinding: "The language can hold part of this document, but the central protocol still needs stronger witness.",
+          nextMoves: ["Keep the operational subset, then rerun Compiler Read."],
+          repeatStability: {
+            repeatStable: false,
+            summary: "unstable across repeats (outcome_changed, disposition_changed)",
+            instabilityReasons: ["outcome_changed", "disposition_changed"],
+          },
+          repeatDrift: {
+            isDrifting: true,
+            changedFields: ["outcomeClass", "readDisposition"],
+            runA: {
+              ok: true,
+              runIndex: 0,
+              compilerRead: {
+                outcomeClass: "mixed",
+                verdict: { readDisposition: "needs_more_witness" },
+              },
+            },
+            runB: {
+              ok: true,
+              runIndex: 1,
+              compilerRead: {
+                outcomeClass: "raw_not_direct_source",
+                verdict: { readDisposition: "informative_only" },
+              },
+            },
+          },
+          groundingRejectedClaimCount: 1,
+          lookAheadSummary: {
+            mode: "historical_commit",
+            currentHeadExists: true,
+            currentHeadPath: "docs/ide-pivot-reset-foundation-2026-04-09.md",
+            nextCommits: [],
+          },
+          currentSnapshotException: null,
+          detailArtifactRefs: {
+            packetJsonPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.json",
+            packetMarkdownPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.md",
+            reviewPacketPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-review-packet-2026-04-13.md",
+            manifestPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.manifest.json",
+          },
+          trustCaveats: ["Repeat drift is visible and should be treated as honest uncertainty."],
+          eraLabel: "pivot",
+          documentFamily: "foundation",
+        },
+        {
+          entryId: "origin-evolution-feedback",
+          packetKind: "historical_replay_packet",
+          label: "origin-evolution-feedback",
+          sourcePath:
+            "docs/LoegosSeed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
+          category: "honest_limit",
+          outcomeClass: "raw_not_direct_source",
+          readDisposition: "informative_only",
+          primaryFinding: "The document is not direct source, so the structural read stays open at the interpretation boundary.",
+          nextMoves: ["Read the translated subset or embedded executable layer before deciding what this document can carry."],
+          repeatStability: {
+            repeatStable: true,
+            summary: "stable across repeats",
+            instabilityReasons: [],
+          },
+          repeatDrift: {
+            isDrifting: false,
+            changedFields: [],
+            runA: null,
+            runB: null,
+          },
+          groundingRejectedClaimCount: 2,
+          lookAheadSummary: {
+            mode: "historical_commit",
+            currentHeadExists: true,
+            currentHeadPath:
+              "docs/LoegosSeed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
+            nextCommits: [{ commitHash: "15e113d", subject: "Consolidate Loegos seed docs and tighten v1 workbench spec" }],
+          },
+          currentSnapshotException: null,
+          detailArtifactRefs: {
+            packetJsonPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.json",
+            packetMarkdownPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.md",
+            reviewPacketPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-review-packet-2026-04-13.md",
+            manifestPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.manifest.json",
+          },
+          trustCaveats: ["The read stayed open at an honest limit."],
+          eraLabel: "informative_limit",
+          documentFamily: "origin",
+        },
+        {
+          entryId: "compiler-read-spec-current-snapshot",
+          packetKind: "historical_replay_packet",
+          label: "compiler-read-spec-current-snapshot",
+          sourcePath: "docs/compiler-read-spec-2026-04-13.md",
+          category: "clean",
+          outcomeClass: "mixed",
+          readDisposition: "needs_more_witness",
+          primaryFinding: "The language can hold part of this document, but the central protocol still needs stronger witness.",
+          nextMoves: ["Add one quoted witness or external citation for the central protocol claim."],
+          repeatStability: {
+            repeatStable: true,
+            summary: "stable across repeats",
+            instabilityReasons: [],
+          },
+          repeatDrift: {
+            isDrifting: false,
+            changedFields: [],
+            runA: null,
+            runB: null,
+          },
+          groundingRejectedClaimCount: 0,
+          lookAheadSummary: {
+            mode: "current_snapshot_only",
+            currentHeadExists: false,
+            currentHeadPath: null,
+            nextCommits: [],
+            pinExceptionReason: "This document exists in the working tree but has no reachable git introduction commit in this worktree.",
+          },
+          currentSnapshotException: {
+            reason: "This document exists in the working tree but has no reachable git introduction commit in this worktree.",
+            mode: "current_snapshot",
+          },
+          detailArtifactRefs: {
+            packetJsonPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.json",
+            packetMarkdownPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.md",
+            reviewPacketPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-review-packet-2026-04-13.md",
+            manifestPath:
+              "output/compiler-read-benchmarks/compiler-read-historical-replay-pilot-2026-04-13.manifest.json",
+          },
+          trustCaveats: ["This entry is a current-snapshot exception."],
+          eraLabel: "compiler_read",
+          documentFamily: "spec",
+        },
+      ],
+      currentSnapshotExceptions: [
+        {
+          replayId: "compiler-read-spec-current-snapshot",
+          sourcePath: "docs/compiler-read-spec-2026-04-13.md",
+          reason: "This document exists in the working tree but has no reachable git introduction commit in this worktree.",
+        },
+      ],
+    },
+    session: {
+      id: "review_session_1",
+      status: "in_progress",
+      overallDecision: "",
+      overallSummary: "",
+      entries: [
+        {
+          id: "entry_saved",
+          sessionId: "review_session_1",
+          packetKind: "present_day_packet",
+          entryId: "docs/seven-operate-receipt-contract.md",
+          honestyScore: 3,
+          understandabilityScore: 2,
+          specificityScore: 2,
+          actionabilityScore: 2,
+          convergenceValueScore: 3,
+          wouldUseAgainScore: 2,
+          laterHistoryJudgment: null,
+          moveWouldTakeNow: "Pull one trace before changing the flow.",
+          driftAssessment: null,
+          notes: "Strong and usable.",
+        },
+      ],
+    },
+  };
+
+  await page.route("**/api/replay-review/current", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(currentPayload),
+    });
+  });
+
+  await page.route("**/api/replay-review/session", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(currentPayload),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        session: {
+          ...currentPayload.session,
+          status: route.request().postDataJSON()?.status || "in_progress",
+          overallDecision: route.request().postDataJSON()?.overallDecision || "",
+          overallSummary: route.request().postDataJSON()?.overallSummary || "",
+        },
+      }),
+    });
+  });
+
+  await page.route("**/api/replay-review/entry", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        entry: route.request().postDataJSON(),
+      }),
+    });
+  });
+}
+
 test("dream library uploads markdown, plays, pauses, and restores the last position", async ({
   page,
 }) => {
@@ -349,4 +660,42 @@ test("dream runs compiler read inline and clears it on refresh", async ({ page }
   await page.reload({ waitUntil: "commit" });
   await expect(page.getByTestId("dream-player")).toContainText("field-notes.md");
   await expect(page.getByTestId("dream-compiler-read-panel")).toHaveCount(0);
+});
+
+test("dream opens replay review inline and surfaces clean, edge, and honest-limit packets", async ({
+  page,
+}) => {
+  await bootstrapGuardian(page);
+  await mockReplayReview(page);
+
+  await page.goto("/dream", { waitUntil: "commit" });
+  await expect(page.getByTestId("dream-screen")).toBeVisible();
+
+  await page.getByTestId("dream-replay-review").click();
+  await expect(page.getByTestId("dream-replay-review-panel")).toBeVisible();
+  await expect(page.getByTestId("dream-replay-review-entry-title")).toContainText(
+    "seven-operate-receipt-contract.md",
+  );
+  await expect(page.getByTestId("dream-replay-review-save-status")).toContainText("Autosave");
+
+  await page.getByTestId("dream-replay-review-packet-historical_replay_packet").click();
+  await expect(page.getByTestId("dream-replay-review-entry-title")).toContainText(
+    "pivot-foundation",
+  );
+  await expect(page.getByTestId("dream-replay-review-panel")).toContainText("Changed fields");
+
+  await page.getByRole("button", { name: "origin-evolution-feedback" }).click();
+  await expect(page.getByTestId("dream-replay-review-honest-limit")).toContainText(
+    "restraint, not failure",
+  );
+
+  await page.getByRole("button", { name: "compiler-read-spec-current-snapshot" }).click();
+  await expect(page.getByTestId("dream-replay-review-snapshot-exception")).toContainText(
+    "Current-snapshot exception",
+  );
+
+  await page.getByTestId("dream-replay-review-context-toggle").click();
+  await expect(page.getByTestId("dream-replay-review-context")).toContainText(
+    "Next commits: none recorded in this replay summary.",
+  );
 });

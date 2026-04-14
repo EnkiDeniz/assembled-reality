@@ -76,6 +76,30 @@ enum ListeningSessionStatus {
   PAUSED
 }
 
+enum ReplayReviewStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ReplayReviewPacketKind {
+  PRESENT_DAY_PACKET
+  HISTORICAL_REPLAY_PACKET
+}
+
+enum ReplayLaterHistoryJudgment {
+  SUPPORTED
+  WEAKENED
+  MIXED
+  UNCLEAR
+}
+
+enum ReplayOverallDecision {
+  WIDEN_REPLAY_LANE
+  HOLD_REPLAY_LANE_FIX_DIAGNOSTICS_FIRST
+  HOLD_REPLAY_LANE_FIX_GROUNDING_FIRST
+  PILOT_NOT_USEFUL_YET
+}
+
 enum ReaderProjectDocumentRole {
   SOURCE
   ASSEMBLY
@@ -107,6 +131,7 @@ model User {
   readerListeningSessions ReaderListeningSession[]
   readerOperateRuns    ReaderOperateRun[]
   readerAttestedOverrides ReaderAttestedOverride[]
+  replayReviewSessions ReplayReviewSession[]
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 }
@@ -495,6 +520,48 @@ model ReaderListeningSession {
 
   @@unique([readerProfileId, documentKey])
   @@index([userId, documentKey])
+}
+
+model ReplayReviewSession {
+  id               String                @id @default(cuid())
+  userId           String
+  reviewKey        String
+  status           ReplayReviewStatus    @default(IN_PROGRESS)
+  packetAArtifactId String
+  packetBArtifactId String
+  overallDecision  ReplayOverallDecision?
+  overallSummary   String?               @db.Text
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries          ReplayReviewEntry[]
+
+  @@unique([userId, reviewKey])
+  @@index([userId, status, updatedAt])
+}
+
+model ReplayReviewEntry {
+  id                     String                     @id @default(cuid())
+  sessionId              String
+  packetKind             ReplayReviewPacketKind
+  entryId                String
+  honestyScore           Int?
+  understandabilityScore Int?
+  specificityScore       Int?
+  actionabilityScore     Int?
+  convergenceValueScore  Int?
+  wouldUseAgainScore     Int?
+  laterHistoryJudgment   ReplayLaterHistoryJudgment?
+  moveWouldTakeNow       String?                    @db.Text
+  driftAssessment        String?                    @db.Text
+  notes                  String?                    @db.Text
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  session                ReplayReviewSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, packetKind, entryId])
+  @@index([sessionId, packetKind, updatedAt])
 }
 
 model Account {

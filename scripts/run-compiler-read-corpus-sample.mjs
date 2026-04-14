@@ -210,6 +210,12 @@ function hashContent(value = "") {
   return crypto.createHash("sha256").update(String(value || ""), "utf8").digest("hex");
 }
 
+function buildArtifactId(kind = "", meta = {}) {
+  const seed = normalizeText(meta.seed || meta.manifestSourcePath || meta.generatedAt);
+  const digest = hashContent(`${kind}:${seed}:${normalizeText(meta.generatedAt)}`).slice(0, 16);
+  return `${kind}:${digest}`;
+}
+
 function summarizeSampledDocument(document) {
   return {
     documentPath: document.relativePath,
@@ -1212,6 +1218,19 @@ async function runBenchmark(options) {
   report.fixturePromotionCandidates = buildFixturePromotionCandidates(results, options.reviewCount);
   report.repeatInstabilityCases = buildRepeatInstabilityCases(results);
   report.recommendedNextTighteningStep = recommendNextTighteningStep(report);
+  report.reviewPacketEntries = buildReviewPacketEntries(report).map((entry) => ({
+    ...entry,
+    entryId: entry.documentPath,
+    packetKind: "present_day_packet",
+    groundingRejectedClaimCount: Number(
+      summarizePrimaryRun(results.find((document) => document.documentPath === entry.documentPath))
+        ?.compilerRead?.groundingRejectedClaimCount || 0,
+    ),
+  }));
+  report.packetKind = "present_day_packet";
+  report.artifactId = buildArtifactId("present_day_packet", report.meta);
+  report.recommendation = report.recommendedNextTighteningStep;
+  report.currentSnapshotExceptions = [];
 
   return report;
 }

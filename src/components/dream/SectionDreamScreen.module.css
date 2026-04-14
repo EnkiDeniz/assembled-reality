@@ -304,6 +304,48 @@
   font-size: 0.78rem;
 }
 
+.actionButtonActive {
+  border-color: rgba(94, 167, 255, 0.3);
+  background: rgba(94, 167, 255, 0.12);
+}
+
+.insightModeSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  width: fit-content;
+}
+
+.insightModeButton {
+  border: 0;
+  background: transparent;
+  color: rgba(244, 245, 247, 0.66);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.insightModeButton:hover,
+.insightModeButton:focus-visible {
+  color: rgba(244, 245, 247, 0.96);
+  transform: translateY(-1px);
+}
+
+.insightModeButtonActive {
+  background: rgba(94, 167, 255, 0.16);
+  color: rgba(244, 245, 247, 0.98);
+}
+
 .compilerReadPanel {
   display: grid;
   gap: 14px;
@@ -444,6 +486,263 @@
   white-space: pre-wrap;
 }
 
+.replayReviewPanel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(127, 217, 160, 0.14);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(127, 217, 160, 0.08), transparent 42%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.replayReviewHead,
+.replayReviewSectionHead,
+.replayReviewEntryHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.replayReviewIdentity,
+.replayReviewEntryIdentity,
+.replayReviewSectionHead {
+  min-width: 0;
+}
+
+.replayReviewIdentity,
+.replayReviewEntryIdentity {
+  display: grid;
+  gap: 6px;
+}
+
+.replayReviewIdentity strong,
+.replayReviewEntryIdentity strong,
+.replayReviewRailCard strong,
+.replayReviewSection strong,
+.replayReviewContextBlock strong {
+  color: rgba(244, 245, 247, 0.96);
+}
+
+.replayReviewEntryIdentity p,
+.replayReviewRailNote,
+.replayReviewMetaCopy,
+.replayReviewContextBlock p {
+  margin: 0;
+  color: rgba(244, 245, 247, 0.64);
+  line-height: 1.55;
+}
+
+.replayReviewLayout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+}
+
+.replayReviewRail,
+.replayReviewMain {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.replayReviewPacketSwitch,
+.replayReviewEntryList {
+  display: grid;
+  gap: 8px;
+}
+
+.replayReviewPacketButton,
+.replayReviewEntryButton {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.replayReviewPacketButton:hover,
+.replayReviewPacketButton:focus-visible,
+.replayReviewEntryButton:hover,
+.replayReviewEntryButton:focus-visible,
+.replayReviewPacketButtonActive,
+.replayReviewEntryButtonActive {
+  border-color: rgba(127, 217, 160, 0.24);
+  background: rgba(127, 217, 160, 0.09);
+  transform: translateY(-1px);
+}
+
+.replayReviewPacketButton {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.replayReviewPacketButton strong,
+.replayReviewEntryButtonCopy strong {
+  display: block;
+  color: rgba(244, 245, 247, 0.94);
+}
+
+.replayReviewPacketButton span,
+.replayReviewEntryButtonCopy span {
+  color: rgba(244, 245, 247, 0.58);
+  font-size: 0.78rem;
+}
+
+.replayReviewRailCard,
+.replayReviewSection,
+.replayReviewContext,
+.replayReviewCompletion {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.replayReviewMetricList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.replayReviewMetricList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(244, 245, 247, 0.7);
+}
+
+.replayReviewMetricList strong {
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.replayReviewChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.replayReviewCallout {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid rgba(127, 217, 160, 0.16);
+  border-radius: 18px;
+  background: rgba(127, 217, 160, 0.08);
+  color: rgba(244, 245, 247, 0.92);
+}
+
+.replayReviewScoreGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.replayReviewScoreField,
+.replayReviewField {
+  display: grid;
+  gap: 8px;
+}
+
+.replayReviewScoreField span,
+.replayReviewField span {
+  color: rgba(244, 245, 247, 0.72);
+  font-size: 0.82rem;
+}
+
+.replayReviewScoreScale {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.replayReviewScoreButton {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(7, 8, 11, 0.42);
+  color: rgba(244, 245, 247, 0.78);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.replayReviewScoreButtonActive,
+.replayReviewScoreButton:hover,
+.replayReviewScoreButton:focus-visible {
+  border-color: rgba(127, 217, 160, 0.3);
+  background: rgba(127, 217, 160, 0.14);
+  color: rgba(244, 245, 247, 0.96);
+}
+
+.replayReviewField input,
+.replayReviewField textarea,
+.replayReviewField select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(7, 8, 11, 0.54);
+  color: rgba(244, 245, 247, 0.96);
+  font: inherit;
+}
+
+.replayReviewField input,
+.replayReviewField select {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.replayReviewField textarea {
+  min-height: 120px;
+  resize: vertical;
+  padding: 12px 14px;
+  line-height: 1.55;
+}
+
+.replayReviewDrift,
+.replayReviewContextBlock {
+  display: grid;
+  gap: 10px;
+}
+
+.replayReviewDrift p {
+  margin: 0;
+  color: rgba(244, 245, 247, 0.72);
+}
+
+.replayReviewActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.replayReviewFooter {
+  min-height: 20px;
+  color: rgba(244, 245, 247, 0.6);
+  font-size: 0.78rem;
+}
+
 .textarea {
   min-height: 160px;
   resize: vertical;
@@ -513,6 +812,10 @@
 }
 
 @media (max-width: 959px) {
+  .replayReviewLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .libraryToggle {
     display: inline-flex;
   }
@@ -541,6 +844,11 @@
   }
 
   .transportRow {
+    justify-content: space-between;
+  }
+
+  .insightModeSwitch {
+    width: 100%;
     justify-content: space-between;
   }
 
@@ -588,6 +896,10 @@
     min-height: min(46vh, 460px);
     gap: 14px;
   }
+
+  .replayReviewScoreGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 420px) {
@@ -613,6 +925,10 @@
 
   .actionButton span {
     display: none;
+  }
+
+  .insightModeButton {
+    width: 100%;
   }
 
   .libraryToggle {
