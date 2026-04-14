@@ -186,14 +186,15 @@ test("dream storage saves documents, creates new versions, persists compiler rea
     assert.equal(withRead.compilerRead?.contentHash, withRead.contentHash);
 
     const restored = await restorePreviousDreamDocumentVersion(withRead);
-    assert.equal(restored.versionCount, 2);
-    assert.equal(restored.hasPreviousVersion, false);
+    assert.equal(restored.versionCount, 3);
+    assert.equal(restored.hasPreviousVersion, true);
     assert.equal(restored.rawMarkdown.includes("Version one."), true);
+    assert.equal(restored.currentVersion?.parentVersionId, withRead.currentVersionId);
 
     const loaded = await loadDreamDocument(saved.id);
     assert.equal(loaded.rawMarkdown.includes("Version one."), true);
     assert.equal(Array.isArray(loaded.versions), true);
-    assert.equal(loaded.versions.length, 2);
+    assert.equal(loaded.versions.length, 3);
   } finally {
     restore();
   }

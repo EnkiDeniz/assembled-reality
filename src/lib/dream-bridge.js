@@ -1,5 +1,5 @@
 const BRIDGE_KEY = "assembled-reality:dream-bridge:v1";
-const BRIDGE_KINDS = new Set(["passage", "note", "witness"]);
+const BRIDGE_KINDS = new Set(["passage", "note", "witness", "read_summary"]);
 const BRIDGE_STATES = new Set(["pending", "armed", "dismissed", "sent"]);
 
 function normalizeText(value = "") {
@@ -48,6 +48,17 @@ export function normalizeDreamBridgePayload(payload = null) {
     normalizeText(nextPayload.documentTitle) ||
     "Library document";
   const provenanceLabel = normalizeText(nextPayload.provenanceLabel) || "From Library";
+  const versionId = normalizeText(nextPayload.versionId) || null;
+  const versionLabel = normalizeText(nextPayload.versionLabel) || null;
+  const readSummary =
+    nextPayload.readSummary && typeof nextPayload.readSummary === "object"
+      ? {
+          primaryFinding: normalizeText(nextPayload.readSummary.primaryFinding),
+          nextMove: normalizeText(nextPayload.readSummary.nextMove),
+          readDisposition: normalizeText(nextPayload.readSummary.readDisposition),
+        }
+      : null;
+  const receiptStatus = normalizeText(nextPayload.receiptStatus) || "";
 
   return {
     kind: BRIDGE_KINDS.has(kind) ? kind : "passage",
@@ -56,9 +67,17 @@ export function normalizeDreamBridgePayload(payload = null) {
     documentTitle: normalizeText(nextPayload.documentTitle) || sourceLabel,
     sourceLabel,
     provenanceLabel,
+    versionId,
+    versionLabel,
     anchor: normalizeText(nextPayload.anchor) || null,
     excerpt,
     savedAt: normalizeSavedAt(nextPayload.savedAt),
+    readSummary:
+      readSummary &&
+      (readSummary.primaryFinding || readSummary.nextMove || readSummary.readDisposition)
+        ? readSummary
+        : null,
+    receiptStatus: receiptStatus || null,
   };
 }
 

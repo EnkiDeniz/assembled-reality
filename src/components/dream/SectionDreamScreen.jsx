@@ -51,6 +51,7 @@ import {
   getDreamDocumentCurrentVersion,
   listDreamDocuments,
   loadActiveDreamDocument,
+  loadDreamDocument,
   loadDreamSession,
   replaceActiveDreamDocument,
   restorePreviousDreamDocumentVersion,
@@ -219,6 +220,12 @@ export default function SectionDreamScreen({
   const visibleCompilerReadPending = compilerReadPending;
   const compilerReadSheetOpen = showCompilerReadSheet;
   const currentVersion = dreamDocument?.currentVersion || getDreamDocumentCurrentVersion(dreamDocument);
+  const currentVersionIndex = Array.isArray(dreamDocument?.versions)
+    ? dreamDocument.versions.findIndex((version) => version.versionId === currentVersion?.versionId)
+    : -1;
+  const currentVersionNumber =
+    currentVersionIndex >= 0 ? currentVersionIndex + 1 : Number(dreamDocument?.versionCount) || 0;
+  const currentVersionLabel = currentVersionNumber ? `v${currentVersionNumber}` : "";
   const previousVersion =
     dreamDocument?.versions?.find((version) => version.versionId === currentVersion?.parentVersionId) || null;
   const previousCompilerRead = previousVersion?.compilerRead || null;
@@ -1253,6 +1260,10 @@ export default function SectionDreamScreen({
     cancelCompilerReadRequest();
     const requestId = compilerReadRequestIdRef.current;
     const requestDocumentId = activeDocument.id;
+    const requestVersionId =
+      activeDocument.currentVersionId ||
+      activeDocument.currentVersion?.versionId ||
+      "";
     const controller = new AbortController();
     compilerReadAbortRef.current = controller;
     setCompilerReadError("");
@@ -1288,7 +1299,15 @@ export default function SectionDreamScreen({
         return;
       }
 
-      const persistedDocument = await attachCompilerReadToDreamDocument(activeDocument, payload.compilerRead);
+      const latestDocument = await loadDreamDocument(requestDocumentId);
+      if (!latestDocument?.id || latestDocument.currentVersionId !== requestVersionId) {
+        return;
+      }
+
+      const persistedDocument = await attachCompilerReadToDreamDocument(
+        requestDocumentId,
+        payload.compilerRead,
+      );
       startTransition(() => {
         setDreamLibrary((current) => upsertDocument(current, persistedDocument));
         if (currentStateRef.current.dreamDocument?.id === persistedDocument.id) {
@@ -1394,6 +1413,8 @@ export default function SectionDreamScreen({
       kind: "passage",
       state: "pending",
       documentId: dreamDocument.id,
+      versionId: currentVersion?.versionId || null,
+      versionLabel: currentVersionLabel || null,
       documentTitle: dreamDocument.filename,
       sourceLabel: dreamDocument.filename,
       provenanceLabel: "From Library",
@@ -1417,6 +1438,8 @@ export default function SectionDreamScreen({
       kind: "read_summary",
       state: "pending",
       documentId: dreamDocument.id,
+      versionId: currentVersion?.versionId || null,
+      versionLabel: currentVersionLabel || null,
       documentTitle: dreamDocument.filename,
       sourceLabel: dreamDocument.filename,
       provenanceLabel: "From Library",
@@ -1468,7 +1491,7 @@ export default function SectionDreamScreen({
       await navigator.clipboard.writeText(
         formatCompilerReadAsMarkdown({
           title: dreamDocument?.filename || "",
-          versionLabel: currentVersion ? `v${dreamDocument?.versionCount || 1}` : "",
+          versionLabel: currentVersionLabel,
           versionCreatedAt: currentVersion?.createdAt || "",
           compilerRead: visibleCompilerRead,
         }),
@@ -1801,7 +1824,7 @@ export default function SectionDreamScreen({
                     data-testid="dream-paste-submit"
                   >
                     <FileText size={15} />
-                    <span>{dreamDocument?.id ? "Save as new version" : "Save document"}</span>
+                    <span>{dreamDocument?.id ? "Save as new version and rerun" : "Save document"}</span>
                   </button>
                 </div>
               </div>
@@ -1833,7 +1856,7 @@ export default function SectionDreamScreen({
                   </SignalChip>
                   {dreamDocument.versionCount > 1 ? (
                     <SignalChip tone="neutral">
-                      {`v${dreamDocument.versionCount}`}
+                      {currentVersionLabel}
                     </SignalChip>
                   ) : null}
                 </div>
@@ -1935,7 +1958,7 @@ export default function SectionDreamScreen({
                   documentId={dreamDocument.id}
                   compilerReadKey={currentVersion?.versionId || dreamDocument?.contentHash || ""}
                   documentTitle={dreamDocument.filename}
-                  versionLabel={currentVersion ? `v${dreamDocument.versionCount || 1}` : ""}
+                  versionLabel={currentVersionLabel}
                   versionCreatedAt={currentVersion?.createdAt || ""}
                   compilerRead={visibleCompilerRead}
                   pending={visibleCompilerReadPending}
@@ -2008,7 +2031,7 @@ export default function SectionDreamScreen({
             documentId={dreamDocument?.id || ""}
             compilerReadKey={currentVersion?.versionId || dreamDocument?.contentHash || ""}
             documentTitle={dreamDocument?.filename || ""}
-            versionLabel={currentVersion ? `v${dreamDocument?.versionCount || 1}` : ""}
+            versionLabel={currentVersionLabel}
             versionCreatedAt={currentVersion?.createdAt || ""}
             compilerRead={visibleCompilerRead}
             pending={visibleCompilerReadPending}

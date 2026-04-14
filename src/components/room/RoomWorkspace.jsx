@@ -422,6 +422,7 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
           ? "Read summary"
           : "Passage";
   const anchorLabel = normalizeText(payload?.anchor);
+  const versionLabel = normalizeText(payload?.versionLabel);
   const stateLabel =
     state === "armed"
       ? "Armed"
@@ -458,6 +459,7 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
         <div className={styles.dreamBridgeMeta}>
           <span>{kindLabel}</span>
           <span>Library</span>
+          {versionLabel ? <span>{versionLabel}</span> : null}
           <span>{stateLabel}</span>
           {anchorLabel ? <span>{anchorLabel}</span> : null}
           {normalizeText(payload?.savedAt) ? <span>{formatOperateTimestamp(payload.savedAt)}</span> : null}

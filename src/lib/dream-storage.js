@@ -532,11 +532,37 @@ export async function restorePreviousDreamDocumentVersion(documentOrId) {
     return projectDreamDocument(normalizedDocument);
   }
 
+  const previousVersion =
+    normalizedDocument.versions.find((version) => version.versionId === currentVersion.parentVersionId) ||
+    null;
+  if (!previousVersion?.versionId) {
+    return projectDreamDocument(normalizedDocument);
+  }
+
+  const createdAt = new Date().toISOString();
+  const restoredVersion = await buildDreamVersionRecord({
+    documentId: normalizedDocument.id,
+    rawMarkdown: previousVersion.rawMarkdown || "",
+    createdAt,
+  });
+  restoredVersion.parentVersionId = currentVersion.versionId || null;
+  if (previousVersion.compilerRead) {
+    restoredVersion.compilerRead = {
+      ...previousVersion.compilerRead,
+      contentHash:
+        restoredVersion.contentHash ||
+        normalizeText(previousVersion.compilerRead.contentHash) ||
+        null,
+    };
+    restoredVersion.compilerReadRanAt = previousVersion.compilerReadRanAt || createdAt;
+  }
+
   return persistStoredDreamDocument({
     ...normalizedDocument,
-    currentVersionId: currentVersion.parentVersionId,
-    updatedAt: new Date().toISOString(),
-    lastOpenedAt: new Date().toISOString(),
+    currentVersionId: restoredVersion.versionId,
+    updatedAt: createdAt,
+    lastOpenedAt: createdAt,
+    versions: [...normalizedDocument.versions, restoredVersion],
   });
 }
 
