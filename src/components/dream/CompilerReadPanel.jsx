@@ -2,9 +2,13 @@
 
 import { useSyncExternalStore } from "react";
 import { Kicker, SignalChip } from "@/components/shell/LoegosShell";
+import { buildCompilerReadDiagnosticsView } from "@/lib/compiler-read-diagnostics";
+import {
+  loadCompilerReadSelfCheck,
+  saveCompilerReadSelfCheck,
+  subscribeToCompilerReadSelfCheck,
+} from "@/lib/compiler-read-self-check";
 import styles from "@/components/dream/SectionDreamScreen.module.css";
-
-const SELF_CHECK_KEY = "assembled-reality:compiler-read-self-check:v1";
 
 function normalizeText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -23,18 +27,6 @@ function renderClaimMeta(claim) {
     sentenceCase(claim?.supportStatus),
     sentenceCase(claim?.translationReadiness),
   ].filter(Boolean);
-}
-
-function buildLayerDiagnostics(label, result) {
-  const diagnostics = Array.isArray(result?.diagnostics) ? result.diagnostics : [];
-  if (!diagnostics.length) {
-    return [];
-  }
-  return diagnostics.map((diagnostic) => ({
-    key: `${label}:${diagnostic.code}:${diagnostic.line || 0}`,
-    label,
-    text: `${sentenceCase(diagnostic.severity)} ${diagnostic.code}: ${diagnostic.message}`,
-  }));
 }
 
 function buildAdmissionSummary(rawDocumentResult = null) {
@@ -127,62 +119,11 @@ function isMeaningfulCompilerRead(compilerRead = null) {
   );
 }
 
-function getSelfCheckStorageKey(documentId = "") {
-  return `${SELF_CHECK_KEY}:${normalizeText(documentId) || "unknown"}`;
-}
-
-function loadSelfCheck(documentId = "") {
-  if (typeof window === "undefined" || !normalizeText(documentId)) return "";
-  try {
-    return normalizeText(window.localStorage.getItem(getSelfCheckStorageKey(documentId)));
-  } catch {
-    return "";
-  }
-}
-
-function saveSelfCheck(documentId = "", value = "") {
-  if (typeof window === "undefined" || !normalizeText(documentId)) return;
-  try {
-    if (!normalizeText(value)) {
-      window.localStorage.removeItem(getSelfCheckStorageKey(documentId));
-      window.dispatchEvent(new CustomEvent("compiler-read-self-check-change", { detail: { documentId } }));
-      return;
-    }
-    window.localStorage.setItem(getSelfCheckStorageKey(documentId), normalizeText(value));
-    window.dispatchEvent(new CustomEvent("compiler-read-self-check-change", { detail: { documentId } }));
-  } catch {
-    // Ignore local persistence failures and keep the read usable.
-  }
-}
-
-function subscribeToSelfCheck(documentId = "", callback = () => {}) {
-  if (typeof window === "undefined" || !normalizeText(documentId)) {
-    return () => {};
-  }
-
-  function handleStorage(event) {
-    if (event.key && event.key !== getSelfCheckStorageKey(documentId)) return;
-    callback();
-  }
-
-  function handleChange(event) {
-    if (normalizeText(event?.detail?.documentId) !== normalizeText(documentId)) return;
-    callback();
-  }
-
-  window.addEventListener("storage", handleStorage);
-  window.addEventListener("compiler-read-self-check-change", handleChange);
-  return () => {
-    window.removeEventListener("storage", handleStorage);
-    window.removeEventListener("compiler-read-self-check-change", handleChange);
-  };
-}
-
 function CompilerReadSelfCheck({ documentId = "", compilerRead = null }) {
   const meaningful = isMeaningfulCompilerRead(compilerRead);
   const selectedValue = useSyncExternalStore(
-    (callback) => subscribeToSelfCheck(documentId, callback),
-    () => loadSelfCheck(documentId),
+    (callback) => subscribeToCompilerReadSelfCheck(documentId, callback),
+    () => loadCompilerReadSelfCheck(documentId),
     () => "",
   );
 
@@ -211,7 +152,7 @@ function CompilerReadSelfCheck({ documentId = "", compilerRead = null }) {
             type="button"
             className={`${styles.compilerReadSelfCheckButton} ${selectedValue === option.value ? styles.compilerReadSelfCheckButtonActive : ""}`}
             onClick={() => {
-              saveSelfCheck(documentId, option.value);
+              saveCompilerReadSelfCheck(documentId, option.value);
             }}
             data-testid={`dream-compiler-read-self-check-${option.value}`}
           >
@@ -236,11 +177,11 @@ function CompilerReadDetail({ compilerRead = null }) {
   const omittedClaimDetails = omittedClaims
     .map((claimId) => claimSet.find((claim) => claim.id === claimId))
     .filter(Boolean);
-  const diagnostics = [
-    ...buildLayerDiagnostics("Raw source", rawDocumentResult),
-    ...buildLayerDiagnostics("Translated subset", translatedSubsetResult),
-    ...buildLayerDiagnostics("Embedded program", embeddedExecutableResult),
-  ];
+  const diagnosticsView = buildCompilerReadDiagnosticsView({
+    rawDocumentResult,
+    translatedSubsetResult,
+    embeddedExecutableResult,
+  });
   const embeddedSummary = buildEmbeddedSummary(embeddedExecutableResult);
 
   return (
@@ -305,14 +246,74 @@ function CompilerReadDetail({ compilerRead = null }) {
       <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-evidence">
         <summary>Show diagnostics and translation detail</summary>
         <div className={styles.compilerReadInspectBody}>
-          {diagnostics.length ? (
+          {diagnosticsView.buckets.length ? (
             <div className={styles.compilerReadInspectBlock} data-testid="dream-compiler-read-diagnostics">
               <Kicker tone="neutral">Diagnostics</Kicker>
-              <ul className={styles.compilerReadList}>
-                {diagnostics.map((diagnostic) => (
-                  <li key={diagnostic.key}>{diagnostic.label}: {diagnostic.text}</li>
+              <div className={styles.compilerReadDiagnosticBuckets}>
+                {diagnosticsView.buckets.map((bucket) => (
+                  <div
+                    key={bucket.id}
+                    className={styles.compilerReadDiagnosticBucket}
+                    data-testid={`dream-compiler-read-diagnostics-${bucket.id}`}
+                  >
+                    <div className={styles.compilerReadSectionHead}>
+                      <div className={styles.compilerReadIdentity}>
+                        <Kicker tone="neutral">{bucket.title}</Kicker>
+                        <strong>
+                          {bucket.id === "noise"
+                            ? "Repeated parser noise grouped for readability"
+                            : bucket.title}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className={styles.compilerReadDiagnosticGroupList}>
+                      {bucket.groups.map((group) => {
+                        const samples = group.sampleTokens.length
+                          ? group.sampleTokens
+                          : group.sampleMessages;
+                        return (
+                          <div key={group.key} className={styles.compilerReadDiagnosticGroup}>
+                            <div className={styles.compilerReadDiagnosticSummary}>
+                              <strong>
+                                {group.count > 1
+                                  ? `${group.code} ${group.family} · ${group.count} occurrences`
+                                  : `${group.code} ${group.family}`}
+                              </strong>
+                              {group.count === 1 && group.sampleMessages[0] && group.sampleMessages[0] !== group.family ? (
+                                <p>{group.sampleMessages[0]}</p>
+                              ) : null}
+                            </div>
+                            {samples.length ? (
+                              <div className={styles.compilerReadDiagnosticSamples}>
+                                {samples.map((sample) => (
+                                  <span key={`${group.key}:${sample}`} className={styles.compilerReadDiagnosticSample}>
+                                    {sample}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
+              {diagnosticsView.hasAggregation ? (
+                <details
+                  className={styles.compilerReadInspectNested}
+                  data-testid="dream-compiler-read-diagnostics-all"
+                >
+                  <summary>Show all parser events</summary>
+                  <ul className={styles.compilerReadList}>
+                    {diagnosticsView.flatEntries.map((diagnostic) => (
+                      <li key={diagnostic.key}>
+                        {diagnostic.layer}: {sentenceCase(diagnostic.severity)} {diagnostic.code}: {diagnostic.message}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
             </div>
           ) : null}
 
@@ -351,6 +352,9 @@ export default function CompilerReadPanel({
   error = "",
   mode = "summary",
   onOpenInspect = null,
+  actions = [],
+  showSelfCheck = false,
+  summaryRef = null,
 }) {
   if (!pending && !error && !compilerRead) {
     return null;
@@ -440,7 +444,11 @@ export default function CompilerReadPanel({
 
       {compilerRead ? (
         <>
-          <div className={styles.compilerReadSummaryLead} data-testid="dream-compiler-read-summary">
+          <div
+            ref={summaryRef}
+            className={styles.compilerReadSummaryLead}
+            data-testid="dream-compiler-read-summary"
+          >
             <div className={styles.compilerReadCard}>
               <Kicker tone="neutral">Finding</Kicker>
               <strong>{primaryFinding}</strong>
@@ -477,7 +485,25 @@ export default function CompilerReadPanel({
             </div>
           ) : null}
 
-          <CompilerReadSelfCheck documentId={documentId} compilerRead={compilerRead} />
+          {Array.isArray(actions) && actions.length ? (
+            <div className={styles.compilerReadActionRow} data-testid="dream-compiler-read-actions">
+              {actions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  className={styles.compilerReadInspectButton}
+                  onClick={action.onClick}
+                  data-testid={action.testId}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {showSelfCheck ? (
+            <CompilerReadSelfCheck documentId={documentId} compilerRead={compilerRead} />
+          ) : null}
         </>
       ) : null}
     </section>

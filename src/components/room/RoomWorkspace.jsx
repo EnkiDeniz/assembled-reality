@@ -29,12 +29,26 @@ import {
   normalizeDreamBridgePayload,
   saveDreamBridgePayload,
 } from "@/lib/dream-bridge";
+import { buildDreamDocumentRecord } from "@/lib/dream";
+import {
+  listDreamDocuments,
+  saveDreamDocument,
+  setActiveDreamDocument,
+} from "@/lib/dream-storage";
 import {
   buildWorkingEchoStripStateFromRoomView,
   normalizeSectionId,
 } from "@/lib/loegos-shell";
+import {
+  clearRuntimeSurfaceResumeLibrary,
+  loadRuntimeSurfaceResumeState,
+  saveRuntimeSurfaceResumeState,
+} from "@/lib/runtime-surface-resume";
 
 const DEFAULT_PROJECT_KEY = "default-project";
+const ROOM_DRAFT_PREFIX = "assembled-reality:room-draft:v1";
+const ROOM_IDLE_RESUME_MS = 15 * 60 * 1000;
+const BRIDGE_DISMISS_RECOVERY_MS = 8_000;
 
 const RECEIPT_RESULT_OPTIONS = [
   { value: "matched", label: "Matched" },
@@ -52,6 +66,54 @@ function normalizeText(value = "") {
 
 function normalizeLongForm(value = "") {
   return String(value || "").trim();
+}
+
+function loadSessionDraft(key = "") {
+  if (typeof window === "undefined" || !normalizeText(key)) return "";
+  try {
+    return normalizeLongForm(window.sessionStorage.getItem(key));
+  } catch {
+    return "";
+  }
+}
+
+function saveSessionDraft(key = "", value = "") {
+  if (typeof window === "undefined" || !normalizeText(key)) return;
+  try {
+    if (!normalizeLongForm(value)) {
+      window.sessionStorage.removeItem(key);
+      return;
+    }
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore draft persistence failures and keep the room usable.
+  }
+}
+
+function getRoomDraftKey(projectKey = "", sessionId = "") {
+  const normalizedProjectKey = normalizeText(projectKey) || DEFAULT_PROJECT_KEY;
+  const normalizedSessionId = normalizeText(sessionId);
+  if (!normalizedSessionId) return "";
+  return `${ROOM_DRAFT_PREFIX}:${normalizedProjectKey}:${normalizedSessionId}`;
+}
+
+function hasMeaningfulConversation(view = null) {
+  const messages = Array.isArray(view?.messages) ? view.messages : [];
+  const hasAssistantReply = messages.some(
+    (message) =>
+      normalizeText(message?.role).toLowerCase() === "assistant" &&
+      normalizeText(message?.content),
+  );
+  const workingEchoStripState = buildWorkingEchoStripStateFromRoomView(view);
+  return Boolean(hasAssistantReply || !workingEchoStripState?.dormant);
+}
+
+function buildDreamFilenameFromRoomSource(document = null) {
+  const originalFilename = normalizeText(document?.originalFilename);
+  if (originalFilename) return originalFilename;
+  const title = normalizeText(document?.title);
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return `${slug || "room-source"}.md`;
 }
 
 function buildWorkspaceHref(
@@ -295,7 +357,7 @@ function StatusChip({ view, floating = false }) {
   );
 }
 
-function ThreadIdentityBar({ view, onOpenThreads }) {
+function ThreadIdentityBar({ view, onOpenThreads, onNewConversation, canStartFresh = false }) {
   const roomTitle = normalizeText(view?.session?.title) || "Conversation";
   const roomLabel = normalizeText(view?.project?.title) || "Current room";
   const sessionCount = Array.isArray(view?.sessions) ? view.sessions.length : 0;
@@ -312,6 +374,17 @@ function ThreadIdentityBar({ view, onOpenThreads }) {
 
       <div className={styles.threadIdentityActions}>
         {view?.fieldState ? <StatusChip view={view} /> : null}
+        {canStartFresh ? (
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={onNewConversation}
+            data-testid="room-new-conversation"
+          >
+            <Plus size={14} />
+            New Conversation
+          </button>
+        ) : null}
         <button
           type="button"
           className={styles.contextButton}
@@ -335,9 +408,19 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
     normalizeText(payload?.sourceLabel) ||
     normalizeText(payload?.documentTitle) ||
     "Library document";
-  const excerpt = normalizeText(payload?.excerpt) || "Passage carried from Library.";
+  const readSummary = payload?.readSummary || null;
+  const excerpt =
+    normalizeText(readSummary?.primaryFinding) ||
+    normalizeText(payload?.excerpt) ||
+    "Passage carried from Library.";
   const kindLabel =
-    kind === "witness" ? "Witness" : kind === "note" ? "Note" : "Passage";
+    kind === "witness"
+      ? "Witness"
+      : kind === "note"
+        ? "Note"
+        : kind === "read_summary"
+          ? "Read summary"
+          : "Passage";
   const anchorLabel = normalizeText(payload?.anchor);
   const stateLabel =
     state === "armed"
@@ -345,6 +428,17 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
       : state === "sent"
         ? "Used in Room"
         : "Pending";
+  const stateCopy =
+    state === "armed"
+      ? "Armed: travels with your next turn."
+      : "Pending: available but not active.";
+  const provenanceLine =
+    kind === "read_summary"
+      ? "Read summary from Library"
+      : anchorLabel
+        ? "Traveling with source anchor"
+        : "Traveling from Library source";
+  const receiptLine = normalizeText(payload?.receiptStatus) || "Not yet receipted";
   const showUseAction = state === "pending" || state === "armed";
   const showDismissAction = state === "pending" || state === "armed";
 
@@ -354,6 +448,13 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
         <Kicker tone="brand">{normalizeText(payload?.provenanceLabel) || "From Library"}</Kicker>
         <strong>{sourceLabel}</strong>
         <p>{excerpt}</p>
+        {readSummary?.nextMove ? (
+          <p className={styles.dreamBridgeSummary}>Next move: {readSummary.nextMove}</p>
+        ) : null}
+        <p className={styles.dreamBridgeStateLine}>{stateCopy}</p>
+        <p className={styles.dreamBridgeStateLine}>
+          {provenanceLine}. {receiptLine}.
+        </p>
         <div className={styles.dreamBridgeMeta}>
           <span>{kindLabel}</span>
           <span>Library</span>
@@ -391,6 +492,47 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
         >
           Open Library
         </Link>
+      </div>
+    </div>
+  );
+}
+
+function DreamBridgeRecoveryNotice({ payload, onRestore }) {
+  if (!payload?.documentId) return null;
+
+  const kind = normalizeText(payload?.kind).toLowerCase();
+  const sourceLabel =
+    normalizeText(payload?.sourceLabel) ||
+    normalizeText(payload?.documentTitle) ||
+    "Library document";
+  const kindLabel =
+    kind === "witness"
+      ? "Witness"
+      : kind === "note"
+        ? "Note"
+        : kind === "read_summary"
+          ? "Read summary"
+          : "Passage";
+
+  return (
+    <div className={styles.dreamBridgeRecoveryNotice} data-testid="room-dream-bridge-recovery">
+      <div className={styles.dreamBridgeCopy}>
+        <Kicker tone="neutral">Bridge</Kicker>
+        <strong>Bridge dismissed</strong>
+        <p>
+          {kindLabel} from {sourceLabel} is no longer staged.
+        </p>
+      </div>
+
+      <div className={styles.dreamBridgeActions}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onRestore}
+          data-testid="dream-bridge-restore"
+        >
+          Restore
+        </button>
       </div>
     </div>
   );
@@ -834,26 +976,10 @@ function WorkingEchoStrip({ view, onOpenDetail }) {
 
 function StarterView({
   starter = null,
-  canCreateBox = false,
-  canCompose = false,
-  onCreateBox = null,
-  onOpenSource = null,
-  onFocusComposer = null,
+  onStartAction = null,
+  onTeachLiveIssue = null,
+  onTeachSourceDocument = null,
 }) {
-  function handleStarterAction(nextAction = "") {
-    if (canCreateBox && nextAction) {
-      onCreateBox?.(nextAction);
-      return;
-    }
-
-    if (nextAction === "talk") {
-      onFocusComposer?.();
-      return;
-    }
-
-    onOpenSource?.();
-  }
-
   return (
     <section className={styles.starter} data-testid="room-starter">
       <Kicker tone="neutral" className={styles.starterKicker}>
@@ -864,11 +990,29 @@ function StarterView({
         {starter?.secondLine ||
           "Paste a document, upload a file, or start talking. Open Library when you want to re-enter source first."}
       </p>
+      <div className={styles.starterFork} data-testid="room-starter-fork">
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onTeachLiveIssue}
+          data-testid="room-starter-live-issue"
+        >
+          Start with a live issue
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onTeachSourceDocument}
+          data-testid="room-starter-source-document"
+        >
+          Start with a source document
+        </button>
+      </div>
       <div className={styles.starterActions}>
         <button
           type="button"
           className={styles.secondaryButton}
-          onClick={() => handleStarterAction("paste")}
+          onClick={() => onStartAction?.("paste")}
           data-testid="room-starter-paste"
         >
           <FileText size={14} />
@@ -877,7 +1021,7 @@ function StarterView({
         <button
           type="button"
           className={styles.secondaryButton}
-          onClick={() => handleStarterAction("upload")}
+          onClick={() => onStartAction?.("upload")}
           data-testid="room-starter-upload"
         >
           <Upload size={14} />
@@ -885,8 +1029,8 @@ function StarterView({
         </button>
         <button
           type="button"
-          className={canCompose ? styles.primaryButton : styles.secondaryButton}
-          onClick={() => handleStarterAction("talk")}
+          className={styles.primaryButton}
+          onClick={() => onStartAction?.("talk")}
           data-testid="room-starter-talk"
         >
           <SendHorizontal size={14} />
@@ -897,6 +1041,84 @@ function StarterView({
         Or open <Link href="/dream">Library</Link> to re-enter a document first.
       </p>
     </section>
+  );
+}
+
+function PostAddGuidanceCard({
+  guidance = null,
+  onOpenLibrary = null,
+  onAskHere = null,
+  onDismiss = null,
+}) {
+  if (!guidance) return null;
+
+  return (
+    <div className={styles.postAddCard} data-testid="room-post-add-card">
+      <div className={styles.postAddCopy}>
+        <Kicker tone="grounded">Document added</Kicker>
+        <strong>{guidance.headline || "Your source is now in the room."}</strong>
+        <p>{guidance.body}</p>
+      </div>
+      <div className={styles.postAddActions}>
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={guidance.primaryAction === "library" ? onOpenLibrary : onAskHere}
+          data-testid="room-post-add-primary"
+        >
+          {guidance.primaryLabel}
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={guidance.primaryAction === "library" ? onAskHere : onOpenLibrary}
+          data-testid="room-post-add-secondary"
+        >
+          {guidance.secondaryLabel}
+        </button>
+        <button
+          type="button"
+          className={styles.inlineLinkButton}
+          onClick={onDismiss}
+          data-testid="room-post-add-dismiss"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RoomResumeBanner({ resume = null, onContinue = null, onReturnToLibrary = null, onDismiss = null }) {
+  if (!resume) return null;
+
+  return (
+    <div className={styles.resumeBanner} data-testid="room-resume-banner">
+      <div className={styles.postAddCopy}>
+        <Kicker tone="brand">Resume</Kicker>
+        <strong>Pick up where you left off.</strong>
+        <p>
+          Continue this Room, or return to Library
+          {resume.libraryTitle ? ` for ${resume.libraryTitle}` : ""}.
+        </p>
+      </div>
+      <div className={styles.postAddActions}>
+        <button type="button" className={styles.primaryButton} onClick={onContinue} data-testid="room-resume-continue">
+          Continue in Room
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onReturnToLibrary}
+          data-testid="room-resume-library"
+        >
+          Return to Library
+        </button>
+        <button type="button" className={styles.inlineLinkButton} onClick={onDismiss}>
+          Dismiss
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -996,14 +1218,19 @@ function CreateBoxForm({ onCreate, busy }) {
   );
 }
 
-function SourceTray({ projectKey, onComplete }) {
-  const [mode, setMode] = useState("upload");
+function SourceTray({ projectKey, onComplete, initialMode = "upload" }) {
+  const [mode, setMode] = useState(initialMode === "paste" ? "paste" : initialMode === "link" ? "link" : "upload");
   const [file, setFile] = useState(null);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (!normalizeText(initialMode)) return;
+    setMode(initialMode === "paste" ? "paste" : initialMode === "link" ? "link" : "upload");
+  }, [initialMode]);
 
   async function handleUpload(event) {
     event.preventDefault();
@@ -2183,6 +2410,7 @@ function WorkspaceSectionContent({
   mode,
   view,
   projectKey,
+  pendingStarterAction,
   highlightedRegion,
   mirrorCollapsed,
   workingEchoCollapsed,
@@ -2286,7 +2514,13 @@ function WorkspaceSectionContent({
   }
 
   if (mode === "source") {
-    return <SourceTray projectKey={projectKey} onComplete={onSourceComplete} />;
+    return (
+      <SourceTray
+        projectKey={projectKey}
+        onComplete={onSourceComplete}
+        initialMode={pendingStarterAction || "upload"}
+      />
+    );
   }
 
   if (mode === "create") {
@@ -2333,8 +2567,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   const [workingEchoCollapsed, setWorkingEchoCollapsed] = useState(false);
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
   const [pendingDreamBridgePayload, setPendingDreamBridgePayload] = useState(null);
+  const [dismissedDreamBridgePayload, setDismissedDreamBridgePayload] = useState(null);
   const [pendingStarterAction, setPendingStarterAction] = useState("");
   const [composerFocusSignal, setComposerFocusSignal] = useState(0);
+  const [postAddGuidance, setPostAddGuidance] = useState(null);
+  const [resumeBanner, setResumeBanner] = useState(null);
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
   const overlayIntentKeyRef = useRef("");
@@ -2344,6 +2581,21 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     (persistedDreamBridgePayload
       ? { ...persistedDreamBridgePayload, state: "sent" }
       : null);
+  const projectKey = view?.project?.projectKey || "";
+  const activeSessionId = view?.session?.id || "";
+  const currentFocusedDocumentKey = view?.focusedWitness?.documentKey || "";
+  const messages = Array.isArray(view?.messages) ? view.messages : [];
+  const roomDraftKey = getRoomDraftKey(projectKey, activeSessionId);
+  const hasRecentSources = Array.isArray(view?.recentSources) && view.recentSources.length > 0;
+  const meaningfulConversation = hasMeaningfulConversation(view);
+  const showStarter =
+    Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
+  const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
+  const composerPlaceholder = meaningfulConversation
+    ? "Continue the live issue or add new source"
+    : hasRecentSources
+      ? "Ask Seven about this source or name the issue"
+      : "Tell Seven what is live right now";
 
   useEffect(() => {
     setView(initialView);
@@ -2385,21 +2637,108 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       return;
     }
 
+    setDismissedDreamBridgePayload(null);
     setPendingDreamBridgePayload(incomingPayload);
   }, []);
 
-  const projectKey = view?.project?.projectKey || "";
-  const activeSessionId = view?.session?.id || "";
-  const currentFocusedDocumentKey = view?.focusedWitness?.documentKey || "";
-  const messages = Array.isArray(view?.messages) ? view.messages : [];
-  const showStarter =
-    Boolean(view?.starter?.show) && messages.length === 0 && !normalizeText(optimisticUserMessage);
-  const canSend = Boolean(normalizeText(projectKey) && normalizeText(activeSessionId));
+  useEffect(() => {
+    if (!dismissedDreamBridgePayload?.documentId) return;
+    const timeoutId = window.setTimeout(() => {
+      setDismissedDreamBridgePayload(null);
+    }, BRIDGE_DISMISS_RECOVERY_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [dismissedDreamBridgePayload]);
+
+  useEffect(() => {
+    if (!dreamBridgePayload?.documentId) return;
+    setDismissedDreamBridgePayload(null);
+  }, [dreamBridgePayload?.documentId, dreamBridgePayload?.savedAt, dreamBridgePayload?.state]);
+
+  useEffect(() => {
+    setDismissedDreamBridgePayload(null);
+  }, [activeSessionId, currentFocusedDocumentKey, projectKey]);
+
+  useEffect(() => {
+    if (!roomDraftKey) return;
+    setComposerText(loadSessionDraft(roomDraftKey));
+  }, [roomDraftKey]);
+
+  useEffect(() => {
+    if (!roomDraftKey) return;
+    saveSessionDraft(roomDraftKey, composerText);
+  }, [composerText, roomDraftKey]);
+
+  useEffect(() => {
+    if (!projectKey || !activeSessionId) return;
+    let cancelled = false;
+
+    async function syncResumeBanner() {
+      const previous = loadRuntimeSurfaceResumeState();
+      const lastSeenAt = Date.parse(previous?.lastSeenAt || "") || 0;
+      const shouldOfferLibraryResume = Boolean(
+        previous?.lastSurface === "dream" &&
+          previous?.library?.documentId &&
+          Date.now() - lastSeenAt >= ROOM_IDLE_RESUME_MS,
+      );
+
+      saveRuntimeSurfaceResumeState({
+        surface: "room",
+        room: {
+          projectKey,
+          sessionId: activeSessionId,
+          title: view?.session?.title || "Room",
+          updatedAt: view?.session?.updatedAt || new Date().toISOString(),
+        },
+      });
+
+      if (!shouldOfferLibraryResume) {
+        if (!cancelled) {
+          setResumeBanner(null);
+        }
+        return;
+      }
+
+      try {
+        const dreamDocuments = await listDreamDocuments();
+        const resumeDocument = dreamDocuments.find(
+          (document) => normalizeText(document?.id) === normalizeText(previous?.library?.documentId),
+        );
+        if (!resumeDocument?.id) {
+          clearRuntimeSurfaceResumeLibrary();
+          if (!cancelled) {
+            setResumeBanner(null);
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setResumeBanner({
+            documentId: resumeDocument.id,
+            anchor: previous.library.anchor || "",
+            libraryTitle: previous.library.title || resumeDocument.filename || "",
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setResumeBanner(null);
+        }
+      }
+    }
+
+    void syncResumeBanner();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSessionId, projectKey, view?.session?.title, view?.session?.updatedAt]);
 
   function applyRoomView(nextView, { clearPendingBridge = false } = {}) {
     setView(nextView);
     if (clearPendingBridge) {
       setPendingDreamBridgePayload(null);
+      setDismissedDreamBridgePayload(null);
       clearDreamBridgePayload();
     }
   }
@@ -2436,6 +2775,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       setComposerFocusSignal((current) => current + 1);
       return;
     }
+    setPendingStarterAction(normalizedAction);
     setOverlayMode("source");
   }
 
@@ -2472,6 +2812,8 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     try {
       await refreshRoom(nextProjectKey, "", "", "");
       setPendingDreamBridgePayload(null);
+      setPostAddGuidance(null);
+      setResumeBanner(null);
       clearDreamBridgePayload();
       setPendingStarterAction("");
       startActionTransition(() => {
@@ -2504,10 +2846,64 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     });
   }
 
-  async function handleSourceComplete() {
+  async function createDefaultBox(starterAction = "paste") {
+    const response = await fetch("/api/workspace/project", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "Untitled Box", subtitle: "" }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || "Could not create the box.");
+    }
+    await handleProjectSelect(payload?.project?.projectKey || "", {
+      starterAction,
+    });
+    return payload?.project?.projectKey || "";
+  }
+
+  async function seedLibraryDocumentFromRoomSource(sourceDocument = null) {
+    if (!sourceDocument?.rawMarkdown) return null;
+    try {
+      const documentRecord = await buildDreamDocumentRecord({
+        filename: buildDreamFilenameFromRoomSource(sourceDocument),
+        rawMarkdown: sourceDocument.rawMarkdown,
+        sourceKind: "upload",
+      });
+      await saveDreamDocument(documentRecord);
+      return documentRecord;
+    } catch {
+      return null;
+    }
+  }
+
+  function buildPostAddGuidance(nextView, dreamDocument = null) {
+    const meaningfulConversation = hasMeaningfulConversation(nextView);
+    return {
+      dreamDocumentId: dreamDocument?.id || "",
+      dreamAnchor: "",
+      primaryAction: meaningfulConversation ? "room" : "library",
+      primaryLabel: meaningfulConversation ? "Ask Seven here" : "Open in Library for structural read",
+      secondaryLabel: meaningfulConversation ? "Open in Library" : "Ask Seven here",
+      headline: meaningfulConversation
+        ? "Your source is ready inside the live thread."
+        : "Your source is ready for structural read.",
+      body: meaningfulConversation
+        ? "Stay in Room when the live issue is already underway. Open Library when you want a structural read before the next move."
+        : "Open Library when you want the structural read first. Stay here if you already know the question you want to ask Seven.",
+    };
+  }
+
+  async function handleSourceComplete(payload = null) {
     setActionError("");
-    await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey);
+    const sourceDocument = payload?.document || payload?.sourceDocument || null;
+    const seededDreamDocument = await seedLibraryDocumentFromRoomSource(sourceDocument);
+    const nextView = await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey);
+    setPostAddGuidance(buildPostAddGuidance(nextView, seededDreamDocument));
     setOverlayMode("");
+    setPendingStarterAction("");
   }
 
   async function handleCreateSession() {
@@ -2530,7 +2926,9 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       }
       applyRoomView(payload.view, { clearPendingBridge: true });
       setComposerText("");
+      saveSessionDraft(roomDraftKey, "");
       setMessageError("");
+      setPostAddGuidance(null);
       startActionTransition(() => {
         router.replace(
           buildWorkspaceHref(projectKey, {
@@ -2569,6 +2967,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
         throw new Error(payload?.error || "Could not open that conversation.");
       }
       applyRoomView(payload.view, { clearPendingBridge: true });
+      setPostAddGuidance(null);
       startActionTransition(() => {
         router.replace(
           buildWorkspaceHref(projectKey, {
@@ -2605,6 +3004,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
         throw new Error(payload?.error || "Could not archive that conversation.");
       }
       applyRoomView(payload.view, { clearPendingBridge: true });
+      setPostAddGuidance(null);
       startActionTransition(() => {
         router.replace(
           buildWorkspaceHref(projectKey, {
@@ -2631,7 +3031,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     setTurnPending(true);
     setMessageError("");
     setOptimisticUserMessage(message);
+    setPostAddGuidance(null);
+    setResumeBanner(null);
+    setDismissedDreamBridgePayload(null);
     setComposerText("");
+    saveSessionDraft(roomDraftKey, "");
     const bridgePayload =
       pendingDreamBridgePayload?.state === "armed" ? pendingDreamBridgePayload : null;
     try {
@@ -2821,9 +3225,78 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     handleCloseOverlay();
   }
 
+  async function handleStarterAction(nextAction = "") {
+    const normalizedAction = normalizeText(nextAction).toLowerCase();
+    if (!normalizedAction) return;
+
+    setActionError("");
+    try {
+      if (normalizedAction === "talk") {
+        if (!normalizeText(projectKey)) {
+          await createDefaultBox("talk");
+          return;
+        }
+        setComposerFocusSignal((current) => current + 1);
+        return;
+      }
+
+      if (!normalizeText(projectKey)) {
+        await createDefaultBox(normalizedAction);
+        return;
+      }
+
+      setPendingStarterAction(normalizedAction);
+      setOverlayMode("source");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not start the room.");
+    }
+  }
+
+  async function handleOpenSourceFromComposer() {
+    setActionError("");
+    try {
+      if (!normalizeText(projectKey)) {
+        await createDefaultBox("upload");
+        return;
+      }
+      setPendingStarterAction("upload");
+      setOverlayMode("source");
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not open source intake.");
+    }
+  }
+
+  function handleOpenGuidanceLibrary() {
+    if (postAddGuidance?.dreamDocumentId) {
+      setActiveDreamDocument(postAddGuidance.dreamDocumentId);
+      router.push(buildDreamHref(postAddGuidance.dreamDocumentId, postAddGuidance.dreamAnchor || ""));
+    } else {
+      router.push("/dream");
+    }
+    setPostAddGuidance(null);
+  }
+
+  function handleAskSevenHere() {
+    setPostAddGuidance(null);
+    setComposerFocusSignal((current) => current + 1);
+  }
+
+  function handleDismissResumeBanner() {
+    setResumeBanner(null);
+  }
+
+  function handleReturnToLibrary() {
+    if (!resumeBanner?.documentId) {
+      router.push("/dream");
+      return;
+    }
+    setActiveDreamDocument(resumeBanner.documentId);
+    router.push(buildDreamHref(resumeBanner.documentId, resumeBanner.anchor || ""));
+    setResumeBanner(null);
+  }
+
   function handleUseDreamBridge() {
     if (!dreamBridgePayload?.documentId) return;
-    const excerpt = normalizeText(dreamBridgePayload.excerpt);
     const nextPayload = normalizeDreamBridgePayload({
       ...dreamBridgePayload,
       state: "armed",
@@ -2832,15 +3305,23 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
       setPendingDreamBridgePayload(nextPayload);
       saveDreamBridgePayload(nextPayload);
     }
-    if (excerpt) {
-      setComposerText((current) => current || excerpt);
-    }
     setComposerFocusSignal((current) => current + 1);
   }
 
   function handleDismissDreamBridge() {
+    if (dreamBridgePayload?.documentId) {
+      setDismissedDreamBridgePayload(dreamBridgePayload);
+    }
     setPendingDreamBridgePayload(null);
     clearDreamBridgePayload();
+  }
+
+  function handleRestoreDreamBridge() {
+    const nextPayload = normalizeDreamBridgePayload(dismissedDreamBridgePayload);
+    if (!nextPayload?.documentId) return;
+    setPendingDreamBridgePayload(nextPayload);
+    saveDreamBridgePayload(nextPayload);
+    setDismissedDreamBridgePayload(null);
   }
 
   async function handleOpenWitness(nextDocumentKey = "") {
@@ -2899,6 +3380,9 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     if (nextMode === "create") {
       setPendingStarterAction("");
     }
+    if (nextMode === "source") {
+      setPendingStarterAction("");
+    }
     if (nextMode === "witness") {
       startActionTransition(() => {
         router.replace(
@@ -2928,11 +3412,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     activeSectionMode === "threads"
       ? { label: "Conversations", title: view?.session?.title || "Conversations" }
       : activeSectionMode === "mirror"
-      ? { label: "Mirror", title: view?.project?.title || "Room" }
+      ? { label: "Live Read", title: view?.project?.title || "Room" }
       : activeSectionMode === "witness"
-        ? { label: "Witness", title: view?.focusedWitness?.title || "Focused witness" }
+        ? { label: "Source Detail", title: view?.focusedWitness?.title || "Focused witness" }
         : activeSectionMode === "operate"
-          ? { label: "Operate", title: view?.project?.title || "Box advisory" }
+          ? { label: "Audit", title: view?.project?.title || "Box advisory" }
           : activeSectionMode === "source"
               ? { label: "Source", title: "Add source" }
               : activeSectionMode === "create"
@@ -2952,13 +3436,29 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
         <ThreadIdentityBar
           view={view}
           onOpenThreads={() => setOverlayMode("threads")}
+          onNewConversation={handleCreateSession}
+          canStartFresh={Boolean(projectKey)}
         />
+
+        {resumeBanner ? (
+          <RoomResumeBanner
+            resume={resumeBanner}
+            onContinue={handleDismissResumeBanner}
+            onReturnToLibrary={handleReturnToLibrary}
+            onDismiss={handleDismissResumeBanner}
+          />
+        ) : null}
 
         {dreamBridgePayload?.documentId ? (
           <DreamBridgeNotice
             payload={dreamBridgePayload}
             onUse={handleUseDreamBridge}
             onDismiss={handleDismissDreamBridge}
+          />
+        ) : dismissedDreamBridgePayload?.documentId ? (
+          <DreamBridgeRecoveryNotice
+            payload={dismissedDreamBridgePayload}
+            onRestore={handleRestoreDreamBridge}
           />
         ) : null}
 
@@ -2969,6 +3469,15 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           />
         ) : null}
 
+        {postAddGuidance ? (
+          <PostAddGuidanceCard
+            guidance={postAddGuidance}
+            onOpenLibrary={handleOpenGuidanceLibrary}
+            onAskHere={handleAskSevenHere}
+            onDismiss={() => setPostAddGuidance(null)}
+          />
+        ) : null}
+
         <div
           ref={threadRef}
           className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
@@ -2976,14 +3485,9 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           {showStarter ? (
             <StarterView
               starter={view?.starter}
-              canCreateBox={!normalizeText(projectKey)}
-              canCompose={canSend}
-              onCreateBox={(nextAction) => {
-                setPendingStarterAction(normalizeText(nextAction).toLowerCase());
-                setOverlayMode("create");
-              }}
-              onOpenSource={() => setOverlayMode("source")}
-              onFocusComposer={() => setComposerFocusSignal((current) => current + 1)}
+              onStartAction={(nextAction) => void handleStarterAction(nextAction)}
+              onTeachLiveIssue={() => void handleStarterAction("talk")}
+              onTeachSourceDocument={() => void handleStarterAction("paste")}
             />
           ) : null}
 
@@ -3038,16 +3542,9 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           onChange={setComposerText}
           onSubmit={handleTurnSubmit}
           pending={turnPending}
-          placeholder="Your word"
+          placeholder={composerPlaceholder}
           disabled={!canSend}
-          onOpenAttach={() => {
-            if (normalizeText(projectKey)) {
-              setOverlayMode("source");
-              return;
-            }
-            setPendingStarterAction("");
-            setOverlayMode("create");
-          }}
+          onOpenAttach={() => void handleOpenSourceFromComposer()}
           listenHref={view?.deepLinks?.reader || ""}
           focusSignal={composerFocusSignal}
         />
@@ -3062,6 +3559,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
             mode={activeSectionMode}
             view={view}
             projectKey={projectKey}
+            pendingStarterAction={pendingStarterAction}
             highlightedRegion={highlightedRegion}
             mirrorCollapsed={mirrorCollapsed}
             workingEchoCollapsed={workingEchoCollapsed}

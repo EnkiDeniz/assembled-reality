@@ -130,9 +130,11 @@
   gap: 8px;
   min-width: 0;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-.dreamBridgeNotice {
+.dreamBridgeNotice,
+.dreamBridgeRecoveryNotice {
   width: min(100%, 860px);
   margin: 0 auto;
   display: grid;
@@ -143,6 +145,13 @@
   background:
     linear-gradient(180deg, rgba(94, 167, 255, 0.08), transparent 70%),
     rgba(19, 21, 25, 0.92);
+}
+
+.dreamBridgeRecoveryNotice {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 70%),
+    rgba(19, 21, 25, 0.9);
 }
 
 .dreamBridgeCopy {
@@ -161,6 +170,15 @@
   margin: 0;
   color: rgba(242, 244, 247, 0.84);
   line-height: 1.55;
+}
+
+.dreamBridgeSummary {
+  color: rgba(242, 244, 247, 0.88);
+}
+
+.dreamBridgeStateLine {
+  color: rgba(198, 204, 212, 0.72);
+  font-size: 0.82rem;
 }
 
 .dreamBridgeMeta {
@@ -188,6 +206,45 @@
 
 .roomEchoStrip {
   width: 100%;
+}
+
+.postAddCard,
+.resumeBanner {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(111, 170, 244, 0.16);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(111, 170, 244, 0.08), transparent 70%),
+    rgba(19, 21, 25, 0.92);
+}
+
+.postAddCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.postAddCopy strong {
+  color: rgba(242, 244, 247, 0.96);
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-weight: 560;
+}
+
+.postAddCopy p {
+  margin: 0;
+  color: rgba(198, 204, 212, 0.8);
+  line-height: 1.6;
+}
+
+.postAddActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .sectionStack {
@@ -1680,6 +1737,12 @@
   color: var(--room-soft);
 }
 
+.starterFork {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .fieldChip {
   min-height: 30px;
   padding: 0 12px;
@@ -2797,6 +2860,7 @@
   .bannerStack,
   .threadIdentityBar,
   .dreamBridgeNotice,
+  .dreamBridgeRecoveryNotice,
   .roomEchoStripWrap,
   .thread {
     width: 100%;
@@ -2844,7 +2908,8 @@
   .bannerStack,
   .composerCapsule,
   .threadIdentityBar,
-  .dreamBridgeNotice {
+  .dreamBridgeNotice,
+  .dreamBridgeRecoveryNotice {
     width: 100%;
   }
 
@@ -2954,7 +3019,8 @@
   .bannerStack,
   .composerCapsule,
   .threadIdentityBar,
-  .dreamBridgeNotice {
+  .dreamBridgeNotice,
+  .dreamBridgeRecoveryNotice {
     width: 100%;
   }
 
