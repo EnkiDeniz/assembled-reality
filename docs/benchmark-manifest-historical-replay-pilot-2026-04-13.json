@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "name": "historical-replay-pilot-2026-04-13",
+  "purpose": "Founder-only historical replay pilot with commit-pinned milestone documents and one explicit current-snapshot exception for the untracked Compiler Read spec.",
+  "replayEntries": [
+    {
+      "replayId": "reader-readme",
+      "currentPath": "version 1/README.md",
+      "pathAtCommit": "version 1/README.md",
+      "commitHash": "0c786ac04bf6f2aa8f3a2a2234a5ecaac251d97d",
+      "eraLabel": "reader",
+      "documentFamily": "reader_readme"
+    },
+    {
+      "replayId": "workbench-spec",
+      "currentPath": "version 1/loegos-ui-language-workbench-spec-v1.0.md",
+      "pathAtCommit": "version 1/loegos-ui-language-workbench-spec-v1.0.md",
+      "commitHash": "15e113d6f36a02a4f18268167bcce2c29b03f9c9",
+      "eraLabel": "workbench",
+      "documentFamily": "workbench_spec"
+    },
+    {
+      "replayId": "pivot-foundation",
+      "currentPath": "docs/ide-pivot-reset-foundation-2026-04-09.md",
+      "pathAtCommit": "docs/ide-pivot-reset-foundation-2026-04-09.md",
+      "commitHash": "939a56f6f9e6fd932646d383b3fb65f232969a01",
+      "eraLabel": "pivot",
+      "documentFamily": "pivot_foundation"
+    },
+    {
+      "replayId": "next-phase-proposal",
+      "currentPath": "docs/final-next-phase-proposal-2026-04-11.md",
+      "pathAtCommit": "docs/final-next-phase-proposal-2026-04-11.md",
+      "commitHash": "7ea32c4202c5e5ad3384e5296b3f5d79afe5cf4f",
+      "eraLabel": "next_phase",
+      "documentFamily": "next_phase_proposal"
+    },
+    {
+      "replayId": "compiler-read-spec-current-snapshot",
+      "currentPath": "docs/compiler-read-spec-2026-04-13.md",
+      "pathAtCommit": "docs/compiler-read-spec-2026-04-13.md",
+      "commitHash": null,
+      "eraLabel": "compiler_read",
+      "documentFamily": "compiler_read_spec",
+      "sourceMode": "current_snapshot",
+      "pinExceptionReason": "This document exists in the working tree but has no reachable git introduction commit in this worktree."
+    },
+    {
+      "replayId": "room-dream-runtime",
+      "currentPath": "docs/room-dream-foundation-design-proposal-2026-04-13.md",
+      "pathAtCommit": "docs/room-dream-foundation-design-proposal-2026-04-13.md",
+      "commitHash": "99821ba3e91d6b49595972e41330b19bcae91840",
+      "eraLabel": "runtime",
+      "documentFamily": "room_dream_runtime"
+    },
+    {
+      "replayId": "loegos-positioning",
+      "currentPath": "docs/LoegosSeed/loegos-positioning-final.md",
+      "pathAtCommit": "docs/LoegosSeed/loegos-positioning-final.md",
+      "commitHash": "15e113d6f36a02a4f18268167bcce2c29b03f9c9",
+      "eraLabel": "edge_case",
+      "documentFamily": "loegos_positioning"
+    },
+    {
+      "replayId": "origin-evolution-feedback",
+      "currentPath": "docs/LoegosSeed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
+      "pathAtCommit": "docs/First seed/# Lœgos — Origin, Evolution, Feedback, and Receipt/# Lœgos — Origin, Evolution, Feedback, and Receipt.md",
+      "commitHash": "835dcaea477e33a28602d53f9dce0fd40a536c87",
+      "eraLabel": "informative_limit",
+      "documentFamily": "origin_evolution_feedback"
+    },
+    {
+      "replayId": "proposal-gate-contract",
+      "currentPath": "LoegosCLI/docs/seven-proposal-gate-contract-v0.md",
+      "pathAtCommit": "LoegosCLI/docs/seven-proposal-gate-contract-v0.md",
+      "commitHash": "939a56f6f9e6fd932646d383b3fb65f232969a01",
+      "eraLabel": "stable_operational",
+      "documentFamily": "proposal_gate_contract"
+    }
+  ]
+}
