@@ -28,7 +28,7 @@
   font-family: var(--shell-sans);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 14px;
   padding:
     calc(14px + env(safe-area-inset-top, 0px))
     14px
@@ -51,11 +51,11 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 14px;
-  padding: 18px 16px;
+  gap: 18px;
+  padding: 8px 18px 0 0;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 24%);
+  background: transparent;
   backdrop-filter: none;
   overflow: hidden;
   transition:
@@ -76,7 +76,7 @@
 
 .railHeader {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .wordmark,
@@ -98,6 +98,7 @@
 
 .railWorkspace,
 .workspaceBadge {
+  font-family: var(--shell-sans);
   display: inline-flex;
   align-items: center;
   min-height: 20px;
@@ -135,27 +136,23 @@
   display: none;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--shell-line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--shell-ink);
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--shell-soft);
   font-family: var(--shell-sans);
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    transform 160ms ease;
+  transition: color 160ms ease, transform 160ms ease;
 }
 
 .mobileShellTrigger:hover,
 .mobileShellTrigger:focus-visible {
   transform: translateY(-1px);
-  border-color: var(--shell-line-lit);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--shell-ink);
 }
 
 .topBarIdentity,
@@ -194,29 +191,24 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--shell-line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--shell-soft);
   font-family: var(--shell-sans);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease;
+  transition: transform 160ms ease, color 160ms ease;
 }
 
 .utilityButton:hover,
 .utilityButton:focus-visible {
   transform: translateY(-1px);
-  border-color: var(--shell-line-lit);
   color: var(--shell-ink);
 }
 
@@ -236,33 +228,33 @@
 }
 
 .modeSwitch {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--shell-line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .railBody {
   min-height: 0;
   overflow: auto;
-  padding-right: 4px;
+  padding-right: 6px;
   display: grid;
-  gap: 12px;
+  gap: 20px;
 }
 
 .modeTab {
-  min-width: 76px;
-  min-height: 34px;
+  min-width: 0;
+  min-height: 0;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 14px;
-  border-radius: 999px;
+  justify-content: flex-start;
+  padding: 0;
+  border-radius: 0;
   color: var(--shell-meta);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0;
   text-decoration: none;
@@ -280,7 +272,7 @@
 }
 
 .modeTabActive {
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
   color: var(--shell-ink);
   font-weight: 600;
 }
@@ -315,12 +307,12 @@
 }
 
 .surface {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 28%),
-    var(--shell-shell);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%),
+    rgba(24, 25, 28, 0.66);
+  box-shadow: none;
   backdrop-filter: blur(16px) saturate(1.08);
   overflow: hidden;
 }
@@ -365,9 +357,7 @@
 
 .emptyPlane {
   min-height: 100%;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%),
-    rgba(255, 255, 255, 0.015);
+  background: transparent;
 }
 
 .kicker {
@@ -377,7 +367,7 @@
   color: var(--shell-meta);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 

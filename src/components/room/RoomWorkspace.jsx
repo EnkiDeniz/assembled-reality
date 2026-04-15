@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  FileText,
   Headphones,
   Plus,
   SendHorizontal,
@@ -1000,7 +999,7 @@ function StarterView({
       <div className={styles.starterFork} data-testid="room-starter-fork">
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.starterTextAction}
           onClick={onTeachLiveIssue}
           data-testid="room-starter-live-issue"
         >
@@ -1008,40 +1007,27 @@ function StarterView({
         </button>
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.starterTextAction}
           onClick={onTeachSourceDocument}
           data-testid="room-starter-source-document"
         >
           Start with a source document
         </button>
-      </div>
-      <div className={styles.starterActions}>
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.starterTextAction}
           onClick={() => onStartAction?.("paste")}
           data-testid="room-starter-paste"
         >
-          <FileText size={14} />
           Paste document
         </button>
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.starterTextAction}
           onClick={() => onStartAction?.("upload")}
           data-testid="room-starter-upload"
         >
-          <Upload size={14} />
           Upload file
-        </button>
-        <button
-          type="button"
-          className={styles.primaryButton}
-          onClick={() => onStartAction?.("talk")}
-          data-testid="room-starter-talk"
-        >
-          <SendHorizontal size={14} />
-          Just start talking
         </button>
       </div>
       <p className={styles.starterHint}>
@@ -1131,35 +1117,34 @@ function RoomResumeBanner({ resume = null, onContinue = null, onReturnToLibrary 
 
 function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
   return (
-    <div className={styles.panel}>
-      <div className={styles.panelHead}>
+    <div className={styles.railSection}>
+      <div className={styles.railSectionHead}>
         <div>
           <Kicker tone="neutral">Assemblies</Kicker>
-          <strong>Open another assembly</strong>
+          <strong>Assemblies</strong>
         </div>
-        <button type="button" className={styles.secondaryButton} onClick={onCreate}>
-          <Plus size={14} />
+        <button type="button" className={styles.railTextAction} onClick={onCreate}>
           New Box
         </button>
       </div>
 
-      <div className={styles.projectList}>
+      <div className={styles.railList}>
         {(Array.isArray(projects) ? projects : []).map((project) => (
           <button
             key={project.projectKey}
             type="button"
             data-testid={`room-project-${project.projectKey}`}
-            className={`${styles.projectRow} ${project.projectKey === activeProjectKey ? styles.projectRowActive : ""}`}
+            className={`${styles.railRow} ${project.projectKey === activeProjectKey ? styles.railRowActive : ""}`}
             onClick={() => onSelect(project.projectKey)}
           >
-            <div>
+            <div className={styles.railRowCopy}>
               <strong>{project.title}</strong>
               <span>
                 {project.sourceCount || 0} source{project.sourceCount === 1 ? "" : "s"}
                 {project.receiptDraftCount ? ` • ${project.receiptDraftCount} receipt drafts` : ""}
               </span>
             </div>
-            {project.projectKey === activeProjectKey ? <span className={styles.projectBadge}>Open</span> : null}
+            {project.projectKey === activeProjectKey ? <span className={styles.railRowState}>Open</span> : null}
           </button>
         ))}
       </div>
@@ -1171,36 +1156,36 @@ function RoomArtifactList({ sources, onOpenWitness }) {
   const items = Array.isArray(sources) ? sources.filter(Boolean) : [];
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.panelHead}>
+    <div className={styles.railSection}>
+      <div className={styles.railSectionHead}>
         <div>
           <Kicker tone="neutral">Artifacts</Kicker>
-          <strong>Recent source</strong>
+          <strong>Artifacts</strong>
         </div>
-        <Link href="/dream" className={styles.inlineLinkButton}>
+        <Link href="/dream" className={styles.railTextAction}>
           Open Library
         </Link>
       </div>
 
       {!items.length ? (
-        <p className={styles.noticeText}>No source is attached to this assembly yet.</p>
+        <p className={styles.railEmptyText}>No source is attached to this assembly yet.</p>
       ) : (
-        <div className={styles.projectList}>
+        <div className={styles.railList}>
           {items.map((source) => (
             <button
               key={source.documentKey || source.title}
               type="button"
-              className={styles.projectRow}
+              className={styles.railRow}
               onClick={() => onOpenWitness?.(source.documentKey)}
               disabled={!normalizeText(source.documentKey)}
               data-testid={`room-artifact-${source.documentKey || source.title}`}
             >
-              <div>
+              <div className={styles.railRowCopy}>
                 <strong>{source.title || "Source"}</strong>
                 <span>{source.metaLine || source.badge || "Attached source"}</span>
               </div>
               {normalizeText(source.badge) ? (
-                <span className={styles.projectBadge}>{source.badge}</span>
+                <span className={styles.railRowState}>{source.badge}</span>
               ) : null}
             </button>
           ))}
@@ -1919,37 +1904,36 @@ function RoomSessionList({
   const items = Array.isArray(sessions) ? sessions : [];
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.panelHead}>
+    <div className={styles.railSection}>
+      <div className={styles.railSectionHead}>
         <div>
           <Kicker tone="neutral">Conversations</Kicker>
-          <strong>Continue or start fresh</strong>
+          <strong>Conversations</strong>
         </div>
-        <button type="button" className={styles.secondaryButton} onClick={onCreate} disabled={busy} data-testid="room-create-session">
-          <Plus size={14} />
-          New Conversation
+        <button type="button" className={styles.railTextAction} onClick={onCreate} disabled={busy} data-testid="room-create-session">
+          New
         </button>
       </div>
 
       {!items.length ? (
-        <p className={styles.noticeText}>No conversations yet.</p>
+        <p className={styles.railEmptyText}>No conversations yet.</p>
       ) : (
-        <div className={styles.projectList}>
+        <div className={styles.railList}>
           {items.map((session) => {
             const isActive = session?.id === activeSessionId;
             return (
               <div
                 key={session?.id || session?.sessionKey}
-                className={`${styles.projectRow} ${isActive ? styles.projectRowActive : ""}`}
+                className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
               >
                 <button
                   type="button"
                   data-testid={`room-session-${session?.id || session?.sessionKey}`}
-                  className={styles.sessionRowButton}
+                  className={styles.railRowButton}
                   onClick={() => onActivate?.(session?.id)}
                   disabled={busy || isActive}
                 >
-                  <div>
+                  <div className={styles.railRowCopy}>
                     <strong>{session?.title || "Conversation"}</strong>
                     <span>
                       {Number(session?.messageCount) || 0} message
@@ -1961,15 +1945,15 @@ function RoomSessionList({
                     ) : null}
                   </div>
                 </button>
-                <div className={styles.sessionRowActions}>
-                  {isActive ? <span className={styles.projectBadge}>Open</span> : null}
+                <div className={styles.railRowActions}>
+                  {isActive ? <span className={styles.railRowState}>Open</span> : null}
                   {!isActive && session?.isArchived ? (
-                    <span className={styles.projectBadge}>Archived</span>
+                    <span className={styles.railRowState}>Archived</span>
                   ) : null}
                   {!session?.isArchived ? (
                     <button
                       type="button"
-                      className={styles.ghostButton}
+                      className={styles.railInlineAction}
                       onClick={() => onArchive?.(session?.id)}
                       disabled={busy}
                     >
@@ -3540,8 +3524,8 @@ export default function RoomWorkspace({
       onClick={() => setOverlayMode("context")}
       data-testid="room-scope-control"
     >
-      <span>{assemblyTitle}</span>
-      <small>{scopeSummary}</small>
+      <span>{scopeSummary}</span>
+      <small>{assemblyTitle}</small>
     </button>
   );
 
@@ -3583,103 +3567,93 @@ export default function RoomWorkspace({
         </div>
       ) : null}
 
-      <ShellSurface className={styles.workspaceSurface} roomy>
-        <ThreadIdentityBar
-          view={view}
-          onOpenThreads={() => setOverlayMode("threads")}
-          onNewConversation={handleCreateSession}
-          canStartFresh={Boolean(projectKey)}
-          contextActionClassName={styles.desktopOnlyContextAction}
+      {resumeBanner ? (
+        <RoomResumeBanner
+          resume={resumeBanner}
+          onContinue={handleDismissResumeBanner}
+          onReturnToLibrary={handleReturnToLibrary}
+          onDismiss={handleDismissResumeBanner}
         />
+      ) : null}
 
-        {resumeBanner ? (
-          <RoomResumeBanner
-            resume={resumeBanner}
-            onContinue={handleDismissResumeBanner}
-            onReturnToLibrary={handleReturnToLibrary}
-            onDismiss={handleDismissResumeBanner}
+      {dreamBridgePayload?.documentId ? (
+        <DreamBridgeNotice
+          payload={dreamBridgePayload}
+          onUse={handleUseDreamBridge}
+          onDismiss={handleDismissDreamBridge}
+        />
+      ) : dismissedDreamBridgePayload?.documentId ? (
+        <DreamBridgeRecoveryNotice
+          payload={dismissedDreamBridgePayload}
+          onRestore={handleRestoreDreamBridge}
+        />
+      ) : null}
+
+      {view?.workingEcho ? (
+        <WorkingEchoStrip
+          view={view}
+          onOpenDetail={() => setOverlayMode("mirror")}
+        />
+      ) : null}
+
+      {postAddGuidance ? (
+        <PostAddGuidanceCard
+          guidance={postAddGuidance}
+          onOpenLibrary={handleOpenGuidanceLibrary}
+          onAskHere={handleAskSevenHere}
+          onDismiss={() => setPostAddGuidance(null)}
+        />
+      ) : null}
+
+      <div
+        ref={threadRef}
+        className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
+      >
+        {showStarter ? (
+          <StarterView
+            starter={view?.starter}
+            onStartAction={(nextAction) => void handleStarterAction(nextAction)}
+            onTeachLiveIssue={() => void handleStarterAction("talk")}
+            onTeachSourceDocument={() => void handleStarterAction("paste")}
           />
         ) : null}
 
-        {dreamBridgePayload?.documentId ? (
-          <DreamBridgeNotice
-            payload={dreamBridgePayload}
-            onUse={handleUseDreamBridge}
-            onDismiss={handleDismissDreamBridge}
-          />
-        ) : dismissedDreamBridgePayload?.documentId ? (
-          <DreamBridgeRecoveryNotice
-            payload={dismissedDreamBridgePayload}
-            onRestore={handleRestoreDreamBridge}
-          />
-        ) : null}
-
-        {view?.workingEcho ? (
-          <WorkingEchoStrip
-            view={view}
-            onOpenDetail={() => setOverlayMode("mirror")}
-          />
-        ) : null}
-
-        {postAddGuidance ? (
-          <PostAddGuidanceCard
-            guidance={postAddGuidance}
-            onOpenLibrary={handleOpenGuidanceLibrary}
-            onAskHere={handleAskSevenHere}
-            onDismiss={() => setPostAddGuidance(null)}
-          />
-        ) : null}
-
-        <div
-          ref={threadRef}
-          className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
-        >
-          {showStarter ? (
-            <StarterView
-              starter={view?.starter}
-              onStartAction={(nextAction) => void handleStarterAction(nextAction)}
-              onTeachLiveIssue={() => void handleStarterAction("talk")}
-              onTeachSourceDocument={() => void handleStarterAction("paste")}
-            />
+        <div className={styles.thread}>
+          {optimisticUserMessage ? (
+            <article className={`${styles.messageRow} ${styles.messageRowUser}`}>
+              <div className={`${styles.messageCard} ${styles.messageUser}`}>
+                <div className={styles.messageMeta}>
+                  <span>You</span>
+                </div>
+                <div className={styles.messageBody}>
+                  <p>{optimisticUserMessage}</p>
+                </div>
+              </div>
+            </article>
           ) : null}
 
-          <div className={styles.thread}>
-            {optimisticUserMessage ? (
-              <article className={`${styles.messageRow} ${styles.messageRowUser}`}>
-                <div className={`${styles.messageCard} ${styles.messageUser}`}>
-                  <div className={styles.messageMeta}>
-                    <span>You</span>
-                  </div>
-                  <div className={styles.messageBody}>
-                    <p>{optimisticUserMessage}</p>
-                  </div>
-                </div>
-              </article>
-            ) : null}
+          {messages.map((message) => (
+            <ThreadMessage
+              key={message.id}
+              message={message}
+              view={view}
+              onApplyProposal={handleApplyProposal}
+              onCompleteReceiptKit={handleCompleteReceiptKit}
+              applying={applyingMessageId === message.id}
+              busyReceiptKitId={busyReceiptKitId}
+              onHighlight={highlightRegion}
+            />
+          ))}
 
-            {messages.map((message) => (
-              <ThreadMessage
-                key={message.id}
-                message={message}
-                view={view}
-                onApplyProposal={handleApplyProposal}
-                onCompleteReceiptKit={handleCompleteReceiptKit}
-                applying={applyingMessageId === message.id}
-                busyReceiptKitId={busyReceiptKitId}
-                onHighlight={highlightRegion}
-              />
-            ))}
+          {turnPending ? <LoadingMessage /> : null}
 
-            {turnPending ? <LoadingMessage /> : null}
-
-            {!messages.length && !showStarter && !view?.hasStructure ? (
-              <div className={styles.emptyThread}>
-                <FogPlaceholder>Unresolved regions belong here until witness arrives.</FogPlaceholder>
-              </div>
-            ) : null}
-          </div>
+          {!messages.length && !showStarter && !view?.hasStructure ? (
+            <div className={styles.emptyThread}>
+              <FogPlaceholder>Unresolved regions belong here until witness arrives.</FogPlaceholder>
+            </div>
+          ) : null}
         </div>
-      </ShellSurface>
+      </div>
     </div>
   );
 

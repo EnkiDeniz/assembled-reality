@@ -12,20 +12,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   CircleAlert,
   FileText,
-  FolderOpen,
-  Headphones,
   LoaderCircle,
   Pause,
   Play,
   Plus,
   RotateCcw,
   RotateCw,
-  Upload,
 } from "lucide-react";
 import LoegosShell, {
   Kicker,
-  SignalChip,
-  Surface as ShellSurface,
 } from "@/components/shell/LoegosShell";
 import CompilerReadPanel from "@/components/dream/CompilerReadPanel";
 import styles from "@/components/dream/SectionDreamScreen.module.css";
@@ -1748,7 +1743,6 @@ export default function SectionDreamScreen({
         </div>
       ) : (
         <div className={styles.libraryEmpty}>
-          <FolderOpen size={20} />
           <p>No documents yet.</p>
         </div>
       )}
@@ -1768,13 +1762,13 @@ export default function SectionDreamScreen({
       }}
       data-testid="dream-scope-control"
     >
-      <span className={styles.scopeButtonLabel}>Scope</span>
-      <strong>{dreamDocument?.filename || "No artifact selected"}</strong>
-      <small>
+      <span className={styles.scopeButtonLabel}>
         {dreamDocument
           ? [currentVersionLabel, dreamDocument.libraryStatusLabel || "Library only"].filter(Boolean).join(" · ")
           : "Library only"}
-      </small>
+      </span>
+      <strong>{dreamDocument?.filename || "No artifact selected"}</strong>
+      <small>Scope</small>
     </button>
   );
 
@@ -1910,51 +1904,40 @@ export default function SectionDreamScreen({
 
       <div className={styles.layout}>
         <div data-testid="dream-player" className={styles.stageWrap}>
-          <ShellSurface className={styles.stage} roomy>
-            <div className={styles.stageHead}>
-              <div className={styles.stageIdentity}>
-                <Kicker tone={dreamDocument ? "brand" : "neutral"}>{isReadCanvasActive ? "Compiler Read" : "Library"}</Kicker>
-                <strong>{dreamDocument?.filename || "Library"}</strong>
+          <div className={styles.stage}>
+            {dreamDocument ? (
+              <div className={styles.stageTools}>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={handleOpenLibraryManager}
+                  data-testid="dream-open-library-manager"
+                >
+                  New / Replace document
+                </button>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={visibleCompilerRead || visibleCompilerReadPending || visibleCompilerReadError ? handleOpenCurrentRead : handleRunCompilerRead}
+                  disabled={!visibleCompilerRead && visibleCompilerReadPending}
+                  data-testid="dream-compiler-read"
+                >
+                  {visibleCompilerReadPending
+                    ? "Running Compiler Read"
+                    : visibleCompilerRead || visibleCompilerReadError
+                      ? "Open current read"
+                      : "Compiler Read"}
+                </button>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={handleClear}
+                  data-testid="dream-clear"
+                >
+                  Delete from Library
+                </button>
               </div>
-
-              <div className={styles.stageActions}>
-                {dreamDocument ? (
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={handleOpenLibraryManager}
-                    data-testid="dream-open-library-manager"
-                  >
-                    New / Replace document
-                  </button>
-                ) : null}
-                {dreamDocument ? (
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={visibleCompilerRead || visibleCompilerReadPending || visibleCompilerReadError ? handleOpenCurrentRead : handleRunCompilerRead}
-                    disabled={!visibleCompilerRead && visibleCompilerReadPending}
-                    data-testid="dream-compiler-read"
-                  >
-                    {visibleCompilerReadPending
-                      ? "Running Compiler Read"
-                      : visibleCompilerRead || visibleCompilerReadError
-                        ? "Open current read"
-                        : "Compiler Read"}
-                  </button>
-                ) : null}
-                {dreamDocument ? (
-                  <button
-                    type="button"
-                    className={styles.textButton}
-                    onClick={handleClear}
-                    data-testid="dream-clear"
-                  >
-                    Delete from Library
-                  </button>
-                ) : null}
-              </div>
-            </div>
+            ) : null}
 
             {showPaste ? (
               <div className={styles.pastePanel}>
@@ -2006,21 +1989,11 @@ export default function SectionDreamScreen({
 
             {dreamDocument ? (
               <>
-                <div className={styles.stageMeta}>
-                  <SignalChip tone={hasRemoteVoice ? "brand" : "neutral"} data-testid="dream-voice-badge">
-                    {currentVoiceLabel}
-                  </SignalChip>
-                  <SignalChip tone="neutral">
-                    {summary?.wordCount || 0} words
-                  </SignalChip>
-                  <SignalChip tone="neutral">
-                    {dreamDocument.libraryStatusLabel || "Library only"}
-                  </SignalChip>
-                  {dreamDocument.versionCount > 1 ? (
-                    <SignalChip tone="neutral">
-                      {currentVersionLabel}
-                    </SignalChip>
-                  ) : null}
+                <div className={styles.stageMetaLine}>
+                  <span data-testid="dream-voice-badge">{currentVoiceLabel}</span>
+                  <span>{summary?.wordCount || 0} words</span>
+                  <span>{dreamDocument.libraryStatusLabel || "Library only"}</span>
+                  {dreamDocument.versionCount > 1 ? <span>{currentVersionLabel}</span> : null}
                 </div>
 
                 {isReadCanvasActive ? (
@@ -2161,33 +2134,10 @@ export default function SectionDreamScreen({
               </>
             ) : (
               <div className={styles.emptyStage}>
-                <Headphones size={30} />
-                <p className={styles.emptyStageCopy}>Library is where source becomes contact.</p>
-                <div className={styles.emptyStageActions}>
-                  <button
-                    type="button"
-                    className={styles.primaryControl}
-                    onClick={() => fileInputRef.current?.click()}
-                    aria-label="Upload markdown"
-                    title="Upload markdown"
-                    data-testid="dream-empty-upload"
-                  >
-                    <Upload size={20} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.secondaryControl}
-                    onClick={() => setShowPaste(true)}
-                    aria-label="Paste markdown"
-                    title="Paste markdown"
-                    data-testid="dream-empty-paste"
-                  >
-                    <FileText size={18} />
-                  </button>
-                </div>
+                <p className={styles.emptyStageCopy}>Choose a document, paste markdown, or upload a file.</p>
               </div>
             )}
-          </ShellSurface>
+          </div>
         </div>
       </div>
     </div>

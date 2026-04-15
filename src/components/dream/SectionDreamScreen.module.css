@@ -41,7 +41,7 @@
   min-height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 22px;
 }
 
 .libraryRail {
@@ -55,23 +55,13 @@
   gap: 14px;
 }
 
-.libraryPanelHead,
-.stageHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.libraryPanelIdentity,
-.stageIdentity {
+.libraryPanelIdentity {
   display: grid;
   gap: 6px;
   min-width: 0;
 }
 
-.libraryPanelIdentity strong,
-.stageIdentity strong {
+.libraryPanelIdentity strong {
   color: rgba(244, 245, 247, 0.96);
   font-family: var(--font-ui);
   font-size: clamp(1.0625rem, 1.55vw, 1.5rem);
@@ -85,18 +75,9 @@
   font-size: 0.82rem;
 }
 
-.libraryPanelActions,
-.stageActions,
-.emptyStageActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
 .libraryList {
   display: grid;
-  gap: 8px;
+  gap: 2px;
 }
 
 .libraryItem {
@@ -104,24 +85,25 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease;
+  transition: color 160ms ease;
 }
 
 .libraryItem:hover,
 .libraryItem:focus-visible,
 .libraryItemActive {
-  border-color: rgba(94, 167, 255, 0.18);
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
+}
+
+.libraryList > .libraryItem:first-child {
+  border-top: 0;
 }
 
 .libraryItemCopy {
@@ -132,8 +114,15 @@
 
 .libraryItemCopy strong {
   font-size: 0.96rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.3;
+  color: rgba(244, 245, 247, 0.78);
+  transition: color 160ms ease, font-weight 160ms ease;
+}
+
+.libraryItemActive .libraryItemCopy strong {
+  color: rgba(244, 245, 247, 0.98);
+  font-weight: 600;
 }
 
 .libraryItemCopy span,
@@ -148,26 +137,38 @@
 }
 
 .libraryEmpty {
-  min-height: 160px;
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  padding: 20px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  min-height: 0;
+  padding-top: 6px;
   color: rgba(244, 245, 247, 0.54);
-  text-align: center;
+  text-align: left;
 }
 
 .stageWrap {
   min-height: 100%;
 }
 
-.stageMeta {
+.stage {
+  min-height: 100%;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.stageTools {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.stageMetaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: rgba(244, 245, 247, 0.56);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .scrubRow {
@@ -278,31 +279,26 @@
 }
 
 .scopeButton {
-  min-width: min(320px, 42vw);
+  min-width: min(280px, 38vw);
   display: grid;
   gap: 4px;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    transform 160ms ease;
+  transition: color 160ms ease;
 }
 
 .scopeButton:hover,
 .scopeButton:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(94, 167, 255, 0.26);
-  background: rgba(94, 167, 255, 0.08);
+  color: rgba(244, 245, 247, 0.98);
 }
 
 .scopeButtonLabel {
-  color: rgba(244, 245, 247, 0.54);
+  color: rgba(244, 245, 247, 0.56);
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 500;
@@ -312,13 +308,13 @@
 
 .scopeButton strong {
   color: rgba(244, 245, 247, 0.96);
-  font-size: 0.95rem;
+  font-size: 15px;
   line-height: 1.25;
   font-weight: 600;
 }
 
 .scopeButton small {
-  color: rgba(244, 245, 247, 0.62);
+  color: rgba(244, 245, 247, 0.44);
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -362,10 +358,11 @@
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr);
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  background: transparent;
 }
 
 .pasteActions {
@@ -393,12 +390,10 @@
   display: grid;
   gap: 10px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 42%),
-    rgba(42, 42, 44, 0.96);
-  box-shadow: 0 20px 38px rgba(0, 0, 0, 0.18);
+  background: rgba(42, 42, 44, 0.9);
+  box-shadow: none;
 }
 
 .bottomActionMenu {
@@ -489,10 +484,10 @@
   align-items: center;
   justify-content: center;
   min-height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
   color: rgba(244, 245, 247, 0.84);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -507,8 +502,6 @@
 }
 
 .bottomActionPrimary {
-  border-color: rgba(94, 167, 255, 0.18);
-  background: rgba(94, 167, 255, 0.12);
   color: rgba(244, 245, 247, 0.98);
   font-weight: 600;
 }
@@ -523,8 +516,6 @@
 .bottomActionSecondary:focus-visible,
 .bottomActionGhost:hover,
 .bottomActionGhost:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(94, 167, 255, 0.28);
   color: rgba(244, 245, 247, 0.98);
 }
 
@@ -1170,11 +1161,11 @@
 
 .documentStage {
   min-height: 0;
-  max-height: min(58vh, 760px);
+  max-height: min(70vh, 920px);
   overflow: auto;
   display: grid;
   gap: 16px;
-  padding: 10px 2px 4px;
+  padding: 4px 2px 4px;
   content-visibility: auto;
 }
 
@@ -1194,15 +1185,15 @@
 }
 
 .emptyStage {
-  min-height: min(54vh, 560px);
+  min-height: min(62vh, 640px);
   display: grid;
   place-items: center;
-  gap: 18px;
+  gap: 12px;
 }
 
 .emptyStageCopy {
   margin: 0;
-  max-width: 20rem;
+  max-width: 24rem;
   color: rgba(244, 245, 247, 0.64);
   text-align: center;
   line-height: 1.6;
