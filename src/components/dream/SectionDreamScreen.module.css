@@ -16,34 +16,30 @@
 }
 
 .readerBanner {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 132, 132, 0.18);
-  border-radius: 14px;
-  background: rgba(255, 132, 132, 0.08);
-  color: rgba(255, 222, 222, 0.96);
-  font-size: 0.9rem;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 170, 170, 0.9);
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .readerNotice {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid rgba(94, 167, 255, 0.18);
-  border-radius: 14px;
-  background: rgba(94, 167, 255, 0.08);
-  color: rgba(232, 241, 255, 0.92);
-  font-size: 0.9rem;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(186, 217, 255, 0.82);
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .layout {
   min-height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .libraryRail {
@@ -54,7 +50,7 @@
 .stage {
   min-height: 100%;
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .libraryPanelIdentity {
@@ -87,7 +83,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 10px 0;
+  padding: 8px 0;
   border: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 0;
@@ -153,8 +149,8 @@
   min-height: 100%;
   display: grid;
   align-content: start;
-  gap: 10px;
-  padding-top: 4px;
+  gap: 8px;
+  padding-top: 2px;
 }
 
 .stageTools {
@@ -167,10 +163,10 @@
 .stageMetaLine {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   color: rgba(244, 245, 247, 0.56);
-  font-size: 0.78rem;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.18;
 }
 
 .scrubRow {
@@ -358,11 +354,11 @@
 
 .pastePanel {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: minmax(0, 1fr);
-  padding: 14px 0 0;
+  padding: 8px 0 0;
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 0;
   background: transparent;
 }
@@ -390,11 +386,11 @@
 .bottomActionBar {
   position: relative;
   display: grid;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 24px;
-  background: rgba(42, 42, 44, 0.9);
+  gap: 6px;
+  padding: 10px 14px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 22px;
+  background: rgba(42, 42, 44, 0.88);
   box-shadow: none;
 }
 
@@ -444,19 +440,19 @@
   color: rgba(244, 245, 247, 0.98);
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .bottomActionMeta span {
   color: rgba(244, 245, 247, 0.62);
   font-size: 11px;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .bottomActionRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -533,11 +529,6 @@
   display: grid;
   gap: 14px;
   min-height: 0;
-}
-
-.readCanvasHeader {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .actionButtonActive {
@@ -1166,7 +1157,7 @@
   max-height: min(70vh, 920px);
   overflow: auto;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   padding: 4px 2px 4px;
   content-visibility: auto;
 }
@@ -1174,8 +1165,8 @@
 .chunk {
   margin: 0;
   color: rgba(244, 245, 247, 0.54);
-  font-size: clamp(1rem, 1.4vw, 1.12rem);
-  line-height: 1.62;
+  font-size: clamp(1rem, 1.34vw, 1.08rem);
+  line-height: 1.42;
   transition:
     color 220ms ease,
     transform 220ms ease;
@@ -1189,16 +1180,16 @@
 .emptyStage {
   min-height: min(48vh, 420px);
   display: grid;
-  place-items: center;
-  gap: 8px;
+  align-content: start;
+  gap: 4px;
 }
 
 .emptyStageCopy {
   margin: 0;
   max-width: 24rem;
   color: rgba(244, 245, 247, 0.64);
-  text-align: center;
-  line-height: 1.45;
+  text-align: left;
+  line-height: 1.3;
 }
 
 .spin {

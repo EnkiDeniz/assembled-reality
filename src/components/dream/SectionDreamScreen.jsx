@@ -10,8 +10,6 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  CircleAlert,
-  FileText,
   LoaderCircle,
   Pause,
   Play,
@@ -200,6 +198,8 @@ export default function SectionDreamScreen({
   const hasUnsavedPasteChanges = showPaste
     ? normalizeLongForm(pasteValue) !== normalizeLongForm(dreamDocument?.rawMarkdown || "")
     : false;
+  const hasDraftToSave = Boolean(showPaste && normalizeLongForm(pasteValue));
+  const isSavingNewDocument = Boolean(showPaste && !dreamDocument?.id && hasDraftToSave);
   const compilerReadDisabledReason = hasUnsavedPasteChanges
     ? "Draft changed. Save a new version before running a current Compiler Read."
     : "";
@@ -1192,11 +1192,6 @@ export default function SectionDreamScreen({
     pasteTextareaRef.current?.focus();
   }
 
-  function handleReturnToDocument() {
-    setCompilerReadError("");
-    setShowCompilerReadSheet(false);
-  }
-
   async function handleRestorePreviousVersion() {
     if (!dreamDocument?.id || !dreamDocument?.hasPreviousVersion) {
       return;
@@ -1553,76 +1548,6 @@ export default function SectionDreamScreen({
     }
   }
 
-  const compilerRepairRow = hasUnsavedPasteChanges ? (
-    <div className={styles.compilerRepairRow} data-testid="dream-compiler-read-repair-row">
-      <button
-        type="button"
-        className={styles.actionButton}
-        onClick={() => void handleSaveVersionOnly()}
-        data-testid="dream-compiler-read-save-version"
-      >
-        Save as new version
-      </button>
-      <button
-        type="button"
-        className={styles.iconTextButton}
-        onClick={() => void handleSaveVersionAndRunCompilerRead()}
-        data-testid="dream-compiler-read-update-rerun"
-      >
-        Save and run Compiler Read
-      </button>
-      <button
-        type="button"
-        className={styles.iconTextButton}
-        onClick={handleDiscardPasteEdits}
-        data-testid="dream-compiler-read-discard-edits"
-      >
-        Discard edits
-      </button>
-      <button
-        type="button"
-        className={styles.textButton}
-        onClick={handleKeepEditing}
-        data-testid="dream-compiler-read-keep-editing"
-      >
-        Keep editing
-      </button>
-    </div>
-  ) : compilerReadError && !compilerReadPending ? (
-    <div className={styles.compilerRepairRow} data-testid="dream-compiler-read-repair-row">
-      <button
-        type="button"
-        className={styles.actionButton}
-        onClick={() => void handleRunCompilerRead()}
-        data-testid="dream-compiler-read-rerun"
-      >
-        Run Compiler Read again
-      </button>
-      <button
-        type="button"
-        className={styles.iconTextButton}
-        onClick={handleReturnToDocument}
-        data-testid="dream-compiler-read-return-document"
-      >
-        Return to document
-      </button>
-    </div>
-  ) : null;
-
-  const versionActionRow =
-    dreamDocument?.hasPreviousVersion && !hasUnsavedPasteChanges ? (
-      <div className={styles.compilerRepairRow} data-testid="dream-version-actions">
-        <button
-          type="button"
-          className={styles.iconTextButton}
-          onClick={() => void handleRestorePreviousVersion()}
-          data-testid="dream-restore-previous-version"
-        >
-          Restore previous version
-        </button>
-      </div>
-    ) : null;
-
   const compilerReadActions = visibleCompilerRead
     ? [
         {
@@ -1634,7 +1559,17 @@ export default function SectionDreamScreen({
       ]
     : [];
 
-  const libraryBottomActions = hasUnsavedPasteChanges
+  const libraryBottomActions = isSavingNewDocument
+    ? [
+        {
+          label: "Save document",
+          onClick: () => void handlePasteSubmit(),
+          testId: "dream-bottom-save-document",
+          primary: true,
+          disabled: !hasDraftToSave,
+        },
+      ]
+    : hasUnsavedPasteChanges
     ? [
         {
           label: "Save as new version",
@@ -1648,20 +1583,56 @@ export default function SectionDreamScreen({
           testId: "dream-bottom-save-run-read",
         },
       ]
+    : isReadCanvasActive && visibleCompilerRead
+      ? [
+          {
+            label: "Discuss this read",
+            onClick: handleDiscussThisRead,
+            testId: "dream-discuss-read",
+            primary: true,
+          },
+          {
+            label: "Open document",
+            onClick: () => setCanvasMode("document"),
+            testId: "dream-open-document",
+          },
+        ]
+    : isReadCanvasActive && compilerReadError && !compilerReadPending
+      ? [
+          {
+            label: "Run Compiler Read again",
+            onClick: () => void handleRunCompilerRead(),
+            testId: "dream-compiler-read-rerun",
+            primary: true,
+          },
+          {
+            label: "Open document",
+            onClick: () => setCanvasMode("document"),
+            testId: "dream-open-document",
+          },
+        ]
     : visibleCompilerRead
-      ? compilerReadActions
-      : dreamDocument?.id
+      ? [
+          {
+            label: "Open current read",
+            onClick: handleOpenCurrentRead,
+            testId: "dream-open-current-read",
+            primary: true,
+          },
+          ...compilerReadActions,
+        ]
+    : dreamDocument?.id
         ? [
             {
               label:
                 visibleCompilerReadPending
                   ? "Running Compiler Read"
                   : visibleCompilerRead || visibleCompilerReadError
-                    ? "Open current read"
+                    ? "Run Compiler Read again"
                     : "Compiler Read",
               onClick:
                 visibleCompilerRead || visibleCompilerReadError
-                  ? handleOpenCurrentRead
+                  ? () => void handleRunCompilerRead()
                   : () => void handleRunCompilerRead(),
               testId: "dream-compiler-read",
               primary: true,
@@ -1714,28 +1685,6 @@ export default function SectionDreamScreen({
     </div>
   );
 
-  const scopeControl = (
-    <button
-      type="button"
-      className={styles.scopeButton}
-      onClick={() => {
-        if (dreamDocument?.id) {
-          handleOpenLibraryManager();
-          return;
-        }
-        setShowLibrarySheet(true);
-      }}
-      data-testid="dream-scope-control"
-    >
-      <strong>
-        {dreamDocument
-          ? [currentVersionLabel, dreamDocument.libraryStatusLabel || "Library only"].filter(Boolean).join(" · ")
-          : "Library only"}
-      </strong>
-      {!dreamDocument ? <small>No artifact selected</small> : null}
-    </button>
-  );
-
   const libraryBottomEdge = (
     <div className={styles.bottomActionBar} data-testid="dream-bottom-edge">
         {showLibraryInstrumentMenu ? (
@@ -1782,6 +1731,37 @@ export default function SectionDreamScreen({
                 New / Replace document
               </button>
             ) : null}
+            {isSavingNewDocument ? (
+              <button
+                type="button"
+                className={styles.bottomActionMenuItem}
+                onClick={() => void handlePasteSubmit()}
+                disabled={!hasDraftToSave}
+                data-testid="dream-bottom-menu-save-document"
+              >
+                Save document
+              </button>
+            ) : null}
+            {hasUnsavedPasteChanges ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.bottomActionMenuItem}
+                  onClick={() => void handleSaveVersionOnly()}
+                  data-testid="dream-compiler-read-save-version"
+                >
+                  Save as new version
+                </button>
+                <button
+                  type="button"
+                  className={styles.bottomActionMenuItem}
+                  onClick={() => void handleSaveVersionAndRunCompilerRead()}
+                  data-testid="dream-compiler-read-update-rerun"
+                >
+                  Save and run Compiler Read
+                </button>
+              </>
+            ) : null}
             {hasUnsavedPasteChanges ? (
               <button
                 type="button"
@@ -1790,6 +1770,16 @@ export default function SectionDreamScreen({
                 data-testid="dream-bottom-discard-edits"
               >
                 Discard edits
+              </button>
+            ) : null}
+            {hasUnsavedPasteChanges ? (
+              <button
+                type="button"
+                className={styles.bottomActionMenuItem}
+                onClick={handleKeepEditing}
+                data-testid="dream-compiler-read-keep-editing"
+              >
+                Keep editing
               </button>
             ) : null}
             {dreamDocument?.id && !visibleCompilerRead ? (
@@ -1820,6 +1810,26 @@ export default function SectionDreamScreen({
                 data-testid="dream-choose-document"
               >
                 Choose another document
+              </button>
+            ) : null}
+            {isReadCanvasActive ? (
+              <button
+                type="button"
+                className={styles.bottomActionMenuItem}
+                onClick={() => setCanvasMode("document")}
+                data-testid="dream-bottom-menu-open-document"
+              >
+                Open document
+              </button>
+            ) : null}
+            {dreamDocument?.hasPreviousVersion && !hasUnsavedPasteChanges ? (
+              <button
+                type="button"
+                className={styles.bottomActionMenuItem}
+                onClick={() => void handleRestorePreviousVersion()}
+                data-testid="dream-restore-previous-version"
+              >
+                Restore previous version
               </button>
             ) : null}
             {dreamDocument?.id ? (
@@ -1913,18 +1923,6 @@ export default function SectionDreamScreen({
         data-testid="dream-upload-input"
       />
 
-      {errorMessage ? (
-        <div className={styles.readerBanner} role="alert" aria-live="polite" data-testid="dream-error">
-          <CircleAlert size={16} />
-          <span>{errorMessage}</span>
-        </div>
-      ) : null}
-      {noticeMessage ? (
-        <div className={styles.readerNotice} aria-live="polite" data-testid="dream-notice">
-          <span>{noticeMessage}</span>
-        </div>
-      ) : null}
-
       <div className={styles.layout}>
         <div data-testid="dream-player" className={styles.stageWrap}>
           <div className={styles.stage}>
@@ -1939,42 +1937,19 @@ export default function SectionDreamScreen({
                   placeholder="Paste markdown…"
                   data-testid="dream-paste-input"
                 />
-                <div className={styles.pasteActions}>
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={handlePasteSubmit}
-                    disabled={dreamDocument?.id ? !hasUnsavedPasteChanges : !pasteValue.trim()}
-                    data-testid="dream-paste-submit"
-                  >
-                    <FileText size={15} />
-                    <span>{dreamDocument?.id ? "Save as new version" : "Save document"}</span>
-                  </button>
-                  {dreamDocument?.id ? (
-                    <button
-                      type="button"
-                      className={styles.iconTextButton}
-                      onClick={() => void handleSaveVersionAndRunCompilerRead()}
-                      disabled={!hasUnsavedPasteChanges}
-                      data-testid="dream-paste-submit-run-read"
-                    >
-                      Save and run Compiler Read
-                    </button>
-                  ) : null}
-                </div>
               </div>
             ) : null}
 
-            {compilerReadDisabledReason ? (
-              <p
-                className={styles.compilerReadDisabledReason}
-                data-testid="dream-compiler-read-disabled-reason"
-              >
-                {compilerReadDisabledReason}
-              </p>
+            {errorMessage ? (
+              <div className={styles.readerBanner} role="alert" aria-live="polite" data-testid="dream-error">
+                <span>{errorMessage}</span>
+              </div>
             ) : null}
-            {compilerRepairRow}
-            {versionActionRow}
+            {noticeMessage ? (
+              <div className={styles.readerNotice} aria-live="polite" data-testid="dream-notice">
+                <span>{noticeMessage}</span>
+              </div>
+            ) : null}
 
             {dreamDocument ? (
               <>
@@ -1986,16 +1961,6 @@ export default function SectionDreamScreen({
 
                 {isReadCanvasActive ? (
                   <div className={styles.readCanvas}>
-                    <div className={styles.readCanvasHeader}>
-                      <button
-                        type="button"
-                        className={styles.iconTextButton}
-                        onClick={() => setCanvasMode("document")}
-                        data-testid="dream-open-document"
-                      >
-                        Open document
-                      </button>
-                    </div>
                     <CompilerReadPanel
                       documentId={dreamDocument.id}
                       compilerReadKey={currentVersion?.versionId || dreamDocument?.contentHash || ""}
@@ -2116,8 +2081,6 @@ export default function SectionDreamScreen({
                   <p className={styles.stageHint}>Restoring…</p>
                 ) : isPending ? (
                   <p className={styles.stageHint}>Updating…</p>
-                ) : visibleCompilerRead && !isReadCanvasActive ? (
-                  <p className={styles.stageHint}>Current Compiler Read is ready when you want it.</p>
                 ) : null}
               </>
             ) : (
@@ -2137,7 +2100,6 @@ export default function SectionDreamScreen({
       lensLabel="Library"
       title={dreamDocument?.filename || "Library"}
       workspaceLabel={workspaceLabel}
-      scopeControl={scopeControl}
       rail={libraryPanel}
       composer={libraryBottomEdge}
       focusMode={isReadCanvasActive}

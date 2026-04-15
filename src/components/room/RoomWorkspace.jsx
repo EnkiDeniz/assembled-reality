@@ -411,11 +411,6 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
     normalizeText(payload?.sourceLabel) ||
     normalizeText(payload?.documentTitle) ||
     "Library document";
-  const readSummary = payload?.readSummary || null;
-  const excerpt =
-    normalizeText(readSummary?.primaryFinding) ||
-    normalizeText(payload?.excerpt) ||
-    "Passage carried from Library.";
   const kindLabel =
     kind === "witness"
       ? "Witness"
@@ -424,66 +419,39 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
         : kind === "read_summary"
           ? "Read summary"
           : "Passage";
-  const anchorLabel = normalizeText(payload?.anchor);
   const versionLabel = normalizeText(payload?.versionLabel);
   const stateLabel =
     state === "armed"
-      ? "Armed"
+      ? "armed"
       : state === "sent"
-        ? "Used in Room"
-        : "Pending";
-  const stateCopy =
-    state === "armed"
-      ? "Armed: travels with your next turn."
-      : "Pending: available but not active.";
-  const provenanceLine =
-    kind === "read_summary"
-      ? "Read summary from Library"
-      : anchorLabel
-        ? "Traveling with source anchor"
-        : "Traveling from Library source";
-  const receiptLine = normalizeText(payload?.receiptStatus) || "Not yet receipted";
+        ? "used"
+        : "pending";
+  const metaLine = [kindLabel, versionLabel, stateLabel].filter(Boolean).join(" · ");
   const showUseAction = state === "pending" || state === "armed";
   const showDismissAction = state === "pending" || state === "armed";
 
   return (
-    <div className={styles.dreamBridgeNotice} data-testid="room-dream-bridge">
-      <div className={styles.dreamBridgeCopy}>
-        <Kicker tone="brand">{normalizeText(payload?.provenanceLabel) || "From Library"}</Kicker>
+    <div className={styles.composerStrip} data-testid="room-dream-bridge">
+      <div className={styles.composerStripCopy}>
         <strong>{sourceLabel}</strong>
-        <p>{excerpt}</p>
-        {readSummary?.nextMove ? (
-          <p className={styles.dreamBridgeSummary}>Next move: {readSummary.nextMove}</p>
-        ) : null}
-        <p className={styles.dreamBridgeStateLine}>{stateCopy}</p>
-        <p className={styles.dreamBridgeStateLine}>
-          {provenanceLine}. {receiptLine}.
-        </p>
-        <div className={styles.dreamBridgeMeta}>
-          <span>{kindLabel}</span>
-          <span>Library</span>
-          {versionLabel ? <span>{versionLabel}</span> : null}
-          <span>{stateLabel}</span>
-          {anchorLabel ? <span>{anchorLabel}</span> : null}
-          {normalizeText(payload?.savedAt) ? <span>{formatOperateTimestamp(payload.savedAt)}</span> : null}
-        </div>
+        <span>{metaLine || "Library context"}</span>
       </div>
 
-      <div className={styles.dreamBridgeActions}>
+      <div className={styles.composerStripActions}>
         {showUseAction ? (
           <button
             type="button"
-            className={styles.secondaryButton}
+            className={styles.stripActionPrimary}
             onClick={onUse}
             data-testid="dream-bridge-use"
           >
-            {state === "armed" ? "Armed for next turn" : "Use in Room"}
+            {state === "armed" ? "Use" : "Use"}
           </button>
         ) : null}
         {showDismissAction ? (
           <button
             type="button"
-            className={styles.inlineLinkButton}
+            className={styles.stripAction}
             onClick={onDismiss}
             data-testid="dream-bridge-dismiss"
           >
@@ -492,10 +460,10 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
         ) : null}
         <Link
           href={buildDreamHref(payload.documentId, payload.anchor)}
-          className={styles.inlineLinkButton}
+          className={styles.stripAction}
           data-testid="dream-bridge-return"
         >
-          Open Library
+          Open
         </Link>
       </div>
     </div>
@@ -511,7 +479,6 @@ function DreamBridgeRecoveryNotice({ payload, onRestore, onClear }) {
     normalizeText(payload?.documentTitle) ||
     "Library document";
   const versionLabel = normalizeText(payload?.versionLabel);
-  const anchorLabel = normalizeText(payload?.anchor);
   const kindLabel =
     kind === "witness"
       ? "Witness"
@@ -520,28 +487,19 @@ function DreamBridgeRecoveryNotice({ payload, onRestore, onClear }) {
         : kind === "read_summary"
           ? "Read summary"
           : "Passage";
+  const metaLine = [kindLabel, versionLabel, "dismissed"].filter(Boolean).join(" · ");
 
   return (
-    <div className={styles.dreamBridgeRecoveryNotice} data-testid="room-dream-bridge-recovery">
-      <div className={styles.dreamBridgeCopy}>
-        <Kicker tone="neutral">Bridge</Kicker>
-        <strong>Bridge dismissed</strong>
-        <p>
-          {kindLabel} from {sourceLabel} is no longer staged.
-        </p>
-        <div className={styles.dreamBridgeMeta}>
-          <span>{kindLabel}</span>
-          <span>Library</span>
-          {versionLabel ? <span>{versionLabel}</span> : null}
-          <span>Dismissed</span>
-          {anchorLabel ? <span>{anchorLabel}</span> : null}
-        </div>
+    <div className={styles.composerStrip} data-testid="room-dream-bridge-recovery">
+      <div className={styles.composerStripCopy}>
+        <strong>{sourceLabel}</strong>
+        <span>{metaLine}</span>
       </div>
 
-      <div className={styles.dreamBridgeActions}>
+      <div className={styles.composerStripActions}>
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.stripActionPrimary}
           onClick={onRestore}
           data-testid="dream-bridge-restore"
         >
@@ -549,7 +507,7 @@ function DreamBridgeRecoveryNotice({ payload, onRestore, onClear }) {
         </button>
         <button
           type="button"
-          className={styles.inlineLinkButton}
+          className={styles.stripAction}
           onClick={onClear}
           data-testid="dream-bridge-clear-dismissed"
         >
@@ -1000,15 +958,10 @@ function StarterView({
   starter = null,
   onStartAction = null,
   onTeachLiveIssue = null,
-  onTeachSourceDocument = null,
 }) {
   return (
     <section className={styles.starter} data-testid="room-starter">
-      <h1>{starter?.firstLine || "Bring one live thing into focus."}</h1>
-      <p>
-        {starter?.secondLine ||
-          "Paste a document, upload a file, or start talking. Open Library when you want to re-enter source first."}
-      </p>
+      <p className={styles.starterLead}>{starter?.firstLine || "Bring one live thing into focus."}</p>
       <div className={styles.starterFork} data-testid="room-starter-fork">
         <button
           type="button"
@@ -1017,14 +970,6 @@ function StarterView({
           data-testid="room-starter-live-issue"
         >
           Start with a live issue
-        </button>
-        <button
-          type="button"
-          className={styles.starterTextAction}
-          onClick={onTeachSourceDocument}
-          data-testid="room-starter-source-document"
-        >
-          Start with a source document
         </button>
         <button
           type="button"
@@ -1059,16 +1004,15 @@ function PostAddGuidanceCard({
   if (!guidance) return null;
 
   return (
-    <div className={styles.postAddCard} data-testid="room-post-add-card">
-      <div className={styles.postAddCopy}>
-        <Kicker tone="grounded">Document added</Kicker>
-        <strong>{guidance.headline || "Your source is now in the room."}</strong>
-        <p>{guidance.body}</p>
+    <div className={styles.composerNoticeStrip} data-testid="room-post-add-card">
+      <div className={styles.composerStripCopy}>
+        <strong>{guidance.headline || "Source added."}</strong>
+        <span>{guidance.body}</span>
       </div>
-      <div className={styles.postAddActions}>
+      <div className={styles.composerStripActions}>
         <button
           type="button"
-          className={styles.primaryButton}
+          className={styles.stripActionPrimary}
           onClick={guidance.primaryAction === "library" ? onOpenLibrary : onAskHere}
           data-testid="room-post-add-primary"
         >
@@ -1076,7 +1020,7 @@ function PostAddGuidanceCard({
         </button>
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.stripAction}
           onClick={guidance.primaryAction === "library" ? onAskHere : onOpenLibrary}
           data-testid="room-post-add-secondary"
         >
@@ -1084,7 +1028,7 @@ function PostAddGuidanceCard({
         </button>
         <button
           type="button"
-          className={styles.inlineLinkButton}
+          className={styles.stripAction}
           onClick={onDismiss}
           data-testid="room-post-add-dismiss"
         >
@@ -1099,28 +1043,27 @@ function RoomResumeBanner({ resume = null, onContinue = null, onReturnToLibrary 
   if (!resume) return null;
 
   return (
-    <div className={styles.resumeBanner} data-testid="room-resume-banner">
-      <div className={styles.postAddCopy}>
-        <Kicker tone="brand">Resume</Kicker>
+    <div className={styles.composerNoticeStrip} data-testid="room-resume-banner">
+      <div className={styles.composerStripCopy}>
         <strong>Pick up where you left off.</strong>
-        <p>
-          Continue this Room, or return to Library
+        <span>
+          Continue this Room or return to Library
           {resume.libraryTitle ? ` for ${resume.libraryTitle}` : ""}.
-        </p>
+        </span>
       </div>
-      <div className={styles.postAddActions}>
-        <button type="button" className={styles.primaryButton} onClick={onContinue} data-testid="room-resume-continue">
+      <div className={styles.composerStripActions}>
+        <button type="button" className={styles.stripActionPrimary} onClick={onContinue} data-testid="room-resume-continue">
           Continue in Room
         </button>
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.stripAction}
           onClick={onReturnToLibrary}
           data-testid="room-resume-library"
         >
           Return to Library
         </button>
-        <button type="button" className={styles.inlineLinkButton} onClick={onDismiss}>
+        <button type="button" className={styles.stripAction} onClick={onDismiss}>
           Dismiss
         </button>
       </div>
@@ -2119,6 +2062,7 @@ function Composer({
   scopeLabel = "",
   scopeDetail = "",
   attachActions = [],
+  prelude = null,
 }) {
   const textareaRef = useRef(null);
   const isComposingRef = useRef(false);
@@ -2167,6 +2111,7 @@ function Composer({
   return (
     <form className={styles.composer} onSubmit={handleSubmit}>
       <div className={styles.composerShell}>
+        {prelude ? <div className={styles.composerPrelude}>{prelude}</div> : null}
         <div className={styles.composerCapsule}>
           {attachMenuOpen && attachActions.length ? (
             <div className={styles.composerBloom} data-testid="room-composer-bloom">
@@ -3519,18 +3464,6 @@ export default function RoomWorkspace({
                 ? { label: "Start Room", title: "Create the internal room container" }
                 : { label: "", title: "" };
 
-  const scopeControl = (
-    <button
-      type="button"
-      className={styles.contextButton}
-      onClick={() => setOverlayMode("context")}
-      data-testid="room-scope-control"
-    >
-      <span>{assemblyTitle}</span>
-      <small>{scopeSummary}</small>
-    </button>
-  );
-
   const roomRail = (
     <div className={styles.sectionStack} data-testid="room-shell-rail">
       <RoomSessionList
@@ -3569,29 +3502,6 @@ export default function RoomWorkspace({
         </div>
       ) : null}
 
-      {resumeBanner ? (
-        <RoomResumeBanner
-          resume={resumeBanner}
-          onContinue={handleDismissResumeBanner}
-          onReturnToLibrary={handleReturnToLibrary}
-          onDismiss={handleDismissResumeBanner}
-        />
-      ) : null}
-
-      {dreamBridgePayload?.documentId ? (
-        <DreamBridgeNotice
-          payload={dreamBridgePayload}
-          onUse={handleUseDreamBridge}
-          onDismiss={handleDismissDreamBridge}
-        />
-      ) : dismissedDreamBridgePayload?.documentId ? (
-        <DreamBridgeRecoveryNotice
-          payload={dismissedDreamBridgePayload}
-          onRestore={handleRestoreDreamBridge}
-          onClear={handleClearDismissedDreamBridge}
-        />
-      ) : null}
-
       {view?.workingEcho ? (
         <WorkingEchoStrip
           view={view}
@@ -3599,28 +3509,10 @@ export default function RoomWorkspace({
         />
       ) : null}
 
-      {postAddGuidance ? (
-        <PostAddGuidanceCard
-          guidance={postAddGuidance}
-          onOpenLibrary={handleOpenGuidanceLibrary}
-          onAskHere={handleAskSevenHere}
-          onDismiss={() => setPostAddGuidance(null)}
-        />
-      ) : null}
-
       <div
         ref={threadRef}
-        className={`${styles.threadViewport} ${showStarter ? styles.threadViewportCentered : ""}`}
+        className={styles.threadViewport}
       >
-        {showStarter ? (
-          <StarterView
-            starter={view?.starter}
-            onStartAction={(nextAction) => void handleStarterAction(nextAction)}
-            onTeachLiveIssue={() => void handleStarterAction("talk")}
-            onTeachSourceDocument={() => void handleStarterAction("paste")}
-          />
-        ) : null}
-
         <div className={styles.thread}>
           {optimisticUserMessage ? (
             <article className={`${styles.messageRow} ${styles.messageRowUser}`}>
@@ -3660,13 +3552,56 @@ export default function RoomWorkspace({
     </div>
   );
 
+  const composerPrelude = (
+    <>
+      {resumeBanner ? (
+        <RoomResumeBanner
+          resume={resumeBanner}
+          onContinue={handleDismissResumeBanner}
+          onReturnToLibrary={handleReturnToLibrary}
+          onDismiss={handleDismissResumeBanner}
+        />
+      ) : null}
+
+      {postAddGuidance ? (
+        <PostAddGuidanceCard
+          guidance={postAddGuidance}
+          onOpenLibrary={handleOpenGuidanceLibrary}
+          onAskHere={handleAskSevenHere}
+          onDismiss={() => setPostAddGuidance(null)}
+        />
+      ) : null}
+
+      {showStarter ? (
+        <StarterView
+          starter={view?.starter}
+          onStartAction={(nextAction) => void handleStarterAction(nextAction)}
+          onTeachLiveIssue={() => void handleStarterAction("talk")}
+        />
+      ) : null}
+
+      {dreamBridgePayload?.documentId ? (
+        <DreamBridgeNotice
+          payload={dreamBridgePayload}
+          onUse={handleUseDreamBridge}
+          onDismiss={handleDismissDreamBridge}
+        />
+      ) : dismissedDreamBridgePayload?.documentId ? (
+        <DreamBridgeRecoveryNotice
+          payload={dismissedDreamBridgePayload}
+          onRestore={handleRestoreDreamBridge}
+          onClear={handleClearDismissedDreamBridge}
+        />
+      ) : null}
+    </>
+  );
+
   return (
     <LoegosShell
       route="workspace"
       lensLabel="Room"
       title={roomTitle}
       workspaceLabel={workspaceLabel}
-      scopeControl={scopeControl}
       rail={roomRail}
       main={workspaceMain}
       composer={
@@ -3704,6 +3639,7 @@ export default function RoomWorkspace({
           focusSignal={composerFocusSignal}
           scopeLabel={assemblyTitle}
           scopeDetail={scopeSummary}
+          prelude={composerPrelude}
         />
       }
       sheet={{
