@@ -25,7 +25,7 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(dreamPage, /includeDevice:\s*false/);
 
   assert.match(dreamScreen, /LoegosShell/);
-  assert.match(dreamScreen, /<Kicker tone="brand">Library<\/Kicker>/);
+  assert.match(dreamScreen, /<strong>Documents<\/strong>/);
   assert.match(dreamScreen, /dream-open-library-manager/);
   assert.match(dreamScreen, /dream-compiler-read/);
   assert.match(dreamScreen, /dream-bottom-plus/);
@@ -50,7 +50,7 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(dreamScreen, /restorePreviousDreamDocumentVersion/);
   assert.match(dreamScreen, /clearCompilerReadSelfCheck\(\s*dreamDocument\.id,/);
   assert.match(dreamScreen, /clearRuntimeSurfaceResumeLibrary\(\)/);
-  assert.match(dreamScreen, /All Library documents/);
+  assert.match(dreamScreen, /No saved documents yet/);
   assert.match(dreamScreen, /Delete from Library/);
   assert.match(dreamScreen, /Library only/);
   assert.doesNotMatch(dreamScreen, /ReplayReviewPanel/);

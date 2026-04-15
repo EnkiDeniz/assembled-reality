@@ -566,8 +566,7 @@ export default function LoegosShell({
     ? overflowItems
     : buildDefaultOverflowItems(route);
   const defaultLensLabel = normalizedMode === APP_MODES.dream ? "Library" : "Room";
-  const resolvedLensLabel = lensLabel || defaultLensLabel;
-  const resolvedTitle = title || defaultLensLabel;
+  const resolvedTitle = title || lensLabel || defaultLensLabel;
   const hasRail = Boolean(rail);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -720,11 +719,10 @@ export default function LoegosShell({
                 <span>{effectiveRailCollapsed ? "Show lists" : "Hide lists"}</span>
               </button>
             ) : null}
-            <span className={styles.workspaceBadge}>{workspaceLabel}</span>
             <div className={styles.topBarTitle}>
-              <Kicker tone="neutral">{resolvedLensLabel}</Kicker>
               <strong>{resolvedTitle}</strong>
             </div>
+            {!hasRail ? <span className={styles.workspaceBadge}>{workspaceLabel}</span> : null}
           </div>
 
           <div className={styles.topBarActions}>

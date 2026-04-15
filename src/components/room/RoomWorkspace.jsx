@@ -1004,9 +1004,6 @@ function StarterView({
 }) {
   return (
     <section className={styles.starter} data-testid="room-starter">
-      <Kicker tone="neutral" className={styles.starterKicker}>
-        Room
-      </Kicker>
       <h1>{starter?.firstLine || "Bring one live thing into focus."}</h1>
       <p>
         {starter?.secondLine ||
@@ -1135,12 +1132,9 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
   return (
     <div className={styles.railSection}>
       <div className={styles.railSectionHead}>
-        <div>
-          <Kicker tone="neutral">Assemblies</Kicker>
-          <strong>Assemblies</strong>
-        </div>
+        <strong>Assemblies</strong>
         <button type="button" className={styles.railTextAction} onClick={onCreate}>
-          New Box
+          New
         </button>
       </div>
 
@@ -1160,7 +1154,6 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
                 {project.receiptDraftCount ? ` • ${project.receiptDraftCount} receipt drafts` : ""}
               </span>
             </div>
-            {project.projectKey === activeProjectKey ? <span className={styles.railRowState}>Open</span> : null}
           </button>
         ))}
       </div>
@@ -1174,17 +1167,14 @@ function RoomArtifactList({ sources, onOpenWitness }) {
   return (
     <div className={styles.railSection}>
       <div className={styles.railSectionHead}>
-        <div>
-          <Kicker tone="neutral">Artifacts</Kicker>
-          <strong>Artifacts</strong>
-        </div>
+        <strong>Artifacts</strong>
         <Link href="/dream" className={styles.railTextAction}>
-          Open Library
+          Library
         </Link>
       </div>
 
       {!items.length ? (
-        <p className={styles.railEmptyText}>No source is attached to this assembly yet.</p>
+        <p className={styles.railEmptyText}>No attached source.</p>
       ) : (
         <div className={styles.railList}>
           {items.map((source) => (
@@ -1200,9 +1190,6 @@ function RoomArtifactList({ sources, onOpenWitness }) {
                 <strong>{source.title || "Source"}</strong>
                 <span>{source.metaLine || source.badge || "Attached source"}</span>
               </div>
-              {normalizeText(source.badge) ? (
-                <span className={styles.railRowState}>{source.badge}</span>
-              ) : null}
             </button>
           ))}
         </div>
@@ -1922,10 +1909,7 @@ function RoomSessionList({
   return (
     <div className={styles.railSection}>
       <div className={styles.railSectionHead}>
-        <div>
-          <Kicker tone="neutral">Conversations</Kicker>
-          <strong>Conversations</strong>
-        </div>
+        <strong>Conversations</strong>
         <button type="button" className={styles.railTextAction} onClick={onCreate} disabled={busy} data-testid="room-create-session">
           New
         </button>
@@ -1956,13 +1940,9 @@ function RoomSessionList({
                       {Number(session?.messageCount) === 1 ? "" : "s"}
                       {session?.updatedAt ? ` • ${formatRelativeSessionLabel(session.updatedAt)}` : ""}
                     </span>
-                    {normalizeText(session?.handoffSummary) ? (
-                      <span>{session.handoffSummary}</span>
-                    ) : null}
                   </div>
                 </button>
                 <div className={styles.railRowActions}>
-                  {isActive ? <span className={styles.railRowState}>Open</span> : null}
                   {!isActive && session?.isArchived ? (
                     <span className={styles.railRowState}>Archived</span>
                   ) : null}
@@ -3546,8 +3526,8 @@ export default function RoomWorkspace({
       onClick={() => setOverlayMode("context")}
       data-testid="room-scope-control"
     >
-      <span>{scopeSummary}</span>
-      <small>{assemblyTitle}</small>
+      <span>{assemblyTitle}</span>
+      <small>{scopeSummary}</small>
     </button>
   );
 
