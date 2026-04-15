@@ -99,7 +99,7 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
   assert.match(shell, /event\.key !== "Tab"/);
   assert.match(roomWorkspace, /WorkspaceTriangleShell/);
-  assert.match(roomWorkspace, /workspace-utility-settings/);
+  assert.doesNotMatch(roomWorkspace, /workspace-utility-settings/);
   assert.match(roomWorkspace, /workspace-knowledge-rail/);
   assert.match(roomWorkspace, /workspace-continuity-rail/);
   assert.match(roomWorkspace, /room-post-add-card/);
@@ -122,14 +122,13 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(roomWorkspace, /incomingPayload.state === "dismissed"/);
   assert.match(roomWorkspace, /previous\?\.lastSurface === "dream"/);
   assert.match(roomWorkspace, /clearRuntimeSurfaceResumeLibrary\(\)/);
-  assert.match(roomWorkspace, /buildDreamDocumentRecord/);
-  assert.match(roomWorkspace, /saveDreamDocument/);
+  assert.doesNotMatch(roomWorkspace, /buildDreamDocumentRecord/);
+  assert.doesNotMatch(roomWorkspace, /saveDreamDocument/);
   assert.match(roomWorkspace, /const currentLibraryHref = buildLibraryHref/);
   assert.match(roomWorkspace, /requestedArtifactId=\{focusedArtifact\?\.id \|\| routeArtifactId\}/);
-  assert.match(libraryArtifactPane, /Requested Library artifact not found\./);
-  assert.match(libraryArtifactPane, /The requested Library artifact is no longer available\./);
+  assert.doesNotMatch(libraryArtifactPane, /No library artifact focused/);
+  assert.doesNotMatch(libraryArtifactPane, /Select a Library document from the left rail/);
   assert.match(roomWorkspace, /scopeLabel=\{shell\?\.composerScope\?\.label \|\| assemblyTitle\}/);
-  assert.match(roomWorkspace, /scopeDetail=\{shell\?\.composerScope\?\.detail \|\| scopeSummary\}/);
   assert.match(roomWorkspace, /LibraryArtifactPane/);
   assert.match(roomWorkspace, /room-artifact-/);
   assert.match(roomWorkspace, /Tell Seven what is live right now/);

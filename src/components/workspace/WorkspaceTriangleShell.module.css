@@ -1,358 +1,200 @@
 .root {
-  min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(20, 20, 20, 0.98), rgba(10, 10, 10, 1));
+  min-height: 100dvh;
+  background: #0a0a0a;
   color: rgba(245, 245, 245, 0.96);
   display: grid;
-  grid-template-columns: 72px 320px minmax(0, 1fr) 420px;
+  grid-template-columns: 260px minmax(0, 1fr);
 }
 
-.rootNoRightPane {
-  grid-template-columns: 72px 320px minmax(0, 1fr);
+.rootWithRight {
+  grid-template-columns: 260px minmax(0, 1fr) 380px;
 }
 
-.utilityRail {
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+/* Left rail */
+.leftRail {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: rgba(8, 8, 8, 0.92);
+  min-height: 100dvh;
 }
 
-.utilityRailHead,
-.leftRailBody,
-.centerHeader,
-.centerMain,
-.centerComposer,
-.rightPaneHead,
-.rightPaneBody {
-  min-width: 0;
-}
-
-.utilityRailHead {
-  padding: 16px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.leftRailHead {
+  padding: 20px 18px 16px;
 }
 
 .wordmark {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-.workspaceLabel {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.58);
-}
-
-.utilityRailBody {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 8px 16px;
-}
-
-.utilityButton {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: inherit;
-  border-radius: 14px;
-  padding: 10px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  font: inherit;
-  cursor: pointer;
-}
-
-.utilityButton span {
-  font-size: 0.68rem;
-  line-height: 1.1;
-  text-align: center;
-}
-
-.utilityButtonActive,
-.utilityButton:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.leftRail {
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background: rgba(12, 12, 12, 0.92);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .leftRailBody {
   flex: 1;
   overflow: auto;
-  padding: 22px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.leftSection {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.leftSectionHead,
-.rightPaneHead {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.eyebrow {
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.48);
+  padding: 0 18px;
 }
 
 .accountBand {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 14px 18px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 18px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.accountCopy {
+.accountIdentity {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
-.accountCopy strong {
-  font-size: 0.95rem;
+.accountIdentity strong {
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
-.accountCopy span {
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 0.8rem;
+.accountIdentity span {
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.72rem;
 }
 
-.accountAction,
-.utilityClose {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.accountActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.accountButton {
+  border: 0;
   background: transparent;
-  color: inherit;
-  border-radius: 999px;
-  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.5);
   font: inherit;
+  font-size: 0.72rem;
   cursor: pointer;
+  padding: 4px 0;
+  transition: color 140ms ease;
 }
 
-.centerStage {
-  min-height: 100vh;
+.accountButton:hover {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* Center */
+.center {
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: rgba(10, 10, 10, 0.9);
 }
 
 .centerHeader {
-  padding: 18px 24px 0;
+  padding: 20px 28px 0;
 }
 
-.canonicalStrip {
-  padding: 16px 24px 0;
+.centerCanonical {
+  padding: 8px 28px 0;
 }
 
 .centerMain {
   flex: 1;
   overflow: auto;
-  padding: 18px 24px 0;
+  padding: 16px 28px 0;
 }
 
 .centerComposer {
-  padding: 16px 24px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 8, 8, 0.92);
+  padding: 14px 28px 20px;
 }
 
+/* Right pane */
 .rightPane {
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  min-height: 100vh;
-  background: rgba(14, 14, 14, 0.96);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
 .rightPaneHead {
-  padding: 20px 20px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.rightPaneHeadTop {
+  padding: 20px 18px 14px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.rightMeta {
-  margin-top: 10px;
+.rightPaneHead strong {
+  font-size: 0.92rem;
+  font-weight: 500;
 }
 
 .rightPaneBody {
   flex: 1;
   overflow: auto;
-  padding: 16px 20px 24px;
+  padding: 14px 18px 20px;
 }
 
-.paneClose {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
-  color: inherit;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.metaBadge {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  min-width: 0;
-}
-
-.metaBadge strong {
-  font-size: 0.76rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.metaBadge span {
-  color: rgba(255, 255, 255, 0.64);
-  font-size: 0.78rem;
-}
-
-.utilityOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-}
-
-.utilityBackdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.58);
+.closeButton {
   border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.44);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 140ms ease;
 }
 
-.utilityPanel {
-  position: absolute;
-  left: 92px;
-  top: 20px;
-  bottom: 20px;
-  width: min(380px, calc(100vw - 120px));
-  background: rgba(16, 16, 16, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+.closeButton:hover {
+  color: rgba(255, 255, 255, 0.86);
 }
 
-.utilityPanelHead {
-  padding: 18px 18px 12px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.utilityPanelBody {
-  overflow: auto;
-  padding: 16px 18px 20px;
-}
-
-@media (max-width: 1280px) {
-  .root {
-    grid-template-columns: 72px 280px minmax(0, 1fr) 360px;
-  }
-
-  .rootNoRightPane {
-    grid-template-columns: 72px 280px minmax(0, 1fr);
+/* Responsive */
+@media (max-width: 1100px) {
+  .rootWithRight {
+    grid-template-columns: 240px minmax(0, 1fr) 340px;
   }
 }
 
-@media (max-width: 1080px) {
-  .root {
-    grid-template-columns: 72px 260px minmax(0, 1fr);
+@media (max-width: 900px) {
+  .root,
+  .rootWithRight {
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 
   .rightPane {
-    grid-column: 2 / -1;
-    min-height: 0;
-    border-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 80vw);
+    z-index: 50;
+    background: #0e0e0e;
+    box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
   }
 }
 
-@media (max-width: 820px) {
-  .root {
+@media (max-width: 680px) {
+  .root,
+  .rootWithRight {
     grid-template-columns: 1fr;
   }
 
-  .utilityRail,
-  .leftRail,
-  .rightPane {
-    min-height: 0;
-    border: 0;
+  .leftRail {
+    display: none;
   }
 
-  .utilityRail {
-    padding: 12px 16px 0;
-    background: transparent;
-  }
-
-  .utilityRailHead {
-    padding: 0 0 12px;
-  }
-
-  .utilityRailBody {
-    flex-direction: row;
-    overflow: auto;
-    padding: 0 0 12px;
-  }
-
-  .utilityButton {
-    min-width: 88px;
-  }
-
-  .leftRailBody,
   .centerHeader,
-  .canonicalStrip,
+  .centerCanonical,
   .centerMain,
-  .centerComposer,
-  .rightPaneHead,
-  .rightPaneBody {
+  .centerComposer {
     padding-left: 16px;
     padding-right: 16px;
   }
 
-  .utilityPanel {
-    left: 16px;
-    right: 16px;
-    width: auto;
+  .rightPane {
+    width: 100vw;
   }
 }

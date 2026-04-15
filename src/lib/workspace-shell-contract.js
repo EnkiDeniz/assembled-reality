@@ -137,7 +137,6 @@ export function buildWorkspaceShellContract(view = null) {
     .filter(Boolean);
   const routeFocusedArtifact = mapRouteFocusedArtifact(view);
   const evidenceContour = buildEvidenceContour(view?.mirror);
-  const basisLabel = normalizeText(view?.roomSourceSummary?.compileState || "unknown");
 
   return {
     activeBox,
@@ -178,18 +177,6 @@ export function buildWorkspaceShellContract(view = null) {
     },
     composerScope: {
       label: normalizeText(activeBox?.title) || "Active box",
-      detail: "Default scope: active box only.",
-    },
-    basis: {
-      label: basisLabel ? `Basis: ${basisLabel}` : "Basis unavailable",
-      commitment: view?.activePreview ? "provisional" : "accepted",
-    },
-    utilityState: {
-      items: [
-        { id: "settings", label: "Settings" },
-        { id: "plugins", label: "Plugins" },
-        { id: "automations", label: "Automations" },
-      ],
     },
   };
 }

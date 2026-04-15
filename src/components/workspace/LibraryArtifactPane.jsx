@@ -22,8 +22,8 @@ export default function LibraryArtifactPane({
   documents = [],
   activeDocument = null,
   onDocumentChange = null,
-  requestedArtifactId = "",
-  errorMessage = "",
+  _requestedArtifactId = "",
+  _errorMessage = "",
 }) {
   const compilerReadSummaryRef = useRef(null);
   const compilerReadAbortRef = useRef(null);
@@ -165,30 +165,13 @@ export default function LibraryArtifactPane({
   }
 
   if (!activeDocument?.id) {
-    return (
-      <div className={styles.empty}>
-        <strong>
-          {normalizeLongForm(requestedArtifactId)
-            ? "Requested Library artifact not found."
-            : "No library artifact focused."}
-        </strong>
-        <p>
-          {normalizeLongForm(errorMessage) ||
-            (normalizeLongForm(requestedArtifactId)
-              ? "The requested Library artifact is no longer available."
-              : "Select a Library document from the left rail to inspect it here.")}
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
     <div className={styles.root} data-testid="library-artifact-pane">
       <div className={styles.head}>
-        <div>
-          <span className={styles.eyebrow}>Library</span>
-          <strong>{activeDocument.filename || "Untitled document"}</strong>
-        </div>
+        <strong>{activeDocument.filename || "Untitled document"}</strong>
       </div>
 
       <div className={styles.versionMeta}>

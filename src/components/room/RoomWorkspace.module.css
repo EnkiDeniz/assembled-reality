@@ -3462,3 +3462,18 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.canonicalLine {
+  color: rgba(242, 244, 247, 0.72);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.roomTitle {
+  color: rgba(242, 244, 247, 0.96);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}

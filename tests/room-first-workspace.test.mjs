@@ -98,12 +98,12 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomUi, /OperatePanel/);
   assert.match(roomUi, /Ask Seven to audit/);
   assert.match(roomUi, /Witness/);
-  assert.match(roomUi, /Canonical Strip/);
+  assert.match(roomUi, /canonicalLine/);
   assert.match(roomUi, /WorkspaceTriangleShell/);
   assert.match(roomUi, /LibraryArtifactPane/);
   assert.match(roomUi, /workspace-continuity-rail/);
   assert.match(roomUi, /workspace-knowledge-rail/);
-  assert.match(roomUi, /workspace-utility-settings/);
+  assert.doesNotMatch(roomUi, /workspace-utility-settings/);
   assert.doesNotMatch(roomUi, /Inspect proposal/);
   assert.doesNotMatch(roomUi, /Structure Waking/);
   assert.match(roomUi, /apply_proposal_preview/);
@@ -112,7 +112,7 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomUi, /Tell Seven what is live right now/);
   assert.match(roomUi, /signOut\(\{ callbackUrl: "\/" \}\)/);
   assert.match(workspaceShell, /workspace-triangle-shell/);
-  assert.match(workspaceShell, /utilityPanel/);
+  assert.match(workspaceShell, /rightPane/);
   assert.match(workspaceContract, /activeBox/);
   assert.match(workspaceContract, /canonicalStrip/);
   assert.match(workspaceContract, /composerScope/);

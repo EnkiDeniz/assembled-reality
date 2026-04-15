@@ -5,12 +5,9 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Clock3,
   Headphones,
   Plus,
-  Plug,
   SendHorizontal,
-  Settings2,
   Upload,
 } from "lucide-react";
 import styles from "@/components/room/RoomWorkspace.module.css";
@@ -28,17 +25,12 @@ import {
   normalizeDreamBridgePayload,
   saveDreamBridgePayload,
 } from "@/lib/dream-bridge";
-import { buildDreamDocumentRecord } from "@/lib/dream";
 import {
   listDreamDocuments,
-  saveDreamDocument,
   setActiveDreamDocument,
 } from "@/lib/dream-storage";
 import LibraryArtifactPane from "@/components/workspace/LibraryArtifactPane";
-import WorkspaceTriangleShell, {
-  BasisBadge,
-  ScopeBadge,
-} from "@/components/workspace/WorkspaceTriangleShell";
+import WorkspaceTriangleShell from "@/components/workspace/WorkspaceTriangleShell";
 import {
   buildWorkingEchoStripStateFromRoomView,
   normalizeSectionId,
@@ -109,14 +101,6 @@ function hasMeaningfulConversation(view = null) {
   );
   const workingEchoStripState = buildWorkingEchoStripStateFromRoomView(view);
   return Boolean(hasAssistantReply || !workingEchoStripState?.dormant);
-}
-
-function buildDreamFilenameFromRoomSource(document = null) {
-  const originalFilename = normalizeText(document?.originalFilename);
-  if (originalFilename) return originalFilename;
-  const title = normalizeText(document?.title);
-  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return `${slug || "room-source"}.md`;
 }
 
 function buildWorkspaceHref(
@@ -565,161 +549,6 @@ function MirrorRegion({
   );
 }
 
-function MirrorPanel({ view, highlightedRegion, collapsed, onToggle, onOpenWitness }) {
-  const mirror = view?.mirror || {};
-  const evidenceItems = Array.isArray(mirror?.evidence) ? mirror.evidence : [];
-  const storyItems = Array.isArray(mirror?.story) ? mirror.story : [];
-  const moveItems = Array.isArray(mirror?.moves) ? mirror.moves : [];
-  const returnItems = Array.isArray(mirror?.returns) ? mirror.returns : [];
-  const summary =
-    normalizeText(mirror?.aim?.text) ||
-    normalizeText(evidenceItems[0]?.title) ||
-    normalizeText(storyItems[0]?.text) ||
-    normalizeText(moveItems[0]?.text) ||
-    normalizeText(returnItems[0]?.label || returnItems[0]?.actual) ||
-    "structure forming...";
-  const showEvidenceStory = evidenceItems.length > 0 || storyItems.length > 0;
-  const evidenceRatio = evidenceItems.length / Math.max(1, evidenceItems.length + storyItems.length);
-
-  if (!view?.hasStructure) return null;
-
-  return (
-    <section className={styles.mirrorStrip} data-testid="room-mirror">
-      <button
-        type="button"
-        className={styles.mirrorToggle}
-        onClick={onToggle}
-        data-testid="room-mirror-toggle"
-      >
-        <span className={styles.mirrorToggleGlyph}>{collapsed ? "▸" : "▾"}</span>
-        <ShapeGlyph role="aim" className={styles.mirrorToggleShape} />
-        <span className={styles.mirrorToggleSummary}>{summary}</span>
-      </button>
-
-      <div className={`${styles.mirrorBody} ${collapsed ? styles.mirrorBodyCollapsed : ""}`}>
-        <div className={styles.mirrorBodyInner}>
-          {normalizeText(mirror?.aim?.text) ? (
-            <MirrorRegion
-              region="aim"
-              highlighted={highlightedRegion === "aim"}
-              delay={0}
-              fullWidth
-            >
-              <div className={styles.mirrorPrimary} data-testid="room-mirror-aim">
-                <p>{mirror.aim.text}</p>
-                {normalizeText(mirror?.aim?.gloss) ? <span>{mirror.aim.gloss}</span> : null}
-              </div>
-            </MirrorRegion>
-          ) : null}
-
-          {showEvidenceStory ? (
-            <RatioBar ratio={evidenceRatio} />
-          ) : null}
-
-          {showEvidenceStory ? (
-            <div className={styles.mirrorSplit}>
-              {evidenceItems.length ? (
-                <MirrorRegion
-                  region="evidence"
-                  caption={String(evidenceItems.length)}
-                  highlighted={highlightedRegion === "evidence"}
-                  delay={400}
-                >
-                  <div className={styles.mirrorList}>
-                    {evidenceItems.map((item) => (
-                      <div key={item.id} className={styles.mirrorItem}>
-                        <div>
-                          <strong>{item.title}</strong>
-                          {item.detail ? <span>{item.detail}</span> : null}
-                        </div>
-                        {item.documentKey ? (
-                          <button
-                            type="button"
-                            className={styles.inlineLinkButton}
-                            data-testid={`room-mirror-witness-${item.documentKey}`}
-                            onClick={() => onOpenWitness?.(item.documentKey)}
-                          >
-                            Witness
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                </MirrorRegion>
-              ) : null}
-
-              {storyItems.length ? (
-                <MirrorRegion
-                  region="story"
-                  caption={String(storyItems.length)}
-                  highlighted={highlightedRegion === "story"}
-                  delay={500}
-                >
-                  <div className={styles.mirrorList}>
-                    {storyItems.map((item) => (
-                      <div key={item.id} className={styles.mirrorItem}>
-                        <div>
-                          <strong>{item.text}</strong>
-                          {item.detail ? <span>{item.detail}</span> : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </MirrorRegion>
-              ) : null}
-            </div>
-          ) : null}
-
-          {moveItems.length ? (
-            <MirrorRegion
-              region="moves"
-              caption={String(moveItems.length)}
-              highlighted={highlightedRegion === "moves"}
-              delay={700}
-              fullWidth
-            >
-              <div className={styles.mirrorList}>
-                {moveItems.map((item) => (
-                  <div key={item.id} className={styles.mirrorItem}>
-                    <div>
-                      <strong>{item.text}</strong>
-                      {item.detail ? <span>{item.detail}</span> : null}
-                    </div>
-                    <span className={styles.moveStatus}>{item.status || "suggested"}</span>
-                  </div>
-                ))}
-              </div>
-            </MirrorRegion>
-          ) : null}
-
-          {returnItems.length ? (
-            <MirrorRegion
-              region="returns"
-              caption={String(returnItems.length)}
-              highlighted={highlightedRegion === "returns"}
-              delay={800}
-              fullWidth
-            >
-              <div className={styles.mirrorList}>
-                {returnItems.map((item) => (
-                  <div key={item.id} className={styles.mirrorItem}>
-                    <div>
-                      <strong>{item.label || item.actual || "Return"}</strong>
-                      {item.actual ? <span>{item.actual}</span> : null}
-                      {item.provenanceLabel ? <span>{item.provenanceLabel}</span> : null}
-                    </div>
-                    <span className={styles.returnResult}>{item.result || "draft"}</span>
-                  </div>
-                ))}
-              </div>
-            </MirrorRegion>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function getWorkingEchoTone(status = "") {
   const normalized = normalizeText(status).toLowerCase();
   if (normalized === "move_ready") return "brand";
@@ -1075,17 +904,13 @@ function RoomResumeBanner({ resume = null, onContinue = null, onReturnToLibrary 
 }
 
 function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
+  const items = Array.isArray(projects) ? projects : [];
+  if (items.length <= 1) return null;
+
   return (
     <div className={styles.railSection}>
-      <div className={styles.railSectionHead}>
-        <strong>Boxes</strong>
-        <button type="button" className={styles.railTextAction} onClick={onCreate}>
-          New
-        </button>
-      </div>
-
       <div className={styles.railList}>
-        {(Array.isArray(projects) ? projects : []).map((project) => (
+        {items.map((project) => (
           <button
             key={project.projectKey}
             type="button"
@@ -1102,164 +927,110 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
             </div>
           </button>
         ))}
+        <button type="button" className={styles.railTextAction} onClick={onCreate}>
+          +
+        </button>
       </div>
     </div>
   );
 }
 
-function RoomArtifactList({ sources, onOpenWitness, libraryHref = "/library" }) {
+function RoomArtifactList({ sources, onOpenWitness }) {
   const items = Array.isArray(sources) ? sources.filter(Boolean) : [];
+  if (!items.length) return null;
 
   return (
     <div className={styles.railSection}>
-      <div className={styles.railSectionHead}>
-        <strong>Witnesses</strong>
-        <Link href={libraryHref} className={styles.railTextAction}>
-          Library
-        </Link>
+      <div className={styles.railList}>
+        {items.map((source) => (
+          <button
+            key={source.documentKey || source.title}
+            type="button"
+            className={styles.railRow}
+            onClick={() => onOpenWitness?.(source.documentKey)}
+            disabled={!normalizeText(source.documentKey)}
+            data-testid={`room-artifact-${source.documentKey || source.title}`}
+          >
+            <div className={styles.railRowCopy}>
+              <strong>{source.title || "Source"}</strong>
+              <span>{source.metaLine || source.badge || "Attached source"}</span>
+            </div>
+          </button>
+        ))}
       </div>
-
-      {!items.length ? (
-        <p className={styles.railEmptyText}>No attached source.</p>
-      ) : (
-        <div className={styles.railList}>
-          {items.map((source) => (
-            <button
-              key={source.documentKey || source.title}
-              type="button"
-              className={styles.railRow}
-              onClick={() => onOpenWitness?.(source.documentKey)}
-              disabled={!normalizeText(source.documentKey)}
-              data-testid={`room-artifact-${source.documentKey || source.title}`}
-            >
-              <div className={styles.railRowCopy}>
-                <strong>{source.title || "Source"}</strong>
-                <span>{source.metaLine || source.badge || "Attached source"}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
 function LibraryArtifactList({ documents, activeDocumentId, onSelect }) {
   const items = Array.isArray(documents) ? documents : [];
+  if (!items.length) return null;
 
   return (
     <div className={styles.railSection}>
-      <div className={styles.railSectionHead}>
-        <strong>Library</strong>
+      <div className={styles.railList}>
+        {items.map((document) => {
+          const isActive = document?.id === activeDocumentId;
+          return (
+            <button
+              key={document.id}
+              type="button"
+              className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
+              onClick={() => onSelect?.(document)}
+              data-testid={`room-library-${document.id}`}
+            >
+              <div className={styles.railRowCopy}>
+                <strong>{document.filename || "Library document"}</strong>
+                <span>
+                  {document.currentVersionLabel || "v1"}
+                  {document.wordCount ? ` • ${document.wordCount} words` : ""}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
-
-      {!items.length ? (
-        <p className={styles.railEmptyText}>No library artifacts yet.</p>
-      ) : (
-        <div className={styles.railList}>
-          {items.map((document) => {
-            const isActive = document?.id === activeDocumentId;
-            return (
-              <button
-                key={document.id}
-                type="button"
-                className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
-                onClick={() => onSelect?.(document)}
-                data-testid={`room-library-${document.id}`}
-              >
-                <div className={styles.railRowCopy}>
-                  <strong>{document.filename || "Library document"}</strong>
-                  <span>
-                    {document.currentVersionLabel || "v1"}
-                    {document.wordCount ? ` • ${document.wordCount} words` : ""}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
 
 function ReceiptArtifactList({ receipts, activeReceiptId, onSelect }) {
   const items = Array.isArray(receipts) ? receipts.filter(Boolean) : [];
+  if (!items.length) return null;
+
   return (
     <div className={styles.railSection}>
-      <div className={styles.railSectionHead}>
-        <strong>Receipts</strong>
+      <div className={styles.railList}>
+        {items.map((receipt) => {
+          const isActive = receipt?.id === activeReceiptId;
+          return (
+            <button
+              key={receipt.id}
+              type="button"
+              className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
+              onClick={() => onSelect?.(receipt)}
+              data-testid={`room-receipt-${receipt.id}`}
+            >
+              <div className={styles.railRowCopy}>
+                <strong>{receipt.title || "Receipt draft"}</strong>
+                <span>{normalizeText(receipt.status || receipt.stance || "draft")}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
-
-      {!items.length ? (
-        <p className={styles.railEmptyText}>No recent receipt drafts yet.</p>
-      ) : (
-        <div className={styles.railList}>
-          {items.map((receipt) => {
-            const isActive = receipt?.id === activeReceiptId;
-            return (
-              <button
-                key={receipt.id}
-                type="button"
-                className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
-                onClick={() => onSelect?.(receipt)}
-                data-testid={`room-receipt-${receipt.id}`}
-              >
-                <div className={styles.railRowCopy}>
-                  <strong>{receipt.title || "Receipt draft"}</strong>
-                  <span>{normalizeText(receipt.status || receipt.stance || "draft")}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
 
-function CanonicalStrip({ shell = null, onOpenOperate = null, operateAvailable = false }) {
+function CanonicalStrip({ shell = null }) {
   const canonical = shell?.canonicalStrip || {};
-  const evidenceItems = Array.isArray(canonical?.evidenceContour?.items)
-    ? canonical.evidenceContour.items
-    : [];
-
+  const aim = canonical?.aim;
+  if (!aim) return null;
   return (
-    <section className={styles.canonicalStripCard} data-testid="workspace-canonical-strip">
-      <div className={styles.canonicalStripHead}>
-        <div>
-          <Kicker tone="neutral">Canonical Strip</Kicker>
-          <strong>{canonical?.aim || "No accepted aim yet."}</strong>
-        </div>
-        <div className={styles.canonicalStripMeta}>
-          <ScopeBadge label={shell?.composerScope?.label || "Active box"} detail={shell?.composerScope?.detail || ""} />
-          <BasisBadge label={shell?.basis?.label || "Basis unavailable"} commitment={shell?.basis?.commitment || ""} />
-        </div>
-      </div>
-
-      <div className={styles.canonicalStripGrid}>
-        <div className={styles.canonicalStripBlock}>
-          <span>Evidence contour</span>
-          <strong>{canonical?.evidenceContour?.summary || "No accepted evidence contour yet."}</strong>
-          {evidenceItems.length ? (
-            <p>{evidenceItems.join(" • ")}</p>
-          ) : null}
-        </div>
-        <div className={styles.canonicalStripBlock}>
-          <span>Return condition</span>
-          <strong>{canonical?.returnCondition || "No return condition is explicit yet."}</strong>
-        </div>
-        <div className={styles.canonicalStripBlock}>
-          <span>Lawful next move</span>
-          <strong>{canonical?.nextMove || "No lawful next move is accepted yet."}</strong>
-          {operateAvailable ? (
-            <button type="button" className={styles.railInlineAction} onClick={onOpenOperate}>
-              Open Operate
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </section>
+    <div className={styles.canonicalLine} data-testid="workspace-canonical-strip">
+      <span>{aim}</span>
+    </div>
   );
 }
 
@@ -1307,38 +1078,6 @@ function ArtifactFallbackPane({ roomIdentity = null }) {
       <p className={styles.noticeText}>
         Keep the room attached to a real object by opening a witness, library item, or receipt from the left rail.
       </p>
-    </div>
-  );
-}
-
-function UtilityPanelContent({ activeUtility = "", onClose = null }) {
-  const normalized = normalizeText(activeUtility).toLowerCase();
-  if (!normalized) return null;
-
-  if (normalized === "settings") {
-    return (
-      <div className={styles.utilityPanelCopy}>
-        <p>Account and identity controls live here first.</p>
-        <div className={styles.inlineActions}>
-          <Link href="/account" className={styles.primaryLinkButton} onClick={onClose}>
-            Open account
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (normalized === "plugins") {
-    return (
-      <div className={styles.utilityPanelCopy}>
-        <p>Plugins stay peripheral in V1. This shell keeps them available without letting them become the product center.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.utilityPanelCopy}>
-      <p>Automations stay peripheral in V1. They remain available here without competing with the live box/session/artifact workflow.</p>
     </div>
   );
 }
@@ -2046,67 +1785,39 @@ function RoomSessionList({
   activeSessionId,
   onCreate,
   onActivate,
-  onArchive,
   busy = false,
 }) {
   const items = Array.isArray(sessions) ? sessions : [];
 
   return (
     <div className={styles.railSection}>
-      <div className={styles.railSectionHead}>
-        <strong>Sessions</strong>
+      <div className={styles.railList}>
         <button type="button" className={styles.railTextAction} onClick={onCreate} disabled={busy} data-testid="room-create-session">
-          New
+          +
         </button>
-      </div>
-
-      {!items.length ? (
-        <p className={styles.railEmptyText}>No conversations yet.</p>
-      ) : (
-        <div className={styles.railList}>
-          {items.map((session) => {
-            const isActive = session?.id === activeSessionId;
-            return (
-              <div
-                key={session?.id || session?.sessionKey}
-                className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
-              >
-                <button
-                  type="button"
-                  data-testid={`room-session-${session?.id || session?.sessionKey}`}
-                  className={styles.railRowButton}
-                  onClick={() => onActivate?.(session?.id)}
-                  disabled={busy || isActive}
-                >
-                  <div className={styles.railRowCopy}>
-                    <strong>{session?.title || "Conversation"}</strong>
-                    <span>
-                      {Number(session?.messageCount) || 0} message
-                      {Number(session?.messageCount) === 1 ? "" : "s"}
-                      {session?.updatedAt ? ` • ${formatRelativeSessionLabel(session.updatedAt)}` : ""}
-                    </span>
-                  </div>
-                </button>
-                <div className={styles.railRowActions}>
-                  {!isActive && session?.isArchived ? (
-                    <span className={styles.railRowState}>Archived</span>
-                  ) : null}
-                  {!session?.isArchived ? (
-                    <button
-                      type="button"
-                      className={styles.railInlineAction}
-                      onClick={() => onArchive?.(session?.id)}
-                      disabled={busy}
-                    >
-                      Archive
-                    </button>
-                  ) : null}
-                </div>
+        {items.map((session) => {
+          const isActive = session?.id === activeSessionId;
+          return (
+            <button
+              key={session?.id || session?.sessionKey}
+              type="button"
+              data-testid={`room-session-${session?.id || session?.sessionKey}`}
+              className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
+              onClick={() => onActivate?.(session?.id)}
+              disabled={busy || isActive}
+            >
+              <div className={styles.railRowCopy}>
+                <strong>{session?.title || "Conversation"}</strong>
+                <span>
+                  {Number(session?.messageCount) || 0} message
+                  {Number(session?.messageCount) === 1 ? "" : "s"}
+                  {session?.updatedAt ? ` • ${formatRelativeSessionLabel(session.updatedAt)}` : ""}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2628,130 +2339,6 @@ function WorkspaceManagementSection({
   );
 }
 
-function WorkspaceSectionContent({
-  mode,
-  view,
-  projectKey,
-  pendingStarterAction,
-  highlightedRegion,
-  mirrorCollapsed,
-  workingEchoCollapsed,
-  onToggleMirror,
-  onToggleWorkingEcho,
-  onOpenWitness,
-  onOpenOperate,
-  onClose,
-  onOpenMode,
-  onProjectSelect,
-  onCreateSession,
-  onActivateSession,
-  onArchiveSession,
-  onCreateBox,
-  onSourceComplete,
-  onRunOperate,
-  onAskSevenAudit,
-  operatePending,
-  operateError,
-  operateResult,
-  busy,
-}) {
-  if (mode === "threads") {
-    return (
-      <RoomSessionList
-        sessions={view?.sessions}
-        activeSessionId={view?.session?.id}
-        onCreate={onCreateSession}
-        onActivate={onActivateSession}
-        onArchive={onArchiveSession}
-        busy={busy}
-      />
-    );
-  }
-
-  if (mode === "mirror") {
-    return (
-      <div className={styles.sectionStack}>
-        {view?.hasStructure ? (
-          <MirrorPanel
-            view={view}
-            highlightedRegion={highlightedRegion}
-            collapsed={mirrorCollapsed}
-            onToggle={onToggleMirror}
-            onOpenWitness={onOpenWitness}
-          />
-        ) : (
-          <ShellSurface className={styles.sectionNotice} roomy>
-            <p>No mirror is visible yet. Start with a source and a declared aim.</p>
-          </ShellSurface>
-        )}
-        {view?.workingEcho ? (
-          <WorkingEchoPanel
-            workingEcho={view.workingEcho}
-            collapsed={workingEchoCollapsed}
-            onToggle={onToggleWorkingEcho}
-          />
-        ) : null}
-        <AuthorityPanel authorityContext={view?.authorityContext} roomIdentity={view?.roomIdentity} />
-      </div>
-    );
-  }
-
-  if (mode === "witness") {
-    return <FocusedWitnessPanel focusedWitness={view?.focusedWitness} onBack={onClose} />;
-  }
-
-  if (mode === "operate") {
-    return (
-      <OperatePanel
-        operateSummary={view?.adjacent?.operate || null}
-        pending={operatePending}
-        error={operateError}
-        result={operateResult}
-        onRun={onRunOperate}
-        onAskSeven={onAskSevenAudit}
-        onBack={onClose}
-      />
-    );
-  }
-
-  if (mode === "context" || mode === "boxes") {
-    return (
-      <WorkspaceManagementSection
-        view={view}
-        projectKey={projectKey}
-        onOpenMode={onOpenMode}
-        onOpenWitness={onOpenWitness}
-        onOpenOperate={onOpenOperate}
-        onProjectSelect={onProjectSelect}
-        onCreateSession={onCreateSession}
-        onActivateSession={onActivateSession}
-        onArchiveSession={onArchiveSession}
-        canOpenWitness={Boolean(normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader))}
-        canOpenOperate={Boolean(
-          normalizeText(view?.adjacent?.operate?.openHref) || view?.adjacent?.operate?.available,
-        )}
-        busy={busy}
-      />
-    );
-  }
-
-  if (mode === "source") {
-    return (
-      <SourceTray
-        projectKey={projectKey}
-        onComplete={onSourceComplete}
-        initialMode={pendingStarterAction || "upload"}
-      />
-    );
-  }
-
-  if (mode === "create") {
-    return <CreateBoxForm onCreate={onCreateBox} busy={busy} />;
-  }
-
-  return null;
-}
-
 function buildLibraryHref(
   documentId = "",
   anchor = "",
@@ -2778,7 +2365,6 @@ function buildLibraryHref(
 export default function RoomWorkspace({
   initialView,
   initialSection = "",
-  workspaceLabel = "Personal",
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2788,7 +2374,7 @@ export default function RoomWorkspace({
   const [actionPending, startActionTransition] = useTransition();
   const [messageError, setMessageError] = useState("");
   const [actionError, setActionError] = useState("");
-  const [mirrorCollapsed, setMirrorCollapsed] = useState(false);
+  const [_mirrorCollapsed, setMirrorCollapsed] = useState(false);
   const [overlayMode, setOverlayMode] = useState(() => {
     const requestedSection = normalizeSectionId(initialSection);
     if (requestedSection === "source" || requestedSection === "create") return requestedSection;
@@ -2799,16 +2385,14 @@ export default function RoomWorkspace({
   const [operatePending, setOperatePending] = useState(false);
   const [operateError, setOperateError] = useState("");
   const [operateResult, setOperateResult] = useState(null);
-  const [highlightedRegion, setHighlightedRegion] = useState("");
-  const [workingEchoCollapsed, setWorkingEchoCollapsed] = useState(false);
+  const [_highlightedRegion, setHighlightedRegion] = useState("");
   const [optimisticUserMessage, setOptimisticUserMessage] = useState("");
   const [pendingDreamBridgePayload, setPendingDreamBridgePayload] = useState(null);
   const [dismissedDreamBridgePayload, setDismissedDreamBridgePayload] = useState(null);
-  const [pendingStarterAction, setPendingStarterAction] = useState("");
+  const [_pendingStarterAction, setPendingStarterAction] = useState("");
   const [composerFocusSignal, setComposerFocusSignal] = useState(0);
   const [postAddGuidance, setPostAddGuidance] = useState(null);
   const [resumeBanner, setResumeBanner] = useState(null);
-  const [activeUtility, setActiveUtility] = useState("");
   const [libraryDocuments, setLibraryDocuments] = useState([]);
   const [libraryError, setLibraryError] = useState("");
   const [focusedArtifact, setFocusedArtifact] = useState(() => {
@@ -3199,23 +2783,6 @@ export default function RoomWorkspace({
     }
   }
 
-  async function handleCreateBox({ title, subtitle }) {
-    const response = await fetch("/api/workspace/project", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title, subtitle }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(payload?.error || "Could not create the box.");
-    }
-    await handleProjectSelect(payload?.project?.projectKey || "", {
-      starterAction: pendingStarterAction,
-    });
-  }
-
   async function createDefaultBox(starterAction = "paste") {
     const response = await fetch("/api/workspace/project", {
       method: "POST",
@@ -3232,52 +2799,6 @@ export default function RoomWorkspace({
       starterAction,
     });
     return payload?.project?.projectKey || "";
-  }
-
-  async function seedLibraryDocumentFromRoomSource(sourceDocument = null) {
-    if (!sourceDocument?.rawMarkdown) return null;
-    try {
-      const documentRecord = await buildDreamDocumentRecord({
-        filename: buildDreamFilenameFromRoomSource(sourceDocument),
-        rawMarkdown: sourceDocument.rawMarkdown,
-        sourceKind: "upload",
-      });
-      const savedDocument = await saveDreamDocument(documentRecord);
-      setLibraryDocuments((current) => {
-        const remainder = current.filter((document) => document.id !== savedDocument.id);
-        return [savedDocument, ...remainder];
-      });
-      return savedDocument;
-    } catch {
-      return null;
-    }
-  }
-
-  function buildPostAddGuidance(nextView, dreamDocument = null) {
-    const meaningfulConversation = hasMeaningfulConversation(nextView);
-    return {
-      dreamDocumentId: dreamDocument?.id || "",
-      dreamAnchor: "",
-      primaryAction: meaningfulConversation ? "room" : "library",
-      primaryLabel: meaningfulConversation ? "Ask Seven here" : "Open in Library for structural read",
-      secondaryLabel: meaningfulConversation ? "Open in Library" : "Ask Seven here",
-      headline: meaningfulConversation
-        ? "Your source is ready inside the live thread."
-        : "Your source is ready for structural read.",
-      body: meaningfulConversation
-        ? "Stay in Room when the live issue is already underway. Open Library when you want a structural read before the next move."
-        : "Open Library when you want the structural read first. Stay here if you already know the question you want to ask Seven.",
-    };
-  }
-
-  async function handleSourceComplete(payload = null) {
-    setActionError("");
-    const sourceDocument = payload?.document || payload?.sourceDocument || null;
-    const seededDreamDocument = await seedLibraryDocumentFromRoomSource(sourceDocument);
-    const nextView = await refreshRoom(projectKey, activeSessionId, roomScopedDocumentKey);
-    setPostAddGuidance(buildPostAddGuidance(nextView, seededDreamDocument));
-    setOverlayMode("");
-    setPendingStarterAction("");
   }
 
   async function handleCreateSession() {
@@ -3536,34 +3057,6 @@ export default function RoomWorkspace({
     }
   }
 
-  async function loadOperateSummary() {
-    if (!normalizeText(projectKey)) return null;
-    setOperatePending(true);
-    setOperateError("");
-    try {
-      const params = new URLSearchParams();
-      params.set("projectKey", projectKey);
-      params.set("mode", "summary");
-      const response = await fetch(`/api/workspace/operate?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || "Operate could not load the latest box read.");
-      }
-      setOperateResult(payload?.result || null);
-      return payload?.result || null;
-    } catch (error) {
-      setOperateResult(null);
-      setOperateError(
-        error instanceof Error ? error.message : "Operate could not load the latest box read.",
-      );
-      return null;
-    } finally {
-      setOperatePending(false);
-    }
-  }
-
   async function handleRunOperate() {
     if (!normalizeText(projectKey)) return;
     setOperatePending(true);
@@ -3782,30 +3275,6 @@ export default function RoomWorkspace({
     }
   }
 
-  async function handleOpenOperate() {
-    try {
-      await refreshRoom(projectKey, activeSessionId, roomScopedDocumentKey, "");
-      setFocusedArtifact({ type: "operate", id: normalizeText(view?.adjacent?.operate?.documentKey) || "operate" });
-      startActionTransition(() => {
-        router.replace(
-          buildWorkspaceHref(projectKey, {
-            sessionId: activeSessionId,
-            ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
-          }),
-          { scroll: false },
-        );
-      });
-      if (view?.adjacent?.operate?.hasRun) {
-        await loadOperateSummary();
-      } else {
-        setOperateError("");
-        setOperateResult(null);
-      }
-    } catch (error) {
-      setOperateError(error instanceof Error ? error.message : "Could not open Operate.");
-    }
-  }
-
   function handleCloseOverlay() {
     const nextMode = normalizeText(overlayMode).toLowerCase();
     setOverlayMode("");
@@ -3816,14 +3285,6 @@ export default function RoomWorkspace({
       setPendingStarterAction("");
     }
   }
-
-  const activeSectionMode = normalizeText(overlayMode).toLowerCase();
-  const sectionMeta =
-    activeSectionMode === "source"
-              ? { label: "Source", title: "Add source" }
-              : activeSectionMode === "create"
-                ? { label: "Start Room", title: "Create the internal room container" }
-                : { label: "", title: "" };
 
   const workspaceMain = (
     <div className={styles.workspaceMain} data-testid="room-workspace">
@@ -3992,36 +3453,15 @@ export default function RoomWorkspace({
     </div>
   );
 
-  let rightPaneLabel = "Artifact";
   let rightPaneTitle = shell?.activeBox?.title || roomTitle;
-  let rightPaneMeta = (
-    <BasisBadge label={shell?.basis?.label || "Basis unavailable"} commitment={shell?.basis?.commitment || ""} />
-  );
-  let rightPaneContent = <ArtifactFallbackPane roomIdentity={view?.roomIdentity} />;
-  const rightPaneVisible = focusedArtifact?.type && focusedArtifact.type !== "room";
+  let rightPaneContent = null;
+  const rightPaneActive = focusedArtifact?.type && focusedArtifact.type !== "room";
 
   if (focusedArtifact?.type === "witness") {
-    rightPaneLabel = "Witness";
     rightPaneTitle = view?.focusedWitness?.title || "Focused witness";
-    rightPaneMeta = (
-      <div className={styles.inlineMetaWrap}>
-        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail={shell?.composerScope?.detail || ""} />
-        <BasisBadge label="Basis: witness" commitment="captured" />
-      </div>
-    );
     rightPaneContent = <FocusedWitnessPanel focusedWitness={view?.focusedWitness} onBack={() => setFocusedArtifact({ type: "room", id: "" })} />;
   } else if (focusedArtifact?.type === "library") {
-    rightPaneLabel = "Library";
     rightPaneTitle = activeLibraryDocument?.filename || "Library artifact";
-    rightPaneMeta = (
-      <div className={styles.inlineMetaWrap}>
-        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail="Inspectable artifact only" />
-        <BasisBadge
-          label={activeLibraryDocument ? "Basis: current library version" : "Basis: requested library artifact"}
-          commitment={activeLibraryDocument?.compilerRead ? "diagnostic" : "captured"}
-        />
-      </div>
-    );
     rightPaneContent = (
       <LibraryArtifactPane
         documents={libraryDocuments}
@@ -4032,24 +3472,10 @@ export default function RoomWorkspace({
       />
     );
   } else if (focusedArtifact?.type === "receipt") {
-    rightPaneLabel = "Receipt";
     rightPaneTitle = activeReceipt?.title || "Receipt draft";
-    rightPaneMeta = (
-      <div className={styles.inlineMetaWrap}>
-        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail="Receipt belongs to the box." />
-        <BasisBadge label="Basis: box return history" commitment="captured" />
-      </div>
-    );
     rightPaneContent = <ReceiptArtifactPane receipt={activeReceipt} />;
   } else if (focusedArtifact?.type === "operate") {
-    rightPaneLabel = "Operate";
     rightPaneTitle = "Box advisory read";
-    rightPaneMeta = (
-      <div className={styles.inlineMetaWrap}>
-        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail="Non-canonical advisory read" />
-        <BasisBadge label="Basis: active box sources" commitment="diagnostic" />
-      </div>
-    );
     rightPaneContent = (
       <OperatePanel
         operateSummary={view?.adjacent?.operate || null}
@@ -4063,111 +3489,23 @@ export default function RoomWorkspace({
     );
   }
 
-  const utilityPanel =
-    activeUtility || activeSectionMode
-      ? {
-          open: true,
-          title:
-            activeUtility
-              ? activeUtility.charAt(0).toUpperCase() + activeUtility.slice(1)
-              : sectionMeta.title,
-          onClose: () => {
-            setActiveUtility("");
-            handleCloseOverlay();
-          },
-          content: activeUtility ? (
-            <UtilityPanelContent activeUtility={activeUtility} onClose={() => setActiveUtility("")} />
-          ) : (
-            <WorkspaceSectionContent
-              mode={activeSectionMode}
-              view={view}
-              projectKey={projectKey}
-              pendingStarterAction={pendingStarterAction}
-              highlightedRegion={highlightedRegion}
-              mirrorCollapsed={mirrorCollapsed}
-              workingEchoCollapsed={workingEchoCollapsed}
-              onToggleMirror={() => setMirrorCollapsed((current) => !current)}
-              onToggleWorkingEcho={() => setWorkingEchoCollapsed((current) => !current)}
-              onOpenWitness={handleOpenWitness}
-              onOpenOperate={handleOpenOperate}
-              onClose={handleCloseOverlay}
-              onOpenMode={setOverlayMode}
-              onProjectSelect={handleProjectSelect}
-              onCreateSession={handleCreateSession}
-              onActivateSession={handleActivateSession}
-              onArchiveSession={handleArchiveSession}
-              onCreateBox={handleCreateBox}
-              onSourceComplete={handleSourceComplete}
-              onRunOperate={handleRunOperate}
-              onAskSevenAudit={handleAskSevenAudit}
-              operatePending={operatePending}
-              operateError={operateError}
-              operateResult={operateResult}
-              busy={actionPending}
-            />
-          ),
-        }
-      : null;
-
   return (
     <WorkspaceTriangleShell
-      workspaceLabel={workspaceLabel}
-      utilityItems={[
-        {
-          id: "settings",
-          label: "Settings",
-          icon: Settings2,
-          active: activeUtility === "settings",
-          onClick: () => setActiveUtility((current) => (current === "settings" ? "" : "settings")),
-          testId: "workspace-utility-settings",
-        },
-        {
-          id: "plugins",
-          label: "Plugins",
-          icon: Plug,
-          active: activeUtility === "plugins",
-          onClick: () => setActiveUtility((current) => (current === "plugins" ? "" : "plugins")),
-          testId: "workspace-utility-plugins",
-        },
-        {
-          id: "automations",
-          label: "Automations",
-          icon: Clock3,
-          active: activeUtility === "automations",
-          onClick: () => setActiveUtility((current) => (current === "automations" ? "" : "automations")),
-          testId: "workspace-utility-automations",
-        },
-      ]}
-      continuity={continuityRail}
-      knowledge={knowledgeRail}
+      sidebar={<>{continuityRail}{knowledgeRail}</>}
       account={{
         name: view?.viewer?.name || "Personal",
         detail: view?.viewer?.email || shell?.activeBox?.title || "Workspace",
-        action: {
-          label: "Sign out",
-          onClick: () => {
-            void signOut({ callbackUrl: "/" });
+        actions: [
+          {
+            label: "Sign out",
+            onClick: () => {
+              void signOut({ callbackUrl: "/" });
+            },
           },
-        },
+        ],
       }}
-      header={
-        <div className={styles.workspaceStageHead}>
-          <div>
-            <Kicker tone="neutral">Room</Kicker>
-            <strong>{roomTitle}</strong>
-            <p className={styles.workspaceStageSubcopy}>{scopeSummary}</p>
-          </div>
-        </div>
-      }
-      canonical={
-        <CanonicalStrip
-          shell={shell}
-          onOpenOperate={() => {
-            void handleOpenOperate();
-          }}
-          operateAvailable={Boolean(view?.adjacent?.operate?.available)}
-        />
-      }
+      header={<strong className={styles.roomTitle}>{roomTitle}</strong>}
+      canonical={<CanonicalStrip shell={shell} />}
       main={workspaceMain}
       composer={
         <Composer
@@ -4207,13 +3545,9 @@ export default function RoomWorkspace({
           prelude={composerPrelude}
         />
       }
-      rightLabel={rightPaneLabel}
       rightTitle={rightPaneTitle}
-      rightMeta={rightPaneMeta}
-      rightPane={rightPaneContent}
-      rightPaneVisible={Boolean(rightPaneVisible)}
-      onCloseRightPane={rightPaneVisible ? handleCloseRightPane : null}
-      utilityPanel={utilityPanel}
+      rightPane={rightPaneActive ? rightPaneContent : null}
+      onCloseRightPane={rightPaneActive ? handleCloseRightPane : null}
     />
   );
 }
