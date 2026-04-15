@@ -46,7 +46,6 @@ import {
 const DEFAULT_PROJECT_KEY = "default-project";
 const ROOM_DRAFT_PREFIX = "assembled-reality:room-draft:v1";
 const ROOM_IDLE_RESUME_MS = 15 * 60 * 1000;
-const BRIDGE_DISMISS_RECOVERY_MS = 8_000;
 
 const RECEIPT_RESULT_OPTIONS = [
   { value: "matched", label: "Matched" },
@@ -503,7 +502,7 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
   );
 }
 
-function DreamBridgeRecoveryNotice({ payload, onRestore }) {
+function DreamBridgeRecoveryNotice({ payload, onRestore, onClear }) {
   if (!payload?.documentId) return null;
 
   const kind = normalizeText(payload?.kind).toLowerCase();
@@ -511,6 +510,8 @@ function DreamBridgeRecoveryNotice({ payload, onRestore }) {
     normalizeText(payload?.sourceLabel) ||
     normalizeText(payload?.documentTitle) ||
     "Library document";
+  const versionLabel = normalizeText(payload?.versionLabel);
+  const anchorLabel = normalizeText(payload?.anchor);
   const kindLabel =
     kind === "witness"
       ? "Witness"
@@ -528,6 +529,13 @@ function DreamBridgeRecoveryNotice({ payload, onRestore }) {
         <p>
           {kindLabel} from {sourceLabel} is no longer staged.
         </p>
+        <div className={styles.dreamBridgeMeta}>
+          <span>{kindLabel}</span>
+          <span>Library</span>
+          {versionLabel ? <span>{versionLabel}</span> : null}
+          <span>Dismissed</span>
+          {anchorLabel ? <span>{anchorLabel}</span> : null}
+        </div>
       </div>
 
       <div className={styles.dreamBridgeActions}>
@@ -538,6 +546,14 @@ function DreamBridgeRecoveryNotice({ payload, onRestore }) {
           data-testid="dream-bridge-restore"
         >
           Restore
+        </button>
+        <button
+          type="button"
+          className={styles.inlineLinkButton}
+          onClick={onClear}
+          data-testid="dream-bridge-clear-dismissed"
+        >
+          Clear
         </button>
       </div>
     </div>
@@ -2720,8 +2736,14 @@ export default function RoomWorkspace({
       return;
     }
 
-    if (incomingPayload.state === "dismissed" || incomingPayload.state === "sent") {
+    if (incomingPayload.state === "sent") {
       clearDreamBridgePayload();
+      return;
+    }
+
+    if (incomingPayload.state === "dismissed") {
+      setPendingDreamBridgePayload(null);
+      setDismissedDreamBridgePayload(incomingPayload);
       return;
     }
 
@@ -2730,23 +2752,9 @@ export default function RoomWorkspace({
   }, []);
 
   useEffect(() => {
-    if (!dismissedDreamBridgePayload?.documentId) return;
-    const timeoutId = window.setTimeout(() => {
-      setDismissedDreamBridgePayload(null);
-    }, BRIDGE_DISMISS_RECOVERY_MS);
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [dismissedDreamBridgePayload]);
-
-  useEffect(() => {
     if (!dreamBridgePayload?.documentId) return;
     setDismissedDreamBridgePayload(null);
   }, [dreamBridgePayload?.documentId, dreamBridgePayload?.savedAt, dreamBridgePayload?.state]);
-
-  useEffect(() => {
-    setDismissedDreamBridgePayload(null);
-  }, [activeSessionId, currentFocusedDocumentKey, projectKey]);
 
   useEffect(() => {
     if (!roomDraftKey) return;
@@ -3404,18 +3412,32 @@ export default function RoomWorkspace({
 
   function handleDismissDreamBridge() {
     if (dreamBridgePayload?.documentId) {
-      setDismissedDreamBridgePayload(dreamBridgePayload);
+      const nextPayload = normalizeDreamBridgePayload({
+        ...dreamBridgePayload,
+        state: "dismissed",
+      });
+      setDismissedDreamBridgePayload(nextPayload);
+      if (nextPayload) {
+        saveDreamBridgePayload(nextPayload);
+      }
     }
     setPendingDreamBridgePayload(null);
-    clearDreamBridgePayload();
   }
 
   function handleRestoreDreamBridge() {
-    const nextPayload = normalizeDreamBridgePayload(dismissedDreamBridgePayload);
+    const nextPayload = normalizeDreamBridgePayload({
+      ...dismissedDreamBridgePayload,
+      state: "pending",
+    });
     if (!nextPayload?.documentId) return;
     setPendingDreamBridgePayload(nextPayload);
     saveDreamBridgePayload(nextPayload);
     setDismissedDreamBridgePayload(null);
+  }
+
+  function handleClearDismissedDreamBridge() {
+    setDismissedDreamBridgePayload(null);
+    clearDreamBridgePayload();
   }
 
   async function handleOpenWitness(nextDocumentKey = "") {
@@ -3586,6 +3608,7 @@ export default function RoomWorkspace({
         <DreamBridgeRecoveryNotice
           payload={dismissedDreamBridgePayload}
           onRestore={handleRestoreDreamBridge}
+          onClear={handleClearDismissedDreamBridge}
         />
       ) : null}
 

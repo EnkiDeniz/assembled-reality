@@ -110,3 +110,20 @@ test("normalizeDreamBridgePayload preserves version provenance when present", ()
   assert.equal(result.versionId, "version_3");
   assert.equal(result.versionLabel, "v3");
 });
+
+test("normalizeDreamBridgePayload keeps dismissed bridge payloads recoverable", () => {
+  const result = normalizeDreamBridgePayload({
+    kind: "passage",
+    state: "dismissed",
+    documentId: "dream_doc_8",
+    documentTitle: "Memo",
+    versionId: "version_4",
+    versionLabel: "v4",
+    excerpt: "Keep this passage recoverable.",
+  });
+
+  assert.equal(result.state, "dismissed");
+  assert.equal(result.versionId, "version_4");
+  assert.equal(result.versionLabel, "v4");
+  assert.equal(result.excerpt, "Keep this passage recoverable.");
+});

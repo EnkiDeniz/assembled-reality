@@ -43,6 +43,7 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(dreamScreen, /dream-discuss-read/);
   assert.match(dreamScreen, /dream-choose-document/);
   assert.match(dreamScreen, /dream-replace-document/);
+  assert.match(dreamScreen, /dreamDocument\?\.currentVersionLabel/);
   assert.match(dreamScreen, /window\.matchMedia\("\(min-width: 960px\)"\)\.matches/);
   assert.match(dreamScreen, /createNextDreamDocumentVersion/);
   assert.match(dreamScreen, /attachCompilerReadToDreamDocument/);
@@ -102,10 +103,12 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(roomWorkspace, /dream-bridge-use/);
   assert.match(roomWorkspace, /dream-bridge-dismiss/);
   assert.match(roomWorkspace, /dream-bridge-restore/);
+  assert.match(roomWorkspace, /dream-bridge-clear-dismissed/);
   assert.match(roomWorkspace, /Bridge dismissed/);
   assert.match(roomWorkspace, /Pending: available but not active\./);
   assert.match(roomWorkspace, /Armed: travels with your next turn\./);
   assert.match(roomWorkspace, /pendingDreamBridgePayload\?\.state === "armed"/);
+  assert.match(roomWorkspace, /incomingPayload.state === "dismissed"/);
   assert.match(roomWorkspace, /previous\?\.lastSurface === "dream"/);
   assert.match(roomWorkspace, /clearRuntimeSurfaceResumeLibrary\(\)/);
   assert.match(roomWorkspace, /buildDreamDocumentRecord/);
@@ -116,6 +119,7 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(roomWorkspace, /Tell Seven what is live right now/);
   assert.match(roomWorkspace, /Ask Seven about this source or name the issue/);
   assert.match(roomWorkspace, /Continue the live issue or add new source/);
+  assert.doesNotMatch(roomWorkspace, /BRIDGE_DISMISS_RECOVERY_MS/);
   assert.doesNotMatch(roomWorkspace, /setComposerText\(\(current\) => current \|\| excerpt/);
   assert.doesNotMatch(roomWorkspace, /const bridgePayload = pendingDreamBridgePayload;/);
   assert.match(dreamScreen, /const visibleCompilerRead = dreamDocument\?\.compilerRead \|\| null/);

@@ -41,6 +41,7 @@ import {
   createNextDreamDocumentVersion,
   attachCompilerReadToDreamDocument,
   deleteDreamDocument,
+  getDreamDocumentCurrentVersionLabel,
   getDreamDocumentCurrentVersion,
   listDreamDocuments,
   loadActiveDreamDocument,
@@ -216,12 +217,8 @@ export default function SectionDreamScreen({
   const visibleCompilerReadPending = compilerReadPending;
   const compilerReadSheetOpen = showCompilerReadSheet;
   const currentVersion = dreamDocument?.currentVersion || getDreamDocumentCurrentVersion(dreamDocument);
-  const currentVersionIndex = Array.isArray(dreamDocument?.versions)
-    ? dreamDocument.versions.findIndex((version) => version.versionId === currentVersion?.versionId)
-    : -1;
-  const currentVersionNumber =
-    currentVersionIndex >= 0 ? currentVersionIndex + 1 : Number(dreamDocument?.versionCount) || 0;
-  const currentVersionLabel = currentVersionNumber ? `v${currentVersionNumber}` : "";
+  const currentVersionLabel =
+    dreamDocument?.currentVersionLabel || getDreamDocumentCurrentVersionLabel(dreamDocument);
   const previousVersion =
     dreamDocument?.versions?.find((version) => version.versionId === currentVersion?.parentVersionId) || null;
   const previousCompilerRead = previousVersion?.compilerRead || null;

@@ -210,10 +210,28 @@ export function getDreamDocumentCurrentVersion(document = null) {
   );
 }
 
+export function getDreamDocumentCurrentVersionNumber(document = null) {
+  const normalizedDocument =
+    document && typeof document === "object" ? normalizeDreamStoredDocument(document) : null;
+  if (!normalizedDocument) return 0;
+
+  const currentVersionIndex = normalizedDocument.versions.findIndex(
+    (version) => version.versionId === normalizedDocument.currentVersionId,
+  );
+  return currentVersionIndex >= 0 ? currentVersionIndex + 1 : normalizedDocument.versions.length;
+}
+
+export function getDreamDocumentCurrentVersionLabel(document = null) {
+  const currentVersionNumber = getDreamDocumentCurrentVersionNumber(document);
+  return currentVersionNumber > 0 ? `v${currentVersionNumber}` : "";
+}
+
 export function projectDreamDocument(document = null) {
   const normalizedDocument = normalizeDreamStoredDocument(document);
   const currentVersion = getDreamDocumentCurrentVersion(normalizedDocument);
   const versionCount = normalizedDocument.versions.length;
+  const currentVersionNumber = getDreamDocumentCurrentVersionNumber(normalizedDocument);
+  const currentVersionLabel = currentVersionNumber > 0 ? `v${currentVersionNumber}` : "";
 
   return {
     ...normalizedDocument,
@@ -230,6 +248,8 @@ export function projectDreamDocument(document = null) {
     compilerReadRanAt: currentVersion?.compilerReadRanAt || null,
     currentVersion: currentVersion || null,
     currentVersionCreatedAt: currentVersion?.createdAt || "",
+    currentVersionNumber,
+    currentVersionLabel,
     versionCount,
     hasPreviousVersion: Boolean(currentVersion?.parentVersionId),
     libraryStatusLabel:
