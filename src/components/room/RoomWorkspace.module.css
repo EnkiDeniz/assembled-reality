@@ -3362,3 +3362,103 @@
     display: none;
   }
 }
+
+.workspaceStageHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.workspaceStageSubcopy {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  max-width: 52ch;
+}
+
+.canonicalStripCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.canonicalStripHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.canonicalStripMeta,
+.inlineMetaWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.canonicalStripGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.canonicalStripBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.canonicalStripBlock span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.inlineReturnBanner {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.utilityPanelCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.primaryLinkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 960px) {
+  .workspaceStageHead,
+  .canonicalStripHead {
+    flex-direction: column;
+  }
+
+  .canonicalStripGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -21,6 +21,7 @@ import {
   compileRoomSource,
   createOrHydrateRoomRuntimeWindow,
 } from "@/lib/room-canonical";
+import { buildWorkspaceShellContract } from "@/lib/workspace-shell-contract";
 import { listOperateIncludedDocuments } from "@/lib/operate";
 import {
   ensureRoomAssemblyDocumentForProject,
@@ -290,8 +291,16 @@ function buildProjectList(projects = []) {
   }));
 }
 
-function buildEmptyRoomView({ readerData: _readerData = null, projects = [], resetAt = null } = {}) {
-  return {
+function buildEmptyRoomView({ readerData = null, projects = [], resetAt = null } = {}) {
+  const view = {
+    viewer: {
+      name:
+        normalizeText(readerData?.profile?.displayName) ||
+        normalizeText(readerData?.user?.name) ||
+        "Personal",
+      email: normalizeText(readerData?.user?.email),
+      workspaceLabel: "Personal",
+    },
     project: null,
     projects: buildProjectList(projects),
     roomIdentity: {
@@ -379,11 +388,17 @@ function buildEmptyRoomView({ readerData: _readerData = null, projects = [], res
     },
     starter: {
       show: true,
-      firstLine: "Bring one live thing into focus.",
-      secondLine: "Paste a document, upload a file, or start talking. Open Library when you want to re-enter source first.",
+      firstLine: "Start with what is live, or bring in a source.",
+      secondLine:
+        "Use Room when you want live steering. Use Library when you want to re-enter a document before the next move.",
     },
     diagnostics: [],
     resetAt,
+  };
+
+  return {
+    ...view,
+    shell: buildWorkspaceShellContract(view),
   };
 }
 
@@ -629,7 +644,15 @@ export async function buildRoomWorkspaceViewForUser(
     activeSession: resolvedSession,
   });
 
-  return {
+  const view = {
+    viewer: {
+      name:
+        normalizeText(readerData?.profile?.displayName) ||
+        normalizeText(readerData?.user?.name) ||
+        "Personal",
+      email: normalizeText(readerData?.user?.email),
+      workspaceLabel: "Personal",
+    },
     project: {
       projectKey: activeProject?.projectKey || "",
       title: activeProject?.boxTitle || activeProject?.title || "Untitled Box",
@@ -657,6 +680,11 @@ export async function buildRoomWorkspaceViewForUser(
     workingEcho,
     ...canonicalView,
   };
+
+  return {
+    ...view,
+    shell: buildWorkspaceShellContract(view),
+  };
 }
 
 export async function loadRoomWorkspacePageData({ searchParams } = {}) {
@@ -669,8 +697,27 @@ export async function loadRoomWorkspacePageData({ searchParams } = {}) {
   const projectKey = String(resolvedSearchParams?.project || "").trim();
   const sessionId =
     String(resolvedSearchParams?.sessionId || resolvedSearchParams?.session || "").trim();
+  const artifactType = String(resolvedSearchParams?.artifactType || "").trim();
+  const artifactId = String(resolvedSearchParams?.artifactId || "").trim();
   const documentKey =
     String(resolvedSearchParams?.document || resolvedSearchParams?.documentKey || "").trim();
   const adjacent = String(resolvedSearchParams?.adjacent || "").trim();
-  return buildRoomWorkspaceViewForUser(session.user.id, { projectKey, sessionId, documentKey, adjacent });
+  const effectiveDocumentKey = artifactType.toLowerCase() === "library" ? "" : documentKey;
+  const view = await buildRoomWorkspaceViewForUser(session.user.id, {
+    projectKey,
+    sessionId,
+    documentKey: effectiveDocumentKey,
+    adjacent,
+  });
+  const routedView = {
+    ...view,
+    routeState: {
+      artifactType,
+      artifactId,
+    },
+  };
+  return {
+    ...routedView,
+    shell: buildWorkspaceShellContract(routedView),
+  };
 }

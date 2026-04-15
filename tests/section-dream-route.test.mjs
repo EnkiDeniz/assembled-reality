@@ -8,6 +8,7 @@ async function read(path) {
 
 test("section dream is a signed-in utility route wired into signed-in navigation only", async () => {
   const dreamPage = await read("src/app/dream/page.jsx");
+  const libraryPage = await read("src/app/library/page.jsx");
   const dreamScreen = await read("src/components/dream/SectionDreamScreen.jsx");
   const compilerPanel = await read("src/components/dream/CompilerReadPanel.jsx");
   const compilerSelfCheck = await read("src/lib/compiler-read-self-check.js");
@@ -17,12 +18,16 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   const runtimeResume = await read("src/lib/runtime-surface-resume.js");
   const publicSite = await read("src/lib/public-site.js");
   const roomServer = await read("src/lib/room-server.js");
+  const libraryArtifactPane = await read("src/components/workspace/LibraryArtifactPane.jsx");
 
-  assert.match(dreamPage, /SectionDreamScreen/);
+  assert.match(dreamPage, /redirect\(`\/library/);
   assert.match(dreamPage, /title: "Library"/);
-  assert.match(dreamPage, /getRequiredSession/);
-  assert.match(dreamPage, /redirect\("\/"\)/);
-  assert.match(dreamPage, /includeDevice:\s*false/);
+  assert.match(dreamPage, /resolvedSearchParams\?\.project/);
+  assert.match(dreamPage, /params\.set\("sessionId", sessionId\)/);
+  assert.match(libraryPage, /artifactType/);
+  assert.match(libraryPage, /redirect\(`\/workspace/);
+  assert.match(libraryPage, /resolvedSearchParams\?\.project/);
+  assert.match(libraryPage, /params\.set\("sessionId", sessionId\)/);
 
   assert.match(dreamScreen, /LoegosShell/);
   assert.match(dreamScreen, /<strong>Documents<\/strong>/);
@@ -93,8 +98,10 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(shell, /Account/);
   assert.match(shell, /signOut\(\{ callbackUrl: "\/" \}\)/);
   assert.match(shell, /event\.key !== "Tab"/);
-  assert.match(roomWorkspace, /room-open-context/);
-  assert.match(roomWorkspace, /room-new-conversation/);
+  assert.match(roomWorkspace, /WorkspaceTriangleShell/);
+  assert.match(roomWorkspace, /workspace-utility-settings/);
+  assert.match(roomWorkspace, /workspace-knowledge-rail/);
+  assert.match(roomWorkspace, /workspace-continuity-rail/);
   assert.match(roomWorkspace, /room-post-add-card/);
   assert.match(roomWorkspace, /room-resume-banner/);
   assert.match(roomWorkspace, /room-starter-fork/);
@@ -117,9 +124,13 @@ test("section dream is a signed-in utility route wired into signed-in navigation
   assert.match(roomWorkspace, /clearRuntimeSurfaceResumeLibrary\(\)/);
   assert.match(roomWorkspace, /buildDreamDocumentRecord/);
   assert.match(roomWorkspace, /saveDreamDocument/);
-  assert.match(roomWorkspace, /scopeLabel=\{assemblyTitle\}/);
-  assert.match(roomWorkspace, /scopeDetail=\{scopeSummary\}/);
-  assert.match(roomWorkspace, /room-shell-rail/);
+  assert.match(roomWorkspace, /const currentLibraryHref = buildLibraryHref/);
+  assert.match(roomWorkspace, /requestedArtifactId=\{focusedArtifact\?\.id \|\| routeArtifactId\}/);
+  assert.match(libraryArtifactPane, /Requested Library artifact not found\./);
+  assert.match(libraryArtifactPane, /The requested Library artifact is no longer available\./);
+  assert.match(roomWorkspace, /scopeLabel=\{shell\?\.composerScope\?\.label \|\| assemblyTitle\}/);
+  assert.match(roomWorkspace, /scopeDetail=\{shell\?\.composerScope\?\.detail \|\| scopeSummary\}/);
+  assert.match(roomWorkspace, /LibraryArtifactPane/);
   assert.match(roomWorkspace, /room-artifact-/);
   assert.match(roomWorkspace, /Tell Seven what is live right now/);
   assert.match(roomWorkspace, /Bring one live thing into focus\./);

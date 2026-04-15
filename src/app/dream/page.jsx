@@ -1,13 +1,4 @@
 import { redirect } from "next/navigation";
-import SectionDreamScreen from "@/components/dream/SectionDreamScreen";
-import { appEnv } from "@/lib/env";
-import { getReaderProfileByUserId } from "@/lib/reader-db";
-import { getRequiredSession } from "@/lib/server-session";
-import {
-  clampListeningRate,
-  getVoiceCatalog,
-  resolvePreferredVoiceChoice,
-} from "@/lib/listening";
 
 export const dynamic = "force-dynamic";
 
@@ -15,32 +6,31 @@ export const metadata = {
   title: "Library",
 };
 
-export default async function DreamPage() {
-  const session = await getRequiredSession();
-  if (!session?.user?.id) {
-    redirect("/");
+export default async function DreamPage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const params = new URLSearchParams();
+  const project = String(resolvedSearchParams?.project || "").trim();
+  const sessionId = String(
+    resolvedSearchParams?.sessionId || resolvedSearchParams?.session || "",
+  ).trim();
+  const artifactId = String(
+    resolvedSearchParams?.artifactId || resolvedSearchParams?.document || "",
+  ).trim();
+  const anchor = String(resolvedSearchParams?.anchor || "").trim();
+
+  if (project) {
+    params.set("project", project);
+  }
+  if (sessionId) {
+    params.set("sessionId", sessionId);
+  }
+  if (artifactId) {
+    params.set("artifactId", artifactId);
+  }
+  if (anchor) {
+    params.set("anchor", anchor);
   }
 
-  const readerData = await getReaderProfileByUserId(session.user.id);
-  const voiceCatalog = getVoiceCatalog({
-    openAiEnabled: appEnv.openai.enabled,
-    openAiVoice: appEnv.openai.voice,
-    elevenLabsEnabled: appEnv.elevenlabs.enabled,
-    elevenLabsVoiceId: appEnv.elevenlabs.voiceId,
-    includeDevice: false,
-  });
-  const initialVoiceChoice = resolvePreferredVoiceChoice(
-    voiceCatalog,
-    readerData?.profile?.preferredVoiceProvider,
-    readerData?.profile?.preferredVoiceId,
-  );
-  const initialRate = clampListeningRate(readerData?.profile?.preferredListeningRate, 1);
-
-  return (
-    <SectionDreamScreen
-      voiceCatalog={voiceCatalog}
-      initialVoiceChoice={initialVoiceChoice}
-      initialRate={initialRate}
-    />
-  );
+  const suffix = params.toString();
+  redirect(`/library${suffix ? `?${suffix}` : ""}`);
 }

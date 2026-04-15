@@ -2,18 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  Clock3,
   Headphones,
   Plus,
+  Plug,
   SendHorizontal,
+  Settings2,
   Upload,
 } from "lucide-react";
 import styles from "@/components/room/RoomWorkspace.module.css";
-import LoegosShell, {
-  PulseStrip,
-  Surface as ShellSurface,
-} from "@/components/shell/LoegosShell";
+import { PulseStrip, Surface as ShellSurface } from "@/components/shell/LoegosShell";
 import {
   deriveRoomTerrainPresentation,
   getMirrorRegionRole,
@@ -33,6 +34,11 @@ import {
   saveDreamDocument,
   setActiveDreamDocument,
 } from "@/lib/dream-storage";
+import LibraryArtifactPane from "@/components/workspace/LibraryArtifactPane";
+import WorkspaceTriangleShell, {
+  BasisBadge,
+  ScopeBadge,
+} from "@/components/workspace/WorkspaceTriangleShell";
 import {
   buildWorkingEchoStripStateFromRoomView,
   normalizeSectionId,
@@ -115,29 +121,25 @@ function buildDreamFilenameFromRoomSource(document = null) {
 
 function buildWorkspaceHref(
   projectKey = "",
-  { sessionId = "", documentKey = "", adjacent = "" } = {},
+  { sessionId = "", documentKey = "", adjacent = "", artifactType = "", artifactId = "" } = {},
 ) {
   const params = new URLSearchParams();
   const normalizedProjectKey = normalizeText(projectKey);
   const normalizedSessionId = normalizeText(sessionId);
   const normalizedDocumentKey = normalizeText(documentKey);
   const normalizedAdjacent = normalizeText(adjacent).toLowerCase();
+  const normalizedArtifactType = normalizeText(artifactType).toLowerCase();
+  const normalizedArtifactId = normalizeText(artifactId);
   if (normalizedProjectKey && normalizedProjectKey !== DEFAULT_PROJECT_KEY) {
     params.set("project", normalizedProjectKey);
   }
   if (normalizedSessionId) params.set("sessionId", normalizedSessionId);
   if (normalizedDocumentKey) params.set("document", normalizedDocumentKey);
   if (normalizedAdjacent) params.set("adjacent", normalizedAdjacent);
+  if (normalizedArtifactType) params.set("artifactType", normalizedArtifactType);
+  if (normalizedArtifactId) params.set("artifactId", normalizedArtifactId);
   const query = params.toString();
   return query ? `/workspace?${query}` : "/workspace";
-}
-
-function buildWitnessHref(projectKey = "", sessionId = "", documentKey = "", adjacent = "witness") {
-  return buildWorkspaceHref(projectKey, {
-    sessionId,
-    documentKey,
-    adjacent,
-  });
 }
 
 function extractDocumentKeyFromWorkspaceHref(href = "") {
@@ -402,7 +404,7 @@ function ThreadIdentityBar({
   );
 }
 
-function DreamBridgeNotice({ payload, onUse, onDismiss }) {
+function DreamBridgeNotice({ payload, onUse, onDismiss, libraryHref = "/library" }) {
   if (!payload?.documentId) return null;
 
   const kind = normalizeText(payload?.kind).toLowerCase();
@@ -459,7 +461,7 @@ function DreamBridgeNotice({ payload, onUse, onDismiss }) {
           </button>
         ) : null}
         <Link
-          href={buildDreamHref(payload.documentId, payload.anchor)}
+          href={libraryHref}
           className={styles.stripAction}
           data-testid="dream-bridge-return"
         >
@@ -958,6 +960,7 @@ function StarterView({
   starter = null,
   onStartAction = null,
   onTeachLiveIssue = null,
+  libraryHref = "/library",
 }) {
   return (
     <section className={styles.starter} data-testid="room-starter">
@@ -989,7 +992,7 @@ function StarterView({
         </button>
       </div>
       <p className={styles.starterHint}>
-        Or open <Link href="/dream">Library</Link> to re-enter a document first.
+        Or open <Link href={libraryHref}>Library</Link> to re-enter a document first.
       </p>
     </section>
   );
@@ -1075,7 +1078,7 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
   return (
     <div className={styles.railSection}>
       <div className={styles.railSectionHead}>
-        <strong>Assemblies</strong>
+        <strong>Boxes</strong>
         <button type="button" className={styles.railTextAction} onClick={onCreate}>
           New
         </button>
@@ -1104,14 +1107,14 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
   );
 }
 
-function RoomArtifactList({ sources, onOpenWitness }) {
+function RoomArtifactList({ sources, onOpenWitness, libraryHref = "/library" }) {
   const items = Array.isArray(sources) ? sources.filter(Boolean) : [];
 
   return (
     <div className={styles.railSection}>
       <div className={styles.railSectionHead}>
-        <strong>Artifacts</strong>
-        <Link href="/dream" className={styles.railTextAction}>
+        <strong>Witnesses</strong>
+        <Link href={libraryHref} className={styles.railTextAction}>
           Library
         </Link>
       </div>
@@ -1137,6 +1140,205 @@ function RoomArtifactList({ sources, onOpenWitness }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function LibraryArtifactList({ documents, activeDocumentId, onSelect }) {
+  const items = Array.isArray(documents) ? documents : [];
+
+  return (
+    <div className={styles.railSection}>
+      <div className={styles.railSectionHead}>
+        <strong>Library</strong>
+      </div>
+
+      {!items.length ? (
+        <p className={styles.railEmptyText}>No library artifacts yet.</p>
+      ) : (
+        <div className={styles.railList}>
+          {items.map((document) => {
+            const isActive = document?.id === activeDocumentId;
+            return (
+              <button
+                key={document.id}
+                type="button"
+                className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
+                onClick={() => onSelect?.(document)}
+                data-testid={`room-library-${document.id}`}
+              >
+                <div className={styles.railRowCopy}>
+                  <strong>{document.filename || "Library document"}</strong>
+                  <span>
+                    {document.currentVersionLabel || "v1"}
+                    {document.wordCount ? ` • ${document.wordCount} words` : ""}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReceiptArtifactList({ receipts, activeReceiptId, onSelect }) {
+  const items = Array.isArray(receipts) ? receipts.filter(Boolean) : [];
+  return (
+    <div className={styles.railSection}>
+      <div className={styles.railSectionHead}>
+        <strong>Receipts</strong>
+      </div>
+
+      {!items.length ? (
+        <p className={styles.railEmptyText}>No recent receipt drafts yet.</p>
+      ) : (
+        <div className={styles.railList}>
+          {items.map((receipt) => {
+            const isActive = receipt?.id === activeReceiptId;
+            return (
+              <button
+                key={receipt.id}
+                type="button"
+                className={`${styles.railRow} ${isActive ? styles.railRowActive : ""}`}
+                onClick={() => onSelect?.(receipt)}
+                data-testid={`room-receipt-${receipt.id}`}
+              >
+                <div className={styles.railRowCopy}>
+                  <strong>{receipt.title || "Receipt draft"}</strong>
+                  <span>{normalizeText(receipt.status || receipt.stance || "draft")}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CanonicalStrip({ shell = null, onOpenOperate = null, operateAvailable = false }) {
+  const canonical = shell?.canonicalStrip || {};
+  const evidenceItems = Array.isArray(canonical?.evidenceContour?.items)
+    ? canonical.evidenceContour.items
+    : [];
+
+  return (
+    <section className={styles.canonicalStripCard} data-testid="workspace-canonical-strip">
+      <div className={styles.canonicalStripHead}>
+        <div>
+          <Kicker tone="neutral">Canonical Strip</Kicker>
+          <strong>{canonical?.aim || "No accepted aim yet."}</strong>
+        </div>
+        <div className={styles.canonicalStripMeta}>
+          <ScopeBadge label={shell?.composerScope?.label || "Active box"} detail={shell?.composerScope?.detail || ""} />
+          <BasisBadge label={shell?.basis?.label || "Basis unavailable"} commitment={shell?.basis?.commitment || ""} />
+        </div>
+      </div>
+
+      <div className={styles.canonicalStripGrid}>
+        <div className={styles.canonicalStripBlock}>
+          <span>Evidence contour</span>
+          <strong>{canonical?.evidenceContour?.summary || "No accepted evidence contour yet."}</strong>
+          {evidenceItems.length ? (
+            <p>{evidenceItems.join(" • ")}</p>
+          ) : null}
+        </div>
+        <div className={styles.canonicalStripBlock}>
+          <span>Return condition</span>
+          <strong>{canonical?.returnCondition || "No return condition is explicit yet."}</strong>
+        </div>
+        <div className={styles.canonicalStripBlock}>
+          <span>Lawful next move</span>
+          <strong>{canonical?.nextMove || "No lawful next move is accepted yet."}</strong>
+          {operateAvailable ? (
+            <button type="button" className={styles.railInlineAction} onClick={onOpenOperate}>
+              Open Operate
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReceiptArtifactPane({ receipt = null }) {
+  if (!receipt) {
+    return (
+      <div className={styles.panel}>
+        <p className={styles.noticeText}>No receipt is focused yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.panel} data-testid="workspace-receipt-pane">
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="neutral">Receipt</Kicker>
+          <strong>{receipt.title || "Receipt draft"}</strong>
+        </div>
+      </div>
+      <div className={styles.authorityGrid}>
+        <div className={styles.authorityBlock}>
+          <span>Status</span>
+          <strong>{normalizeText(receipt.status || "draft") || "draft"}</strong>
+          {normalizeText(receipt.stance) ? <p>{receipt.stance}</p> : null}
+        </div>
+        <div className={styles.authorityBlock}>
+          <span>Interpretation</span>
+          <p>{normalizeText(receipt.interpretation) || "No interpretation saved yet."}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArtifactFallbackPane({ roomIdentity = null }) {
+  return (
+    <div className={styles.panel} data-testid="workspace-artifact-fallback">
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="neutral">Artifact</Kicker>
+          <strong>{roomIdentity?.boxTitle || "Active box"}</strong>
+        </div>
+      </div>
+      <p className={styles.noticeText}>
+        Keep the room attached to a real object by opening a witness, library item, or receipt from the left rail.
+      </p>
+    </div>
+  );
+}
+
+function UtilityPanelContent({ activeUtility = "", onClose = null }) {
+  const normalized = normalizeText(activeUtility).toLowerCase();
+  if (!normalized) return null;
+
+  if (normalized === "settings") {
+    return (
+      <div className={styles.utilityPanelCopy}>
+        <p>Account and identity controls live here first.</p>
+        <div className={styles.inlineActions}>
+          <Link href="/account" className={styles.primaryLinkButton} onClick={onClose}>
+            Open account
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (normalized === "plugins") {
+    return (
+      <div className={styles.utilityPanelCopy}>
+        <p>Plugins stay peripheral in V1. This shell keeps them available without letting them become the product center.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.utilityPanelCopy}>
+      <p>Automations stay peripheral in V1. They remain available here without competing with the live box/session/artifact workflow.</p>
     </div>
   );
 }
@@ -1852,7 +2054,7 @@ function RoomSessionList({
   return (
     <div className={styles.railSection}>
       <div className={styles.railSectionHead}>
-        <strong>Conversations</strong>
+        <strong>Sessions</strong>
         <button type="button" className={styles.railTextAction} onClick={onCreate} disabled={busy} data-testid="room-create-session">
           New
         </button>
@@ -2550,16 +2752,27 @@ function WorkspaceSectionContent({
   return null;
 }
 
-function buildDreamHref(documentId = "", anchor = "") {
+function buildLibraryHref(
+  documentId = "",
+  anchor = "",
+  { projectKey = "", sessionId = "" } = {},
+) {
   const params = new URLSearchParams();
+  if (normalizeText(projectKey) && normalizeText(projectKey) !== DEFAULT_PROJECT_KEY) {
+    params.set("project", normalizeText(projectKey));
+  }
+  if (normalizeText(sessionId)) {
+    params.set("sessionId", normalizeText(sessionId));
+  }
   if (normalizeText(documentId)) {
-    params.set("document", normalizeText(documentId));
+    params.set("artifactId", normalizeText(documentId));
   }
   if (normalizeText(anchor)) {
     params.set("anchor", normalizeText(anchor));
   }
+  params.set("artifactType", "library");
   const query = params.toString();
-  return query ? `/dream?${query}` : "/dream";
+  return query ? `/library?${query}` : "/library";
 }
 
 export default function RoomWorkspace({
@@ -2568,6 +2781,7 @@ export default function RoomWorkspace({
   workspaceLabel = "Personal",
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useState(initialView);
   const [composerText, setComposerText] = useState("");
   const [turnPending, setTurnPending] = useState(false);
@@ -2577,10 +2791,8 @@ export default function RoomWorkspace({
   const [mirrorCollapsed, setMirrorCollapsed] = useState(false);
   const [overlayMode, setOverlayMode] = useState(() => {
     const requestedSection = normalizeSectionId(initialSection);
-    if (requestedSection === "context" || requestedSection === "boxes") return "threads";
-    if (requestedSection) return requestedSection;
-    const nextIntent = normalizeText(initialView?.overlayIntent).toLowerCase();
-    return nextIntent === "instrument" ? "threads" : nextIntent === "boxes" ? "threads" : nextIntent;
+    if (requestedSection === "source" || requestedSection === "create") return requestedSection;
+    return "";
   });
   const [applyingMessageId, setApplyingMessageId] = useState("");
   const [busyReceiptKitId, setBusyReceiptKitId] = useState("");
@@ -2596,6 +2808,23 @@ export default function RoomWorkspace({
   const [composerFocusSignal, setComposerFocusSignal] = useState(0);
   const [postAddGuidance, setPostAddGuidance] = useState(null);
   const [resumeBanner, setResumeBanner] = useState(null);
+  const [activeUtility, setActiveUtility] = useState("");
+  const [libraryDocuments, setLibraryDocuments] = useState([]);
+  const [libraryError, setLibraryError] = useState("");
+  const [focusedArtifact, setFocusedArtifact] = useState(() => {
+    const artifactType = normalizeText(initialView?.routeState?.artifactType).toLowerCase();
+    const artifactId = normalizeText(initialView?.routeState?.artifactId);
+    if (artifactType === "library") {
+      return { type: "library", id: artifactId };
+    }
+    if (normalizeText(initialView?.focusedWitness?.documentKey)) {
+      return {
+        type: "witness",
+        id: normalizeText(initialView.focusedWitness.documentKey),
+      };
+    }
+    return { type: "room", id: "" };
+  });
   const threadRef = useRef(null);
   const highlightTimeoutRef = useRef(null);
   const overlayIntentKeyRef = useRef("");
@@ -2608,7 +2837,16 @@ export default function RoomWorkspace({
   const projectKey = view?.project?.projectKey || "";
   const activeSessionId = view?.session?.id || "";
   const currentFocusedDocumentKey = view?.focusedWitness?.documentKey || "";
+  const roomScopedDocumentKey =
+    normalizeText(focusedArtifact?.type).toLowerCase() === "library"
+      ? ""
+      : currentFocusedDocumentKey;
+  const currentLibraryHref = buildLibraryHref("", "", {
+    projectKey,
+    sessionId: activeSessionId,
+  });
   const messages = Array.isArray(view?.messages) ? view.messages : [];
+  const shell = view?.shell || {};
   const roomDraftKey = getRoomDraftKey(projectKey, activeSessionId);
   const hasRecentSources = Array.isArray(view?.recentSources) && view.recentSources.length > 0;
   const meaningfulConversation = hasMeaningfulConversation(view);
@@ -2625,6 +2863,14 @@ export default function RoomWorkspace({
   const scopeSummary =
     normalizeText(view?.roomIdentity?.canonScopeLabel) ||
     "Canon stays assembly-level across conversations.";
+  const routeArtifactType = normalizeText(searchParams?.get("artifactType")).toLowerCase();
+  const routeArtifactId = normalizeText(searchParams?.get("artifactId"));
+  const activeLibraryDocument =
+    libraryDocuments.find((document) => document.id === focusedArtifact?.id) || null;
+  const activeReceipt =
+    (Array.isArray(view?.receiptSummary?.recentDrafts) ? view.receiptSummary.recentDrafts : []).find(
+      (receipt) => normalizeText(receipt?.id) === normalizeText(focusedArtifact?.id),
+    ) || null;
 
   useEffect(() => {
     setView(initialView);
@@ -2633,13 +2879,67 @@ export default function RoomWorkspace({
   }, [initialView]);
 
   useEffect(() => {
+    if (routeArtifactType === "library") return;
+    if (currentFocusedDocumentKey) {
+      setFocusedArtifact((current) =>
+        current?.type === "library" || current?.type === "operate" || current?.type === "receipt"
+          ? current
+          : { type: "witness", id: currentFocusedDocumentKey },
+      );
+      return;
+    }
+    setFocusedArtifact((current) =>
+      current?.type === "witness" ? { type: "room", id: "" } : current,
+    );
+  }, [currentFocusedDocumentKey, routeArtifactType]);
+
+  useEffect(() => {
+    if (focusedArtifact?.type === "receipt" && !activeReceipt?.id) {
+      setFocusedArtifact({ type: "room", id: "" });
+    }
+  }, [activeReceipt?.id, focusedArtifact?.type]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listDreamDocuments()
+      .then((documents) => {
+        if (cancelled) return;
+        setLibraryDocuments(documents);
+        if (routeArtifactType === "library") {
+          const selected = documents.find((document) => document.id === routeArtifactId) || null;
+          if (routeArtifactId && !selected) {
+            setFocusedArtifact({ type: "library", id: routeArtifactId });
+            setLibraryError("The requested Library artifact is no longer available.");
+            return;
+          }
+          if (selected?.id) {
+            setFocusedArtifact({ type: "library", id: selected.id });
+            setLibraryError("");
+            return;
+          }
+          if (documents[0]?.id) {
+            setFocusedArtifact({ type: "library", id: documents[0].id });
+            setLibraryError("");
+          }
+          return;
+        }
+        setLibraryError("");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLibraryError(error instanceof Error ? error.message : "Could not open Library artifacts.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [routeArtifactId, routeArtifactType]);
+
+  useEffect(() => {
     const requestedSection = normalizeSectionId(initialSection);
-    if (!requestedSection) return;
-    const nextSection =
-      requestedSection === "context" || requestedSection === "boxes"
-        ? "threads"
-        : requestedSection;
-    setOverlayMode((current) => current || nextSection);
+    if (requestedSection === "source" || requestedSection === "create") {
+      setOverlayMode((current) => current || requestedSection);
+    }
   }, [initialSection]);
 
   useEffect(() => {
@@ -2766,10 +3066,7 @@ export default function RoomWorkspace({
 
   useEffect(() => {
     const rawIntent = normalizeText(view?.overlayIntent).toLowerCase();
-    const nextIntent =
-      rawIntent === "instrument" || rawIntent === "boxes"
-        ? "threads"
-        : rawIntent;
+    const nextIntent = rawIntent === "source" || rawIntent === "create" ? rawIntent : "";
     const intentKey = [nextIntent, projectKey, activeSessionId, currentFocusedDocumentKey].join(":");
     if (!nextIntent || overlayMode || overlayIntentKeyRef.current === intentKey) return;
     overlayIntentKeyRef.current = intentKey;
@@ -2803,7 +3100,7 @@ export default function RoomWorkspace({
   async function refreshRoom(
     nextProjectKey = projectKey,
     nextSessionId = activeSessionId,
-    nextDocumentKey = currentFocusedDocumentKey,
+    nextDocumentKey = roomScopedDocumentKey,
     nextAdjacent = "",
   ) {
     const params = new URLSearchParams();
@@ -2826,6 +3123,58 @@ export default function RoomWorkspace({
     }
     applyRoomView(payload.view);
     return payload.view;
+  }
+
+  function handleLibraryDocumentChange(nextDocument, { focusOnly = false } = {}) {
+    if (!nextDocument?.id) return;
+    setActiveDreamDocument(nextDocument.id, nextDocument.filename || "");
+    setLibraryDocuments((current) => {
+      const remainder = current.filter((document) => document.id !== nextDocument.id);
+      return [nextDocument, ...remainder];
+    });
+    setFocusedArtifact({ type: "library", id: nextDocument.id });
+    startActionTransition(() => {
+      router.replace(
+        buildWorkspaceHref(projectKey, {
+          sessionId: activeSessionId,
+          artifactType: "library",
+          artifactId: nextDocument.id,
+        }),
+        { scroll: false },
+      );
+    });
+    if (!focusOnly) {
+      setLibraryError("");
+    }
+  }
+
+  function handleSelectReceipt(receipt) {
+    if (!receipt?.id) return;
+    setFocusedArtifact({ type: "receipt", id: receipt.id });
+    startActionTransition(() => {
+      router.replace(
+        buildWorkspaceHref(projectKey, {
+          sessionId: activeSessionId,
+          ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
+        }),
+        { scroll: false },
+      );
+    });
+  }
+
+  function handleCloseRightPane() {
+    setFocusedArtifact({ type: "room", id: "" });
+    if (focusedArtifact?.type === "library" || focusedArtifact?.type === "receipt" || focusedArtifact?.type === "operate") {
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: activeSessionId,
+            ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
+          }),
+          { scroll: false },
+        );
+      });
+    }
   }
 
   async function handleProjectSelect(nextProjectKey, { starterAction = "" } = {}) {
@@ -2893,8 +3242,12 @@ export default function RoomWorkspace({
         rawMarkdown: sourceDocument.rawMarkdown,
         sourceKind: "upload",
       });
-      await saveDreamDocument(documentRecord);
-      return documentRecord;
+      const savedDocument = await saveDreamDocument(documentRecord);
+      setLibraryDocuments((current) => {
+        const remainder = current.filter((document) => document.id !== savedDocument.id);
+        return [savedDocument, ...remainder];
+      });
+      return savedDocument;
     } catch {
       return null;
     }
@@ -2921,7 +3274,7 @@ export default function RoomWorkspace({
     setActionError("");
     const sourceDocument = payload?.document || payload?.sourceDocument || null;
     const seededDreamDocument = await seedLibraryDocumentFromRoomSource(sourceDocument);
-    const nextView = await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey);
+    const nextView = await refreshRoom(projectKey, activeSessionId, roomScopedDocumentKey);
     setPostAddGuidance(buildPostAddGuidance(nextView, seededDreamDocument));
     setOverlayMode("");
     setPendingStarterAction("");
@@ -2938,7 +3291,7 @@ export default function RoomWorkspace({
         },
         body: JSON.stringify({
           projectKey,
-          documentKey: currentFocusedDocumentKey,
+          documentKey: roomScopedDocumentKey,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -2954,7 +3307,7 @@ export default function RoomWorkspace({
         router.replace(
           buildWorkspaceHref(projectKey, {
             sessionId: payload?.view?.session?.id || "",
-            documentKey: currentFocusedDocumentKey,
+            ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
           }),
           { scroll: false },
         );
@@ -2979,7 +3332,7 @@ export default function RoomWorkspace({
         body: JSON.stringify({
           projectKey,
           sessionId: nextSessionId,
-          documentKey: currentFocusedDocumentKey,
+          documentKey: roomScopedDocumentKey,
           action: "activate",
         }),
       });
@@ -2993,7 +3346,7 @@ export default function RoomWorkspace({
         router.replace(
           buildWorkspaceHref(projectKey, {
             sessionId: payload?.view?.session?.id || nextSessionId,
-            documentKey: currentFocusedDocumentKey,
+            ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
           }),
           { scroll: false },
         );
@@ -3016,7 +3369,7 @@ export default function RoomWorkspace({
         body: JSON.stringify({
           projectKey,
           sessionId: nextSessionId,
-          documentKey: currentFocusedDocumentKey,
+          documentKey: roomScopedDocumentKey,
           action: "archive",
         }),
       });
@@ -3030,7 +3383,7 @@ export default function RoomWorkspace({
         router.replace(
           buildWorkspaceHref(projectKey, {
             sessionId: payload?.view?.session?.id || "",
-            documentKey: currentFocusedDocumentKey,
+            ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
           }),
           { scroll: false },
         );
@@ -3068,7 +3421,7 @@ export default function RoomWorkspace({
         body: JSON.stringify({
           projectKey,
           sessionId: activeSessionId,
-          documentKey: currentFocusedDocumentKey,
+          documentKey: roomScopedDocumentKey,
           message,
           bridgePayload,
         }),
@@ -3102,7 +3455,7 @@ export default function RoomWorkspace({
         body: JSON.stringify({
           projectKey,
           sessionId: activeSessionId,
-          documentKey: currentFocusedDocumentKey,
+          documentKey: roomScopedDocumentKey,
           action: "apply_proposal_preview",
           assistantMessageId: message.id,
         }),
@@ -3165,7 +3518,7 @@ export default function RoomWorkspace({
         body: JSON.stringify({
           projectKey,
           sessionId: activeSessionId,
-          documentKey: currentFocusedDocumentKey,
+          documentKey: roomScopedDocumentKey,
           action: "complete_receipt_kit",
           receiptKit,
           completion: nextCompletion,
@@ -3231,7 +3584,7 @@ export default function RoomWorkspace({
         throw new Error(payload?.error || "Operate could not finish.");
       }
       setOperateResult(payload?.result || null);
-      await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey, "operate");
+      await refreshRoom(projectKey, activeSessionId, roomScopedDocumentKey, "operate");
     } catch (error) {
       setOperateError(error instanceof Error ? error.message : "Operate could not finish.");
     } finally {
@@ -3283,7 +3636,16 @@ export default function RoomWorkspace({
         return;
       }
       if (nextMode === "library") {
-        router.push("/dream");
+        if (libraryDocuments[0]?.id) {
+          handleLibraryDocumentChange(libraryDocuments[0], { focusOnly: true });
+        } else {
+          router.push(
+            buildWorkspaceHref(projectKey, {
+              sessionId: activeSessionId,
+              artifactType: "library",
+            }),
+          );
+        }
         return;
       }
       setPendingStarterAction(nextMode);
@@ -3296,9 +3658,20 @@ export default function RoomWorkspace({
   function handleOpenGuidanceLibrary() {
     if (postAddGuidance?.dreamDocumentId) {
       setActiveDreamDocument(postAddGuidance.dreamDocumentId);
-      router.push(buildDreamHref(postAddGuidance.dreamDocumentId, postAddGuidance.dreamAnchor || ""));
+      router.push(
+        buildWorkspaceHref(projectKey, {
+          sessionId: activeSessionId,
+          artifactType: "library",
+          artifactId: postAddGuidance.dreamDocumentId,
+        }),
+      );
     } else {
-      router.push("/dream");
+      router.push(
+        buildWorkspaceHref(projectKey, {
+          sessionId: activeSessionId,
+          artifactType: "library",
+        }),
+      );
     }
     setPostAddGuidance(null);
   }
@@ -3314,11 +3687,22 @@ export default function RoomWorkspace({
 
   function handleReturnToLibrary() {
     if (!resumeBanner?.documentId) {
-      router.push("/dream");
+      router.push(
+        buildWorkspaceHref(projectKey, {
+          sessionId: activeSessionId,
+          artifactType: "library",
+        }),
+      );
       return;
     }
     setActiveDreamDocument(resumeBanner.documentId);
-    router.push(buildDreamHref(resumeBanner.documentId, resumeBanner.anchor || ""));
+    router.push(
+      buildWorkspaceHref(projectKey, {
+        sessionId: activeSessionId,
+        artifactType: "library",
+        artifactId: resumeBanner.documentId,
+      }),
+    );
     setResumeBanner(null);
   }
 
@@ -3370,10 +3754,7 @@ export default function RoomWorkspace({
       normalizeText(nextDocumentKey) ||
       currentFocusedDocumentKey ||
       extractDocumentKeyFromWorkspaceHref(view?.deepLinks?.reader || "");
-    const witnessHref = targetDocumentKey
-      ? buildWitnessHref(projectKey, activeSessionId, targetDocumentKey)
-      : normalizeText(view?.focusedWitness?.openHref || view?.deepLinks?.reader);
-    if (!witnessHref) return;
+    if (!targetDocumentKey) return;
     const alreadyFocused = Boolean(
       targetDocumentKey &&
         currentFocusedDocumentKey &&
@@ -3381,13 +3762,20 @@ export default function RoomWorkspace({
         view?.focusedWitness,
     );
     if (alreadyFocused) {
-      setOverlayMode("witness");
+      setFocusedArtifact({ type: "witness", id: targetDocumentKey });
       return;
     }
     try {
-      await refreshRoom(projectKey, activeSessionId, targetDocumentKey, "witness");
+      await refreshRoom(projectKey, activeSessionId, targetDocumentKey, "");
+      setFocusedArtifact({ type: "witness", id: targetDocumentKey });
       startActionTransition(() => {
-        router.replace(witnessHref, { scroll: false });
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: activeSessionId,
+            documentKey: targetDocumentKey,
+          }),
+          { scroll: false },
+        );
       });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open that witness.");
@@ -3395,15 +3783,18 @@ export default function RoomWorkspace({
   }
 
   async function handleOpenOperate() {
-    const operateHref = normalizeText(view?.adjacent?.operate?.openHref);
     try {
-      await refreshRoom(projectKey, activeSessionId, currentFocusedDocumentKey, "operate");
-      if (operateHref) {
-        startActionTransition(() => {
-          router.replace(operateHref, { scroll: false });
-        });
-      }
-      setOverlayMode("operate");
+      await refreshRoom(projectKey, activeSessionId, roomScopedDocumentKey, "");
+      setFocusedArtifact({ type: "operate", id: normalizeText(view?.adjacent?.operate?.documentKey) || "operate" });
+      startActionTransition(() => {
+        router.replace(
+          buildWorkspaceHref(projectKey, {
+            sessionId: activeSessionId,
+            ...(roomScopedDocumentKey ? { documentKey: roomScopedDocumentKey } : {}),
+          }),
+          { scroll: false },
+        );
+      });
       if (view?.adjacent?.operate?.hasRun) {
         await loadOperateSummary();
       } else {
@@ -3424,74 +3815,15 @@ export default function RoomWorkspace({
     if (nextMode === "source") {
       setPendingStarterAction("");
     }
-    if (nextMode === "witness") {
-      startActionTransition(() => {
-        router.replace(
-          buildWorkspaceHref(projectKey, {
-            sessionId: activeSessionId,
-          }),
-          { scroll: false },
-        );
-      });
-      return;
-    }
-    if (nextMode === "operate") {
-      startActionTransition(() => {
-        router.replace(
-          buildWorkspaceHref(projectKey, {
-            sessionId: activeSessionId,
-            ...(currentFocusedDocumentKey ? { documentKey: currentFocusedDocumentKey } : {}),
-          }),
-          { scroll: false },
-        );
-      });
-    }
   }
 
   const activeSectionMode = normalizeText(overlayMode).toLowerCase();
   const sectionMeta =
-    activeSectionMode === "threads"
-      ? { label: "Conversations", title: view?.session?.title || "Conversations" }
-      : activeSectionMode === "mirror"
-      ? { label: "Live Read", title: view?.project?.title || "Room" }
-      : activeSectionMode === "witness"
-        ? { label: "Source Detail", title: view?.focusedWitness?.title || "Focused witness" }
-        : activeSectionMode === "operate"
-          ? { label: "Audit", title: view?.project?.title || "Box advisory" }
-          : activeSectionMode === "source"
+    activeSectionMode === "source"
               ? { label: "Source", title: "Add source" }
               : activeSectionMode === "create"
                 ? { label: "Start Room", title: "Create the internal room container" }
                 : { label: "", title: "" };
-
-  const roomRail = (
-    <div className={styles.sectionStack} data-testid="room-shell-rail">
-      <RoomSessionList
-        sessions={view?.sessions}
-        activeSessionId={view?.session?.id}
-        onCreate={handleCreateSession}
-        onActivate={handleActivateSession}
-        onArchive={handleArchiveSession}
-        busy={actionPending}
-      />
-
-      <RoomArtifactList
-        sources={view?.recentSources}
-        onOpenWitness={(nextDocumentKey) => {
-          void handleOpenWitness(nextDocumentKey);
-        }}
-      />
-
-      <ProjectPicker
-        projects={view?.projects}
-        activeProjectKey={projectKey}
-        onSelect={(nextProjectKey) => {
-          void handleProjectSelect(nextProjectKey);
-        }}
-        onCreate={() => setOverlayMode("create")}
-      />
-    </div>
-  );
 
   const workspaceMain = (
     <div className={styles.workspaceMain} data-testid="room-workspace">
@@ -3507,6 +3839,17 @@ export default function RoomWorkspace({
           view={view}
           onOpenDetail={() => setOverlayMode("mirror")}
         />
+      ) : null}
+
+      {shell?.previewState?.activePreview ? (
+        <ActivePreviewBanner activePreview={shell.previewState.activePreview} />
+      ) : null}
+
+      {shell?.returnState?.latestReturn?.actual ? (
+        <div className={styles.inlineReturnBanner} data-testid="workspace-latest-return">
+          <Kicker tone="grounded">Latest Return</Kicker>
+          <strong>{shell.returnState.latestReturn.actual}</strong>
+        </div>
       ) : null}
 
       <div
@@ -3577,6 +3920,7 @@ export default function RoomWorkspace({
           starter={view?.starter}
           onStartAction={(nextAction) => void handleStarterAction(nextAction)}
           onTeachLiveIssue={() => void handleStarterAction("talk")}
+          libraryHref={currentLibraryHref}
         />
       ) : null}
 
@@ -3585,6 +3929,10 @@ export default function RoomWorkspace({
           payload={dreamBridgePayload}
           onUse={handleUseDreamBridge}
           onDismiss={handleDismissDreamBridge}
+          libraryHref={buildLibraryHref(dreamBridgePayload.documentId, dreamBridgePayload.anchor, {
+            projectKey,
+            sessionId: activeSessionId,
+          })}
         />
       ) : dismissedDreamBridgePayload?.documentId ? (
         <DreamBridgeRecoveryNotice
@@ -3596,13 +3944,230 @@ export default function RoomWorkspace({
     </>
   );
 
+  const continuityRail = (
+    <div className={styles.sectionStack} data-testid="workspace-continuity-rail">
+      <ProjectPicker
+        projects={shell?.boxes || view?.projects}
+        activeProjectKey={projectKey}
+        onSelect={(nextProjectKey) => {
+          void handleProjectSelect(nextProjectKey);
+        }}
+        onCreate={() => setOverlayMode("create")}
+      />
+
+      <RoomSessionList
+        sessions={shell?.sessions || view?.sessions}
+        activeSessionId={view?.session?.id}
+        onCreate={handleCreateSession}
+        onActivate={handleActivateSession}
+        onArchive={handleArchiveSession}
+        busy={actionPending}
+      />
+    </div>
+  );
+
+  const knowledgeRail = (
+    <div className={styles.sectionStack} data-testid="workspace-knowledge-rail">
+      <RoomArtifactList
+        sources={view?.recentSources}
+        onOpenWitness={(nextDocumentKey) => {
+          void handleOpenWitness(nextDocumentKey);
+        }}
+        libraryHref={currentLibraryHref}
+      />
+
+      <LibraryArtifactList
+        documents={libraryDocuments}
+        activeDocumentId={focusedArtifact?.type === "library" ? focusedArtifact?.id : ""}
+        onSelect={handleLibraryDocumentChange}
+      />
+
+      <ReceiptArtifactList
+        receipts={view?.receiptSummary?.recentDrafts}
+        activeReceiptId={focusedArtifact?.type === "receipt" ? focusedArtifact?.id : ""}
+        onSelect={handleSelectReceipt}
+      />
+
+      {libraryError ? <p className={styles.railEmptyText}>{libraryError}</p> : null}
+    </div>
+  );
+
+  let rightPaneLabel = "Artifact";
+  let rightPaneTitle = shell?.activeBox?.title || roomTitle;
+  let rightPaneMeta = (
+    <BasisBadge label={shell?.basis?.label || "Basis unavailable"} commitment={shell?.basis?.commitment || ""} />
+  );
+  let rightPaneContent = <ArtifactFallbackPane roomIdentity={view?.roomIdentity} />;
+  const rightPaneVisible = focusedArtifact?.type && focusedArtifact.type !== "room";
+
+  if (focusedArtifact?.type === "witness") {
+    rightPaneLabel = "Witness";
+    rightPaneTitle = view?.focusedWitness?.title || "Focused witness";
+    rightPaneMeta = (
+      <div className={styles.inlineMetaWrap}>
+        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail={shell?.composerScope?.detail || ""} />
+        <BasisBadge label="Basis: witness" commitment="captured" />
+      </div>
+    );
+    rightPaneContent = <FocusedWitnessPanel focusedWitness={view?.focusedWitness} onBack={() => setFocusedArtifact({ type: "room", id: "" })} />;
+  } else if (focusedArtifact?.type === "library") {
+    rightPaneLabel = "Library";
+    rightPaneTitle = activeLibraryDocument?.filename || "Library artifact";
+    rightPaneMeta = (
+      <div className={styles.inlineMetaWrap}>
+        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail="Inspectable artifact only" />
+        <BasisBadge
+          label={activeLibraryDocument ? "Basis: current library version" : "Basis: requested library artifact"}
+          commitment={activeLibraryDocument?.compilerRead ? "diagnostic" : "captured"}
+        />
+      </div>
+    );
+    rightPaneContent = (
+      <LibraryArtifactPane
+        documents={libraryDocuments}
+        activeDocument={activeLibraryDocument}
+        onDocumentChange={handleLibraryDocumentChange}
+        requestedArtifactId={focusedArtifact?.id || routeArtifactId}
+        errorMessage={libraryError}
+      />
+    );
+  } else if (focusedArtifact?.type === "receipt") {
+    rightPaneLabel = "Receipt";
+    rightPaneTitle = activeReceipt?.title || "Receipt draft";
+    rightPaneMeta = (
+      <div className={styles.inlineMetaWrap}>
+        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail="Receipt belongs to the box." />
+        <BasisBadge label="Basis: box return history" commitment="captured" />
+      </div>
+    );
+    rightPaneContent = <ReceiptArtifactPane receipt={activeReceipt} />;
+  } else if (focusedArtifact?.type === "operate") {
+    rightPaneLabel = "Operate";
+    rightPaneTitle = "Box advisory read";
+    rightPaneMeta = (
+      <div className={styles.inlineMetaWrap}>
+        <ScopeBadge label={shell?.composerScope?.label || assemblyTitle} detail="Non-canonical advisory read" />
+        <BasisBadge label="Basis: active box sources" commitment="diagnostic" />
+      </div>
+    );
+    rightPaneContent = (
+      <OperatePanel
+        operateSummary={view?.adjacent?.operate || null}
+        pending={operatePending}
+        error={operateError}
+        result={operateResult}
+        onRun={handleRunOperate}
+        onAskSeven={handleAskSevenAudit}
+        onBack={() => setFocusedArtifact({ type: "room", id: "" })}
+      />
+    );
+  }
+
+  const utilityPanel =
+    activeUtility || activeSectionMode
+      ? {
+          open: true,
+          title:
+            activeUtility
+              ? activeUtility.charAt(0).toUpperCase() + activeUtility.slice(1)
+              : sectionMeta.title,
+          onClose: () => {
+            setActiveUtility("");
+            handleCloseOverlay();
+          },
+          content: activeUtility ? (
+            <UtilityPanelContent activeUtility={activeUtility} onClose={() => setActiveUtility("")} />
+          ) : (
+            <WorkspaceSectionContent
+              mode={activeSectionMode}
+              view={view}
+              projectKey={projectKey}
+              pendingStarterAction={pendingStarterAction}
+              highlightedRegion={highlightedRegion}
+              mirrorCollapsed={mirrorCollapsed}
+              workingEchoCollapsed={workingEchoCollapsed}
+              onToggleMirror={() => setMirrorCollapsed((current) => !current)}
+              onToggleWorkingEcho={() => setWorkingEchoCollapsed((current) => !current)}
+              onOpenWitness={handleOpenWitness}
+              onOpenOperate={handleOpenOperate}
+              onClose={handleCloseOverlay}
+              onOpenMode={setOverlayMode}
+              onProjectSelect={handleProjectSelect}
+              onCreateSession={handleCreateSession}
+              onActivateSession={handleActivateSession}
+              onArchiveSession={handleArchiveSession}
+              onCreateBox={handleCreateBox}
+              onSourceComplete={handleSourceComplete}
+              onRunOperate={handleRunOperate}
+              onAskSevenAudit={handleAskSevenAudit}
+              operatePending={operatePending}
+              operateError={operateError}
+              operateResult={operateResult}
+              busy={actionPending}
+            />
+          ),
+        }
+      : null;
+
   return (
-    <LoegosShell
-      route="workspace"
-      lensLabel="Room"
-      title={roomTitle}
+    <WorkspaceTriangleShell
       workspaceLabel={workspaceLabel}
-      rail={roomRail}
+      utilityItems={[
+        {
+          id: "settings",
+          label: "Settings",
+          icon: Settings2,
+          active: activeUtility === "settings",
+          onClick: () => setActiveUtility((current) => (current === "settings" ? "" : "settings")),
+          testId: "workspace-utility-settings",
+        },
+        {
+          id: "plugins",
+          label: "Plugins",
+          icon: Plug,
+          active: activeUtility === "plugins",
+          onClick: () => setActiveUtility((current) => (current === "plugins" ? "" : "plugins")),
+          testId: "workspace-utility-plugins",
+        },
+        {
+          id: "automations",
+          label: "Automations",
+          icon: Clock3,
+          active: activeUtility === "automations",
+          onClick: () => setActiveUtility((current) => (current === "automations" ? "" : "automations")),
+          testId: "workspace-utility-automations",
+        },
+      ]}
+      continuity={continuityRail}
+      knowledge={knowledgeRail}
+      account={{
+        name: view?.viewer?.name || "Personal",
+        detail: view?.viewer?.email || shell?.activeBox?.title || "Workspace",
+        action: {
+          label: "Sign out",
+          onClick: () => {
+            void signOut({ callbackUrl: "/" });
+          },
+        },
+      }}
+      header={
+        <div className={styles.workspaceStageHead}>
+          <div>
+            <Kicker tone="neutral">Room</Kicker>
+            <strong>{roomTitle}</strong>
+            <p className={styles.workspaceStageSubcopy}>{scopeSummary}</p>
+          </div>
+        </div>
+      }
+      canonical={
+        <CanonicalStrip
+          shell={shell}
+          onOpenOperate={() => {
+            void handleOpenOperate();
+          }}
+          operateAvailable={Boolean(view?.adjacent?.operate?.available)}
+        />
+      }
       main={workspaceMain}
       composer={
         <Composer
@@ -3637,46 +4202,18 @@ export default function RoomWorkspace({
           ]}
           listenHref={view?.deepLinks?.reader || ""}
           focusSignal={composerFocusSignal}
-          scopeLabel={assemblyTitle}
-          scopeDetail={scopeSummary}
+          scopeLabel={shell?.composerScope?.label || assemblyTitle}
+          scopeDetail={shell?.composerScope?.detail || scopeSummary}
           prelude={composerPrelude}
         />
       }
-      sheet={{
-        open: Boolean(activeSectionMode),
-        label: sectionMeta.label,
-        title: sectionMeta.title,
-        onClose: handleCloseOverlay,
-        children: (
-          <WorkspaceSectionContent
-            mode={activeSectionMode}
-            view={view}
-            projectKey={projectKey}
-            pendingStarterAction={pendingStarterAction}
-            highlightedRegion={highlightedRegion}
-            mirrorCollapsed={mirrorCollapsed}
-            workingEchoCollapsed={workingEchoCollapsed}
-            onToggleMirror={() => setMirrorCollapsed((current) => !current)}
-            onToggleWorkingEcho={() => setWorkingEchoCollapsed((current) => !current)}
-            onOpenWitness={handleOpenWitness}
-            onOpenOperate={handleOpenOperate}
-            onClose={handleCloseOverlay}
-            onOpenMode={setOverlayMode}
-            onProjectSelect={handleProjectSelect}
-            onCreateSession={handleCreateSession}
-            onActivateSession={handleActivateSession}
-            onArchiveSession={handleArchiveSession}
-            onCreateBox={handleCreateBox}
-            onSourceComplete={handleSourceComplete}
-            onRunOperate={handleRunOperate}
-            onAskSevenAudit={handleAskSevenAudit}
-            operatePending={operatePending}
-            operateError={operateError}
-            operateResult={operateResult}
-            busy={actionPending}
-          />
-        ),
-      }}
+      rightLabel={rightPaneLabel}
+      rightTitle={rightPaneTitle}
+      rightMeta={rightPaneMeta}
+      rightPane={rightPaneContent}
+      rightPaneVisible={Boolean(rightPaneVisible)}
+      onCloseRightPane={rightPaneVisible ? handleCloseRightPane : null}
+      utilityPanel={utilityPanel}
     />
   );
 }

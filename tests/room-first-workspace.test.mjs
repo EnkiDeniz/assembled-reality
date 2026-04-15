@@ -61,6 +61,9 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   const roomCanonical = await read("src/lib/room-canonical.js");
   const roomState = await read("src/lib/room.js");
   const roomUi = await read("src/components/room/RoomWorkspace.jsx");
+  const workspaceShell = await read("src/components/workspace/WorkspaceTriangleShell.jsx");
+  const workspaceContract = await read("src/lib/workspace-shell-contract.js");
+  const roomServer = await read("src/lib/room-server.js");
   const seedModel = await read("src/lib/seed-model.js");
   const roomTurnService = await read("src/lib/room-turn-service.js");
 
@@ -91,20 +94,31 @@ test("room canonical pipeline uses gate, compiler/runtime helpers, and hidden as
   assert.match(roomUi, /previewStatus/);
   assert.match(roomUi, /AuthorityPanel/);
   assert.match(roomUi, /Box canon unchanged/);
-  assert.match(roomUi, /Session-scoped\. Not canon\./);
   assert.match(roomUi, /FocusedWitnessPanel/);
   assert.match(roomUi, /OperatePanel/);
   assert.match(roomUi, /Ask Seven to audit/);
   assert.match(roomUi, /Witness/);
+  assert.match(roomUi, /Canonical Strip/);
+  assert.match(roomUi, /WorkspaceTriangleShell/);
+  assert.match(roomUi, /LibraryArtifactPane/);
+  assert.match(roomUi, /workspace-continuity-rail/);
+  assert.match(roomUi, /workspace-knowledge-rail/);
+  assert.match(roomUi, /workspace-utility-settings/);
   assert.doesNotMatch(roomUi, /Inspect proposal/);
   assert.doesNotMatch(roomUi, /Structure Waking/);
   assert.match(roomUi, /apply_proposal_preview/);
   assert.match(roomUi, /complete_receipt_kit/);
   assert.match(roomUi, /mirrorRegion/);
-  assert.match(roomUi, /What's on your mind\?/);
-  assert.match(roomUi, /Start talking\.\.\./);
-  assert.match(roomUi, /href="\/account"/);
+  assert.match(roomUi, /Tell Seven what is live right now/);
   assert.match(roomUi, /signOut\(\{ callbackUrl: "\/" \}\)/);
+  assert.match(workspaceShell, /workspace-triangle-shell/);
+  assert.match(workspaceShell, /utilityPanel/);
+  assert.match(workspaceContract, /activeBox/);
+  assert.match(workspaceContract, /canonicalStrip/);
+  assert.match(workspaceContract, /composerScope/);
+  assert.match(workspaceContract, /Requested Library artifact/);
+  assert.match(workspaceContract, /library:\s*routeFocusedArtifact \? \[routeFocusedArtifact\] : \[\]/);
+  assert.match(roomServer, /artifactType\.toLowerCase\(\) === "library" \? "" : documentKey/);
 
   assert.match(seedModel, /isRoomAssemblyDocument/);
 });

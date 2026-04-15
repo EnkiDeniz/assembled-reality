@@ -113,7 +113,7 @@ export default function AccountShell({
                 </div>
               </div>
               <div className={styles.linkRow}>
-                <Link href="/dream" className={`${styles.linkButton} ${styles.linkButtonPrimary}`}>
+                <Link href="/library" className={`${styles.linkButton} ${styles.linkButtonPrimary}`}>
                   Open Library
                 </Link>
               </div>
