@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOut, MoreHorizontal, X } from "lucide-react";
+import { LogOut, MoreHorizontal, PanelLeft, X } from "lucide-react";
 import {
   APP_MODES,
   CONTEXT_CARD_LIFECYCLES,
@@ -100,9 +100,9 @@ export function IconButton({
   );
 }
 
-function ModeSwitch({ mode = APP_MODES.room }) {
+function ModeSwitch({ mode = APP_MODES.room, className = "" }) {
   return (
-    <nav className={styles.modeSwitch} aria-label="Signed-in sections">
+    <nav className={joinClasses(styles.modeSwitch, className)} aria-label="Signed-in sections">
       <Link
         href="/workspace"
         className={joinClasses(styles.modeTab, mode === APP_MODES.room ? styles.modeTabActive : "")}
@@ -119,33 +119,6 @@ function ModeSwitch({ mode = APP_MODES.room }) {
       >
         Library
       </Link>
-    </nav>
-  );
-}
-
-function MobileTabBar({ route = "workspace" }) {
-  const items = [
-    { href: "/workspace", label: "Room", testId: "shell-mobile-room", active: route === "workspace" },
-    { href: "/dream", label: "Library", testId: "shell-mobile-dream", active: route === "dream" },
-  ];
-
-  return (
-    <nav
-      className={styles.mobileNav}
-      aria-label="Primary signed-in navigation"
-      style={{ "--mobile-nav-count": items.length }}
-    >
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={joinClasses(styles.mobileNavLink, item.active ? styles.mobileNavLinkActive : "")}
-          aria-current={item.active ? "page" : undefined}
-          data-testid={item.testId}
-        >
-          {item.label}
-        </Link>
-      ))}
     </nav>
   );
 }
@@ -301,6 +274,7 @@ export function PulseStrip({ state = null, onOpenCards, className = "" }) {
   const secondaryCards = Array.isArray(state?.secondaryCards) ? state.secondaryCards : [];
   const overflowCount = Number(state?.overflowCount || 0);
   const field = state?.field || null;
+  const reasonLine = state?.reasonLine || null;
 
   return (
     <button
@@ -321,6 +295,11 @@ export function PulseStrip({ state = null, onOpenCards, className = "" }) {
           <>
             <Kicker tone={primary.tone}>{primary.label}</Kicker>
             <p>{primary.verdict || primary.title}</p>
+            {reasonLine?.text ? (
+              <small className={styles.pulseReason}>
+                {reasonLine.label}: {reasonLine.text}
+              </small>
+            ) : null}
           </>
         ) : (
           <>
@@ -360,6 +339,7 @@ export function SectionLayer({
   title = "",
   onClose,
   children = null,
+  variant = "sheet",
 }) {
   const titleId = useId();
   const closeButtonRef = useRef(null);
@@ -436,10 +416,21 @@ export function SectionLayer({
   if (!open) return null;
 
   return (
-    <div className={styles.sheetBackdrop} onClick={onClose}>
+    <div
+      className={joinClasses(
+        styles.sheetBackdrop,
+        variant === "drawer" ? styles.drawerBackdrop : "",
+        variant === "takeover" ? styles.takeoverBackdrop : "",
+      )}
+      onClick={onClose}
+    >
       <aside
         ref={layerRef}
-        className={styles.sheetLayer}
+        className={joinClasses(
+          styles.sheetLayer,
+          variant === "drawer" ? styles.drawerLayer : "",
+          variant === "takeover" ? styles.takeoverLayer : "",
+        )}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -549,6 +540,11 @@ export default function LoegosShell({
   route = "workspace",
   mode = "",
   title = "",
+  lensLabel = "",
+  workspaceLabel = "Personal",
+  scopeControl = null,
+  rail = null,
+  focusMode = false,
   contextControl = null,
   headerAccessory = null,
   main = null,
@@ -569,39 +565,208 @@ export default function LoegosShell({
   const resolvedOverflowItems = overflowItems.length
     ? overflowItems
     : buildDefaultOverflowItems(route);
+  const defaultLensLabel = normalizedMode === APP_MODES.dream ? "Library" : "Room";
+  const resolvedLensLabel = lensLabel || defaultLensLabel;
+  const resolvedTitle = title || defaultLensLabel;
+  const hasRail = Boolean(rail);
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const effectiveRailCollapsed = Boolean(focusMode || railCollapsed);
+  const overlayOpen = Boolean(sheetOpen || mobileDrawerOpen);
+
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      setMobileDrawerOpen(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [sheetOpen]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setMobileDrawerOpen(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [route]);
+
+  const drawerContent = (
+    <div className={styles.drawerStack}>
+      <div className={styles.drawerIdentity}>
+        <span className={styles.wordmark}>Lœgos</span>
+        <span className={styles.railWorkspace}>{workspaceLabel}</span>
+      </div>
+
+      <div className={styles.drawerLens}>
+        <Kicker tone="neutral">Current lens</Kicker>
+        <strong>{resolvedTitle}</strong>
+      </div>
+
+      <ModeSwitch mode={normalizedMode} className={styles.drawerModeSwitch} />
+
+      {scopeControl ? (
+        <div className={styles.drawerScope}>
+          <Kicker tone="neutral">Current scope</Kicker>
+          <div className={styles.drawerScopeSlot}>{scopeControl}</div>
+        </div>
+      ) : null}
+
+      {rail ? (
+        <div
+          className={styles.drawerSection}
+          onClickCapture={(event) => {
+            if (event.target instanceof Element && event.target.closest("a,button")) {
+              setMobileDrawerOpen(false);
+            }
+          }}
+        >
+          {rail}
+        </div>
+      ) : null}
+
+      {resolvedOverflowItems.length ? (
+        <div className={styles.drawerUtilityList}>
+          <Kicker tone="neutral">Utilities</Kicker>
+          <div className={styles.drawerUtilityItems}>
+            {resolvedOverflowItems.map((item) => {
+              const Icon = item.icon || MoreHorizontal;
+              if (item.href) {
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={styles.drawerUtilityItem}
+                    onClick={() => setMobileDrawerOpen(false)}
+                  >
+                    <Icon size={14} aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={styles.drawerUtilityItem}
+                  onClick={() => {
+                    setMobileDrawerOpen(false);
+                    item.onClick?.();
+                  }}
+                >
+                  <Icon size={14} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
-    <main className={styles.root} data-route={route} data-mode={normalizedMode}>
-      <div className={styles.header} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
-        <div className={styles.headerCopy}>
-          <span className={styles.wordmark}>Lœgos</span>
-          {title ? <span className={styles.headerTitle}>{title}</span> : null}
+    <main
+      className={joinClasses(
+        styles.root,
+        hasRail ? styles.rootWithRail : "",
+        hasRail && effectiveRailCollapsed ? styles.rootRailCollapsed : "",
+      )}
+      data-route={route}
+      data-mode={normalizedMode}
+    >
+      {hasRail ? (
+        <aside
+          className={styles.rail}
+          inert={overlayOpen ? true : undefined}
+          aria-hidden={overlayOpen ? "true" : undefined}
+        >
+          <div className={styles.railHeader}>
+            <span className={styles.wordmark}>Lœgos</span>
+            <span className={styles.railWorkspace}>{workspaceLabel}</span>
+          </div>
+          <ModeSwitch mode={normalizedMode} className={styles.railModeSwitch} />
+          <div className={styles.railBody}>{rail}</div>
+        </aside>
+      ) : null}
+
+      <div className={styles.shellMain}>
+        <div
+          className={styles.topBar}
+          inert={overlayOpen ? true : undefined}
+          aria-hidden={overlayOpen ? "true" : undefined}
+        >
+          <button
+            type="button"
+            className={styles.mobileShellTrigger}
+            onClick={() => setMobileDrawerOpen(true)}
+            aria-label="Open navigation"
+            title="Open navigation"
+            data-testid="shell-mobile-drawer-trigger"
+          >
+            □
+          </button>
+
+          <div className={styles.topBarIdentity}>
+            {hasRail ? (
+              <button
+                type="button"
+                className={styles.utilityButton}
+                onClick={() => setRailCollapsed((current) => !current)}
+                aria-label={effectiveRailCollapsed ? "Show navigation lists" : "Hide navigation lists"}
+                title={effectiveRailCollapsed ? "Show navigation lists" : "Hide navigation lists"}
+                data-testid="shell-rail-toggle"
+              >
+                <PanelLeft size={16} aria-hidden="true" />
+                <span>{effectiveRailCollapsed ? "Show lists" : "Hide lists"}</span>
+              </button>
+            ) : null}
+            <span className={styles.workspaceBadge}>{workspaceLabel}</span>
+            <div className={styles.topBarTitle}>
+              <Kicker tone="neutral">{resolvedLensLabel}</Kicker>
+              <strong>{resolvedTitle}</strong>
+            </div>
+          </div>
+
+          <div className={styles.topBarActions}>
+            {scopeControl ? <div className={styles.scopeSlot}>{scopeControl}</div> : null}
+            {headerControl || null}
+            <OverflowMenu items={resolvedOverflowItems} />
+          </div>
         </div>
 
-        <div className={styles.headerMiddle}>
-          <ModeSwitch mode={normalizedMode} />
+        <div
+          className={styles.body}
+          inert={overlayOpen ? true : undefined}
+          aria-hidden={overlayOpen ? "true" : undefined}
+        >
+          <div className={styles.stageFrame}>{main || <Surface className={styles.emptyPlane} />}</div>
         </div>
 
-        <div className={styles.headerActions}>
-          {headerControl || null}
-          <OverflowMenu items={resolvedOverflowItems} />
+        <div
+          className={styles.bottomRail}
+          inert={overlayOpen ? true : undefined}
+          aria-hidden={overlayOpen ? "true" : undefined}
+        >
+          {composer ? <div className={styles.composerSlot}>{composer}</div> : null}
         </div>
       </div>
 
-      <div className={styles.body} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
-        <div className={styles.stageFrame}>{main || <Surface className={styles.emptyPlane} />}</div>
-      </div>
-
-      <div className={styles.bottomRail} inert={sheetOpen ? true : undefined} aria-hidden={sheetOpen ? "true" : undefined}>
-        {composer ? <div className={styles.composerSlot}>{composer}</div> : null}
-        <MobileTabBar route={route} />
-      </div>
+      <SectionLayer
+        open={mobileDrawerOpen}
+        label="Shell"
+        title={workspaceLabel}
+        onClose={() => setMobileDrawerOpen(false)}
+        variant="drawer"
+      >
+        {drawerContent}
+      </SectionLayer>
 
       <SectionLayer
         open={Boolean(resolvedSheet?.open)}
         label={resolvedSheet?.label || ""}
         title={resolvedSheet?.title || ""}
         onClose={resolvedSheet?.onClose}
+        variant={resolvedSheet?.variant || "sheet"}
       >
         {resolvedSheet?.children || null}
       </SectionLayer>

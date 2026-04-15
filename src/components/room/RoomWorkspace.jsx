@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   FileText,
   Headphones,
-  Paperclip,
   Plus,
   SendHorizontal,
   Upload,
@@ -357,7 +356,13 @@ function StatusChip({ view, floating = false }) {
   );
 }
 
-function ThreadIdentityBar({ view, onOpenThreads, onNewConversation, canStartFresh = false }) {
+function ThreadIdentityBar({
+  view,
+  onOpenThreads,
+  onNewConversation,
+  canStartFresh = false,
+  contextActionClassName = "",
+}) {
   const roomTitle = normalizeText(view?.session?.title) || "Conversation";
   const roomLabel = normalizeText(view?.project?.title) || "Current room";
   const sessionCount = Array.isArray(view?.sessions) ? view.sessions.length : 0;
@@ -387,7 +392,7 @@ function ThreadIdentityBar({ view, onOpenThreads, onNewConversation, canStartFre
         ) : null}
         <button
           type="button"
-          className={styles.contextButton}
+          className={`${styles.contextButton} ${contextActionClassName}`.trim()}
           onClick={onOpenThreads}
           data-testid="room-open-context"
         >
@@ -1129,8 +1134,8 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <div>
-          <Kicker tone="neutral">Boxes</Kicker>
-          <strong>Open another room</strong>
+          <Kicker tone="neutral">Assemblies</Kicker>
+          <strong>Open another assembly</strong>
         </div>
         <button type="button" className={styles.secondaryButton} onClick={onCreate}>
           <Plus size={14} />
@@ -1158,6 +1163,49 @@ function ProjectPicker({ projects, activeProjectKey, onSelect, onCreate }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function RoomArtifactList({ sources, onOpenWitness }) {
+  const items = Array.isArray(sources) ? sources.filter(Boolean) : [];
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHead}>
+        <div>
+          <Kicker tone="neutral">Artifacts</Kicker>
+          <strong>Recent source</strong>
+        </div>
+        <Link href="/dream" className={styles.inlineLinkButton}>
+          Open Library
+        </Link>
+      </div>
+
+      {!items.length ? (
+        <p className={styles.noticeText}>No source is attached to this assembly yet.</p>
+      ) : (
+        <div className={styles.projectList}>
+          {items.map((source) => (
+            <button
+              key={source.documentKey || source.title}
+              type="button"
+              className={styles.projectRow}
+              onClick={() => onOpenWitness?.(source.documentKey)}
+              disabled={!normalizeText(source.documentKey)}
+              data-testid={`room-artifact-${source.documentKey || source.title}`}
+            >
+              <div>
+                <strong>{source.title || "Source"}</strong>
+                <span>{source.metaLine || source.badge || "Attached source"}</span>
+              </div>
+              {normalizeText(source.badge) ? (
+                <span className={styles.projectBadge}>{source.badge}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2088,9 +2136,13 @@ function Composer({
   onOpenAttach,
   listenHref,
   focusSignal = 0,
+  scopeLabel = "",
+  scopeDetail = "",
+  attachActions = [],
 }) {
   const textareaRef = useRef(null);
   const isComposingRef = useRef(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const hasValue = Boolean(normalizeText(value));
   const canListen = Boolean(normalizeText(listenHref));
   const canSubmit = hasValue && !pending && !disabled;
@@ -2108,6 +2160,14 @@ function Composer({
     if (!focusSignal || disabled) return;
     textareaRef.current?.focus();
   }, [disabled, focusSignal]);
+
+  useEffect(() => {
+    if (!disabled) return;
+    const frame = window.requestAnimationFrame(() => {
+      setAttachMenuOpen(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [disabled]);
 
   function handleKeyDown(event) {
     if (event.key !== "Enter" || event.shiftKey || isComposingRef.current) return;
@@ -2128,14 +2188,47 @@ function Composer({
     <form className={styles.composer} onSubmit={handleSubmit}>
       <div className={styles.composerShell}>
         <div className={styles.composerCapsule}>
+          {attachMenuOpen && attachActions.length ? (
+            <div className={styles.composerBloom} data-testid="room-composer-bloom">
+              {attachActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  className={styles.composerBloomItem}
+                  onClick={() => {
+                    setAttachMenuOpen(false);
+                    action.onClick?.();
+                  }}
+                  data-testid={action.testId}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {scopeLabel || scopeDetail ? (
+            <div className={styles.composerMeta}>
+              {scopeLabel ? <strong>{scopeLabel}</strong> : null}
+              {scopeDetail ? <span>{scopeDetail}</span> : null}
+            </div>
+          ) : null}
+
           <div className={styles.composerRow}>
             <button
               type="button"
               className={styles.composerTool}
-              onClick={onOpenAttach}
-              aria-label="Add source"
+              onClick={() => {
+                if (attachActions.length) {
+                  setAttachMenuOpen((current) => !current);
+                  return;
+                }
+                onOpenAttach?.();
+              }}
+              aria-label="Open add menu"
+              data-testid="room-composer-plus"
             >
-              <Paperclip size={16} />
+              <Plus size={16} />
             </button>
             <textarea
               data-testid="room-composer-input"
@@ -2544,7 +2637,11 @@ function buildDreamHref(documentId = "", anchor = "") {
   return query ? `/dream?${query}` : "/dream";
 }
 
-export default function RoomWorkspace({ initialView, initialSection = "" }) {
+export default function RoomWorkspace({
+  initialView,
+  initialSection = "",
+  workspaceLabel = "Personal",
+}) {
   const router = useRouter();
   const [view, setView] = useState(initialView);
   const [composerText, setComposerText] = useState("");
@@ -2598,6 +2695,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     : hasRecentSources
       ? "Ask Seven about this source or name the issue"
       : "Tell Seven what is live right now";
+  const roomTitle = normalizeText(view?.session?.title) || "Conversation";
+  const assemblyTitle = normalizeText(view?.project?.title) || "Untitled Box";
+  const scopeSummary =
+    normalizeText(view?.roomIdentity?.canonScopeLabel) ||
+    "Canon stays assembly-level across conversations.";
 
   useEffect(() => {
     setView(initialView);
@@ -3254,14 +3356,20 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
     }
   }
 
-  async function handleOpenSourceFromComposer() {
+  async function handleOpenSourceFromComposer(mode = "upload") {
+    const nextMode =
+      mode === "paste" ? "paste" : mode === "link" ? "link" : mode === "library" ? "library" : "upload";
     setActionError("");
     try {
       if (!normalizeText(projectKey)) {
-        await createDefaultBox("upload");
+        await createDefaultBox(nextMode === "library" ? "upload" : nextMode);
         return;
       }
-      setPendingStarterAction("upload");
+      if (nextMode === "library") {
+        router.push("/dream");
+        return;
+      }
+      setPendingStarterAction(nextMode);
       setOverlayMode("source");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Could not open source intake.");
@@ -3425,6 +3533,47 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
                 ? { label: "Start Room", title: "Create the internal room container" }
                 : { label: "", title: "" };
 
+  const scopeControl = (
+    <button
+      type="button"
+      className={styles.contextButton}
+      onClick={() => setOverlayMode("context")}
+      data-testid="room-scope-control"
+    >
+      <span>{assemblyTitle}</span>
+      <small>{scopeSummary}</small>
+    </button>
+  );
+
+  const roomRail = (
+    <div className={styles.sectionStack} data-testid="room-shell-rail">
+      <RoomSessionList
+        sessions={view?.sessions}
+        activeSessionId={view?.session?.id}
+        onCreate={handleCreateSession}
+        onActivate={handleActivateSession}
+        onArchive={handleArchiveSession}
+        busy={actionPending}
+      />
+
+      <RoomArtifactList
+        sources={view?.recentSources}
+        onOpenWitness={(nextDocumentKey) => {
+          void handleOpenWitness(nextDocumentKey);
+        }}
+      />
+
+      <ProjectPicker
+        projects={view?.projects}
+        activeProjectKey={projectKey}
+        onSelect={(nextProjectKey) => {
+          void handleProjectSelect(nextProjectKey);
+        }}
+        onCreate={() => setOverlayMode("create")}
+      />
+    </div>
+  );
+
   const workspaceMain = (
     <div className={styles.workspaceMain} data-testid="room-workspace">
       {actionError || messageError ? (
@@ -3440,6 +3589,7 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           onOpenThreads={() => setOverlayMode("threads")}
           onNewConversation={handleCreateSession}
           canStartFresh={Boolean(projectKey)}
+          contextActionClassName={styles.desktopOnlyContextAction}
         />
 
         {resumeBanner ? (
@@ -3536,7 +3686,11 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
   return (
     <LoegosShell
       route="workspace"
-      title="Room"
+      lensLabel="Room"
+      title={roomTitle}
+      workspaceLabel={workspaceLabel}
+      scopeControl={scopeControl}
+      rail={roomRail}
       main={workspaceMain}
       composer={
         <Composer
@@ -3546,9 +3700,33 @@ export default function RoomWorkspace({ initialView, initialSection = "" }) {
           pending={turnPending}
           placeholder={composerPlaceholder}
           disabled={!canSend}
-          onOpenAttach={() => void handleOpenSourceFromComposer()}
+          onOpenAttach={() => void handleOpenSourceFromComposer("upload")}
+          attachActions={[
+            {
+              label: "Paste source",
+              onClick: () => void handleOpenSourceFromComposer("paste"),
+              testId: "room-composer-bloom-paste",
+            },
+            {
+              label: "Upload file",
+              onClick: () => void handleOpenSourceFromComposer("upload"),
+              testId: "room-composer-bloom-upload",
+            },
+            {
+              label: "Capture link",
+              onClick: () => void handleOpenSourceFromComposer("link"),
+              testId: "room-composer-bloom-link",
+            },
+            {
+              label: "Open Library",
+              onClick: () => void handleOpenSourceFromComposer("library"),
+              testId: "room-composer-bloom-library",
+            },
+          ]}
           listenHref={view?.deepLinks?.reader || ""}
           focusSignal={composerFocusSignal}
+          scopeLabel={assemblyTitle}
+          scopeDetail={scopeSummary}
         />
       }
       sheet={{

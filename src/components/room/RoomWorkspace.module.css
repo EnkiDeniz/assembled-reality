@@ -111,17 +111,17 @@
 
 .threadIdentityCopy strong {
   color: rgba(242, 244, 247, 0.96);
-  font-size: 1rem;
-  line-height: 1.25;
-  font-weight: 560;
+  font-size: 17px;
+  line-height: 1.18;
+  font-weight: 600;
 }
 
 .threadIdentityCopy span {
   color: rgba(198, 204, 212, 0.68);
-  font-family: var(--room-font-mono);
-  font-size: 0.73rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--room-font-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .threadIdentityActions {
@@ -1256,13 +1256,14 @@
   min-height: 40px;
   padding: 0 14px;
   border: 1px solid var(--room-line);
-  border-radius: 8px;
-  background: var(--room-surface-strong);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--room-white);
-  font-family: var(--room-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-family: var(--room-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   line-height: 1;
   cursor: pointer;
   text-decoration: none;
@@ -1274,9 +1275,10 @@
 }
 
 .primaryButton {
-  background: rgba(94, 167, 255, 0.16);
-  border-color: rgba(94, 167, 255, 0.24);
-  color: var(--room-blue);
+  background: rgba(94, 167, 255, 0.12);
+  border-color: rgba(94, 167, 255, 0.18);
+  color: rgba(242, 244, 247, 0.98);
+  font-weight: 600;
 }
 
 .secondaryButton,
@@ -1716,9 +1718,9 @@
 
 .starter h1 {
   margin-top: 10px;
-  font-size: 22px;
-  line-height: 1.05;
-  font-weight: 550;
+  font-size: 26px;
+  line-height: 1.04;
+  font-weight: 600;
   letter-spacing: -0.03em;
   color: var(--room-white);
 }
@@ -1726,8 +1728,8 @@
 .starter p {
   max-width: 340px;
   margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.55;
   color: var(--room-soft);
 }
 
@@ -1793,9 +1795,9 @@
   display: inline-grid;
   gap: 2px;
   padding: 0 14px;
-  border: 1px solid var(--room-line);
-  border-radius: 999px;
-  background: var(--room-surface-strong);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--room-white);
   text-align: left;
   cursor: pointer;
@@ -1813,17 +1815,21 @@
 
 .contextButton span {
   font-family: var(--room-font-sans);
-  font-size: 12px;
-  font-weight: 560;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1.15;
 }
 
 .contextButton small {
   color: var(--room-soft);
-  font-family: var(--room-font-mono);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--room-font-sans);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.desktopOnlyContextAction {
+  display: inline-grid;
 }
 
 .terrainFog {
@@ -2503,7 +2509,7 @@
 .composer {
   padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
   background:
-    linear-gradient(180deg, rgba(12, 13, 16, 0), rgba(12, 13, 16, 0.82) 28%, rgba(12, 13, 16, 1) 100%);
+    linear-gradient(180deg, rgba(12, 13, 16, 0), rgba(12, 13, 16, 0.78) 28%, rgba(12, 13, 16, 1) 100%);
 }
 
 .composerShell {
@@ -2514,13 +2520,70 @@
 .composerCapsule {
   width: min(100%, 860px);
   margin: 0 auto;
-  padding: 6px 8px 6px 14px;
-  border: 1px solid var(--room-line);
-  border-radius: 18px;
+  position: relative;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 26px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 36%),
-    #141517;
-  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.14);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 40%),
+    rgba(42, 42, 44, 0.96);
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.18);
+}
+
+.composerBloom {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 10px);
+  z-index: 8;
+  min-width: 180px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(34, 35, 39, 0.98);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.2);
+}
+
+.composerBloomItem {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(242, 244, 247, 0.82);
+  font-family: var(--room-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.composerBloomItem:hover,
+.composerBloomItem:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(242, 244, 247, 0.98);
+}
+
+.composerMeta {
+  display: grid;
+  gap: 2px;
+  padding: 0 0 8px 44px;
+}
+
+.composerMeta strong {
+  color: rgba(242, 244, 247, 0.96);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.composerMeta span {
+  color: rgba(198, 204, 212, 0.68);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .composerRow {
@@ -2535,11 +2598,11 @@
 
 .composerTool,
 .composerListenInline {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 38px;
+  min-width: 38px;
   padding: 0;
-  border: none;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--room-ghost);
 }
@@ -2558,12 +2621,13 @@
   max-height: 128px;
   padding: 9px 0 6px;
   color: var(--room-white);
-  font-size: 0.9375rem;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.45;
 }
 
 .composerRow textarea::placeholder {
   color: var(--room-ghost);
+  font-weight: 400;
 }
 
 .composerActions {
@@ -2578,12 +2642,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   padding: 0;
   border: none;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
   color: var(--room-ghost);
   transform: scale(0.92);
   transition:
@@ -2593,8 +2657,8 @@
 }
 
 .composerSendActive {
-  background: var(--room-blue);
-  color: #ffffff;
+  background: #ffffff;
+  color: #111214;
   transform: scale(1);
 }
 
@@ -2795,6 +2859,7 @@
 .toolLinkSubtle:focus-visible,
 .tabButton:focus-visible,
 .projectRow:focus-visible,
+.composerBloomItem:focus-visible,
 .composerTool:focus-visible,
 .composerListen:focus-visible,
 .composerListenInline:focus-visible,
@@ -3051,6 +3116,10 @@
     padding: 0;
   }
 
+  .composerMeta {
+    padding-left: 40px;
+  }
+
   .composerCapsule {
     padding: 5px 5px 8px 14px;
   }
@@ -3156,5 +3225,11 @@
   .fieldChip {
     min-height: 28px;
     padding: 0 10px;
+  }
+}
+
+@media (min-width: 960px) {
+  .desktopOnlyContextAction {
+    display: none;
   }
 }

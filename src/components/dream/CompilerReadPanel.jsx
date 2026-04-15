@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { Kicker, SignalChip } from "@/components/shell/LoegosShell";
 import { buildCompilerReadDiagnosticsView } from "@/lib/compiler-read-diagnostics";
+import { buildCompilerReadReview } from "@/lib/compiler-read-review";
 import {
   loadCompilerReadSelfCheck,
   saveCompilerReadSelfCheck,
@@ -20,12 +21,13 @@ function sentenceCase(value = "") {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function renderClaimMeta(claim) {
+function renderClaimMeta(claim, { omittedFromSubset = false } = {}) {
   return [
     sentenceCase(claim?.claimKind),
     sentenceCase(claim?.provenanceClass),
     sentenceCase(claim?.supportStatus),
     sentenceCase(claim?.translationReadiness),
+    omittedFromSubset ? "Omitted from subset" : "",
   ].filter(Boolean);
 }
 
@@ -164,9 +166,92 @@ function CompilerReadSelfCheck({ documentId = "", compilerReadKey = "", compiler
   );
 }
 
+function CompilerReadClaimList({ claims = [], omittedClaimIds = new Set() }) {
+  if (!Array.isArray(claims) || !claims.length) {
+    return <p>No structured claim set was produced in this run.</p>;
+  }
+
+  return (
+    <div className={styles.compilerReadClaimList}>
+      {claims.map((claim) => (
+        <article key={claim.id} className={styles.compilerReadClaim}>
+          <div className={styles.compilerReadClaimHead}>
+            <strong>{claim.text || "Untitled claim"}</strong>
+            <div className={styles.compilerReadChips}>
+              {renderClaimMeta(claim, { omittedFromSubset: omittedClaimIds.has(claim.id) }).map((meta) => (
+                <SignalChip key={`${claim.id}:${meta}`} tone="neutral">
+                  {meta}
+                </SignalChip>
+              ))}
+            </div>
+          </div>
+          {claim.sourceExcerpt ? (
+            <p className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</p>
+          ) : null}
+          {claim.reason ? <p>{claim.reason}</p> : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function CompilerReadReviewSection({
+  kicker = "",
+  title = "",
+  claims = [],
+  testId = "",
+}) {
+  const entries = Array.isArray(claims) ? claims.filter(Boolean) : [];
+  if (!entries.length) return null;
+
+  return (
+    <div className={styles.compilerReadSection} data-testid={testId || undefined}>
+      <div className={styles.compilerReadSectionHead}>
+        <div className={styles.compilerReadIdentity}>
+          <Kicker tone="neutral">{kicker}</Kicker>
+          <strong>{title}</strong>
+        </div>
+      </div>
+      <div className={styles.compilerReadClaimList}>
+        {entries.map((claim) => (
+          <article key={claim.id} className={styles.compilerReadClaim}>
+            <div className={styles.compilerReadClaimHead}>
+              <strong>{claim.text || "Untitled claim"}</strong>
+            </div>
+            {claim.sourceExcerpt ? <p className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</p> : null}
+            {claim.reason ? <p>{claim.reason}</p> : null}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompilerReadWitnessSection({ items = [], testId = "" }) {
+  const entries = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!entries.length) return null;
+
+  return (
+    <div className={styles.compilerReadSection} data-testid={testId || undefined}>
+      <div className={styles.compilerReadSectionHead}>
+        <div className={styles.compilerReadIdentity}>
+          <Kicker tone="neutral">Missing decision witness</Kicker>
+          <strong>What still needs evidence before deciding</strong>
+        </div>
+      </div>
+      <ul className={styles.compilerReadList}>
+        {entries.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function CompilerReadDetail({ compilerRead = null }) {
   if (!compilerRead) return null;
 
+  const review = buildCompilerReadReview(compilerRead);
   const claimSet = Array.isArray(compilerRead?.claimSet) ? compilerRead.claimSet : [];
   const rawDocumentResult = compilerRead?.rawDocumentResult || null;
   const translatedSubsetResult = compilerRead?.translatedSubsetResult || null;
@@ -174,9 +259,7 @@ function CompilerReadDetail({ compilerRead = null }) {
   const omittedClaims = Array.isArray(translatedSubsetResult?.omittedClaims)
     ? translatedSubsetResult.omittedClaims
     : [];
-  const omittedClaimDetails = omittedClaims
-    .map((claimId) => claimSet.find((claim) => claim.id === claimId))
-    .filter(Boolean);
+  const omittedClaimIds = new Set(omittedClaims);
   const diagnosticsView = buildCompilerReadDiagnosticsView({
     rawDocumentResult,
     translatedSubsetResult,
@@ -186,62 +269,62 @@ function CompilerReadDetail({ compilerRead = null }) {
 
   return (
     <div className={styles.compilerReadDetail} data-testid="dream-compiler-read-detail">
-      <div className={styles.compilerReadSection} data-testid="dream-compiler-read-claims">
-        <div className={styles.compilerReadSectionHead}>
-          <div className={styles.compilerReadIdentity}>
-            <Kicker tone="neutral">Claims</Kicker>
-            <strong>What the read can currently ground</strong>
-          </div>
-        </div>
-        {claimSet.length ? (
-          <div className={styles.compilerReadClaimList}>
-            {claimSet.map((claim) => (
-              <article key={claim.id} className={styles.compilerReadClaim}>
-                <div className={styles.compilerReadClaimHead}>
-                  <strong>{claim.text || "Untitled claim"}</strong>
-                  <div className={styles.compilerReadChips}>
-                    {renderClaimMeta(claim).map((meta) => (
-                      <SignalChip key={`${claim.id}:${meta}`} tone="neutral">
-                        {meta}
-                      </SignalChip>
-                    ))}
+      {review.isProposal ? (
+        <>
+          <CompilerReadReviewSection
+            kicker="Supported offer terms"
+            title="What the source states explicitly"
+            claims={compilerRead?.supportedOfferTerms || review.supportedOfferTerms}
+            testId="dream-compiler-read-supported-terms"
+          />
+          <CompilerReadReviewSection
+            kicker="Unsupported efficacy claims"
+            title="What still needs witness before you trust it"
+            claims={compilerRead?.unsupportedEfficacyClaims || review.unsupportedEfficacyClaims}
+            testId="dream-compiler-read-unsupported-efficacy"
+          />
+          <CompilerReadWitnessSection
+            items={compilerRead?.missingDecisionWitness || review.missingDecisionWitness}
+            testId="dream-compiler-read-missing-witness"
+          />
+          {(compilerRead?.backgroundFraming || review.backgroundFraming)?.length ? (
+            <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-background">
+              <summary>Show background framing</summary>
+              <div className={styles.compilerReadInspectBody}>
+                <CompilerReadReviewSection
+                  kicker="Background framing"
+                  title="Context the document uses without decision-grade witness"
+                  claims={compilerRead?.backgroundFraming || review.backgroundFraming}
+                />
+              </div>
+            </details>
+          ) : null}
+          <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-claims">
+            <summary>Show extracted claims under review</summary>
+            <div className={styles.compilerReadInspectBody}>
+              <div className={styles.compilerReadSection}>
+                <div className={styles.compilerReadSectionHead}>
+                  <div className={styles.compilerReadIdentity}>
+                    <Kicker tone="neutral">Extracted claims</Kicker>
+                    <strong>All extracted claims, with subset omissions marked</strong>
                   </div>
                 </div>
-                {claim.sourceExcerpt ? (
-                  <p className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</p>
-                ) : null}
-                {claim.reason ? <p>{claim.reason}</p> : null}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p>No structured claim set was produced in this run.</p>
-        )}
-      </div>
-
-      {omittedClaimDetails.length ? (
-        <div className={styles.compilerReadSection} data-testid="dream-compiler-read-omitted">
+                <CompilerReadClaimList claims={claimSet} omittedClaimIds={omittedClaimIds} />
+              </div>
+            </div>
+          </details>
+        </>
+      ) : (
+        <div className={styles.compilerReadSection} data-testid="dream-compiler-read-claims">
           <div className={styles.compilerReadSectionHead}>
             <div className={styles.compilerReadIdentity}>
-              <Kicker tone="neutral">Omitted material</Kicker>
-              <strong>What did not travel cleanly</strong>
+              <Kicker tone="neutral">Extracted claims</Kicker>
+              <strong>What the read pulled out for review</strong>
             </div>
           </div>
-          <div className={styles.compilerReadClaimList}>
-            {omittedClaimDetails.map((claim) => (
-              <article key={claim.id} className={styles.compilerReadClaim}>
-                <div className={styles.compilerReadClaimHead}>
-                  <strong>{claim.text || "Untitled claim"}</strong>
-                </div>
-                {claim.sourceExcerpt ? (
-                  <p className={styles.compilerReadExcerpt}>{claim.sourceExcerpt}</p>
-                ) : null}
-                <p>{claim.reason || "This claim could not travel cleanly in the current subset."}</p>
-              </article>
-            ))}
-          </div>
+          <CompilerReadClaimList claims={claimSet} omittedClaimIds={omittedClaimIds} />
         </div>
-      ) : null}
+      )}
 
       <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-evidence">
         <summary>Show diagnostics and translation detail</summary>
@@ -379,6 +462,13 @@ export default function CompilerReadPanel({
     ? translatedSubsetResult.omittedClaims.length
     : 0;
   const versionContext = [versionLabel, versionCreatedAt].filter(Boolean).join(" · ");
+  const review = buildCompilerReadReview(compilerRead);
+  const supportedOfferTerms = compilerRead?.supportedOfferTerms || review.supportedOfferTerms;
+  const unsupportedEfficacyClaims =
+    compilerRead?.unsupportedEfficacyClaims || review.unsupportedEfficacyClaims;
+  const backgroundFraming = compilerRead?.backgroundFraming || review.backgroundFraming;
+  const missingDecisionWitness =
+    compilerRead?.missingDecisionWitness || review.missingDecisionWitness;
 
   if (mode === "detail") {
     return (
@@ -419,8 +509,8 @@ export default function CompilerReadPanel({
         ) : null}
         {versionContext ? (
           <div className={styles.compilerReadInlineNote}>
-            <strong>{documentTitle || "Current document"}</strong>
-            <span>{versionContext}</span>
+            <strong>Scope</strong>
+            <span>{[documentTitle || "Current document", versionContext].filter(Boolean).join(" · ")}</span>
           </div>
         ) : null}
         <CompilerReadDetail compilerRead={compilerRead} />
@@ -497,10 +587,52 @@ export default function CompilerReadPanel({
             </div>
           </div>
 
+          {review.isProposal ? (
+            <div className={styles.compilerReadDetail}>
+              <CompilerReadReviewSection
+                kicker="Supported offer terms"
+                title="What the source states explicitly"
+                claims={supportedOfferTerms}
+                testId="dream-compiler-read-supported-terms"
+              />
+              <CompilerReadReviewSection
+                kicker="Unsupported efficacy claims"
+                title="What still needs witness before you trust it"
+                claims={unsupportedEfficacyClaims}
+                testId="dream-compiler-read-unsupported-efficacy"
+              />
+              <CompilerReadWitnessSection
+                items={missingDecisionWitness}
+                testId="dream-compiler-read-missing-witness"
+              />
+              {backgroundFraming.length ? (
+                <details className={styles.compilerReadInspect} data-testid="dream-compiler-read-background">
+                  <summary>Show background framing</summary>
+                  <div className={styles.compilerReadInspectBody}>
+                    <CompilerReadReviewSection
+                      kicker="Background framing"
+                      title="Context the document uses without decision-grade witness"
+                      claims={backgroundFraming}
+                    />
+                  </div>
+                </details>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className={styles.compilerReadChips}>
             <SignalChip tone="neutral">{sentenceCase(compilerRead?.documentSummary?.documentType || "mixed")}</SignalChip>
-            <SignalChip tone="neutral">{claimSet.length} claims</SignalChip>
-            <SignalChip tone="neutral">{omittedCount} omitted</SignalChip>
+            {review.isProposal ? (
+              <>
+                <SignalChip tone="neutral">{supportedOfferTerms.length} offer terms</SignalChip>
+                <SignalChip tone="neutral">{unsupportedEfficacyClaims.length} efficacy claims</SignalChip>
+              </>
+            ) : (
+              <>
+                <SignalChip tone="neutral">{claimSet.length} claims</SignalChip>
+                <SignalChip tone="neutral">{omittedCount} omitted</SignalChip>
+              </>
+            )}
             {rawSecondaryTrusted ? (
               <SignalChip tone="neutral">{sentenceCase(rawDocumentResult?.runtimeState || "open")}</SignalChip>
             ) : (
